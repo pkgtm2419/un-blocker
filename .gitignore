@@ -1,0 +1,15 @@
+*.iml
+.gradle
+/local.properties
+/.idea/
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+app/build/
+*.hprof
+*.orig
+
+# Keep release APK
+!release/unblocker-v1.0.0.apk

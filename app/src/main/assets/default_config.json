@@ -1,0 +1,21 @@
+{
+  "appVersion": "1.0.0",
+  "appName": "unblocker",
+  "appTagline": "unwanted network blocker",
+  "defaultConfig": {
+    "adBlockingEnabled": true,
+    "adultContentBlockingEnabled": true,
+    "parentalControlEnabled": false,
+    "backgroundMonitoringEnabled": true,
+    "connectionLoggingEnabled": true,
+    "selfCheckingEnabled": true,
+    "autoRestartOnBootEnabled": true,
+    "healthCheckInterval": 300000,
+    "logRetentionDays": 30,
+    "notificationEnabled": true,
+    "notificationTitle": "unblocker is Active",
+    "notificationSubtitle": "Blocking unwanted ads & adult network traffic",
+    "updateAdListFrequency": "weekly",
+    "updateAdultListFrequency": "weekly"
+  }
+}

@@ -108,6 +108,13 @@ class UnblockerVpnService : VpnService() {
                 .setMtu(1500)
                 .setBlocking(true)
 
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                builder.setMetered(false)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                setUnderlyingNetworks(null)
+            }
+
             vpnInterface = builder.establish()
             if (vpnInterface == null) {
                 stopSelf()

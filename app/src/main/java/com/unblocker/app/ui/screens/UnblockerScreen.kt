@@ -333,6 +333,34 @@ fun UnblockerScreen(
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // VPN Setting Guidance Tip
+            Surface(
+                color = Slate800.copy(alpha = 0.5f),
+                shape = RoundedCornerShape(14.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Slate700.copy(alpha = 0.5f)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = 520.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "💡",
+                        fontSize = 16.sp
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = "For full-speed browsing across all networks: In Android VPN settings, keep 'Always-on VPN' ON, and 'Block connections without VPN' OFF.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Slate400
+                    )
+                }
+            }
         }
     }
 }

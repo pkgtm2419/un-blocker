@@ -106,6 +106,7 @@ class FilteringPreferences(private val context: Context) {
         }
     }
 
+    @android.annotation.SuppressLint("StaticFieldLeak")
     companion object {
         private const val KEY_INITIALIZED = "initialized"
         private const val KEY_AD_BLOCKING = "ad_blocking_enabled"

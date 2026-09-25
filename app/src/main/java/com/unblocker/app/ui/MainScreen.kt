@@ -28,6 +28,9 @@ fun MainScreen(
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             quickStartManager.startBlockingServices(onPermissionRequired = {})
+        } else {
+            // User cancelled or denied VPN permission
+            preferences.setAdBlockingEnabled(false)
         }
     }
 

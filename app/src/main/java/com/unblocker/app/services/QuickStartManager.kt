@@ -28,7 +28,8 @@ enum class ServiceStatus {
 
 class QuickStartManager(private val context: Context) {
 
-    private val preferences = FilteringPreferences.getInstance(context)
+    private val appContext = context.applicationContext
+    private val preferences = FilteringPreferences.getInstance(appContext)
 
     private val _status = MutableStateFlow(
         if (UnblockerVpnService.isServiceActive.value) ServiceStatus.RUNNING else ServiceStatus.STOPPED
@@ -37,6 +38,14 @@ class QuickStartManager(private val context: Context) {
 
     init {
         loadDefaultConfiguration()
+        CoroutineScope(Dispatchers.Main).launch {
+            UnblockerVpnService.isServiceActive.collect { active ->
+                _status.value = if (active) ServiceStatus.RUNNING else ServiceStatus.STOPPED
+                if (!active && preferences.serviceRunning.value) {
+                    preferences.setServiceRunning(false)
+                }
+            }
+        }
     }
 
     fun loadDefaultConfiguration(): DefaultConfig {
@@ -136,6 +145,7 @@ class QuickStartManager(private val context: Context) {
         )
     }
 
+    @android.annotation.SuppressLint("StaticFieldLeak")
     companion object {
         @Volatile
         private var INSTANCE: QuickStartManager? = null

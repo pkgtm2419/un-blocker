@@ -74,6 +74,14 @@ class LocalNetworkLearner {
 
         // Self-Learning: Update reputation weight in memory
         if (compositeScore >= BLOCK_THRESHOLD) {
+            if (learnedReputations.size > MAX_LEARNED_REPUTATIONS) {
+                val entriesToEvict = learnedReputations.entries
+                    .sortedBy { it.value }
+                    .take(100)
+                for (entry in entriesToEvict) {
+                    learnedReputations.remove(entry.key)
+                }
+            }
             learnedReputations[cleanDomain] = compositeScore
 
             // Propagate suspicion to parent domain if applicable
@@ -101,6 +109,23 @@ class LocalNetworkLearner {
      * and periodic beacons (typical of background telemetry).
      */
     private fun evaluateCadence(domain: String, timestamp: Long): Float {
+        // Prune stale domains if the map exceeds capacity threshold
+        if (queryTimestamps.size > MAX_TRACKED_DOMAINS) {
+            val iterator = queryTimestamps.entries.iterator()
+            var pruned = 0
+            while (iterator.hasNext() && pruned < 200) {
+                val entry = iterator.next()
+                val deque = entry.value
+                val isStale = synchronized(deque) {
+                    deque.isEmpty() || (timestamp - deque.last() > 180_000L)
+                }
+                if (isStale) {
+                    iterator.remove()
+                    pruned++
+                }
+            }
+        }
+
         val window = queryTimestamps.computeIfAbsent(domain) { ArrayDeque() }
 
         synchronized(window) {
@@ -201,6 +226,8 @@ class LocalNetworkLearner {
 
     companion object {
         const val BLOCK_THRESHOLD = 0.65f
+        const val MAX_TRACKED_DOMAINS = 2000
+        const val MAX_LEARNED_REPUTATIONS = 5000
     }
 }
 

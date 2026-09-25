@@ -5,12 +5,17 @@ import com.unblocker.app.data.model.ContentType
 import com.unblocker.app.data.model.DetectionMethod
 import com.unblocker.app.data.model.FilterResult
 import com.unblocker.app.data.preferences.FilteringPreferences
+import com.unblocker.app.domain.model.BlockingCategory
+import com.unblocker.app.domain.model.BlockingDecision
+import com.unblocker.app.domain.usecase.DecideBlockingUseCase
+import com.unblocker.app.logic.analysis.AdaptiveBlockingEngine
 import com.unblocker.app.logic.analysis.LocalNetworkLearner
 import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Autonomous local content filter engine.
- * Combines on-device self-learning network analysis, seed heuristics, and adult content classifier.
+ * Combines Clean Architecture UseCase orchestration with 7-day adaptive multi-factor learning,
+ * seed heuristics, and adult content classifier.
  * Operates 100% on-device with zero logs, zero history, and zero cloud dependency.
  */
 class ContentFilterEngine(
@@ -18,8 +23,16 @@ class ContentFilterEngine(
     private val adDetector: AdDetector = AdDetector(context),
     private val adultContentDetector: AdultContentDetector = AdultContentDetector(context),
     private val networkLearner: LocalNetworkLearner = LocalNetworkLearner(context),
-    private val preferences: FilteringPreferences = FilteringPreferences.getInstance(context)
+    private val preferences: FilteringPreferences = FilteringPreferences.getInstance(context),
+    val adaptiveEngine: AdaptiveBlockingEngine = AdaptiveBlockingEngine(preferences, networkLearner)
 ) {
+
+    private val decideBlockingUseCase = DecideBlockingUseCase(
+        adDetector = adDetector,
+        adultContentDetector = adultContentDetector,
+        adaptiveBlockingEngine = adaptiveEngine,
+        preferences = preferences
+    )
 
     // Ephemeral in-memory evaluation cache for instant sub-millisecond response
     private val decisionCache = ConcurrentHashMap<String, FilterResult>()
@@ -52,7 +65,7 @@ class ContentFilterEngine(
             }
         }
 
-        val result = evaluateDomain(domain, isAdBlocking, isAdultBlocking)
+        val result = evaluateDomain(domain)
 
         if (decisionCache.size < maxCacheSize) {
             decisionCache[domain] = result
@@ -61,72 +74,33 @@ class ContentFilterEngine(
         return result
     }
 
-    private fun evaluateDomain(
-        domain: String,
-        isAdBlocking: Boolean,
-        isAdultBlocking: Boolean
-    ): FilterResult {
-        // 1. Check Ad / Tracker Detection (Seed lists + On-device self-learning network analysis)
-        if (isAdBlocking) {
-            // Check static seed heuristics
-            val (isAdSeed, seedReason) = adDetector.isAdDomain(domain)
-            if (isAdSeed) {
-                return FilterResult(
-                    domain = domain,
-                    contentType = ContentType.AD,
-                    shouldBlock = true,
-                    reason = seedReason,
-                    detectionMethod = DetectionMethod.STATIC_LIST,
-                    confidence = 0.95f
-                )
-            }
+    private fun evaluateDomain(domain: String): FilterResult {
+        val decision = decideBlockingUseCase(domain)
 
-            // Check On-device Self-learning Network Analysis (Cadence, Burst, Entropy)
-            val score = networkLearner.analyzeQuery(domain)
-            if (score.score >= LocalNetworkLearner.BLOCK_THRESHOLD) {
-                adDetector.addDomain(domain)
-                return FilterResult(
-                    domain = domain,
-                    contentType = ContentType.AD,
-                    shouldBlock = true,
-                    reason = score.reason,
-                    detectionMethod = DetectionMethod.PATTERN_MATCH,
-                    confidence = score.score
-                )
-            }
+        val contentType = when (decision.category) {
+            BlockingCategory.AD, BlockingCategory.TRACKER -> ContentType.AD
+            BlockingCategory.ADULT_CONTENT -> ContentType.ADULT_CONTENT
+            BlockingCategory.NORMAL -> ContentType.NORMAL
         }
 
-        // 2. Check 18+ Adult Content Detection (Option 2)
-        if (isAdultBlocking) {
-            val (isAdult, adultReason) = adultContentDetector.isAdultContent(domain)
-            if (isAdult) {
-                val method = if (adultReason.contains("TLD")) {
-                    DetectionMethod.TLD_RULE
-                } else if (adultReason.contains("Pattern")) {
-                    DetectionMethod.PATTERN_MATCH
-                } else {
-                    DetectionMethod.STATIC_LIST
-                }
-
-                return FilterResult(
-                    domain = domain,
-                    contentType = ContentType.ADULT_CONTENT,
-                    shouldBlock = true,
-                    reason = adultReason,
-                    detectionMethod = method,
-                    confidence = 0.92f
-                )
-            }
+        val method = if (!decision.isBlocked) {
+            DetectionMethod.NONE
+        } else if (decision.category == BlockingCategory.ADULT_CONTENT) {
+            if (decision.reason.contains("TLD")) DetectionMethod.TLD_RULE
+            else if (decision.reason.contains("Pattern")) DetectionMethod.PATTERN_MATCH
+            else DetectionMethod.STATIC_LIST
+        } else {
+            if (decision.reason.contains("Static") || decision.reason.contains("Suffix")) DetectionMethod.STATIC_LIST
+            else DetectionMethod.PATTERN_MATCH
         }
 
-        // 3. Normal Allowed Traffic
         return FilterResult(
             domain = domain,
-            contentType = ContentType.NORMAL,
-            shouldBlock = false,
-            reason = "Allowed normal traffic",
-            detectionMethod = DetectionMethod.NONE,
-            confidence = 1.0f
+            contentType = contentType,
+            shouldBlock = decision.isBlocked,
+            reason = decision.reason,
+            detectionMethod = method,
+            confidence = decision.confidence
         )
     }
 
@@ -137,4 +111,6 @@ class ContentFilterEngine(
     fun getAdDetector(): AdDetector = adDetector
     fun getAdultContentDetector(): AdultContentDetector = adultContentDetector
     fun getNetworkLearner(): LocalNetworkLearner = networkLearner
+    fun getAdaptiveBlockingEngine(): AdaptiveBlockingEngine = adaptiveEngine
+    fun getDecideBlockingUseCase(): DecideBlockingUseCase = decideBlockingUseCase
 }

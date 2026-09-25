@@ -285,8 +285,15 @@ fun UnblockerScreen(
                             )
                     )
                     Spacer(modifier = Modifier.width(9.dp))
+                    val daysActive = preferences.getDaysSinceInstall()
+                    val activeStatusText = if (daysActive < 7) {
+                        "SHIELD ACTIVE • DAY $daysActive LEARNING"
+                    } else {
+                        "SHIELD ACTIVE • AUTONOMOUS SHIELD"
+                    }
+
                     Text(
-                        text = if (isRunning) "SHIELD ACTIVE • BLOCKING ADS" else "SHIELD IDLE • TAP ICON TO START",
+                        text = if (isRunning) activeStatusText else "SHIELD IDLE • TAP ICON TO START",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.8.sp,

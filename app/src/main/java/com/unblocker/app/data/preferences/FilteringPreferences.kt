@@ -40,6 +40,31 @@ class FilteringPreferences(private val context: Context) {
     private val _healthEffectivenessScore = MutableStateFlow(prefs.getFloat(KEY_EFFECTIVENESS_SCORE, 99.4f))
     val healthEffectivenessScore: StateFlow<Float> = _healthEffectivenessScore.asStateFlow()
 
+    private val _learningStartTime = MutableStateFlow(
+        prefs.getLong(KEY_LEARNING_START_TIME, 0L).let {
+            if (it == 0L) {
+                val now = System.currentTimeMillis()
+                prefs.edit().putLong(KEY_LEARNING_START_TIME, now).apply()
+                now
+            } else {
+                it
+            }
+        }
+    )
+    val learningStartTime: StateFlow<Long> = _learningStartTime.asStateFlow()
+
+    fun getDaysSinceInstall(): Int {
+        val start = _learningStartTime.value
+        val now = System.currentTimeMillis()
+        val days = ((now - start) / (86_400_000L)).toInt() + 1
+        return days.coerceAtLeast(1)
+    }
+
+    fun resetLearningStartDateForTesting(startTime: Long) {
+        prefs.edit().putLong(KEY_LEARNING_START_TIME, startTime).apply()
+        _learningStartTime.value = startTime
+    }
+
     fun setAdBlockingEnabled(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_AD_BLOCKING, enabled).apply()
         _adBlockingEnabled.value = enabled
@@ -118,6 +143,7 @@ class FilteringPreferences(private val context: Context) {
         private const val KEY_LOG_RETENTION = "log_retention_days"
         private const val KEY_LAST_HEALTH_CHECK = "last_health_check"
         private const val KEY_EFFECTIVENESS_SCORE = "effectiveness_score"
+        private const val KEY_LEARNING_START_TIME = "learning_start_time"
 
         @Volatile
         private var INSTANCE: FilteringPreferences? = null

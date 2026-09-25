@@ -7,6 +7,7 @@ import kotlin.math.sqrt
 /**
  * On-device autonomous network analysis and self-learning tracking system.
  * Operates 100% locally using system resources without cloud dependencies.
+ * Implements Multi-Factor Ad & Tracker Detection as specified in Section 1.1 of un-blocker-improvement-plan.md.
  * Zero user logs or history are created or stored.
  */
 class LocalNetworkLearner(private val context: android.content.Context? = null) {
@@ -58,6 +59,20 @@ class LocalNetworkLearner(private val context: android.content.Context? = null) 
         "doubleclick", "admob", "applovin", "unityads", "vungle", "inmobi", "criteo", "taboola"
     )
 
+    private val knownTrackers = setOf(
+        "google-analytics.com", "ssl.google-analytics.com",
+        "adjust.com", "appsflyer.com", "branch.io", "kochava.com",
+        "flurry.com", "singular.net", "braze.com", "mixpanel.com",
+        "segment.com", "segment.io", "amplitude.com", "scorecardresearch.com",
+        "quantserve.com", "moatads.com", "clarity.ms", "hotjar.com",
+        "newrelic.com", "app-measurement.com"
+    )
+
+    private val ddnsProviders = setOf(
+        "duckdns.org", "no-ip.biz", "no-ip.com", "ddns.net", "zapto.org",
+        "hopto.org", "bounceme.net", "ngrok.io", "servehttp.com"
+    )
+
     private val safeExceptions = setOf(
         "google.com", "android.com", "github.com", "wikipedia.org",
         "stackoverflow.com", "microsoft.com", "apple.com", "cloudflare.com",
@@ -71,10 +86,53 @@ class LocalNetworkLearner(private val context: android.content.Context? = null) 
     )
 
     /**
+     * Extracts multi-factor structural and behavioral signatures for deep inspection.
+     * Aligned with Section 1.1.1 of un-blocker-improvement-plan.md.
+     */
+    fun extractDomainSignature(domain: String): DomainSignature {
+        val cleanDomain = domain.trim().lowercase()
+        val subdomainDepth = cleanDomain.count { it == '.' }
+        val hasLexical = evaluateLexical(cleanDomain) > 0.35f
+        val hasTracker = knownTrackers.any { cleanDomain == it || cleanDomain.endsWith(".$it") }
+        val isDdns = ddnsProviders.any { cleanDomain.endsWith(".$it") }
+        val entropy = evaluateEntropy(cleanDomain)
+        val cadence = evaluateCadence(cleanDomain, System.currentTimeMillis())
+
+        val suspiciousPatterns = mutableListOf<String>()
+        if (subdomainDepth >= 4 && (hasLexical || entropy > 0.5f)) {
+            suspiciousPatterns.add("Deep nested subdomain with tracker markers")
+        }
+        if (isDdns && (hasLexical || entropy > 0.5f)) {
+            suspiciousPatterns.add("Dynamic DNS tracker endpoint")
+        }
+        if (hasTracker) {
+            suspiciousPatterns.add("Known tracker framework signature")
+        }
+        if (entropy > 3.1f) {
+            suspiciousPatterns.add("High entropy DGA/algorithmic subdomain")
+        }
+
+        val analysis = analyzeQuery(cleanDomain)
+
+        return DomainSignature(
+            domain = cleanDomain,
+            subdomainDepth = subdomainDepth,
+            hasAdLexicalToken = hasLexical,
+            hasTrackerSignature = hasTracker,
+            isDdnsOrDynamic = isDdns,
+            entropy = entropy,
+            cadenceScore = cadence,
+            suspiciousPatterns = suspiciousPatterns,
+            compositeThreatScore = analysis.score
+        )
+    }
+
+    /**
      * Analyze a network domain query using local behavioral, lexical, and temporal heuristics.
      * Returns a composite suspicion score between 0.0 and 1.0.
+     * Supports dynamic adaptive confidence thresholds from the 7-day learning engine.
      */
-    fun analyzeQuery(domain: String): AnalysisScore {
+    fun analyzeQuery(domain: String, threshold: Float = BLOCK_THRESHOLD): AnalysisScore {
         val cleanDomain = domain.trim().lowercase()
         if (cleanDomain.isBlank()) return AnalysisScore(0.0f, "Empty")
 
@@ -95,32 +153,51 @@ class LocalNetworkLearner(private val context: android.content.Context? = null) 
 
         // 2. Check previous learned reputation
         val cachedScore = learnedReputations[cleanDomain]
-        if (cachedScore != null && cachedScore >= BLOCK_THRESHOLD) {
+        if (cachedScore != null && cachedScore >= threshold) {
             return AnalysisScore(cachedScore, "Learned tracker pattern")
         }
 
-        // 3. Temporal & Cadence Analysis (Burst and Heartbeat Detection)
+        // 3. Known tracker framework direct detection
+        val isKnownTracker = knownTrackers.any { cleanDomain == it || cleanDomain.endsWith(".$it") }
+        if (isKnownTracker) {
+            return AnalysisScore(0.95f, "Known mobile tracker / telemetry framework")
+        }
+
+        // 4. Temporal & Cadence Analysis (Burst and Heartbeat Detection)
         val now = System.currentTimeMillis()
         val cadenceScore = evaluateCadence(cleanDomain, now)
 
-        // 4. Lexical Token Analysis
+        // 5. Lexical Token Analysis
         val lexicalScore = evaluateLexical(cleanDomain)
 
-        // 5. Shannon Entropy Analysis (Detects algorithmic/pseudo-random tracker subdomains)
+        // 6. Shannon Entropy Analysis (Detects algorithmic/pseudo-random tracker subdomains)
         val entropyScore = evaluateEntropy(cleanDomain)
+
+        // 7. Structural Multi-Factor Checks: Subdomain Depth & Dynamic DNS
+        val subdomainDepth = cleanDomain.count { it == '.' }
+        val isDdns = ddnsProviders.any { cleanDomain.endsWith(".$it") }
+        var structuralBoost = 0.0f
+        if (subdomainDepth >= 4 && (lexicalScore > 0.40f || entropyScore > 0.50f)) {
+            structuralBoost += 0.15f
+        }
+        if (isDdns && (lexicalScore > 0.35f || entropyScore > 0.50f)) {
+            structuralBoost += 0.20f
+        }
 
         // Composite Suspicion Score:
         // Lexical token markers are the primary requirement for ad/tracker blocking.
         // Cadence bursts and entropy alone must NEVER block normal websites.
-        val compositeScore = when {
+        val baseScore = when {
             lexicalScore >= BLOCK_THRESHOLD -> lexicalScore
             lexicalScore >= 0.50f && (cadenceScore >= 0.50f || entropyScore >= 0.50f) -> 0.75f
             lexicalScore >= 0.40f && cadenceScore >= 0.60f && entropyScore >= 0.60f -> 0.70f
             else -> maxOf(cadenceScore * 0.35f, entropyScore * 0.35f)
-        }.coerceAtMost(1.0f)
+        }
+
+        val compositeScore = (baseScore + structuralBoost).coerceAtMost(1.0f)
 
         // Self-Learning: Update reputation weight in memory and persist newly learned tracker on-device
-        if (compositeScore >= BLOCK_THRESHOLD) {
+        if (compositeScore >= threshold) {
             val isNew = !learnedReputations.containsKey(cleanDomain)
             if (learnedReputations.size > MAX_LEARNED_REPUTATIONS) {
                 val entriesToEvict = learnedReputations.entries
@@ -137,8 +214,9 @@ class LocalNetworkLearner(private val context: android.content.Context? = null) 
         }
 
         val reason = when {
-            lexicalScore >= BLOCK_THRESHOLD -> "Ad/Tracker lexical signature detected"
-            compositeScore >= BLOCK_THRESHOLD -> "Autonomous network analysis flagged tracker"
+            isKnownTracker -> "Known mobile tracker / telemetry framework"
+            lexicalScore >= threshold -> "Ad/Tracker lexical signature detected"
+            compositeScore >= threshold -> "Autonomous multi-factor analysis flagged tracker"
             else -> "Benign traffic"
         }
 

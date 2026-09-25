@@ -35,10 +35,17 @@ class DnsCache(private val maxEntries: Int = 1000) {
     }
 
     fun put(domain: String, queryType: Short, dnsPayload: ByteArray, ttlSeconds: Long = 120) {
-        if (cache.size > maxEntries) {
-            val oldestKey = cache.entries.minByOrNull { it.value.expiresAt }?.key
-            if (oldestKey != null) {
-                cache.remove(oldestKey)
+        if (cache.size >= maxEntries) {
+            val now = System.currentTimeMillis()
+            val expiredKeys = cache.entries.filter { it.value.expiresAt < now }.map { it.key }
+            for (k in expiredKeys) {
+                cache.remove(k)
+            }
+            if (cache.size >= maxEntries) {
+                val keysToRemove = cache.entries.take(50).map { it.key }
+                for (k in keysToRemove) {
+                    cache.remove(k)
+                }
             }
         }
 

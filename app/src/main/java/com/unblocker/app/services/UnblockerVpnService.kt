@@ -41,6 +41,7 @@ class UnblockerVpnService : VpnService() {
     private val writeLock = Any()
 
     private val dnsCache = com.unblocker.app.logic.dns.DnsCache()
+    private val bufferPool = com.unblocker.app.logic.dns.ByteArrayPool(4096, 64)
     private var forwardScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO + kotlinx.coroutines.SupervisorJob())
 
     private val upstreamResolvers by lazy {
@@ -124,49 +125,53 @@ class UnblockerVpnService : VpnService() {
             inputStream = FileInputStream(vpnInterface!!.fileDescriptor)
             outputStream = FileOutputStream(vpnInterface!!.fileDescriptor)
 
-            val packetBuffer = ByteArray(4096)
+            val packetBuffer = bufferPool.acquire()
 
-            while (isRunning.get()) {
-                val length = try {
-                    inputStream.read(packetBuffer)
-                } catch (e: Exception) {
-                    break
-                }
-
-                if (length <= 0) continue
-
-                val packetCopy = packetBuffer.copyOf(length)
-                val query = DnsPacketUtil.parseIpPacket(packetCopy, length) ?: continue
-
-                // Autonomous local analysis
-                val result = filterEngine.analyzeAndFilter(query.domain)
-
-                if (result.shouldBlock) {
-                    // Fast local spoof response (0.0.0.0 in <0.05ms)
-                    val responsePacket = DnsPacketUtil.buildBlockedDnsResponsePacket(query)
-                    synchronized(writeLock) {
-                        try {
-                            outputStream?.write(responsePacket)
-                        } catch (ignored: Exception) {}
+            try {
+                while (isRunning.get()) {
+                    val length = try {
+                        inputStream.read(packetBuffer)
+                    } catch (e: Exception) {
+                        break
                     }
-                } else {
-                    // Check local high-speed DNS cache
-                    val cachedPayload = dnsCache.get(query.domain, query.queryType, query.transactionId)
-                    if (cachedPayload != null) {
-                        val wrappedResponse = wrapDnsResponseInIpUdp(query, cachedPayload, cachedPayload.size)
+
+                    if (length <= 0) continue
+
+                    val packetCopy = packetBuffer.copyOf(length)
+                    val query = DnsPacketUtil.parseIpPacket(packetCopy, length) ?: continue
+
+                    // Autonomous local analysis
+                    val result = filterEngine.analyzeAndFilter(query.domain)
+
+                    if (result.shouldBlock) {
+                        // Fast local spoof response (0.0.0.0 in <0.05ms)
+                        val responsePacket = DnsPacketUtil.buildBlockedDnsResponsePacket(query)
                         synchronized(writeLock) {
                             try {
-                                outputStream?.write(wrappedResponse)
+                                outputStream?.write(responsePacket)
                             } catch (ignored: Exception) {}
                         }
                     } else {
-                        // Forward query asynchronously in parallel on Dispatchers.IO - NEVER blocks the TUN loop!
-                        val currentOut = outputStream
-                        forwardScope.launch {
-                            resolveAndForward(query, currentOut)
+                        // Check local high-speed DNS cache
+                        val cachedPayload = dnsCache.get(query.domain, query.queryType, query.transactionId)
+                        if (cachedPayload != null) {
+                            val wrappedResponse = wrapDnsResponseInIpUdp(query, cachedPayload, cachedPayload.size)
+                            synchronized(writeLock) {
+                                try {
+                                    outputStream?.write(wrappedResponse)
+                                } catch (ignored: Exception) {}
+                            }
+                        } else {
+                            // Forward query asynchronously in parallel on Dispatchers.IO - NEVER blocks the TUN loop!
+                            val currentOut = outputStream
+                            forwardScope.launch {
+                                resolveAndForward(query, currentOut)
+                            }
                         }
                     }
                 }
+            } finally {
+                bufferPool.release(packetBuffer)
             }
         } catch (e: Exception) {
             // Error handling
@@ -193,7 +198,7 @@ class UnblockerVpnService : VpnService() {
             return
         }
 
-        val receiveBuffer = ByteArray(4096)
+        val receiveBuffer = bufferPool.acquire()
         try {
             for (upstream in upstreamResolvers) {
                 try {
@@ -223,6 +228,7 @@ class UnblockerVpnService : VpnService() {
         } catch (e: Exception) {
             // Network failure
         } finally {
+            bufferPool.release(receiveBuffer)
             try { socket.close() } catch (ignored: Exception) {}
         }
     }

@@ -9,13 +9,46 @@ import kotlin.math.sqrt
  * Operates 100% locally using system resources without cloud dependencies.
  * Zero user logs or history are created or stored.
  */
-class LocalNetworkLearner {
+class LocalNetworkLearner(private val context: android.content.Context? = null) {
 
     // In-memory learned reputation cache: domain -> confidence score (0.0 to 1.0)
     private val learnedReputations = ConcurrentHashMap<String, Float>()
 
     // Temporal cadence tracking: domain -> recent query timestamps (sliding window)
     private val queryTimestamps = ConcurrentHashMap<String, ArrayDeque<Long>>()
+
+    init {
+        loadPersistedTrackers()
+    }
+
+    private fun loadPersistedTrackers() {
+        if (context == null) return
+        try {
+            val file = java.io.File(context.filesDir, "learned_trackers.txt")
+            if (file.exists()) {
+                file.forEachLine { line ->
+                    val trimmed = line.trim().lowercase()
+                    if (trimmed.isNotEmpty() && !trimmed.startsWith("#")) {
+                        val parts = trimmed.split(':')
+                        val domain = parts[0]
+                        val score = if (parts.size > 1) parts[1].toFloatOrNull() ?: 0.85f else 0.85f
+                        learnedReputations[domain] = score
+                    }
+                }
+            }
+        } catch (ignored: Exception) {}
+    }
+
+    private fun persistLearnedDomain(domain: String, score: Float) {
+        if (context == null) return
+        try {
+            val file = java.io.File(context.filesDir, "learned_trackers.txt")
+            file.appendText("$domain:$score\n")
+        } catch (ignored: Exception) {}
+    }
+
+    fun getLearnedTrackersCount(): Int = learnedReputations.size
+    fun getAllLearnedDomains(): Set<String> = learnedReputations.keys.toSet()
 
     private val adLexicalTokens = setOf(
         "ad", "ads", "track", "tracker", "tracking", "telemetry", "pixel",
@@ -86,8 +119,9 @@ class LocalNetworkLearner {
             else -> maxOf(cadenceScore * 0.35f, entropyScore * 0.35f)
         }.coerceAtMost(1.0f)
 
-        // Self-Learning: Update reputation weight in memory for the specific subdomain
+        // Self-Learning: Update reputation weight in memory and persist newly learned tracker on-device
         if (compositeScore >= BLOCK_THRESHOLD) {
+            val isNew = !learnedReputations.containsKey(cleanDomain)
             if (learnedReputations.size > MAX_LEARNED_REPUTATIONS) {
                 val entriesToEvict = learnedReputations.entries
                     .sortedBy { it.value }
@@ -97,6 +131,9 @@ class LocalNetworkLearner {
                 }
             }
             learnedReputations[cleanDomain] = compositeScore
+            if (isNew) {
+                persistLearnedDomain(cleanDomain, compositeScore)
+            }
         }
 
         val reason = when {

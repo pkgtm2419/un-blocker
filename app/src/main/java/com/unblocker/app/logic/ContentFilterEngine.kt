@@ -17,7 +17,7 @@ class ContentFilterEngine(
     private val context: Context,
     private val adDetector: AdDetector = AdDetector(context),
     private val adultContentDetector: AdultContentDetector = AdultContentDetector(context),
-    private val networkLearner: LocalNetworkLearner = LocalNetworkLearner(),
+    private val networkLearner: LocalNetworkLearner = LocalNetworkLearner(context),
     private val preferences: FilteringPreferences = FilteringPreferences.getInstance(context)
 ) {
 
@@ -84,6 +84,7 @@ class ContentFilterEngine(
             // Check On-device Self-learning Network Analysis (Cadence, Burst, Entropy)
             val score = networkLearner.analyzeQuery(domain)
             if (score.score >= LocalNetworkLearner.BLOCK_THRESHOLD) {
+                adDetector.addDomain(domain)
                 return FilterResult(
                     domain = domain,
                     contentType = ContentType.AD,

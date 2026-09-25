@@ -5,7 +5,6 @@ import android.net.VpnService
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import com.unblocker.app.data.database.AppDatabase
 import com.unblocker.app.data.model.AppConfigPayload
 import com.unblocker.app.data.model.DefaultConfig
 import com.unblocker.app.data.preferences.FilteringPreferences
@@ -30,7 +29,6 @@ enum class ServiceStatus {
 class QuickStartManager(private val context: Context) {
 
     private val preferences = FilteringPreferences.getInstance(context)
-    private val database = AppDatabase.getDatabase(context)
 
     private val _status = MutableStateFlow(
         if (UnblockerVpnService.isServiceActive.value) ServiceStatus.RUNNING else ServiceStatus.STOPPED

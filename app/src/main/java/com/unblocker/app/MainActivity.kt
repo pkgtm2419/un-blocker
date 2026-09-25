@@ -26,7 +26,6 @@ class MainActivity : ComponentActivity() {
                         color = MaterialTheme.colorScheme.background
                     ) {
                         MainScreen(
-                            database = app.database,
                             preferences = app.preferences,
                             quickStartManager = app.quickStartManager
                         )

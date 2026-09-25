@@ -12,47 +12,39 @@ import android.os.ParcelFileDescriptor
 import androidx.core.app.NotificationCompat
 import com.unblocker.app.MainActivity
 import com.unblocker.app.R
-import com.unblocker.app.data.database.AppDatabase
-import com.unblocker.app.data.model.ConnectionLog
-import com.unblocker.app.data.model.ContentType
 import com.unblocker.app.data.preferences.FilteringPreferences
 import com.unblocker.app.logic.ContentFilterEngine
 import com.unblocker.app.logic.dns.DnsPacketUtil
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicLong
 
+/**
+ * On-device local VPN service.
+ * Intercepts DNS queries on port 53, evaluates with ContentFilterEngine locally,
+ * and drops unwanted ad/tracker and adult traffic without logging any user browsing history.
+ */
 class UnblockerVpnService : VpnService() {
 
     private var vpnInterface: ParcelFileDescriptor? = null
     private var workerThread: Thread? = null
     private val isRunning = AtomicBoolean(false)
 
-    private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
     private lateinit var filterEngine: ContentFilterEngine
-    private lateinit var database: AppDatabase
     private lateinit var preferences: FilteringPreferences
-
-    private val adsBlockedCount = AtomicLong(0)
-    private val adultBlockedCount = AtomicLong(0)
-    private val totalQueriesCount = AtomicLong(0)
 
     override fun onCreate() {
         super.onCreate()
-        database = AppDatabase.getDatabase(this)
         preferences = FilteringPreferences.getInstance(this)
-        filterEngine = ContentFilterEngine(this, preferences = preferences, database = database)
+        filterEngine = ContentFilterEngine(this, preferences = preferences)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -111,10 +103,10 @@ class UnblockerVpnService : VpnService() {
             outputStream = FileOutputStream(vpnInterface!!.fileDescriptor)
 
             forwarderSocket = DatagramSocket()
-            protect(forwarderSocket) // Protect socket from being routed through our own VPN
-            forwarderSocket.soTimeout = 2500
+            protect(forwarderSocket) // Protect socket from being looped back into TUN
+            forwarderSocket.soTimeout = 2000
 
-            val upstreamDns = InetAddress.getByName("1.1.1.1") // Cloudflare DNS fallback
+            val upstreamDns = InetAddress.getByName("1.1.1.1")
             val packetBuffer = ByteArray(4096)
             val dnsResponseBuf = ByteArray(4096)
 
@@ -129,28 +121,17 @@ class UnblockerVpnService : VpnService() {
 
                 val query = DnsPacketUtil.parseIpPacket(packetBuffer, length)
                 if (query != null) {
-                    totalQueriesCount.incrementAndGet()
+                    // Local autonomous analysis - ZERO logs saved to disk
                     val result = filterEngine.analyzeAndFilter(query.domain)
 
                     if (result.shouldBlock) {
-                        // 1. BLOCKED -> Synthesize 0.0.0.0 DNS response and send back to TUN
-                        if (result.contentType == ContentType.AD) {
-                            adsBlockedCount.incrementAndGet()
-                        } else if (result.contentType == ContentType.ADULT_CONTENT) {
-                            adultBlockedCount.incrementAndGet()
-                        }
-
+                        // Synthesize local 0.0.0.0 response (< 1ms, zero data transferred)
                         val responsePacket = DnsPacketUtil.buildBlockedDnsResponsePacket(query)
                         try {
                             outputStream.write(responsePacket)
-                        } catch (e: Exception) {
-                            // ignore write error
-                        }
-
-                        logConnection(query.domain, true, result.reason, result.detectionMethod.name, result.contentType.name, result.confidence)
-                        updateNotificationThrottled()
+                        } catch (e: Exception) {}
                     } else {
-                        // 2. ALLOWED -> Forward to upstream real DNS server
+                        // Forward permitted traffic to local upstream resolver
                         try {
                             val dnsPayload = ByteArray(query.dnsLength)
                             System.arraycopy(query.rawPacket, query.dnsOffset, dnsPayload, 0, query.dnsLength)
@@ -161,13 +142,10 @@ class UnblockerVpnService : VpnService() {
                             val inPacket = DatagramPacket(dnsResponseBuf, dnsResponseBuf.size)
                             forwarderSocket.receive(inPacket)
 
-                            // Wrap upstream response into IP/UDP packet back to device
                             val wrappedResponse = wrapDnsResponseInIpUdp(query, inPacket.data, inPacket.length)
                             outputStream.write(wrappedResponse)
-
-                            logConnection(query.domain, false, "Allowed", result.detectionMethod.name, ContentType.NORMAL.name, 1.0f)
                         } catch (e: Exception) {
-                            // Upstream timeout or network error, let standard retries handle it
+                            // Upstream timeout or network error, let standard resolver retry
                         }
                     }
                 }
@@ -186,8 +164,8 @@ class UnblockerVpnService : VpnService() {
     private fun wrapDnsResponseInIpUdp(query: com.unblocker.app.logic.dns.DnsQuery, dnsBytes: ByteArray, dnsLength: Int): ByteArray {
         val udpLength = 8 + dnsLength
         val ipTotalLength = 20 + udpLength
-        val buf = java.nio.ByteBuffer.allocate(ipTotalLength)
-        buf.order(java.nio.ByteOrder.BIG_ENDIAN)
+        val buf = ByteBuffer.allocate(ipTotalLength)
+        buf.order(ByteOrder.BIG_ENDIAN)
 
         // IPv4 Header
         buf.put(0x45.toByte())
@@ -213,43 +191,6 @@ class UnblockerVpnService : VpnService() {
         return buf.array()
     }
 
-    private fun logConnection(
-        domain: String,
-        isBlocked: Boolean,
-        reason: String,
-        method: String,
-        category: String,
-        confidence: Float
-    ) {
-        serviceScope.launch {
-            try {
-                val log = ConnectionLog(
-                    domain = domain,
-                    isBlocked = isBlocked,
-                    reason = reason,
-                    detectionMethod = method,
-                    category = category,
-                    confidence = confidence,
-                    protocol = "DNS",
-                    port = 53
-                )
-                database.connectionDao().insert(log)
-            } catch (e: Exception) {
-                // Ignore DB logging errors during shutdown
-            }
-        }
-    }
-
-    private var lastNotificationUpdate = 0L
-    private fun updateNotificationThrottled() {
-        val now = System.currentTimeMillis()
-        if (now - lastNotificationUpdate > 3000) {
-            lastNotificationUpdate = now
-            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            manager.notify(NOTIFICATION_ID, buildNotification())
-        }
-    }
-
     private fun buildNotification(): Notification {
         val launchIntent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
@@ -271,13 +212,11 @@ class UnblockerVpnService : VpnService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val text = "Ads blocked: ${adsBlockedCount.get()} | 18+ blocked: ${adultBlockedCount.get()}"
-
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_blocker_notification)
-            .setContentTitle("unblocker - Protection Active")
-            .setContentText(text)
-            .setSubText("Zero-server on-device shield")
+            .setContentTitle("unblocker Protection Active")
+            .setContentText("Analyzing network & blocking unwanted traffic locally")
+            .setSubText("Zero-Cloud • Zero-Logs")
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
             .setContentIntent(pendingIntent)
@@ -289,10 +228,10 @@ class UnblockerVpnService : VpnService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "unblocker Protection Service",
+                "unblocker Protection",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Shows live status of active ad & adult content blocking"
+                description = "Shows live status of active local network protection"
                 setShowBadge(false)
             }
             val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

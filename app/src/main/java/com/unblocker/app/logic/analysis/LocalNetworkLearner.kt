@@ -27,7 +27,14 @@ class LocalNetworkLearner {
 
     private val safeExceptions = setOf(
         "google.com", "android.com", "github.com", "wikipedia.org",
-        "stackoverflow.com", "microsoft.com", "apple.com", "cloudflare.com"
+        "stackoverflow.com", "microsoft.com", "apple.com", "cloudflare.com",
+        "youtube.com", "youtu.be", "youtubekids.com", "googlevideo.com", "ytimg.com",
+        "ggpht.com", "googleapis.com", "gstatic.com", "amazon.com", "aws.amazon.com",
+        "netflix.com", "nflxvideo.net", "instagram.com", "facebook.com",
+        "fbcdn.net", "whatsapp.com", "twitter.com", "x.com", "twimg.com",
+        "reddit.com", "redditmedia.com", "linkedin.com", "spotify.com",
+        "spotifycdn.com", "vimeo.com", "twitch.tv", "fastly.net", "akamai.net",
+        "akamaiedge.net", "cloudfront.net"
     )
 
     /**
@@ -38,12 +45,17 @@ class LocalNetworkLearner {
         val cleanDomain = domain.trim().lowercase()
         if (cleanDomain.isBlank()) return AnalysisScore(0.0f, "Empty")
 
-        // 1. Safe domain bypass
+        // 1. Safe domain bypass: Allow main platform and content CDN services
+        // UNLESS it's an explicit ad subdomain
         for (safe in safeExceptions) {
-            if (cleanDomain == safe || cleanDomain.endsWith(".$safe") && !cleanDomain.contains("ad")) {
-                // If it's a known benign service without explicit ad tokens, preserve it
-                if (!cleanDomain.startsWith("ads.") && !cleanDomain.startsWith("pagead")) {
-                    return AnalysisScore(0.0f, "Safe domain")
+            if (cleanDomain == safe || cleanDomain.endsWith(".$safe")) {
+                val isExplicitAdSubdomain = cleanDomain.startsWith("ads.") ||
+                        cleanDomain.startsWith("ad.") ||
+                        cleanDomain.startsWith("pagead") ||
+                        cleanDomain.startsWith("adservice.") ||
+                        cleanDomain.startsWith("googleads.")
+                if (!isExplicitAdSubdomain) {
+                    return AnalysisScore(0.0f, "Safe service domain")
                 }
             }
         }
@@ -64,15 +76,17 @@ class LocalNetworkLearner {
         // 5. Shannon Entropy Analysis (Detects algorithmic/pseudo-random tracker subdomains)
         val entropyScore = evaluateEntropy(cleanDomain)
 
-        // Composite Suspicion Score: evaluate primary suspicion signal and cross-signal reinforcement
-        val primarySignal = maxOf(lexicalScore, cadenceScore, entropyScore)
-        val multiSignalBoost = if ((lexicalScore >= 0.5f && cadenceScore >= 0.5f) ||
-            (lexicalScore >= 0.5f && entropyScore >= 0.5f) ||
-            (cadenceScore >= 0.5f && entropyScore >= 0.5f)) 0.15f else 0.0f
+        // Composite Suspicion Score:
+        // Lexical token markers are the primary requirement for ad/tracker blocking.
+        // Cadence bursts and entropy alone must NEVER block normal websites.
+        val compositeScore = when {
+            lexicalScore >= BLOCK_THRESHOLD -> lexicalScore
+            lexicalScore >= 0.50f && (cadenceScore >= 0.50f || entropyScore >= 0.50f) -> 0.75f
+            lexicalScore >= 0.40f && cadenceScore >= 0.60f && entropyScore >= 0.60f -> 0.70f
+            else -> maxOf(cadenceScore * 0.35f, entropyScore * 0.35f)
+        }.coerceAtMost(1.0f)
 
-        val compositeScore = (primarySignal + multiSignalBoost).coerceAtMost(1.0f)
-
-        // Self-Learning: Update reputation weight in memory
+        // Self-Learning: Update reputation weight in memory for the specific subdomain
         if (compositeScore >= BLOCK_THRESHOLD) {
             if (learnedReputations.size > MAX_LEARNED_REPUTATIONS) {
                 val entriesToEvict = learnedReputations.entries
@@ -83,19 +97,10 @@ class LocalNetworkLearner {
                 }
             }
             learnedReputations[cleanDomain] = compositeScore
-
-            // Propagate suspicion to parent domain if applicable
-            if (cleanDomain.count { it == '.' } >= 2) {
-                val parent = cleanDomain.substringAfter('.')
-                val currentParent = learnedReputations[parent] ?: 0f
-                learnedReputations[parent] = (currentParent + 0.35f).coerceAtMost(1.0f)
-            }
         }
 
         val reason = when {
             lexicalScore >= BLOCK_THRESHOLD -> "Ad/Tracker lexical signature detected"
-            cadenceScore >= BLOCK_THRESHOLD -> "High-frequency tracking burst/cadence detected"
-            entropyScore >= BLOCK_THRESHOLD -> "Algorithmic tracker subdomain entropy detected"
             compositeScore >= BLOCK_THRESHOLD -> "Autonomous network analysis flagged tracker"
             else -> "Benign traffic"
         }

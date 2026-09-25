@@ -8,10 +8,16 @@ class AdultContentDetector(private val context: Context? = null) {
 
     private val adultDomains = HashSet<String>(6000)
 
-    // Safe domains/words to prevent false positives
+    // Safe domains/words to prevent false positives for major websites and services
     private val safeExceptions = setOf(
         "essex.ac.uk", "sussex.ac.uk", "middlesex.edu", "wessex.com",
-        "sextant.com", "adulteducation.org", "learnadults.com", "isex.edu"
+        "sextant.com", "adulteducation.org", "learnadults.com", "isex.edu",
+        "youtube.com", "youtu.be", "youtubekids.com", "ytimg.com", "googlevideo.com",
+        "google.com", "gstatic.com", "googleapis.com", "ggpht.com", "vimeo.com",
+        "dailymotion.com", "metacafe.com", "twitch.tv", "netflix.com", "nflxvideo.net",
+        "facebook.com", "instagram.com", "twitter.com", "x.com", "reddit.com",
+        "wikipedia.org", "github.com", "amazon.com", "microsoft.com", "apple.com",
+        "spotify.com", "linkedin.com", "cloudflare.com"
     )
 
     private val adultTlds = setOf("xxx", "adult", "porn", "sex", "cam")
@@ -22,7 +28,7 @@ class AdultContentDetector(private val context: Context? = null) {
         Regex(".*-sex-.*"),
         Regex(".*-xxx-.*"),
         Regex(".*-cam-.*"),
-        Regex(".*tube\\d*\\.(?:com|net|org|xxx)$"),
+        Regex(".*(?:red|x|porno|dirty|free|wet|spank|erotic|sex|cam)tube\\d*\\.(?:com|net|org|xxx)$"),
         Regex(".*(?:adult|erotica|chaturbate|stripchat|livejasmin).*")
     )
 

@@ -80,5 +80,14 @@ class AdultContentDetectorTest {
 
         val (isAdult3, _) = adultDetector.isAdultContent("apple.com")
         assertFalse("apple.com must not be identified as adult", isAdult3)
+
+        val (isAdult4, _) = adultDetector.isAdultContent("youtube.com")
+        assertFalse("youtube.com must NOT be identified as adult content", isAdult4)
+
+        val (isAdult5, _) = adultDetector.isAdultContent("m.youtube.com")
+        assertFalse("m.youtube.com must NOT be identified as adult content", isAdult5)
+
+        val (isAdult6, _) = adultDetector.isAdultContent("rr1---sn-4g5ednle.googlevideo.com")
+        assertFalse("googlevideo CDN must NOT be identified as adult content", isAdult6)
     }
 }

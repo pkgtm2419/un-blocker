@@ -53,5 +53,17 @@ class LocalNetworkLearnerTest {
         assertFalse("wikipedia.org should not be flagged", learner.isAdOrTracker("wikipedia.org"))
         assertFalse("github.com should not be flagged", learner.isAdOrTracker("github.com"))
         assertFalse("stackoverflow.com should not be flagged", learner.isAdOrTracker("stackoverflow.com"))
+
+        // YouTube & video CDN endpoints
+        assertFalse("youtube.com should not be flagged", learner.isAdOrTracker("youtube.com"))
+        assertFalse("www.youtube.com should not be flagged", learner.isAdOrTracker("www.youtube.com"))
+        assertFalse("m.youtube.com should not be flagged", learner.isAdOrTracker("m.youtube.com"))
+        assertFalse("googlevideo.com should not be flagged", learner.isAdOrTracker("googlevideo.com"))
+        assertFalse("rr1---sn-4g5ednle.googlevideo.com should not be flagged", learner.isAdOrTracker("rr1---sn-4g5ednle.googlevideo.com"))
+        assertFalse("i.ytimg.com should not be flagged", learner.isAdOrTracker("i.ytimg.com"))
+
+        // Explicit ad subdomains MUST still be blocked
+        assertTrue("ads.google.com must be blocked", learner.isAdOrTracker("ads.google.com"))
+        assertTrue("ads.youtube.com must be blocked", learner.isAdOrTracker("ads.youtube.com"))
     }
 }

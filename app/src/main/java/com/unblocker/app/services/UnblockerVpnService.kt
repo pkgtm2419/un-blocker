@@ -15,6 +15,7 @@ import com.unblocker.app.R
 import com.unblocker.app.data.preferences.FilteringPreferences
 import com.unblocker.app.logic.ContentFilterEngine
 import com.unblocker.app.logic.dns.DnsPacketUtil
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -37,6 +38,19 @@ class UnblockerVpnService : VpnService() {
     private var vpnInterface: ParcelFileDescriptor? = null
     private var workerThread: Thread? = null
     private val isRunning = AtomicBoolean(false)
+    private val writeLock = Any()
+
+    private val dnsCache = com.unblocker.app.logic.dns.DnsCache()
+    private var forwardScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO + kotlinx.coroutines.SupervisorJob())
+
+    private val upstreamResolvers by lazy {
+        listOf(
+            InetAddress.getByName("8.8.8.8"),
+            InetAddress.getByName("1.1.1.1"),
+            InetAddress.getByName("9.9.9.9"),
+            InetAddress.getByName("8.8.4.4")
+        )
+    }
 
     private lateinit var filterEngine: ContentFilterEngine
     private lateinit var preferences: FilteringPreferences
@@ -65,6 +79,8 @@ class UnblockerVpnService : VpnService() {
     private fun startVpn() {
         if (isRunning.getAndSet(true)) return
 
+        forwardScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO + kotlinx.coroutines.SupervisorJob())
+
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, buildNotification())
 
@@ -82,7 +98,6 @@ class UnblockerVpnService : VpnService() {
     private fun runVpnLoop() {
         var inputStream: FileInputStream? = null
         var outputStream: FileOutputStream? = null
-        var forwarderSocket: DatagramSocket? = null
 
         try {
             val builder = Builder()
@@ -102,13 +117,7 @@ class UnblockerVpnService : VpnService() {
             inputStream = FileInputStream(vpnInterface!!.fileDescriptor)
             outputStream = FileOutputStream(vpnInterface!!.fileDescriptor)
 
-            forwarderSocket = DatagramSocket()
-            protect(forwarderSocket) // Protect socket from being looped back into TUN
-            forwarderSocket.soTimeout = 2000
-
-            val upstreamDns = InetAddress.getByName("1.1.1.1")
             val packetBuffer = ByteArray(4096)
-            val dnsResponseBuf = ByteArray(4096)
 
             while (isRunning.get()) {
                 val length = try {
@@ -119,33 +128,35 @@ class UnblockerVpnService : VpnService() {
 
                 if (length <= 0) continue
 
-                val query = DnsPacketUtil.parseIpPacket(packetBuffer, length)
-                if (query != null) {
-                    // Local autonomous analysis - ZERO logs saved to disk
-                    val result = filterEngine.analyzeAndFilter(query.domain)
+                val packetCopy = packetBuffer.copyOf(length)
+                val query = DnsPacketUtil.parseIpPacket(packetCopy, length) ?: continue
 
-                    if (result.shouldBlock) {
-                        // Synthesize local 0.0.0.0 response (< 1ms, zero data transferred)
-                        val responsePacket = DnsPacketUtil.buildBlockedDnsResponsePacket(query)
+                // Autonomous local analysis
+                val result = filterEngine.analyzeAndFilter(query.domain)
+
+                if (result.shouldBlock) {
+                    // Fast local spoof response (0.0.0.0 in <0.05ms)
+                    val responsePacket = DnsPacketUtil.buildBlockedDnsResponsePacket(query)
+                    synchronized(writeLock) {
                         try {
-                            outputStream.write(responsePacket)
-                        } catch (e: Exception) {}
+                            outputStream?.write(responsePacket)
+                        } catch (ignored: Exception) {}
+                    }
+                } else {
+                    // Check local high-speed DNS cache
+                    val cachedPayload = dnsCache.get(query.domain, query.queryType, query.transactionId)
+                    if (cachedPayload != null) {
+                        val wrappedResponse = wrapDnsResponseInIpUdp(query, cachedPayload, cachedPayload.size)
+                        synchronized(writeLock) {
+                            try {
+                                outputStream?.write(wrappedResponse)
+                            } catch (ignored: Exception) {}
+                        }
                     } else {
-                        // Forward permitted traffic to local upstream resolver
-                        try {
-                            val dnsPayload = ByteArray(query.dnsLength)
-                            System.arraycopy(query.rawPacket, query.dnsOffset, dnsPayload, 0, query.dnsLength)
-
-                            val outPacket = DatagramPacket(dnsPayload, dnsPayload.size, upstreamDns, 53)
-                            forwarderSocket.send(outPacket)
-
-                            val inPacket = DatagramPacket(dnsResponseBuf, dnsResponseBuf.size)
-                            forwarderSocket.receive(inPacket)
-
-                            val wrappedResponse = wrapDnsResponseInIpUdp(query, inPacket.data, inPacket.length)
-                            outputStream.write(wrappedResponse)
-                        } catch (e: Exception) {
-                            // Upstream timeout or network error, let standard resolver retry
+                        // Forward query asynchronously in parallel on Dispatchers.IO - NEVER blocks the TUN loop!
+                        val currentOut = outputStream
+                        forwardScope.launch {
+                            resolveAndForward(query, currentOut)
                         }
                     }
                 }
@@ -153,11 +164,59 @@ class UnblockerVpnService : VpnService() {
         } catch (e: Exception) {
             // Error handling
         } finally {
-            try { forwarderSocket?.close() } catch (ignored: Exception) {}
-            try { inputStream?.close() } catch (ignored: Exception) {}
-            try { outputStream?.close() } catch (ignored: Exception) {}
-            try { vpnInterface?.close() } catch (ignored: Exception) {}
-            vpnInterface = null
+            synchronized(writeLock) {
+                try { inputStream?.close() } catch (ignored: Exception) {}
+                try { outputStream?.close() } catch (ignored: Exception) {}
+                try { vpnInterface?.close() } catch (ignored: Exception) {}
+                vpnInterface = null
+            }
+        }
+    }
+
+    private fun resolveAndForward(query: com.unblocker.app.logic.dns.DnsQuery, outputStream: FileOutputStream?) {
+        val dnsPayload = ByteArray(query.dnsLength)
+        System.arraycopy(query.rawPacket, query.dnsOffset, dnsPayload, 0, query.dnsLength)
+
+        val socket = try {
+            DatagramSocket().apply {
+                protect(this)
+                soTimeout = 1200
+            }
+        } catch (e: Exception) {
+            return
+        }
+
+        val receiveBuffer = ByteArray(4096)
+        try {
+            for (upstream in upstreamResolvers) {
+                try {
+                    val outPacket = DatagramPacket(dnsPayload, dnsPayload.size, upstream, 53)
+                    socket.send(outPacket)
+
+                    val inPacket = DatagramPacket(receiveBuffer, receiveBuffer.size)
+                    socket.receive(inPacket)
+
+                    if (inPacket.length >= 12) {
+                        val respTxId = ((receiveBuffer[0].toInt() and 0xFF) shl 8) or (receiveBuffer[1].toInt() and 0xFF)
+                        if (respTxId == (query.transactionId.toInt() and 0xFFFF)) {
+                            val responseData = receiveBuffer.copyOf(inPacket.length)
+                            dnsCache.put(query.domain, query.queryType, responseData)
+
+                            val wrappedResponse = wrapDnsResponseInIpUdp(query, responseData, inPacket.length)
+                            synchronized(writeLock) {
+                                outputStream?.write(wrappedResponse)
+                            }
+                            break
+                        }
+                    }
+                } catch (timeoutOrIo: Exception) {
+                    // Failover to next upstream DNS resolver
+                }
+            }
+        } catch (e: Exception) {
+            // Network failure
+        } finally {
+            try { socket.close() } catch (ignored: Exception) {}
         }
     }
 
@@ -167,7 +226,7 @@ class UnblockerVpnService : VpnService() {
         val buf = ByteBuffer.allocate(ipTotalLength)
         buf.order(ByteOrder.BIG_ENDIAN)
 
-        // IPv4 Header
+        // IPv4 Header (20 bytes)
         buf.put(0x45.toByte())
         buf.put(0x00.toByte())
         buf.putShort(ipTotalLength.toShort())
@@ -175,20 +234,37 @@ class UnblockerVpnService : VpnService() {
         buf.putShort(0x4000.toShort())
         buf.put(64.toByte())
         buf.put(17.toByte()) // UDP
-        buf.putShort(0x0000.toShort())
+        buf.putShort(0x0000.toShort()) // Placeholder for checksum
         buf.put(query.dstIp) // Src IP
         buf.put(query.srcIp) // Dst IP
 
-        // UDP Header
+        // Compute and inject mandatory IPv4 Header Checksum
+        val ipChecksum = computeIpChecksum(buf.array(), 0, 20)
+        buf.putShort(10, ipChecksum)
+
+        // UDP Header (8 bytes)
+        buf.position(20)
         buf.putShort(query.dstPort.toShort())
         buf.putShort(query.srcPort.toShort())
         buf.putShort(udpLength.toShort())
-        buf.putShort(0x0000.toShort())
+        buf.putShort(0x0000.toShort()) // Optional for IPv4 UDP
 
         // DNS Response Payload
         buf.put(dnsBytes, 0, dnsLength)
 
         return buf.array()
+    }
+
+    private fun computeIpChecksum(buf: ByteArray, offset: Int, length: Int): Short {
+        var sum = 0
+        for (i in offset until offset + length step 2) {
+            val word = ((buf[i].toInt() and 0xFF) shl 8) or (buf[i + 1].toInt() and 0xFF)
+            sum += word
+        }
+        while ((sum shr 16) > 0) {
+            sum = (sum and 0xFFFF) + (sum shr 16)
+        }
+        return (sum.inv() and 0xFFFF).toShort()
     }
 
     private fun buildNotification(): Notification {
@@ -243,6 +319,11 @@ class UnblockerVpnService : VpnService() {
         isRunning.set(false)
         preferences.setServiceRunning(false)
         _isServiceActive.value = false
+
+        try {
+            forwardScope.cancel()
+            dnsCache.clear()
+        } catch (ignored: Exception) {}
 
         try {
             vpnInterface?.close()

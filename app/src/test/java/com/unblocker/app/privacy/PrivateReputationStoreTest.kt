@@ -74,4 +74,27 @@ class PrivateReputationStoreTest {
         available = true
         assertEquals(0.9f, store.get("ads.example.com")!!, 0f)
     }
+
+    @Test fun defaultCapacityRetainsMoreThanLegacyFiveThousandLimit() {
+        val store = PrivateReputationStore(key())
+        repeat(5_001) { index -> store.put("ads-$index.example.com", 0.9f) }
+
+        assertEquals(5_001, store.size())
+        assertEquals(0.9f, store.get("ads-0.example.com")!!, 0f)
+    }
+
+    @Test fun untouchedScoreDecaysFivePercentPerCompletedWeek() {
+        var now = 1_700_000_000_000L
+        val store = PrivateReputationStore(key(), nowMillis = { now })
+        store.put("stale-ads.example.com", 1.0f)
+
+        now += 6 * 24 * 60 * 60 * 1_000L
+        assertEquals(1.0f, store.get("stale-ads.example.com")!!, 0.0001f)
+
+        now += 24 * 60 * 60 * 1_000L
+        assertEquals(0.95f, store.get("stale-ads.example.com")!!, 0.0001f)
+
+        now += 7 * 24 * 60 * 60 * 1_000L
+        assertEquals(0.9025f, store.get("stale-ads.example.com")!!, 0.0001f)
+    }
 }

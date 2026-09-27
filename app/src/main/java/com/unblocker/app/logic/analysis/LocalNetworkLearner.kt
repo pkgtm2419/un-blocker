@@ -313,7 +313,7 @@ class LocalNetworkLearner(
     companion object {
         const val BLOCK_THRESHOLD = 0.65f
         const val MAX_TRACKED_DOMAINS = 2000
-        const val MAX_LEARNED_REPUTATIONS = 5000
+        const val MAX_LEARNED_REPUTATIONS = PrivateReputationStore.DEFAULT_CAPACITY
     }
 }
 

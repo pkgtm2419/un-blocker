@@ -42,9 +42,9 @@ class AdultContentDetector(private val context: Context? = null) {
             context.assets.open("adult_domains.txt").use { inputStream ->
                 BufferedReader(InputStreamReader(inputStream)).useLines { lines ->
                     lines.forEach { line ->
-                        val trimmed = line.trim().lowercase()
+                        val trimmed = line.trim()
                         if (trimmed.isNotEmpty() && !trimmed.startsWith("#")) {
-                            adultDomains.add(trimmed)
+                            DomainName.normalize(trimmed)?.let(adultDomains::add)
                         }
                     }
                 }
@@ -60,12 +60,11 @@ class AdultContentDetector(private val context: Context? = null) {
     }
 
     fun addDomain(domain: String) {
-        adultDomains.add(domain.trim().lowercase())
+        DomainName.normalize(domain)?.let(adultDomains::add)
     }
 
     fun isAdultContent(rawDomain: String): Pair<Boolean, String> {
-        val domain = rawDomain.trim().lowercase()
-        if (domain.isBlank()) return Pair(false, "")
+        val domain = DomainName.normalize(rawDomain) ?: return Pair(false, "")
 
         // False positive prevention
         for (safe in safeExceptions) {

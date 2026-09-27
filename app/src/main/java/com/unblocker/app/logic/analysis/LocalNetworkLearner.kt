@@ -1,5 +1,6 @@
 package com.unblocker.app.logic.analysis
 
+import com.unblocker.app.logic.DomainName
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.ln
 import kotlin.math.sqrt
@@ -60,7 +61,17 @@ class LocalNetworkLearner(
      * Aligned with Section 1.1.1 of un-blocker-improvement-plan.md.
      */
     fun extractDomainSignature(domain: String): DomainSignature {
-        val cleanDomain = domain.trim().lowercase()
+        val cleanDomain = DomainName.normalize(domain) ?: return DomainSignature(
+            domain = "",
+            subdomainDepth = 0,
+            hasAdLexicalToken = false,
+            hasTrackerSignature = false,
+            isDdnsOrDynamic = false,
+            entropy = 0.0f,
+            cadenceScore = 0.0f,
+            suspiciousPatterns = emptyList(),
+            compositeThreatScore = 0.0f
+        )
         val subdomainDepth = cleanDomain.count { it == '.' }
         val hasLexical = evaluateLexical(cleanDomain) > 0.35f
         val hasTracker = knownTrackers.any { cleanDomain == it || cleanDomain.endsWith(".$it") }
@@ -103,8 +114,7 @@ class LocalNetworkLearner(
      * Supports dynamic adaptive confidence thresholds from the 7-day learning engine.
      */
     fun analyzeQuery(domain: String, threshold: Float = BLOCK_THRESHOLD): AnalysisScore {
-        val cleanDomain = domain.trim().lowercase()
-        if (cleanDomain.isBlank()) return AnalysisScore(0.0f, "Empty")
+        val cleanDomain = DomainName.normalize(domain) ?: return AnalysisScore(0.0f, "Invalid domain")
 
         // 1. Safe domain bypass: Allow main platform and content CDN services
         // UNLESS it's an explicit ad subdomain

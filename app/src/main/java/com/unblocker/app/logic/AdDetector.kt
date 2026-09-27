@@ -51,9 +51,9 @@ class AdDetector(private val context: Context? = null) {
             context.assets.open("ad_domains.txt").use { inputStream ->
                 BufferedReader(InputStreamReader(inputStream)).useLines { lines ->
                     lines.forEach { line ->
-                        val trimmed = line.trim().lowercase()
+                        val trimmed = line.trim()
                         if (trimmed.isNotEmpty() && !trimmed.startsWith("#")) {
-                            adDomains.add(trimmed)
+                            DomainName.normalize(trimmed)?.let(adDomains::add)
                         }
                     }
                 }
@@ -71,12 +71,11 @@ class AdDetector(private val context: Context? = null) {
     }
 
     fun addDomain(domain: String) {
-        adDomains.add(domain.trim().lowercase())
+        DomainName.normalize(domain)?.let(adDomains::add)
     }
 
     fun isAdDomain(rawDomain: String): Pair<Boolean, String> {
-        val domain = rawDomain.trim().lowercase()
-        if (domain.isBlank()) return Pair(false, "")
+        val domain = DomainName.normalize(rawDomain) ?: return Pair(false, "")
 
         // 1. Direct match
         if (adDomains.contains(domain)) {

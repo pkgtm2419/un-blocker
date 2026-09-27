@@ -1,6 +1,7 @@
 package com.unblocker.app.logic
 
 import com.unblocker.app.logic.analysis.LocalNetworkLearner
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -65,5 +66,16 @@ class LocalNetworkLearnerTest {
         // Explicit ad subdomains MUST still be blocked
         assertTrue("ads.google.com must be blocked", learner.isAdOrTracker("ads.google.com"))
         assertTrue("ads.youtube.com must be blocked", learner.isAdOrTracker("ads.youtube.com"))
+    }
+
+    @Test
+    fun malformedDomainSyntaxNeverBecomesLearnedTracker() {
+        assertFalse(learner.isAdOrTracker("ads..example.com"))
+        assertFalse(learner.isAdOrTracker("ads/example.com"))
+        assertFalse(learner.isAdOrTracker("ads.example.com:443"))
+
+        val signature = learner.extractDomainSignature("ads..example.com")
+        assertEquals("", signature.domain)
+        assertEquals(0.0f, signature.compositeThreatScore, 0.0f)
     }
 }

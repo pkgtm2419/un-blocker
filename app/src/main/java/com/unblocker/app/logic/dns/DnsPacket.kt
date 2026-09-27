@@ -1,5 +1,6 @@
 package com.unblocker.app.logic.dns
 
+import com.unblocker.app.logic.DomainName
 import java.net.InetAddress
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -103,8 +104,7 @@ object DnsPacketUtil {
         val qType = ((packet[pos].toInt() and 0xFF) shl 8 or (packet[pos + 1].toInt() and 0xFF)).toShort()
         val qClass = ((packet[pos + 2].toInt() and 0xFF) shl 8 or (packet[pos + 3].toInt() and 0xFF)).toShort()
 
-        val domain = domainBuilder.toString().lowercase()
-        if (domain.isBlank()) return null
+        val domain = DomainName.normalize(domainBuilder.toString()) ?: return null
 
         return DnsQuery(
             transactionId = txId,

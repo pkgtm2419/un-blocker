@@ -9,11 +9,20 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.util.Random
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 class DnsPacketEdgeCaseTest {
+
+    @Test
+    fun testParserRejectsIllegalDnsNameCharacters() {
+        val packet = createDnsQueryPacket("ads/example.com")
+
+        assertNull(DnsPacketUtil.parseIpPacket(packet, packet.size))
+    }
 
     @Test
     fun testIhlLessThan20IsRejected() {
@@ -121,5 +130,42 @@ class DnsPacketEdgeCaseTest {
         val finished = executor.awaitTermination(10, TimeUnit.SECONDS)
         assertTrue("Executor should terminate within 10 seconds", finished)
         assertEquals("No errors during concurrent packet analysis", 0, errorCount.get())
+    }
+
+    private fun createDnsQueryPacket(domain: String): ByteArray {
+        val labels = domain.split('.')
+        val qnameLength = labels.sumOf { 1 + it.length } + 1
+        val dnsLength = 12 + qnameLength + 4
+        val udpLength = 8 + dnsLength
+        val totalLength = 20 + udpLength
+        return ByteBuffer.allocate(totalLength).order(ByteOrder.BIG_ENDIAN).apply {
+            put(0x45.toByte())
+            put(0)
+            putShort(totalLength.toShort())
+            putShort(1)
+            putShort(0)
+            put(64)
+            put(17)
+            putShort(0)
+            put(byteArrayOf(10, 10, 0, 2))
+            put(byteArrayOf(10, 10, 0, 1))
+            putShort(45_678.toShort())
+            putShort(53)
+            putShort(udpLength.toShort())
+            putShort(0)
+            putShort(0x1234)
+            putShort(0x0100)
+            putShort(1)
+            putShort(0)
+            putShort(0)
+            putShort(0)
+            labels.forEach { label ->
+                put(label.length.toByte())
+                put(label.toByteArray(Charsets.US_ASCII))
+            }
+            put(0)
+            putShort(1)
+            putShort(1)
+        }.array()
     }
 }

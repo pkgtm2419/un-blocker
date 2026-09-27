@@ -7,6 +7,11 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.net.VpnService
+import android.net.ConnectivityManager
+import android.net.LinkProperties
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import androidx.core.app.NotificationCompat
@@ -46,13 +51,27 @@ class UnblockerVpnService : VpnService() {
     private val dnsCache = com.unblocker.app.logic.dns.DnsCache()
     private val bufferPool = com.unblocker.app.logic.dns.ByteArrayPool(4096, 64)
 
-    private val upstreamResolvers by lazy {
-        listOf(
-            InetAddress.getByName("8.8.8.8"),
-            InetAddress.getByName("1.1.1.1"),
-            InetAddress.getByName("9.9.9.9"),
-            InetAddress.getByName("8.8.4.4")
-        )
+    private lateinit var connectivityManager: ConnectivityManager
+    private val networkResolvers = ConcurrentHashMap<Network, List<InetAddress>>()
+    private var networkCallbackRegistered = false
+    private val networkCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) = refreshNetworkResolvers(network)
+
+        override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
+            if (isUsableUnderlyingNetwork(capabilities)) refreshNetworkResolvers(network)
+            else networkResolvers.remove(network)
+        }
+
+        override fun onLinkPropertiesChanged(network: Network, linkProperties: LinkProperties) {
+            val capabilities = connectivityManager.getNetworkCapabilities(network)
+            if (capabilities != null && isUsableUnderlyingNetwork(capabilities)) {
+                networkResolvers[network] = DnsResolverPolicy.sanitize(linkProperties.dnsServers)
+            } else networkResolvers.remove(network)
+        }
+
+        override fun onLost(network: Network) {
+            networkResolvers.remove(network)
+        }
     }
 
     private lateinit var preferences: FilteringPreferences
@@ -60,6 +79,17 @@ class UnblockerVpnService : VpnService() {
     override fun onCreate() {
         super.onCreate()
         preferences = FilteringPreferences.getInstance(this)
+        connectivityManager = getSystemService(ConnectivityManager::class.java)
+        connectivityManager.activeNetwork?.let(::refreshNetworkResolvers)
+        runCatching {
+            connectivityManager.registerNetworkCallback(
+                NetworkRequest.Builder()
+                    .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                    .build(),
+                networkCallback
+            )
+            networkCallbackRegistered = true
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -215,7 +245,7 @@ class UnblockerVpnService : VpnService() {
         try {
             if (!isRunning.get() || !protect(socket)) return
             socket.soTimeout = 700
-            for (upstream in upstreamResolvers) {
+            for (upstream in configuredResolvers()) {
                 if (!isRunning.get() || Thread.currentThread().isInterrupted) return
                 try {
                     // Safe disconnect before reconnecting across upstreams
@@ -252,6 +282,24 @@ class UnblockerVpnService : VpnService() {
             try { socket.close() } catch (ignored: Exception) {}
             run.sockets.remove(socket)
         }
+    }
+
+    private fun configuredResolvers(): List<InetAddress> {
+        return DnsResolverPolicy.sanitize(networkResolvers.values.flatten())
+    }
+
+    private fun refreshNetworkResolvers(network: Network) {
+        val capabilities = connectivityManager.getNetworkCapabilities(network)
+        val linkProperties = connectivityManager.getLinkProperties(network)
+        if (capabilities != null && linkProperties != null && isUsableUnderlyingNetwork(capabilities)) {
+            networkResolvers[network] = DnsResolverPolicy.sanitize(linkProperties.dnsServers)
+        } else networkResolvers.remove(network)
+    }
+
+    private fun isUsableUnderlyingNetwork(capabilities: NetworkCapabilities): Boolean {
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) &&
+            !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
     }
 
     private fun wrapDnsResponseInIpUdp(query: com.unblocker.app.logic.dns.DnsQuery, dnsBytes: ByteArray, dnsLength: Int): ByteArray {
@@ -380,6 +428,11 @@ class UnblockerVpnService : VpnService() {
 
     override fun onDestroy() {
         stopVpn()
+        if (networkCallbackRegistered) {
+            runCatching { connectivityManager.unregisterNetworkCallback(networkCallback) }
+            networkCallbackRegistered = false
+        }
+        networkResolvers.clear()
         super.onDestroy()
     }
 

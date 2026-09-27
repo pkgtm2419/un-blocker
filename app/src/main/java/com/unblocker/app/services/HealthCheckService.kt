@@ -7,7 +7,8 @@ import com.unblocker.app.logic.ContentFilterEngine
 data class HealthReport(
     val timestamp: Long = System.currentTimeMillis(),
     val isVpnRunning: Boolean,
-    val effectivenessScore: Float,
+    val regressionChecksPassed: Int,
+    val regressionChecksTotal: Int,
     val memoryUsageMb: Long,
     val statusMessage: String
 )
@@ -23,7 +24,7 @@ class HealthCheckService(private val context: Context) {
     suspend fun performHealthCheck(): HealthReport {
         val isVpnRunning = UnblockerVpnService.isServiceActive.value
 
-        // Effectiveness Evaluation across sample ad & adult domains
+        // Fixed local smoke cases detect rule regressions; they do not measure real-world effectiveness.
         val testAdDomains = listOf(
             "googleads.g.doubleclick.net", "adservice.google.com", "pagead2.googlesyndication.com",
             "applovin.com", "unityads.unity3d.com", "vungle.com", "criteo.com", "taboola.com"
@@ -31,42 +32,35 @@ class HealthCheckService(private val context: Context) {
         val testAdultDomains = listOf(
             "pornhub.com", "xvideos.com", "xnxx.com", "chaturbate.com", "stripchat.com"
         )
+        val testAllowedDomains = listOf(
+            "google.com", "wikipedia.org", "github.com", "microsoft.com", "mozilla.org"
+        )
 
-        var passed = 0
-        var total = 0
-
-        for (domain in testAdDomains) {
-            total++
-            val res = filterEngine.analyzeAndFilter(domain)
-            if (res.shouldBlock && res.contentType == com.unblocker.app.data.model.ContentType.AD) {
-                passed++
-            }
+        val cases = testAdDomains.map {
+            BlockingRegressionCase(it, preferences.adBlockingEnabled.value)
+        } + testAdultDomains.map {
+            BlockingRegressionCase(it, preferences.adultBlockingEnabled.value)
+        } + testAllowedDomains.map {
+            BlockingRegressionCase(it, shouldBlock = false)
         }
-
-        for (domain in testAdultDomains) {
-            total++
-            val res = filterEngine.analyzeAndFilter(domain)
-            if (res.shouldBlock && res.contentType == com.unblocker.app.data.model.ContentType.ADULT_CONTENT) {
-                passed++
-            }
+        val result = BlockingRegressionCheck(cases).evaluate { domain ->
+            filterEngine.analyzeAndFilter(domain).shouldBlock
         }
-
-        val effectiveness = if (total > 0) (passed.toFloat() / total.toFloat()) * 100f else 100f
-        preferences.setHealthEffectivenessScore(effectiveness)
         preferences.setLastHealthCheckTime(System.currentTimeMillis())
 
         val runtime = Runtime.getRuntime()
         val usedMemoryMb = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024)
 
-        val msg = if (effectiveness >= 90f) {
-            "System Optimal: Autonomous local analysis active at ${"%.1f".format(effectiveness)}%"
+        val msg = if (result.passed == result.total) {
+            "Local regression checks passed: ${result.passed}/${result.total}"
         } else {
-            "System Notice: Effectiveness: ${"%.1f".format(effectiveness)}%"
+            "Local regression check warning: ${result.passed}/${result.total} passed"
         }
 
         return HealthReport(
             isVpnRunning = isVpnRunning,
-            effectivenessScore = effectiveness,
+            regressionChecksPassed = result.passed,
+            regressionChecksTotal = result.total,
             memoryUsageMb = usedMemoryMb,
             statusMessage = msg
         )

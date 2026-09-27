@@ -51,9 +51,6 @@ class FilteringPreferences(private val context: Context) {
     private val _lastHealthCheckTime = MutableStateFlow(prefs.getLong(KEY_LAST_HEALTH_CHECK, 0L))
     val lastHealthCheckTime: StateFlow<Long> = _lastHealthCheckTime.asStateFlow()
 
-    private val _healthEffectivenessScore = MutableStateFlow(prefs.getFloat(KEY_EFFECTIVENESS_SCORE, 99.4f))
-    val healthEffectivenessScore: StateFlow<Float> = _healthEffectivenessScore.asStateFlow()
-
     private val _learningStartTime = MutableStateFlow(
         prefs.getLong(KEY_LEARNING_START_TIME, 0L).let {
             if (it == 0L) {
@@ -125,11 +122,6 @@ class FilteringPreferences(private val context: Context) {
         _lastHealthCheckTime.value = time
     }
 
-    fun setHealthEffectivenessScore(score: Float) {
-        prefs.edit().putFloat(KEY_EFFECTIVENESS_SCORE, score).apply()
-        _healthEffectivenessScore.value = score
-    }
-
     fun loadDefaultConfigIfNeeded(defaultConfig: DefaultConfig) {
         if (!prefs.contains(KEY_INITIALIZED)) {
             prefs.edit()
@@ -163,7 +155,6 @@ class FilteringPreferences(private val context: Context) {
         private const val KEY_HEALTH_CHECK_INTERVAL = "health_check_interval"
         private const val KEY_LOG_RETENTION = "log_retention_days"
         private const val KEY_LAST_HEALTH_CHECK = "last_health_check"
-        private const val KEY_EFFECTIVENESS_SCORE = "effectiveness_score"
         private const val KEY_LEARNING_START_TIME = "learning_start_time"
 
         @Volatile

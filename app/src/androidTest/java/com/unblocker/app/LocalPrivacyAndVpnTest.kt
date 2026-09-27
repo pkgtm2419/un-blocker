@@ -67,6 +67,7 @@ class LocalPrivacyAndVpnTest {
         UnblockerVpnService.stop(context)
         shell("appops set com.unblocker.app ACTIVATE_VPN deny")
         DeviceLearning.clear(context)
+        DeviceLearning.clearAllowlist(context)
         instrumentation.uiAutomation.dropShellPermissionIdentity()
     }
 
@@ -96,6 +97,23 @@ class LocalPrivacyAndVpnTest {
         assertTrue(engine.analyzeAndFilter("pornhub.com").shouldBlock)
         preferences.setAdultBlockingEnabled(false)
         assertFalse(engine.analyzeAndFilter("pornhub.com").shouldBlock)
+    }
+
+    @Test fun localAllowlistIsPrivatePersistentAndAppliedByFilterEngine() {
+        val domain = "doubleclick.net"
+        preferences.setAdBlockingEnabled(true)
+        val allowlist = DeviceLearning.allowlist(context)
+        assertTrue(allowlist.add(domain))
+
+        val file = File(context.noBackupFilesDir, "allowlist-v1")
+        assertTrue(file.exists())
+        assertFalse(file.readText().contains(domain))
+        assertTrue(DeviceLearning.allowlist(context).contains(domain))
+        assertFalse(ContentFilterEngine(context, preferences = preferences)
+            .analyzeAndFilter(domain).shouldBlock)
+
+        DeviceLearning.clearAllowlist(context)
+        assertFalse(DeviceLearning.allowlist(context).contains(domain))
     }
 
     @Test fun bootHonorsPersistedUserChoiceAndConsent() {

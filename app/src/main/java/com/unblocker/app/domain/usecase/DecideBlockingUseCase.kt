@@ -17,6 +17,7 @@ class DecideBlockingUseCase(
     private val adDetector: AdDetector,
     private val adultContentDetector: AdultContentDetector,
     private val adaptiveBlockingEngine: AdaptiveBlockingEngine,
+    private val isAllowlisted: (String) -> Boolean = { false },
     private val isAdBlockingEnabled: () -> Boolean = { true },
     private val isAdultBlockingEnabled: () -> Boolean = { true }
 ) {
@@ -37,6 +38,10 @@ class DecideBlockingUseCase(
         val domain = rawDomain.trim().lowercase()
         if (domain.isBlank()) {
             return BlockingDecision.allow("Empty domain query", 1.0f)
+        }
+
+        if (isAllowlisted(domain)) {
+            return BlockingDecision.allow("Local exception", 1.0f)
         }
 
         val isAdBlocking = isAdBlockingEnabled()

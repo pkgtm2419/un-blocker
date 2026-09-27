@@ -17,7 +17,8 @@ class HealthCheckService(private val context: Context) {
     private val preferences = FilteringPreferences.getInstance(context)
     // Synthetic diagnostics must never train or persist production learning.
     private val filterEngine = ContentFilterEngine(context, preferences = preferences,
-        networkLearner = com.unblocker.app.logic.analysis.LocalNetworkLearner())
+        networkLearner = com.unblocker.app.logic.analysis.LocalNetworkLearner(),
+        allowlistedDomains = com.unblocker.app.logic.analysis.DeviceLearning.memoryAllowlist())
 
     suspend fun performHealthCheck(): HealthReport {
         val isVpnRunning = UnblockerVpnService.isServiceActive.value

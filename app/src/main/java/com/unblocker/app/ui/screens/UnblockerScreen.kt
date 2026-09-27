@@ -39,6 +39,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -54,6 +55,7 @@ import kotlinx.coroutines.withContext
 import android.content.Intent
 import android.provider.Settings
 import com.unblocker.app.logic.analysis.DeviceLearning
+import com.unblocker.app.logic.DomainName
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -112,6 +114,9 @@ fun UnblockerScreen(
     val scope = rememberCoroutineScope()
     var resetMessage by remember { mutableStateOf("") }
     var resetting by remember { mutableStateOf(false) }
+    var exceptionDomain by remember { mutableStateOf("") }
+    var exceptionMessage by remember { mutableStateOf("") }
+    var updatingException by remember { mutableStateOf(false) }
 
     val adultBlockingEnabled by preferences.adultBlockingEnabled.collectAsState()
 
@@ -389,6 +394,95 @@ fun UnblockerScreen(
                             uncheckedTrackColor = Slate800
                         )
                     )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Slate900),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Slate800),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = 420.dp)
+            ) {
+                Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
+                    Text(
+                        text = "Local site exception",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Allow one domain on this device. Only a device-keyed fingerprint is saved.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Slate400
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = exceptionDomain,
+                        onValueChange = { exceptionDomain = it; exceptionMessage = "" },
+                        enabled = !updatingException,
+                        singleLine = true,
+                        label = { Text("example.com") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        TextButton(enabled = !updatingException, onClick = {
+                            updatingException = true
+                            scope.launch {
+                                exceptionMessage = withContext(Dispatchers.IO) {
+                                    try {
+                                        DeviceLearning.clearAllowlist(context.applicationContext)
+                                        "All exceptions cleared."
+                                    } catch (_: Exception) { "Could not clear exceptions. Please retry." }
+                                }
+                                exceptionDomain = ""
+                                updatingException = false
+                            }
+                        }) { Text("Clear all") }
+                        Row {
+                        TextButton(enabled = !updatingException, onClick = {
+                            val domain = DomainName.normalize(exceptionDomain)
+                            if (domain == null) {
+                                exceptionMessage = "Enter a valid domain name."
+                            } else {
+                                updatingException = true
+                                scope.launch {
+                                    val removed = withContext(Dispatchers.IO) {
+                                        DeviceLearning.allowlist(context.applicationContext).remove(domain)
+                                    }
+                                    exceptionMessage = if (removed) "Exception removed." else "No saved exception matched."
+                                    exceptionDomain = ""
+                                    updatingException = false
+                                }
+                            }
+                        }) { Text("Remove") }
+                        TextButton(enabled = !updatingException, onClick = {
+                            val domain = DomainName.normalize(exceptionDomain)
+                            if (domain == null) {
+                                exceptionMessage = "Enter a valid domain name."
+                            } else {
+                                updatingException = true
+                                scope.launch {
+                                    val added = withContext(Dispatchers.IO) {
+                                        DeviceLearning.allowlist(context.applicationContext).add(domain)
+                                    }
+                                    exceptionMessage = if (added) "Exception saved locally." else "Exception already saved."
+                                    exceptionDomain = ""
+                                    updatingException = false
+                                }
+                            }
+                        }) { Text("Allow") }
+                        }
+                    }
+                    if (exceptionMessage.isNotEmpty()) {
+                        Text(exceptionMessage, style = MaterialTheme.typography.bodySmall)
+                    }
                 }
             }
 

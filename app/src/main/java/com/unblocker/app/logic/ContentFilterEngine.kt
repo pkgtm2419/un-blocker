@@ -9,7 +9,9 @@ import com.unblocker.app.domain.model.BlockingCategory
 import com.unblocker.app.domain.model.BlockingDecision
 import com.unblocker.app.domain.usecase.DecideBlockingUseCase
 import com.unblocker.app.logic.analysis.AdaptiveBlockingEngine
+import com.unblocker.app.logic.analysis.DeviceLearning
 import com.unblocker.app.logic.analysis.LocalNetworkLearner
+import com.unblocker.app.logic.analysis.PrivateDomainSet
 
 /**
  * Autonomous local content filter engine.
@@ -23,6 +25,7 @@ class ContentFilterEngine(
     private val adultContentDetector: AdultContentDetector = AdultContentDetector(context),
     private val networkLearner: LocalNetworkLearner = LocalNetworkLearner(context),
     private val preferences: FilteringPreferences = FilteringPreferences.getInstance(context),
+    private val allowlistedDomains: PrivateDomainSet = DeviceLearning.allowlist(context),
     val adaptiveEngine: AdaptiveBlockingEngine = AdaptiveBlockingEngine(preferences, networkLearner)
 ) {
 
@@ -30,7 +33,9 @@ class ContentFilterEngine(
         adDetector = adDetector,
         adultContentDetector = adultContentDetector,
         adaptiveBlockingEngine = adaptiveEngine,
-        preferences = preferences
+        isAllowlisted = allowlistedDomains::contains,
+        isAdBlockingEnabled = { preferences.adBlockingEnabled.value },
+        isAdultBlockingEnabled = { preferences.adultBlockingEnabled.value }
     )
 
     fun analyzeAndFilter(rawDomain: String): FilterResult {

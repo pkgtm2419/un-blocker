@@ -18,6 +18,7 @@ class DecideBlockingUseCaseTest {
     private lateinit var useCase: DecideBlockingUseCase
     private var adEnabled = true
     private var adultEnabled = true
+    private var allowlistedDomains = emptySet<String>()
 
     @Before
     fun setup() {
@@ -36,6 +37,7 @@ class DecideBlockingUseCaseTest {
             adDetector = adDetector,
             adultContentDetector = adultDetector,
             adaptiveBlockingEngine = adaptiveEngine,
+            isAllowlisted = { it in allowlistedDomains },
             isAdBlockingEnabled = { adEnabled },
             isAdultBlockingEnabled = { adultEnabled }
         )
@@ -83,5 +85,13 @@ class DecideBlockingUseCaseTest {
 
         val wikiDecision = useCase("wikipedia.org")
         assertFalse("wikipedia.org should be allowed", wikiDecision.isBlocked)
+    }
+
+    @Test
+    fun testLocalAllowlistOverridesAdAndAdultRules() {
+        allowlistedDomains = setOf("doubleclick.net", "pornhub.com")
+
+        assertFalse(useCase("doubleclick.net").isBlocked)
+        assertFalse(useCase("pornhub.com").isBlocked)
     }
 }

@@ -1,6 +1,6 @@
 package com.unblocker.app.logic.dns
 
-import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.ArrayBlockingQueue
 
 /**
  * Reusable object pool for packet byte arrays.
@@ -12,7 +12,7 @@ class ByteArrayPool(
     val arraySize: Int = 4096,
     val maxPoolSize: Int = 64
 ) {
-    private val pool = ConcurrentLinkedQueue<ByteArray>()
+    private val pool = ArrayBlockingQueue<ByteArray>(maxPoolSize)
 
     init {
         val initialSize = maxPoolSize / 2
@@ -26,7 +26,7 @@ class ByteArrayPool(
     }
 
     fun release(array: ByteArray) {
-        if (array.size == arraySize && pool.size < maxPoolSize) {
+        if (array.size == arraySize) {
             pool.offer(array)
         }
     }

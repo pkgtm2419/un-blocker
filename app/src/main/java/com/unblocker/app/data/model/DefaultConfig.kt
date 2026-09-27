@@ -5,7 +5,7 @@ data class DefaultConfig(
     val adultContentBlockingEnabled: Boolean = true,
     val parentalControlEnabled: Boolean = false,
     val backgroundMonitoringEnabled: Boolean = true,
-    val connectionLoggingEnabled: Boolean = true,
+    val connectionLoggingEnabled: Boolean = false,
     val selfCheckingEnabled: Boolean = true,
     val autoRestartOnBootEnabled: Boolean = true,
     val healthCheckInterval: Long = 300_000L,

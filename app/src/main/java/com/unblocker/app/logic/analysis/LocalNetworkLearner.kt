@@ -10,46 +10,16 @@ import kotlin.math.sqrt
  * Implements Multi-Factor Ad & Tracker Detection as specified in Section 1.1 of un-blocker-improvement-plan.md.
  * Zero user logs or history are created or stored.
  */
-class LocalNetworkLearner(private val context: android.content.Context? = null) {
-
-    // In-memory learned reputation cache: domain -> confidence score (0.0 to 1.0)
-    private val learnedReputations = ConcurrentHashMap<String, Float>()
+class LocalNetworkLearner(
+    context: android.content.Context? = null,
+    private val reputations: PrivateReputationStore = if (context == null) DeviceLearning.memoryStore()
+        else DeviceLearning.store(context)
+) {
 
     // Temporal cadence tracking: domain -> recent query timestamps (sliding window)
     private val queryTimestamps = ConcurrentHashMap<String, ArrayDeque<Long>>()
 
-    init {
-        loadPersistedTrackers()
-    }
-
-    private fun loadPersistedTrackers() {
-        if (context == null) return
-        try {
-            val file = java.io.File(context.filesDir, "learned_trackers.txt")
-            if (file.exists()) {
-                file.forEachLine { line ->
-                    val trimmed = line.trim().lowercase()
-                    if (trimmed.isNotEmpty() && !trimmed.startsWith("#")) {
-                        val parts = trimmed.split(':')
-                        val domain = parts[0]
-                        val score = if (parts.size > 1) parts[1].toFloatOrNull() ?: 0.85f else 0.85f
-                        learnedReputations[domain] = score
-                    }
-                }
-            }
-        } catch (ignored: Exception) {}
-    }
-
-    private fun persistLearnedDomain(domain: String, score: Float) {
-        if (context == null) return
-        try {
-            val file = java.io.File(context.filesDir, "learned_trackers.txt")
-            file.appendText("$domain:$score\n")
-        } catch (ignored: Exception) {}
-    }
-
-    fun getLearnedTrackersCount(): Int = learnedReputations.size
-    fun getAllLearnedDomains(): Set<String> = learnedReputations.keys.toSet()
+    fun getLearnedTrackersCount(): Int = reputations.size()
 
     private val adLexicalTokens = setOf(
         "ad", "ads", "track", "tracker", "tracking", "telemetry", "pixel",
@@ -152,7 +122,7 @@ class LocalNetworkLearner(private val context: android.content.Context? = null) 
         }
 
         // 2. Check previous learned reputation
-        val cachedScore = learnedReputations[cleanDomain]
+        val cachedScore = reputations.get(cleanDomain)
         if (cachedScore != null && cachedScore >= threshold) {
             return AnalysisScore(cachedScore, "Learned tracker pattern")
         }
@@ -198,19 +168,7 @@ class LocalNetworkLearner(private val context: android.content.Context? = null) 
 
         // Self-Learning: Update reputation weight in memory and persist newly learned tracker on-device
         if (compositeScore >= threshold) {
-            val isNew = !learnedReputations.containsKey(cleanDomain)
-            if (learnedReputations.size > MAX_LEARNED_REPUTATIONS) {
-                val entriesToEvict = learnedReputations.entries
-                    .sortedBy { it.value }
-                    .take(100)
-                for (entry in entriesToEvict) {
-                    learnedReputations.remove(entry.key)
-                }
-            }
-            learnedReputations[cleanDomain] = compositeScore
-            if (isNew) {
-                persistLearnedDomain(cleanDomain, compositeScore)
-            }
+            reputations.put(cleanDomain, compositeScore)
         }
 
         val reason = when {
@@ -228,7 +186,7 @@ class LocalNetworkLearner(private val context: android.content.Context? = null) 
      * Detects high-frequency bursts (typical of ad impression logging)
      * and periodic beacons (typical of background telemetry).
      */
-    private fun evaluateCadence(domain: String, timestamp: Long): Float {
+    @Synchronized private fun evaluateCadence(domain: String, timestamp: Long): Float {
         // Prune stale domains if the map exceeds capacity threshold
         if (queryTimestamps.size > MAX_TRACKED_DOMAINS) {
             val iterator = queryTimestamps.entries.iterator()
@@ -246,6 +204,10 @@ class LocalNetworkLearner(private val context: android.content.Context? = null) 
             }
         }
 
+        // Bound even an all-new burst where no entries are old enough to prune.
+        if (queryTimestamps.size >= MAX_TRACKED_DOMAINS && !queryTimestamps.containsKey(domain)) {
+            queryTimestamps.keys.firstOrNull()?.let { queryTimestamps.remove(it) }
+        }
         val window = queryTimestamps.computeIfAbsent(domain) { ArrayDeque() }
 
         synchronized(window) {
@@ -315,6 +277,10 @@ class LocalNetworkLearner(private val context: android.content.Context? = null) 
      * dynamically generated machine strings used by tracker CDNs and ad bidding networks.
      */
     fun evaluateEntropy(domain: String): Float {
+        // Punycode internationalized domains (IDN) naturally contain pseudo-random ASCII
+        // representations (e.g. xn--...). Exclude them from algorithmic entropy scoring.
+        if (domain.contains("xn--")) return 0.0f
+
         val sub = domain.substringBeforeLast('.', "").substringBeforeLast('.', "")
         if (sub.length < 6) return 0.0f
 

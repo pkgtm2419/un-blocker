@@ -5,47 +5,23 @@ import android.net.VpnService
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import com.unblocker.app.data.model.AppConfigPayload
 import com.unblocker.app.data.model.DefaultConfig
 import com.unblocker.app.data.preferences.FilteringPreferences
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.util.concurrent.TimeUnit
-
-enum class ServiceStatus {
-    STOPPED,
-    STARTING,
-    RUNNING,
-    ERROR
-}
 
 class QuickStartManager(private val context: Context) {
 
     private val appContext = context.applicationContext
     private val preferences = FilteringPreferences.getInstance(appContext)
 
-    private val _status = MutableStateFlow(
-        if (UnblockerVpnService.isServiceActive.value) ServiceStatus.RUNNING else ServiceStatus.STOPPED
-    )
-    val status: StateFlow<ServiceStatus> = _status.asStateFlow()
+    val status: StateFlow<ServiceStatus> = UnblockerVpnService.session.status
 
     init {
         loadDefaultConfiguration()
-        CoroutineScope(Dispatchers.Main).launch {
-            UnblockerVpnService.isServiceActive.collect { active ->
-                _status.value = if (active) ServiceStatus.RUNNING else ServiceStatus.STOPPED
-                if (!active && preferences.serviceRunning.value) {
-                    preferences.setServiceRunning(false)
-                }
-            }
-        }
     }
 
     fun loadDefaultConfiguration(): DefaultConfig {
@@ -60,7 +36,7 @@ class QuickStartManager(private val context: Context) {
                     adultContentBlockingEnabled = conf.optBoolean("adultContentBlockingEnabled", true),
                     parentalControlEnabled = conf.optBoolean("parentalControlEnabled", false),
                     backgroundMonitoringEnabled = conf.optBoolean("backgroundMonitoringEnabled", true),
-                    connectionLoggingEnabled = conf.optBoolean("connectionLoggingEnabled", true),
+                    connectionLoggingEnabled = false,
                     selfCheckingEnabled = conf.optBoolean("selfCheckingEnabled", true),
                     autoRestartOnBootEnabled = conf.optBoolean("autoRestartOnBootEnabled", true),
                     healthCheckInterval = conf.optLong("healthCheckInterval", 300_000L),
@@ -94,40 +70,26 @@ class QuickStartManager(private val context: Context) {
             return
         }
 
-        _status.value = ServiceStatus.STARTING
-
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                // Ensure default config is initialized
-                loadDefaultConfiguration()
-
-                // Launch VPN Service
-                UnblockerVpnService.start(context)
-
-                // Schedule Health Check Worker
-                scheduleHealthCheckWorker()
-
-                preferences.setServiceRunning(true)
-                _status.value = ServiceStatus.RUNNING
-            } catch (e: Exception) {
-                _status.value = ServiceStatus.ERROR
-            }
+        try {
+            loadDefaultConfiguration()
+            preferences.setProtectionEnabled(true)
+            UnblockerVpnService.start(context)
+        } catch (_: Exception) {
+            UnblockerVpnService.session.failed()
+            return
         }
+        // Diagnostics failure must not turn a healthy tunnel into a connection error.
+        runCatching { scheduleHealthCheckWorker() }
     }
 
     /**
      * Stop all blocker services.
      */
     fun stopBlockingServices() {
-        _status.value = ServiceStatus.STARTING
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                UnblockerVpnService.stop(context)
-                preferences.setServiceRunning(false)
-                _status.value = ServiceStatus.STOPPED
-            } catch (e: Exception) {
-                _status.value = ServiceStatus.ERROR
-            }
+        try {
+            UnblockerVpnService.stop(context)
+        } catch (_: Exception) {
+            UnblockerVpnService.session.failed()
         }
     }
 
@@ -152,9 +114,7 @@ class QuickStartManager(private val context: Context) {
 
         fun getInstance(context: Context): QuickStartManager {
             return INSTANCE ?: synchronized(this) {
-                val instance = QuickStartManager(context.applicationContext)
-                INSTANCE = instance
-                instance
+                INSTANCE ?: QuickStartManager(context.applicationContext).also { INSTANCE = it }
             }
         }
     }

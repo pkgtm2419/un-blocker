@@ -58,7 +58,6 @@ class DecideBlockingUseCase(
             // B. 7-Day Adaptive Multi-Factor Analysis
             val adaptiveDecision = adaptiveBlockingEngine.evaluateDomain(domain)
             if (adaptiveDecision.isBlocked) {
-                adDetector.addDomain(domain)
                 return adaptiveDecision
             }
         }

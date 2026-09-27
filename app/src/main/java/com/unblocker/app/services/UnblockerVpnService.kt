@@ -27,6 +27,11 @@ import java.net.InetAddress
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.RejectedExecutionException
 
 /**
  * On-device local VPN service.
@@ -35,14 +40,11 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 class UnblockerVpnService : VpnService() {
 
-    private var vpnInterface: ParcelFileDescriptor? = null
-    private var workerThread: Thread? = null
-    private val isRunning = AtomicBoolean(false)
+    private var activeRun: TunnelRun? = null
     private val writeLock = Any()
 
     private val dnsCache = com.unblocker.app.logic.dns.DnsCache()
     private val bufferPool = com.unblocker.app.logic.dns.ByteArrayPool(4096, 64)
-    private var forwardScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO + kotlinx.coroutines.SupervisorJob())
 
     private val upstreamResolvers by lazy {
         listOf(
@@ -53,54 +55,62 @@ class UnblockerVpnService : VpnService() {
         )
     }
 
-    private lateinit var filterEngine: ContentFilterEngine
     private lateinit var preferences: FilteringPreferences
 
     override fun onCreate() {
         super.onCreate()
         preferences = FilteringPreferences.getInstance(this)
-        filterEngine = ContentFilterEngine(this, preferences = preferences)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val action = intent?.action
         if (ACTION_STOP == action) {
-            stopVpn()
-            stopSelf()
+            try { preferences.setProtectionEnabled(false) } finally {
+                stopVpn(publishStopped = false)
+                stopSelf(startId)
+            }
             return START_NOT_STICKY
         }
 
-        if (!isRunning.get()) {
-            startVpn()
+        if (activeRun?.running?.get() != true) {
+            startVpn(startId)
         }
 
         return START_STICKY
     }
 
-    private fun startVpn() {
-        if (isRunning.getAndSet(true)) return
+    private fun startVpn(startId: Int) {
+        val run = synchronized(lifecycleLock) {
+            if (activeRun?.running?.get() == true) return
+            activeRun?.close()
+            TunnelRun(session.begin(), startId).also { activeRun = it }
+        }
+        try {
+            createNotificationChannel()
+            startForeground(NOTIFICATION_ID, buildNotification())
+        } catch (_: Exception) {
+            session.failed(run.owner)
+            stopVpn()
+            stopSelf()
+            return
+        }
 
-        forwardScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO + kotlinx.coroutines.SupervisorJob())
-
-        createNotificationChannel()
-        startForeground(NOTIFICATION_ID, buildNotification())
-
-        preferences.setServiceRunning(true)
-        _isServiceActive.value = true
-
-        workerThread = Thread({
-            runVpnLoop()
+        run.thread = Thread({
+            runVpnLoop(run)
         }, "UnblockerVpnWorker").apply {
-            priority = Thread.MAX_PRIORITY
             start()
         }
     }
 
-    private fun runVpnLoop() {
+    private fun runVpnLoop(run: TunnelRun) {
+        val isRunning = run.running
         var inputStream: FileInputStream? = null
         var outputStream: FileOutputStream? = null
+        var localInterface: ParcelFileDescriptor? = null
 
         try {
+            // Asset loading, Keystore and migration stay off the main/foreground deadline path.
+            val filterEngine = ContentFilterEngine(this, preferences = preferences)
             val builder = Builder()
                 .setSession("unblocker")
                 .addAddress("10.10.0.2", 32)
@@ -112,44 +122,43 @@ class UnblockerVpnService : VpnService() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 builder.setMetered(false)
             }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                setUnderlyingNetworks(null)
+            synchronized(lifecycleLock) {
+                if (!isRunning.get() || !session.owns(run.owner)) return
+                localInterface = builder.establish() ?: error("VPN establishment failed")
+                run.descriptor = localInterface
+                inputStream = FileInputStream(localInterface!!.fileDescriptor)
+                outputStream = FileOutputStream(localInterface!!.fileDescriptor)
+                if (!session.established(run.owner)) return
+                preferences.setServiceRunning(true)
             }
-
-            vpnInterface = builder.establish()
-            if (vpnInterface == null) {
-                stopSelf()
-                return
-            }
-
-            inputStream = FileInputStream(vpnInterface!!.fileDescriptor)
-            outputStream = FileOutputStream(vpnInterface!!.fileDescriptor)
 
             val packetBuffer = bufferPool.acquire()
 
             try {
                 while (isRunning.get()) {
                     val length = try {
-                        inputStream.read(packetBuffer)
+                        inputStream!!.read(packetBuffer)
                     } catch (e: Exception) {
                         break
                     }
 
-                    if (length <= 0) continue
+                    if (length < 0) break
+                    if (length == 0) continue
 
                     val packetCopy = packetBuffer.copyOf(length)
                     val query = DnsPacketUtil.parseIpPacket(packetCopy, length) ?: continue
 
                     // Autonomous local analysis
-                    val result = filterEngine.analyzeAndFilter(query.domain)
+                    val result = synchronized(lifecycleLock) {
+                        if (!isRunning.get()) return
+                        filterEngine.analyzeAndFilter(query.domain)
+                    }
 
                     if (result.shouldBlock) {
-                        // Fast local spoof response (0.0.0.0 in <0.05ms)
+                        // Local blocked response.
                         val responsePacket = DnsPacketUtil.buildBlockedDnsResponsePacket(query)
                         synchronized(writeLock) {
-                            try {
-                                outputStream?.write(responsePacket)
-                            } catch (ignored: Exception) {}
+                            outputStream?.write(responsePacket)
                         }
                     } else {
                         // Check local high-speed DNS cache
@@ -157,15 +166,15 @@ class UnblockerVpnService : VpnService() {
                         if (cachedPayload != null) {
                             val wrappedResponse = wrapDnsResponseInIpUdp(query, cachedPayload, cachedPayload.size)
                             synchronized(writeLock) {
-                                try {
-                                    outputStream?.write(wrappedResponse)
-                                } catch (ignored: Exception) {}
+                                outputStream?.write(wrappedResponse)
                             }
                         } else {
-                            // Forward query asynchronously in parallel on Dispatchers.IO - NEVER blocks the TUN loop!
+                            // Bounded forwarding; blocking resolver I/O stays off the TUN loop.
                             val currentOut = outputStream
-                            forwardScope.launch {
-                                resolveAndForward(query, currentOut)
+                            try {
+                                run.forwarding.execute { resolveAndForward(run, query, currentOut) }
+                            } catch (_: RejectedExecutionException) {
+                                // Saturation: drop this query; client DNS retries. Memory stays bounded.
                             }
                         }
                     }
@@ -173,35 +182,46 @@ class UnblockerVpnService : VpnService() {
             } finally {
                 bufferPool.release(packetBuffer)
             }
-        } catch (e: Exception) {
-            // Error handling
+        } catch (_: Exception) {
+            // State below records failure; exception text can contain user domains.
         } finally {
+            synchronized(lifecycleLock) {
+                val failed = isRunning.getAndSet(false)
+                run.close()
+                if (failed && session.owns(run.owner)) {
+                    session.failed(run.owner)
+                    preferences.setServiceRunning(false)
+                    stopSelf(run.startId)
+                }
+            }
             synchronized(writeLock) {
                 try { inputStream?.close() } catch (ignored: Exception) {}
                 try { outputStream?.close() } catch (ignored: Exception) {}
-                try { vpnInterface?.close() } catch (ignored: Exception) {}
-                vpnInterface = null
+                try { localInterface?.close() } catch (ignored: Exception) {}
             }
         }
     }
 
-    private fun resolveAndForward(query: com.unblocker.app.logic.dns.DnsQuery, outputStream: FileOutputStream?) {
+    private fun resolveAndForward(run: TunnelRun, query: com.unblocker.app.logic.dns.DnsQuery, outputStream: FileOutputStream?) {
+        val isRunning = run.running
         val dnsPayload = ByteArray(query.dnsLength)
         System.arraycopy(query.rawPacket, query.dnsOffset, dnsPayload, 0, query.dnsLength)
 
-        val socket = try {
-            DatagramSocket().apply {
-                protect(this)
-                soTimeout = 1200
-            }
-        } catch (e: Exception) {
-            return
-        }
+        if (!isRunning.get()) return
+        val socket = try { DatagramSocket() } catch (_: Exception) { return }
+        run.sockets.add(socket)
 
         val receiveBuffer = bufferPool.acquire()
         try {
+            if (!isRunning.get() || !protect(socket)) return
+            socket.soTimeout = 700
             for (upstream in upstreamResolvers) {
+                if (!isRunning.get() || Thread.currentThread().isInterrupted) return
                 try {
+                    // Safe disconnect before reconnecting across upstreams
+                    runCatching { socket.disconnect() }
+                    // A connected UDP socket accepts only this resolver's replies.
+                    socket.connect(upstream, 53)
                     val outPacket = DatagramPacket(dnsPayload, dnsPayload.size, upstream, 53)
                     socket.send(outPacket)
 
@@ -230,6 +250,7 @@ class UnblockerVpnService : VpnService() {
         } finally {
             bufferPool.release(receiveBuffer)
             try { socket.close() } catch (ignored: Exception) {}
+            run.sockets.remove(socket)
         }
     }
 
@@ -303,9 +324,9 @@ class UnblockerVpnService : VpnService() {
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_blocker_notification)
-            .setContentTitle("unblocker Protection Active")
-            .setContentText("Analyzing network & blocking unwanted traffic locally")
-            .setSubText("Zero-Cloud • Zero-Logs")
+            .setContentTitle("unblocker")
+            .setContentText("Local DNS protection service • See app for connection status")
+            .setSubText("On-device learning • No telemetry")
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
             .setContentIntent(pendingIntent)
@@ -328,30 +349,45 @@ class UnblockerVpnService : VpnService() {
         }
     }
 
-    private fun stopVpn() {
-        isRunning.set(false)
-        preferences.setServiceRunning(false)
-        _isServiceActive.value = false
-
-        try {
-            forwardScope.cancel()
+    private fun stopVpn(publishStopped: Boolean = true) {
+        synchronized(lifecycleLock) {
+            val run = activeRun
+            run?.close()
+            if (run == null || session.owns(run.owner)) {
+                preferences.setServiceRunning(false)
+                if (session.status.value != ServiceStatus.ERROR) {
+                    if (publishStopped) session.stop() else session.stopping()
+                }
+            }
             dnsCache.clear()
-        } catch (ignored: Exception) {}
-
-        try {
-            vpnInterface?.close()
-            vpnInterface = null
-        } catch (e: Exception) {}
-
-        workerThread?.interrupt()
-        workerThread = null
+        }
 
         stopForeground(STOP_FOREGROUND_REMOVE)
+    }
+
+    @Suppress("DEPRECATION")
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (level >= TRIM_MEMORY_RUNNING_CRITICAL || level >= TRIM_MEMORY_MODERATE) {
+            dnsCache.clear()
+        }
+    }
+
+    override fun onLowMemory() {
+        super.onLowMemory()
+        dnsCache.clear()
     }
 
     override fun onDestroy() {
         stopVpn()
         super.onDestroy()
+    }
+
+    override fun onRevoke() {
+        try { preferences.setProtectionEnabled(false) } finally {
+            stopVpn(publishStopped = false)
+            stopSelf()
+        }
     }
 
     companion object {
@@ -360,14 +396,16 @@ class UnblockerVpnService : VpnService() {
         private const val CHANNEL_ID = "unblocker_vpn_channel"
         private const val NOTIFICATION_ID = 1001
 
-        private val _isServiceActive = MutableStateFlow(false)
-        val isServiceActive: StateFlow<Boolean> = _isServiceActive.asStateFlow()
+        // Shared lock serializes establish/teardown even across successive Service instances.
+        private val lifecycleLock = Any()
+        val session = VpnSessionState()
+        val isServiceActive: StateFlow<Boolean> = session.active
 
-        fun start(context: Context) {
+        fun start(context: Context, fromBackground: Boolean = false) {
             val intent = Intent(context, UnblockerVpnService::class.java).apply {
                 action = ACTION_START
             }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (fromBackground && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
             } else {
                 context.startService(intent)
@@ -375,10 +413,25 @@ class UnblockerVpnService : VpnService() {
         }
 
         fun stop(context: Context) {
-            val intent = Intent(context, UnblockerVpnService::class.java).apply {
-                action = ACTION_STOP
+            try { FilteringPreferences.getInstance(context).setProtectionEnabled(false) } finally {
+                val intent = Intent(context, UnblockerVpnService::class.java).apply {
+                    action = ACTION_STOP
+                }
+                val status = session.status.value
+                if (status == ServiceStatus.RUNNING || status == ServiceStatus.STARTING) {
+                    try {
+                        // Deliver teardown to the live VpnService. stopService() alone cannot destroy a
+                        // service while Android is still bound to its open VPN interface.
+                        context.startService(intent)
+                    } catch (_: Exception) {
+                        context.stopService(intent)
+                        if (!isServiceActive.value) session.stop()
+                    }
+                } else if (status != ServiceStatus.STOPPING) {
+                    context.stopService(intent)
+                    session.stop()
+                }
             }
-            context.startService(intent)
         }
     }
 }

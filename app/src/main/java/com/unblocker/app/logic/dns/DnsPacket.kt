@@ -49,7 +49,7 @@ object DnsPacketUtil {
         if (version != 4) return null // Only IPv4 handled for local DNS spoofing
 
         val ihl = (versionAndIhl and 0x0F) * 4
-        if (length < ihl + 8) return null
+        if (ihl < 20 || length < ihl + 8) return null // RFC 791 requires min IPv4 IHL of 5 (20 bytes)
 
         val protocol = packet[9].toInt() and 0xFF
         if (protocol != 17) return null // Protocol 17 = UDP
@@ -68,7 +68,7 @@ object DnsPacketUtil {
         val dnsOffset = udpOffset + 8
         val dnsLength = udpLength - 8
 
-        if (dnsOffset + dnsLength > length || dnsLength < 12) return null
+        if (udpLength < 20 || dnsLength < 12 || dnsOffset + dnsLength > length) return null
 
         // Parse DNS Header
         val txId = ((packet[dnsOffset].toInt() and 0xFF) shl 8 or (packet[dnsOffset + 1].toInt() and 0xFF)).toShort()
@@ -196,6 +196,7 @@ object DnsPacketUtil {
     }
 
     private fun extractQuestionSection(packet: ByteArray, dnsOffset: Int, dnsLength: Int): ByteArray {
+        if (dnsLength < 12) return ByteArray(0)
         val qStart = dnsOffset + 12
         var pos = qStart
         val end = dnsOffset + dnsLength
@@ -203,20 +204,33 @@ object DnsPacketUtil {
             val len = packet[pos].toInt() and 0xFF
             pos++
             if (len == 0) break
+            if (len > 63 || pos + len > end) {
+                pos = end
+                break
+            }
             pos += len
         }
         pos += 4 // QTYPE (2) + QCLASS (2)
-        val qLength = (pos - qStart).coerceAtMost(end - qStart)
+        val maxAvailable = (end - qStart).coerceAtLeast(0)
+        val qLength = (pos - qStart).coerceIn(0, maxAvailable)
         val question = ByteArray(qLength)
-        System.arraycopy(packet, qStart, question, 0, qLength)
+        if (qLength > 0 && qStart + qLength <= packet.size) {
+            System.arraycopy(packet, qStart, question, 0, qLength)
+        }
         return question
     }
 
     private fun computeIpChecksum(buf: ByteArray, offset: Int, length: Int): Short {
         var sum = 0
-        for (i in offset until offset + length step 2) {
+        val end = offset + length
+        var i = offset
+        while (i < end - 1) {
             val word = ((buf[i].toInt() and 0xFF) shl 8) or (buf[i + 1].toInt() and 0xFF)
             sum += word
+            i += 2
+        }
+        if (i < end) {
+            sum += (buf[i].toInt() and 0xFF) shl 8
         }
         while ((sum shr 16) > 0) {
             sum = (sum and 0xFFFF) + (sum shr 16)

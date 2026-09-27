@@ -1,114 +1,77 @@
-# 🛡️ unblocker (unwanted network blocker)
+# unblocker
 
-<div align="center">
+Open-source Android DNS blocker with on-device filtering and adaptive tracker
+learning. Kotlin, Jetpack Compose, Android 8.0+ (API 26), target API 35.
 
-<img src="app/src/main/res/drawable/ic_launcher_foreground.xml" width="120" height="120" alt="unblocker Logo"/>
+## Privacy and learning
 
-### **100% Local, Autonomous Self-Learning Network Blocker for Android**
+All blocking decisions, learning and settings stay on the installed device.
+There are no accounts, analytics, telemetry, remote model calls, subscriptions or
+automatic blocklist downloads. The app does not collect URLs or page contents.
 
-*Block unwanted advertisements, trackers, telemetry, and 18+ adult content using on-device network analysis and self-learning tracking. Zero cloud dependencies. Zero logs.*
+Learning uses lexical, structural and short-lived query cadence signals, with a
+confidence threshold that changes over seven days. It is a heuristic system;
+false positives and missed trackers are possible. There is no guaranteed blocking
+percentage or latency. Learned reputations survive restarts as at most 5,000
+device-keyed HMAC-SHA256 identifiers and scores in private no-backup storage.
+The key lives in Android Keystore. Raw domain names are held temporarily in memory
+for filtering and DNS resolution; they are not written to the new learning file.
 
-<br/>
+Allowed queries are forwarded over ordinary UDP DNS to Google Public DNS and,
+on failure, Cloudflare/Quad9/Google secondary. These resolvers can see the queried
+domain and network address. DNS transport is not encrypted. This app is a local
+DNS filter, not an anonymity VPN or an offline DNS resolver. Private DNS, browser
+DoH, hardcoded IPs and shared content/ad domains can bypass or limit filtering.
+See [PRIVACY.md](PRIVACY.md) for data handling and migration details.
 
-[![Download APK](https://custom-icon-badges.demolab.com/badge/DOWNLOAD%20APK-v1.0.0%20(DIRECT%20DOWNLOAD)-0D9488?style=for-the-badge&logo=download&logoColor=white)](https://github.com/pkgtm2419/un-blocker/raw/main/release/unblocker-v1.0.0.apk)
+## Use
 
-<br/>
+1. Build and install the debug APK below, open unblocker, and tap the power button.
+2. Accept Android's VPN consent. Enable adult filtering if wanted.
+3. For system-managed restarts, use **Always-on VPN settings** in the app.
+   Leave **Block connections without VPN** off: this is a DNS-only split tunnel.
+4. To erase learned reputations, stop protection and tap **Clear local learning**.
 
-👉 **[⬇️ Direct Download `unblocker-v1.0.0.apk` (17.5 MB)](https://github.com/pkgtm2419/un-blocker/raw/main/release/unblocker-v1.0.0.apk)** 👈
+The app reports STARTING, RUNNING, STOPPED or ERROR. RUNNING means the TUN
+interface was established, not that an upstream resolver is currently reachable.
+Boot startup after the first unlock requires previous user-enabled protection,
+auto-restart enabled and current VPN consent. Explicit stop/revocation clears that
+intent. Always-on VPN is separately controlled by Android; turn it off in Android
+settings if you want protection to stay stopped. Android battery restrictions,
+force-stop and manufacturer auto-start policies can prevent automatic startup.
 
-<br/>
+## Build and test
 
-[![Platform](https://img.shields.io/badge/Platform-Android%208.0%2B%20(API%2026%2B)-3DDC84?style=flat-square&logo=android)](https://developer.android.com)
-[![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose%20M3-4285F4?style=flat-square&logo=jetpackcompose)](https://developer.android.com/jetpack/compose)
-[![Architecture](https://img.shields.io/badge/Architecture-100%25%20Local%20Autonomous-10B981?style=flat-square)](#architecture)
-[![Zero Cloud](https://img.shields.io/badge/Cloud%20Data-Zero%20(100%25%20On--Device)-blue?style=flat-square)](#privacy-guarantee)
-[![Zero Logs](https://img.shields.io/badge/Logs%20%26%20History-None-green?style=flat-square)](#zero-logs-guarantee)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue?style=flat-square)](LICENSE)
+Install JDK 17 and Android SDK platform/build tools 35. Set JAVA_HOME and
+ANDROID_HOME (or create an untracked local.properties with sdk.dir).
+No developer-specific JDK path is checked into the build.
 
-</div>
-
----
-
-## 🚀 Download & Installation
-
-Click the badge above or use the direct download link:
-
-* **[Download unblocker APK v1.0.0](https://github.com/pkgtm2419/un-blocker/raw/main/release/unblocker-v1.0.0.apk)**
-
-### Quick Setup:
-1. Download `unblocker-v1.0.0.apk` to your Android device.
-2. Tap the downloaded file to install (allow "Install from Unknown Sources" if prompted).
-3. Open **unblocker**.
-4. Enable **"Analyze Network & Block Unwanted Ads"** (accept the Android VPN connection request when prompted).
-5. (Optional) Enable **"Block 18+ Content Also"** for adult content protection.
-6. Done! Your entire device is protected in real time with zero configuration.
-
----
-
-## 🌟 Key Highlights
-
-### 1. 🧠 100% Local Self-Learning & Autonomous Tracking
-- **Zero Cloud Dependence**: Unlike conventional ad blockers (such as Blokada) that rely on external cloud servers, cloud subscriptions, or remote blocklist downloads, **unblocker runs 100% locally on your device**.
-- **Real-Time Network Analysis**: Inspects DNS queries as they occur using on-device heuristics:
-  - **Lexical Pattern Detection**: Evaluates domain structures and ad/tracker markers.
-  - **Temporal Cadence & Burst Detection**: Identifies rapid advertising bursts and periodic tracking beacons.
-  - **Shannon Lexical Entropy**: Detects pseudo-random algorithmic subdomains generated by ad exchanges.
-  - **Dynamic In-Memory Reputation**: Automatically learns and adapts to new tracking domains on the fly using system resources.
-
-### 2. 🔕 Zero Logs, Zero History, Zero Dashboard
-- **Total Privacy**: **unblocker does NOT create, store, or display any logs, history, or dashboards**.
-- No SQLite log databases, no connection audit trails, no stored browsing habits.
-- When analysis runs, state is maintained strictly in volatile RAM and is never written to disk or transmitted to any server.
-
-### 3. 🎯 Ultra-Clean Two-Option Interface
-- A distraction-free UI featuring only the two options you need:
-  1. **Analyze Network & Block Unwanted Ads**: Master switch that triggers on-device network analysis and starts blocking unwanted ads and trackers. Automatically requests the necessary VPN connection and notification permissions when activated.
-  2. **Block 18+ Content Also**: An independent toggle that filters adult, explicit, and NSFW domains locally alongside ads.
-
-### 4. ⚡ Ultra-Fast Local DNS Spoofing (`0.0.0.0` in < 1ms)
-- Intercepts outgoing UDP port 53 DNS queries via the Android `VpnService` TUN interface.
-- Blocked queries are instantly resolved to `0.0.0.0` (or `::`) in under **1 millisecond** with **zero network data consumed**.
-- Legitimate queries are securely forwarded to fast upstream resolvers (`1.1.1.1` / `8.8.8.8`) via protected sockets.
-
-### 5. 📱 Fully Responsive Layout Across All Devices
-- Built with **Jetpack Compose Material 3**:
-  - Automatically adapts to **Phones**, **Foldables**, **Tablets**, and **Landscape** orientations.
-  - Fluid typography, dynamic spacing, and tactile toggle cards designed for one-handed operation.
-
----
-
-## 🛠️ Architecture & Tech Stack
-
-- **Language**: Kotlin 2.0.21
-- **UI Framework**: Jetpack Compose & Material 3
-- **Network Engine**: Android `VpnService` with zero-dependency binary DNS packet parser & synthesizer
-- **Analysis Engine**: Local Shannon Entropy + Sliding-Window Cadence + Lexical Heuristics (`LocalNetworkLearner`)
-- **Target SDK**: Android 15 (API 35) | **Min SDK**: Android 8.0 (API 26)
-
----
-
-## 🔒 Zero Logs & Privacy Guarantee
-
-- **Zero Cloud Communication**: The app never connects to any cloud backend or API for updates or data sync.
-- **Zero Logging**: DNS queries are evaluated in-memory and discarded immediately after resolution.
-- **Zero Tracking**: No analytics SDKs, no crash reporting beacons, no ads.
-
----
-
-## 📦 Building from Source
-
-```bash
-# Clone the repository
-git clone https://github.com/pkgtm2419/un-blocker.git
-cd un-blocker
-
-# Build the Debug APK
-./gradlew assembleDebug
-
-# Run Unit Tests
-./gradlew testDebugUnitTest
+```powershell
+.\gradlew.bat testDebugUnitTest lintDebug assembleDebug
+.\gradlew.bat connectedDebugAndroidTest
 ```
 
-Compiled APK is generated at:
-`app/build/outputs/apk/debug/app-debug.apk`
-or directly under `release/unblocker-v1.0.0.apk`.
+The second command requires a disposable emulator/device and exercises local
+Keystore storage, filter switches, boot policy, denied consent and real DNS
+blocking. Tests change the test installation's VPN app-op and learning data.
+Use ./gradlew on Linux/macOS. Build dependencies require internet access;
+runtime learning does not.
+
+Output: app/build/outputs/apk/debug/app-debug.apk (version 1.1.0). This uses a
+development signing key. A production update must use the same signing key as the
+installed release. The tested build output above is authoritative; APK files under
+release/ are not published by Gradle and must not be treated as production builds.
+No updated release is published automatically.
+
+On Windows systems affected by Java's Unix-domain socket temporary-path error,
+set JAVA_TOOL_OPTIONS=-Djdk.net.unixdomain.tmpdir=D:\blocker for the build shell
+only (substitute a short, existing, writable local directory).
+
+## Open source
+
+Application code is licensed under [Apache License 2.0](LICENSE).
+See [NOTICE](NOTICE), [CONTRIBUTING.md](CONTRIBUTING.md) and
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Existing bundled seed-list
+provenance is documented separately; the application license does not override
+third-party rights. Contributions should include regression tests and preserve
+the local-only learning model.

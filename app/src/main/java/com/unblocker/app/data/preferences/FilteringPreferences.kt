@@ -25,6 +25,20 @@ class FilteringPreferences(private val context: Context) {
     private val _serviceRunning = MutableStateFlow(prefs.getBoolean(KEY_SERVICE_RUNNING, false))
     val serviceRunning: StateFlow<Boolean> = _serviceRunning.asStateFlow()
 
+    // User intent is separate from the ephemeral service/process state.
+    private val _protectionEnabled = MutableStateFlow(prefs.getBoolean(KEY_PROTECTION_ENABLED,
+        prefs.getBoolean(KEY_SERVICE_RUNNING, false) && prefs.getBoolean(KEY_AD_BLOCKING, true)).also {
+        if (!prefs.contains(KEY_PROTECTION_ENABLED)) {
+            prefs.edit().putBoolean(KEY_PROTECTION_ENABLED, it).commit()
+        }
+    })
+    val protectionEnabled: StateFlow<Boolean> = _protectionEnabled.asStateFlow()
+
+    fun setProtectionEnabled(enabled: Boolean) {
+        check(prefs.edit().putBoolean(KEY_PROTECTION_ENABLED, enabled).commit())
+        _protectionEnabled.value = enabled
+    }
+
     private val _autoRestartOnBoot = MutableStateFlow(prefs.getBoolean(KEY_AUTO_BOOT, true))
     val autoRestartOnBoot: StateFlow<Boolean> = _autoRestartOnBoot.asStateFlow()
 
@@ -63,6 +77,12 @@ class FilteringPreferences(private val context: Context) {
     fun resetLearningStartDateForTesting(startTime: Long) {
         prefs.edit().putLong(KEY_LEARNING_START_TIME, startTime).apply()
         _learningStartTime.value = startTime
+    }
+
+    fun resetLearning() {
+        val now = System.currentTimeMillis()
+        check(prefs.edit().putLong(KEY_LEARNING_START_TIME, now).commit())
+        _learningStartTime.value = now
     }
 
     fun setAdBlockingEnabled(enabled: Boolean) {
@@ -138,6 +158,7 @@ class FilteringPreferences(private val context: Context) {
         private const val KEY_ADULT_BLOCKING = "adult_blocking_enabled"
         private const val KEY_PARENTAL_CONTROL = "parental_control_enabled"
         private const val KEY_SERVICE_RUNNING = "service_running"
+        private const val KEY_PROTECTION_ENABLED = "protection_enabled"
         private const val KEY_AUTO_BOOT = "auto_restart_on_boot"
         private const val KEY_HEALTH_CHECK_INTERVAL = "health_check_interval"
         private const val KEY_LOG_RETENTION = "log_retention_days"
@@ -150,9 +171,7 @@ class FilteringPreferences(private val context: Context) {
 
         fun getInstance(context: Context): FilteringPreferences {
             return INSTANCE ?: synchronized(this) {
-                val instance = FilteringPreferences(context.applicationContext)
-                INSTANCE = instance
-                instance
+                INSTANCE ?: FilteringPreferences(context.applicationContext).also { INSTANCE = it }
             }
         }
     }

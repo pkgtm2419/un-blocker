@@ -10,7 +10,6 @@ import com.unblocker.app.domain.model.BlockingDecision
 import com.unblocker.app.domain.usecase.DecideBlockingUseCase
 import com.unblocker.app.logic.analysis.AdaptiveBlockingEngine
 import com.unblocker.app.logic.analysis.LocalNetworkLearner
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Autonomous local content filter engine.
@@ -34,10 +33,6 @@ class ContentFilterEngine(
         preferences = preferences
     )
 
-    // Ephemeral in-memory evaluation cache for instant sub-millisecond response
-    private val decisionCache = ConcurrentHashMap<String, FilterResult>()
-    private val maxCacheSize = 3000
-
     fun analyzeAndFilter(rawDomain: String): FilterResult {
         val domain = rawDomain.trim().lowercase()
         if (domain.isBlank()) {
@@ -51,27 +46,9 @@ class ContentFilterEngine(
             )
         }
 
-        val isAdBlocking = preferences.adBlockingEnabled.value
-        val isAdultBlocking = preferences.adultBlockingEnabled.value
-
-        // Check in-memory decision cache
-        val cached = decisionCache[domain]
-        if (cached != null) {
-            // Verify cached result matches current toggle states
-            val matchesAdToggle = cached.contentType != ContentType.AD || cached.shouldBlock == isAdBlocking
-            val matchesAdultToggle = cached.contentType != ContentType.ADULT_CONTENT || cached.shouldBlock == isAdultBlocking
-            if (matchesAdToggle && matchesAdultToggle) {
-                return cached
-            }
-        }
-
-        val result = evaluateDomain(domain)
-
-        if (decisionCache.size < maxCacheSize) {
-            decisionCache[domain] = result
-        }
-
-        return result
+        // Every request must reach behavioral learning and current settings.
+        // Caching NORMAL decisions prevented cadence learning and toggle updates.
+        return evaluateDomain(domain)
     }
 
     private fun evaluateDomain(domain: String): FilterResult {
@@ -102,10 +79,6 @@ class ContentFilterEngine(
             detectionMethod = method,
             confidence = decision.confidence
         )
-    }
-
-    fun clearCache() {
-        decisionCache.clear()
     }
 
     fun getAdDetector(): AdDetector = adDetector

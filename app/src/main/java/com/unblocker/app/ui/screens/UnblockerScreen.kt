@@ -10,9 +10,11 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -41,6 +43,17 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import android.content.Intent
+import android.provider.Settings
+import com.unblocker.app.logic.analysis.DeviceLearning
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -93,6 +106,12 @@ fun UnblockerScreen(
 
     val serviceStatus by quickStartManager.status.collectAsState()
     val isRunning = serviceStatus == ServiceStatus.RUNNING
+    val isStarting = serviceStatus == ServiceStatus.STARTING
+    val isStopping = serviceStatus == ServiceStatus.STOPPING
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var resetMessage by remember { mutableStateOf("") }
+    var resetting by remember { mutableStateOf(false) }
 
     val adultBlockingEnabled by preferences.adultBlockingEnabled.collectAsState()
 
@@ -157,14 +176,27 @@ fun UnblockerScreen(
             verticalArrangement = Arrangement.Center
         ) {
 
-            // Minimal Header Branding
-            Text(
-                text = "unblocker",
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.onBackground,
-                letterSpacing = 1.sp
-            )
+            // Minimal Header Branding with App Logo
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Image(
+                    painter = painterResource(id = com.unblocker.app.R.drawable.app_logo),
+                    contentDescription = "unblocker logo",
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "unblocker",
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    letterSpacing = 1.sp
+                )
+            }
 
             Spacer(modifier = Modifier.height(4.dp))
 
@@ -234,6 +266,7 @@ fun UnblockerScreen(
                             shape = CircleShape
                         )
                         .clickable(
+                            enabled = !isStarting && !isStopping && !resetting,
                             interactionSource = interactionSource,
                             indication = ripple(bounded = true, radius = buttonSize / 2),
                             onClick = {
@@ -293,7 +326,13 @@ fun UnblockerScreen(
                     }
 
                     Text(
-                        text = if (isRunning) activeStatusText else "SHIELD IDLE • TAP ICON TO START",
+                        text = when (serviceStatus) {
+                            ServiceStatus.RUNNING -> activeStatusText
+                            ServiceStatus.STARTING -> "STARTING PROTECTION…"
+                            ServiceStatus.STOPPING -> "STOPPING PROTECTION…"
+                            ServiceStatus.ERROR -> "CONNECTION FAILED • TAP TO RETRY"
+                            ServiceStatus.STOPPED -> "SHIELD IDLE • TAP ICON TO START"
+                        },
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.8.sp,
@@ -357,11 +396,33 @@ fun UnblockerScreen(
 
             // Minimal Privacy Footnote
             Text(
-                text = "🔒 100% Local • Zero Logs • No Cloud Data",
+                text = "Learning stays on this device. No telemetry.\nAllowed DNS queries go to your resolver.",
                 style = MaterialTheme.typography.labelSmall,
                 color = Slate400.copy(alpha = 0.6f),
                 textAlign = TextAlign.Center
             )
+            TextButton(onClick = {
+                context.startActivity(Intent(Settings.ACTION_VPN_SETTINGS))
+            }) { Text("Always-on VPN settings") }
+            Text(
+                "Enable Always-on VPN for system-managed restart. Leave “Block connections without VPN” off: this app routes DNS only.",
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center
+            )
+            TextButton(enabled = !isRunning && !isStarting && !isStopping && !resetting, onClick = {
+                resetting = true
+                scope.launch {
+                    resetMessage = withContext(Dispatchers.IO) {
+                        try {
+                            DeviceLearning.clear(context.applicationContext)
+                            preferences.resetLearning()
+                            "Local learning cleared."
+                        } catch (_: Exception) { "Could not clear learning. Please retry." }
+                    }
+                    resetting = false
+                }
+            }) { Text("Clear local learning (stop protection first)") }
+            if (resetMessage.isNotEmpty()) Text(resetMessage, style = MaterialTheme.typography.bodySmall)
         }
     }
 }

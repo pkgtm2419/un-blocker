@@ -26,6 +26,7 @@ class ContentFilterEngine(
     private val networkLearner: LocalNetworkLearner = LocalNetworkLearner(context),
     private val preferences: FilteringPreferences = FilteringPreferences.getInstance(context),
     private val allowlistedDomains: PrivateDomainSet = DeviceLearning.allowlist(context),
+    private val blocklistedDomains: PrivateDomainSet = DeviceLearning.blocklist(context),
     val adaptiveEngine: AdaptiveBlockingEngine = AdaptiveBlockingEngine(preferences, networkLearner)
 ) {
 
@@ -34,6 +35,7 @@ class ContentFilterEngine(
         adultContentDetector = adultContentDetector,
         adaptiveBlockingEngine = adaptiveEngine,
         isAllowlisted = allowlistedDomains::contains,
+        isBlocklisted = blocklistedDomains::contains,
         isAdBlockingEnabled = { preferences.adBlockingEnabled.value },
         isAdultBlockingEnabled = { preferences.adultBlockingEnabled.value }
     )
@@ -62,10 +64,13 @@ class ContentFilterEngine(
         val contentType = when (decision.category) {
             BlockingCategory.AD, BlockingCategory.TRACKER -> ContentType.AD
             BlockingCategory.ADULT_CONTENT -> ContentType.ADULT_CONTENT
+            BlockingCategory.CUSTOM -> ContentType.CUSTOM
             BlockingCategory.NORMAL -> ContentType.NORMAL
         }
 
-        val method = if (!decision.isBlocked) {
+        val method = if (decision.category == BlockingCategory.CUSTOM) {
+            DetectionMethod.CUSTOM_RULE
+        } else if (!decision.isBlocked) {
             DetectionMethod.NONE
         } else if (decision.category == BlockingCategory.ADULT_CONTENT) {
             if (decision.reason.contains("TLD")) DetectionMethod.TLD_RULE

@@ -413,13 +413,13 @@ fun UnblockerScreen(
             ) {
                 Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
                     Text(
-                        text = "Local site exception",
+                        text = "Local domain rule",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Allow one domain on this device. Only a device-keyed fingerprint is saved.",
+                        text = "Allow or block one exact domain. Only device-keyed fingerprints are saved.",
                         style = MaterialTheme.typography.bodySmall,
                         color = Slate400
                     )
@@ -441,47 +441,70 @@ fun UnblockerScreen(
                             scope.launch {
                                 exceptionMessage = withContext(Dispatchers.IO) {
                                     try {
-                                        DeviceLearning.clearAllowlist(context.applicationContext)
-                                        "All exceptions cleared."
-                                    } catch (_: Exception) { "Could not clear exceptions. Please retry." }
+                                        DeviceLearning.clearRules(context.applicationContext)
+                                        "All local rules cleared."
+                                    } catch (_: Exception) { "Could not clear local rules. Please retry." }
                                 }
                                 exceptionDomain = ""
                                 updatingException = false
                             }
                         }) { Text("Clear all") }
                         Row {
-                        TextButton(enabled = !updatingException, onClick = {
-                            val domain = DomainName.normalize(exceptionDomain)
-                            if (domain == null) {
-                                exceptionMessage = "Enter a valid domain name."
-                            } else {
-                                updatingException = true
-                                scope.launch {
-                                    val removed = withContext(Dispatchers.IO) {
-                                        DeviceLearning.allowlist(context.applicationContext).remove(domain)
+                            TextButton(enabled = !updatingException, onClick = {
+                                val domain = DomainName.normalize(exceptionDomain)
+                                if (domain == null) {
+                                    exceptionMessage = "Enter a valid domain name."
+                                } else {
+                                    updatingException = true
+                                    scope.launch {
+                                        val removed = withContext(Dispatchers.IO) {
+                                            val appContext = context.applicationContext
+                                            val allowed = DeviceLearning.allowlist(appContext).remove(domain)
+                                            val blocked = DeviceLearning.blocklist(appContext).remove(domain)
+                                            allowed || blocked
+                                        }
+                                        exceptionMessage = if (removed) "Local rule removed." else "No saved rule matched."
+                                        exceptionDomain = ""
+                                        updatingException = false
                                     }
-                                    exceptionMessage = if (removed) "Exception removed." else "No saved exception matched."
-                                    exceptionDomain = ""
-                                    updatingException = false
                                 }
-                            }
-                        }) { Text("Remove") }
-                        TextButton(enabled = !updatingException, onClick = {
-                            val domain = DomainName.normalize(exceptionDomain)
-                            if (domain == null) {
-                                exceptionMessage = "Enter a valid domain name."
-                            } else {
-                                updatingException = true
-                                scope.launch {
-                                    val added = withContext(Dispatchers.IO) {
-                                        DeviceLearning.allowlist(context.applicationContext).add(domain)
+                            }) { Text("Remove") }
+                            TextButton(enabled = !updatingException, onClick = {
+                                val domain = DomainName.normalize(exceptionDomain)
+                                if (domain == null) {
+                                    exceptionMessage = "Enter a valid domain name."
+                                } else {
+                                    updatingException = true
+                                    scope.launch {
+                                        val added = withContext(Dispatchers.IO) {
+                                            val appContext = context.applicationContext
+                                            DeviceLearning.allowlist(appContext).remove(domain)
+                                            DeviceLearning.blocklist(appContext).add(domain)
+                                        }
+                                        exceptionMessage = if (added) "Block rule saved locally." else "Block rule already saved."
+                                        exceptionDomain = ""
+                                        updatingException = false
                                     }
-                                    exceptionMessage = if (added) "Exception saved locally." else "Exception already saved."
-                                    exceptionDomain = ""
-                                    updatingException = false
                                 }
-                            }
-                        }) { Text("Allow") }
+                            }) { Text("Block") }
+                            TextButton(enabled = !updatingException, onClick = {
+                                val domain = DomainName.normalize(exceptionDomain)
+                                if (domain == null) {
+                                    exceptionMessage = "Enter a valid domain name."
+                                } else {
+                                    updatingException = true
+                                    scope.launch {
+                                        val added = withContext(Dispatchers.IO) {
+                                            val appContext = context.applicationContext
+                                            DeviceLearning.blocklist(appContext).remove(domain)
+                                            DeviceLearning.allowlist(appContext).add(domain)
+                                        }
+                                        exceptionMessage = if (added) "Allow rule saved locally." else "Allow rule already saved."
+                                        exceptionDomain = ""
+                                        updatingException = false
+                                    }
+                                }
+                            }) { Text("Allow") }
                         }
                     }
                     if (exceptionMessage.isNotEmpty()) {

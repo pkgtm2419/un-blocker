@@ -19,6 +19,7 @@ class DecideBlockingUseCaseTest {
     private var adEnabled = true
     private var adultEnabled = true
     private var allowlistedDomains = emptySet<String>()
+    private var blocklistedDomains = emptySet<String>()
 
     @Before
     fun setup() {
@@ -38,6 +39,7 @@ class DecideBlockingUseCaseTest {
             adultContentDetector = adultDetector,
             adaptiveBlockingEngine = adaptiveEngine,
             isAllowlisted = { it in allowlistedDomains },
+            isBlocklisted = { it in blocklistedDomains },
             isAdBlockingEnabled = { adEnabled },
             isAdultBlockingEnabled = { adultEnabled }
         )
@@ -93,5 +95,25 @@ class DecideBlockingUseCaseTest {
 
         assertFalse(useCase("doubleclick.net").isBlocked)
         assertFalse(useCase("pornhub.com").isBlocked)
+    }
+
+    @Test
+    fun testLocalBlocklistOverridesDisabledFilters() {
+        adEnabled = false
+        adultEnabled = false
+        blocklistedDomains = setOf("wikipedia.org")
+
+        val decision = useCase("wikipedia.org")
+
+        assertTrue(decision.isBlocked)
+        assertEquals(BlockingCategory.CUSTOM, decision.category)
+    }
+
+    @Test
+    fun testAllowlistWinsWhenDomainExistsInBothLocalSets() {
+        allowlistedDomains = setOf("example.org")
+        blocklistedDomains = setOf("example.org")
+
+        assertFalse(useCase("example.org").isBlocked)
     }
 }

@@ -68,6 +68,7 @@ class LocalPrivacyAndVpnTest {
         shell("appops set com.unblocker.app ACTIVATE_VPN deny")
         DeviceLearning.clear(context)
         DeviceLearning.clearAllowlist(context)
+        DeviceLearning.clearBlocklist(context)
         instrumentation.uiAutomation.dropShellPermissionIdentity()
     }
 
@@ -114,6 +115,24 @@ class LocalPrivacyAndVpnTest {
 
         DeviceLearning.clearAllowlist(context)
         assertFalse(DeviceLearning.allowlist(context).contains(domain))
+    }
+
+    @Test fun localBlocklistIsPrivatePersistentAndAppliedByFilterEngine() {
+        val domain = "wikipedia.org"
+        preferences.setAdBlockingEnabled(false)
+        preferences.setAdultBlockingEnabled(false)
+        val blocklist = DeviceLearning.blocklist(context)
+        assertTrue(blocklist.add(domain))
+
+        val file = File(context.noBackupFilesDir, "blocklist-v1")
+        assertTrue(file.exists())
+        assertFalse(file.readText().contains(domain))
+        assertTrue(DeviceLearning.blocklist(context).contains(domain))
+        assertTrue(ContentFilterEngine(context, preferences = preferences)
+            .analyzeAndFilter(domain).shouldBlock)
+
+        DeviceLearning.clearBlocklist(context)
+        assertFalse(DeviceLearning.blocklist(context).contains(domain))
     }
 
     @Test fun bootHonorsPersistedUserChoiceAndConsent() {

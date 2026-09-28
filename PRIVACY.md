@@ -12,9 +12,10 @@ learning model or cloud synchronization. No learning data is sent to the develop
   confirmation times in
   `noBackupFilesDir/learning-v1`. The per-installation HMAC key is non-exportable
   through the Android Keystore API. Hardware protection depends on the device.
-- Exceptions: up to 1,000 exact-domain HMAC-SHA256 identifiers in
-  `noBackupFilesDir/allowlist-v1`, using the same non-exportable device key. The
-  persisted set cannot be reversed into a list by the app.
+- Local rules: up to 1,000 exact-domain allow identifiers and 1,000 exact-domain
+  block identifiers in `noBackupFilesDir/allowlist-v1` and `blocklist-v1`, using
+  the same non-exportable device key. The persisted sets cannot be reversed into
+  domain lists by the app.
 - Volatile data: DNS packet buffers, cached DNS responses and short cadence windows
   used for classification. These disappear with the process. Raw names necessarily
   exist in RAM while DNS is processed.
@@ -29,8 +30,8 @@ files, preferences and databases. Learning is additionally kept in no-backup
 storage. Older backups made before this update cannot be removed by the app.
 Uninstalling/clearing app storage removes local data through Android. Stop
 protection and choose **Clear local learning** to reset scores and the learning
-start date without reinstalling. Use **Clear all** in Local site exception to erase
-exceptions. This does not erase another app's DNS cache.
+start date without reinstalling. Use **Clear all** in Local domain rule to erase
+allow and block rules. This does not erase another app's DNS cache.
 
 ## Network traffic
 
@@ -39,7 +40,7 @@ servers Android reports for a validated, non-VPN Wi-Fi/mobile network. The app h
 no hard-coded public fallback. If none is available, DNS retries or fails instead
 of selecting a third-party resolver. The configured resolver operator and network
 can observe ordinary unencrypted UDP DNS. Website/app connections still use their
-own network services. No learning, settings, exception or diagnostic payload is
+own network services. No learning, settings, local-rule or diagnostic payload is
 attached to a DNS request. This app does not provide anonymity or encrypt traffic.
 
 ## Upgrade from 1.0.0

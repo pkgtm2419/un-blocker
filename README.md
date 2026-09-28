@@ -18,9 +18,10 @@ no-backup storage. Scores decay by 5% for each completed week without confirmati
 The key lives in Android Keystore. Raw domain names are held temporarily in memory
 for filtering and DNS resolution; they are not written to the new learning file.
 
-Users can add up to 1,000 exact-domain local exceptions. Exceptions use the same
-device-keyed HMAC design, so the app cannot reconstruct or display a saved domain
-list; enter a domain again to remove it, or use **Clear all**.
+Users can add up to 1,000 exact-domain allow rules and 1,000 exact-domain block
+rules. Both use the same device-keyed HMAC design, so the app cannot reconstruct
+or display a saved domain list; enter a domain again to remove it, or use
+**Clear all**. An allow rule wins if the same domain exists in both sets.
 
 Allowed queries are forwarded over ordinary UDP DNS only to resolvers configured
 by Android for the current validated Wi-Fi/mobile network. The app has no hard-coded
@@ -37,7 +38,8 @@ See [PRIVACY.md](PRIVACY.md) for data handling and migration details.
 2. Accept Android's VPN consent. Enable adult filtering if wanted.
 3. For system-managed restarts, use **Always-on VPN settings** in the app.
    Leave **Block connections without VPN** off: this is a DNS-only split tunnel.
-4. To erase learned reputations, stop protection and tap **Clear local learning**.
+4. Use **Local domain rule** for exact allow/block rules. To erase learned
+   reputations, stop protection and tap **Clear local learning**.
 
 The app reports STARTING, RUNNING, STOPPED or ERROR. RUNNING means the TUN
 interface was established, not that an upstream resolver is currently reachable.
@@ -59,8 +61,8 @@ No developer-specific JDK path is checked into the build.
 ```
 
 The second command requires a disposable emulator/device and exercises local
-Keystore storage, filter switches, boot policy, denied consent and real DNS
-blocking. Tests change the test installation's VPN app-op and learning data.
+Keystore storage, private local rules, filter switches, boot policy, denied consent
+and real DNS blocking. Tests change the test installation's VPN app-op and local data.
 Use ./gradlew on Linux/macOS. Build dependencies require internet access;
 runtime learning does not.
 

@@ -18,6 +18,7 @@ class DecideBlockingUseCase(
     private val adultContentDetector: AdultContentDetector,
     private val adaptiveBlockingEngine: AdaptiveBlockingEngine,
     private val isAllowlisted: (String) -> Boolean = { false },
+    private val isBlocklisted: (String) -> Boolean = { false },
     private val isAdBlockingEnabled: () -> Boolean = { true },
     private val isAdultBlockingEnabled: () -> Boolean = { true }
 ) {
@@ -42,6 +43,9 @@ class DecideBlockingUseCase(
 
         if (isAllowlisted(domain)) {
             return BlockingDecision.allow("Local exception", 1.0f)
+        }
+        if (isBlocklisted(domain)) {
+            return BlockingDecision.block("Local block rule", 1.0f, BlockingCategory.CUSTOM)
         }
 
         val isAdBlocking = isAdBlockingEnabled()

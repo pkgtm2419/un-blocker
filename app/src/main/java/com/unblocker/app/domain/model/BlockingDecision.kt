@@ -9,6 +9,7 @@ enum class BlockingCategory {
     AD,
     TRACKER,
     ADULT_CONTENT,
+    CUSTOM,
     NORMAL
 }
 

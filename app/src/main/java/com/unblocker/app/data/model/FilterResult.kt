@@ -3,6 +3,7 @@ package com.unblocker.app.data.model
 enum class ContentType {
     AD,
     ADULT_CONTENT,
+    CUSTOM,
     NORMAL
 }
 
@@ -11,6 +12,7 @@ enum class DetectionMethod {
     PATTERN_MATCH,
     TLD_RULE,
     HEURISTIC_ANALYSIS,
+    CUSTOM_RULE,
     NONE
 }
 

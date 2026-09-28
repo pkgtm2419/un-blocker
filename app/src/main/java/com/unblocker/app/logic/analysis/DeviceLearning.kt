@@ -12,6 +12,7 @@ object DeviceLearning {
     private const val ALIAS = "unblocker.learning.hmac.v1"
     private var instance: PrivateReputationStore? = null
     private var allowlistInstance: PrivateDomainSet? = null
+    private var blocklistInstance: PrivateDomainSet? = null
 
     private fun deviceKey(): SecretKey {
         val keystore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
@@ -49,13 +50,27 @@ object DeviceLearning {
         return result
     }
 
+    @Synchronized fun blocklist(context: Context): PrivateDomainSet {
+        blocklistInstance?.let { return it }
+        val result = try {
+            PrivateDomainSet(deviceKey(), File(context.noBackupFilesDir, "blocklist-v1"))
+        } catch (_: Exception) {
+            // No plaintext fallback: rules remain memory-only if protected storage fails.
+            memoryDomainSet()
+        }
+        blocklistInstance = result
+        return result
+    }
+
     fun memoryStore() = PrivateReputationStore(KeyGenerator.getInstance("HmacSHA256").apply {
         init(256)
     }.generateKey())
 
-    fun memoryAllowlist() = PrivateDomainSet(KeyGenerator.getInstance("HmacSHA256").apply {
+    fun memoryDomainSet() = PrivateDomainSet(KeyGenerator.getInstance("HmacSHA256").apply {
         init(256)
     }.generateKey())
+
+    fun memoryAllowlist() = memoryDomainSet()
 
     @Synchronized fun clear(context: Context) {
         store(context).clear()
@@ -73,5 +88,18 @@ object DeviceLearning {
             File(context.noBackupFilesDir, "allowlist-v1.tmp")).forEach { file ->
             check(!file.exists() || file.delete()) { "Allowlist cleanup failed" }
         }
+    }
+
+    @Synchronized fun clearBlocklist(context: Context) {
+        blocklist(context).clear()
+        listOf(File(context.noBackupFilesDir, "blocklist-v1"),
+            File(context.noBackupFilesDir, "blocklist-v1.tmp")).forEach { file ->
+            check(!file.exists() || file.delete()) { "Blocklist cleanup failed" }
+        }
+    }
+
+    fun clearRules(context: Context) {
+        clearAllowlist(context)
+        clearBlocklist(context)
     }
 }

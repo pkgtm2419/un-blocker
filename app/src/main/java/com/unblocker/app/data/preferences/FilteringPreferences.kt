@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONObject
 
-class FilteringPreferences(private val context: Context) {
+class FilteringPreferences(context: Context) {
 
     private val prefs: SharedPreferences =
         context.getSharedPreferences("unblocker_preferences", Context.MODE_PRIVATE)
@@ -143,7 +143,6 @@ class FilteringPreferences(private val context: Context) {
         }
     }
 
-    @android.annotation.SuppressLint("StaticFieldLeak")
     companion object {
         private const val KEY_INITIALIZED = "initialized"
         private const val KEY_AD_BLOCKING = "ad_blocking_enabled"

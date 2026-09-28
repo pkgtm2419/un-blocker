@@ -383,18 +383,16 @@ class UnblockerVpnService : VpnService() {
     }
 
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "unblocker Protection",
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = "Shows live status of active local network protection"
-                setShowBadge(false)
-            }
-            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            manager.createNotificationChannel(channel)
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            "unblocker Protection",
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = "Shows live status of active local network protection"
+            setShowBadge(false)
         }
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.createNotificationChannel(channel)
     }
 
     private fun stopVpn(publishStopped: Boolean = true) {
@@ -458,7 +456,7 @@ class UnblockerVpnService : VpnService() {
             val intent = Intent(context, UnblockerVpnService::class.java).apply {
                 action = ACTION_START
             }
-            if (fromBackground && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (fromBackground) {
                 context.startForegroundService(intent)
             } else {
                 context.startService(intent)

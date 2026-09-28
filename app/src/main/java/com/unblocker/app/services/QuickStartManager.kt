@@ -13,7 +13,7 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.util.concurrent.TimeUnit
 
-class QuickStartManager(private val context: Context) {
+class QuickStartManager(context: Context) {
 
     private val appContext = context.applicationContext
     private val preferences = FilteringPreferences.getInstance(appContext)
@@ -26,7 +26,7 @@ class QuickStartManager(private val context: Context) {
 
     fun loadDefaultConfiguration(): DefaultConfig {
         return try {
-            context.assets.open("default_config.json").use { inputStream ->
+            appContext.assets.open("default_config.json").use { inputStream ->
                 val jsonString = BufferedReader(InputStreamReader(inputStream)).readText()
                 val json = JSONObject(jsonString)
                 val conf = json.getJSONObject("defaultConfig")
@@ -58,7 +58,7 @@ class QuickStartManager(private val context: Context) {
      * Returns true if granted (prepare returns null).
      */
     fun hasVpnPermission(): Boolean {
-        return VpnService.prepare(context) == null
+        return VpnService.prepare(appContext) == null
     }
 
     /**
@@ -73,7 +73,7 @@ class QuickStartManager(private val context: Context) {
         try {
             loadDefaultConfiguration()
             preferences.setProtectionEnabled(true)
-            UnblockerVpnService.start(context)
+            UnblockerVpnService.start(appContext)
         } catch (_: Exception) {
             UnblockerVpnService.session.failed()
             return
@@ -87,7 +87,7 @@ class QuickStartManager(private val context: Context) {
      */
     fun stopBlockingServices() {
         try {
-            UnblockerVpnService.stop(context)
+            UnblockerVpnService.stop(appContext)
         } catch (_: Exception) {
             UnblockerVpnService.session.failed()
         }
@@ -100,14 +100,13 @@ class QuickStartManager(private val context: Context) {
             TimeUnit.MINUTES
         ).build()
 
-        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+        WorkManager.getInstance(appContext).enqueueUniquePeriodicWork(
             "unblocker_health_check_work",
             ExistingPeriodicWorkPolicy.UPDATE,
             workRequest
         )
     }
 
-    @android.annotation.SuppressLint("StaticFieldLeak")
     companion object {
         @Volatile
         private var INSTANCE: QuickStartManager? = null

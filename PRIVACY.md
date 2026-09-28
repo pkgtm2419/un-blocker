@@ -58,6 +58,7 @@ Deletion is not a guarantee of forensic erasure on flash storage.
 Connection states are local and do not log domains or exception messages. Local
 regression checks use fixed blocked and legitimate sample domains with an isolated
 in-memory learner; their passed/total result is not called real-world effectiveness
-and never trains the user's persistent model. Android itself may retain system diagnostics
+and never trains the user's persistent model. They run at most every six hours while
+protection is desired; stopping protection cancels scheduled work. Android itself may retain system diagnostics
 according to the device's settings. This policy describes the application code,
 not the operating system or third-party DNS providers.

@@ -19,6 +19,8 @@ Implementation checklist:
 - [x] Deterministic blocked/legitimate regression corpus and honestly named local
       health checks; no unsupported effectiveness percentage.
 - [x] Android 16/API 36 build target with edge-to-edge safe insets.
+- [x] Six-hour local regression cadence gated by protection intent; stopping
+      protection cancels periodic work and stale logging/update settings were removed.
 
 Tests exercise persistence/reload, identifiers differing by key, corrupt records,
 legacy migration, capacity and concurrency, boot eligibility, failed establishment,

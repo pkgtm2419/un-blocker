@@ -3,6 +3,7 @@ package com.unblocker.app.data.preferences
 import android.content.Context
 import android.content.SharedPreferences
 import com.unblocker.app.data.model.DefaultConfig
+import com.unblocker.app.services.HealthCheckPolicy
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,9 +19,6 @@ class FilteringPreferences(context: Context) {
 
     private val _adultBlockingEnabled = MutableStateFlow(prefs.getBoolean(KEY_ADULT_BLOCKING, true))
     val adultBlockingEnabled: StateFlow<Boolean> = _adultBlockingEnabled.asStateFlow()
-
-    private val _parentalControlEnabled = MutableStateFlow(prefs.getBoolean(KEY_PARENTAL_CONTROL, false))
-    val parentalControlEnabled: StateFlow<Boolean> = _parentalControlEnabled.asStateFlow()
 
     private val _serviceRunning = MutableStateFlow(prefs.getBoolean(KEY_SERVICE_RUNNING, false))
     val serviceRunning: StateFlow<Boolean> = _serviceRunning.asStateFlow()
@@ -42,11 +40,15 @@ class FilteringPreferences(context: Context) {
     private val _autoRestartOnBoot = MutableStateFlow(prefs.getBoolean(KEY_AUTO_BOOT, true))
     val autoRestartOnBoot: StateFlow<Boolean> = _autoRestartOnBoot.asStateFlow()
 
-    private val _healthCheckIntervalMinutes = MutableStateFlow(prefs.getInt(KEY_HEALTH_CHECK_INTERVAL, 5))
+    private val _healthCheckIntervalMinutes = MutableStateFlow(
+        prefs.getInt(KEY_HEALTH_CHECK_INTERVAL, HealthCheckPolicy.DEFAULT_INTERVAL_MINUTES)
+            .coerceAtLeast(HealthCheckPolicy.DEFAULT_INTERVAL_MINUTES).also { interval ->
+                if (prefs.getInt(KEY_HEALTH_CHECK_INTERVAL, interval) != interval) {
+                    prefs.edit().putInt(KEY_HEALTH_CHECK_INTERVAL, interval).apply()
+                }
+            }
+    )
     val healthCheckIntervalMinutes: StateFlow<Int> = _healthCheckIntervalMinutes.asStateFlow()
-
-    private val _logRetentionDays = MutableStateFlow(prefs.getInt(KEY_LOG_RETENTION, 30))
-    val logRetentionDays: StateFlow<Int> = _logRetentionDays.asStateFlow()
 
     private val _lastHealthCheckTime = MutableStateFlow(prefs.getLong(KEY_LAST_HEALTH_CHECK, 0L))
     val lastHealthCheckTime: StateFlow<Long> = _lastHealthCheckTime.asStateFlow()
@@ -92,11 +94,6 @@ class FilteringPreferences(context: Context) {
         _adultBlockingEnabled.value = enabled
     }
 
-    fun setParentalControlEnabled(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_PARENTAL_CONTROL, enabled).apply()
-        _parentalControlEnabled.value = enabled
-    }
-
     fun setServiceRunning(running: Boolean) {
         prefs.edit().putBoolean(KEY_SERVICE_RUNNING, running).apply()
         _serviceRunning.value = running
@@ -108,13 +105,9 @@ class FilteringPreferences(context: Context) {
     }
 
     fun setHealthCheckIntervalMinutes(minutes: Int) {
-        prefs.edit().putInt(KEY_HEALTH_CHECK_INTERVAL, minutes).apply()
-        _healthCheckIntervalMinutes.value = minutes
-    }
-
-    fun setLogRetentionDays(days: Int) {
-        prefs.edit().putInt(KEY_LOG_RETENTION, days).apply()
-        _logRetentionDays.value = days
+        val safeMinutes = minutes.coerceAtLeast(HealthCheckPolicy.DEFAULT_INTERVAL_MINUTES)
+        prefs.edit().putInt(KEY_HEALTH_CHECK_INTERVAL, safeMinutes).apply()
+        _healthCheckIntervalMinutes.value = safeMinutes
     }
 
     fun setLastHealthCheckTime(time: Long) {
@@ -128,18 +121,16 @@ class FilteringPreferences(context: Context) {
                 .putBoolean(KEY_INITIALIZED, true)
                 .putBoolean(KEY_AD_BLOCKING, defaultConfig.adBlockingEnabled)
                 .putBoolean(KEY_ADULT_BLOCKING, defaultConfig.adultContentBlockingEnabled)
-                .putBoolean(KEY_PARENTAL_CONTROL, defaultConfig.parentalControlEnabled)
                 .putBoolean(KEY_AUTO_BOOT, defaultConfig.autoRestartOnBootEnabled)
-                .putInt(KEY_HEALTH_CHECK_INTERVAL, (defaultConfig.healthCheckInterval / 60000).toInt().coerceAtLeast(1))
-                .putInt(KEY_LOG_RETENTION, defaultConfig.logRetentionDays)
+                .putInt(KEY_HEALTH_CHECK_INTERVAL, (defaultConfig.healthCheckInterval / 60000).toInt()
+                    .coerceAtLeast(HealthCheckPolicy.DEFAULT_INTERVAL_MINUTES))
                 .apply()
 
             _adBlockingEnabled.value = defaultConfig.adBlockingEnabled
             _adultBlockingEnabled.value = defaultConfig.adultContentBlockingEnabled
-            _parentalControlEnabled.value = defaultConfig.parentalControlEnabled
             _autoRestartOnBoot.value = defaultConfig.autoRestartOnBootEnabled
-            _healthCheckIntervalMinutes.value = (defaultConfig.healthCheckInterval / 60000).toInt().coerceAtLeast(1)
-            _logRetentionDays.value = defaultConfig.logRetentionDays
+            _healthCheckIntervalMinutes.value = (defaultConfig.healthCheckInterval / 60000).toInt()
+                .coerceAtLeast(HealthCheckPolicy.DEFAULT_INTERVAL_MINUTES)
         }
     }
 
@@ -147,12 +138,10 @@ class FilteringPreferences(context: Context) {
         private const val KEY_INITIALIZED = "initialized"
         private const val KEY_AD_BLOCKING = "ad_blocking_enabled"
         private const val KEY_ADULT_BLOCKING = "adult_blocking_enabled"
-        private const val KEY_PARENTAL_CONTROL = "parental_control_enabled"
         private const val KEY_SERVICE_RUNNING = "service_running"
         private const val KEY_PROTECTION_ENABLED = "protection_enabled"
         private const val KEY_AUTO_BOOT = "auto_restart_on_boot"
         private const val KEY_HEALTH_CHECK_INTERVAL = "health_check_interval"
-        private const val KEY_LOG_RETENTION = "log_retention_days"
         private const val KEY_LAST_HEALTH_CHECK = "last_health_check"
         private const val KEY_LEARNING_START_TIME = "learning_start_time"
 

@@ -10,6 +10,11 @@ class HealthCheckWorker(
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
+        val preferences = com.unblocker.app.data.preferences.FilteringPreferences
+            .getInstance(applicationContext)
+        if (!HealthCheckPolicy.shouldRun(preferences.protectionEnabled.value)) {
+            return Result.success()
+        }
         return try {
             val healthCheckService = HealthCheckService(applicationContext)
             healthCheckService.performHealthCheck()

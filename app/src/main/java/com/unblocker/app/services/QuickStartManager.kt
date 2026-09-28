@@ -34,13 +34,8 @@ class QuickStartManager(context: Context) {
                 val defaultConfig = DefaultConfig(
                     adBlockingEnabled = conf.optBoolean("adBlockingEnabled", true),
                     adultContentBlockingEnabled = conf.optBoolean("adultContentBlockingEnabled", true),
-                    parentalControlEnabled = conf.optBoolean("parentalControlEnabled", false),
-                    backgroundMonitoringEnabled = conf.optBoolean("backgroundMonitoringEnabled", true),
-                    connectionLoggingEnabled = false,
-                    selfCheckingEnabled = conf.optBoolean("selfCheckingEnabled", true),
                     autoRestartOnBootEnabled = conf.optBoolean("autoRestartOnBootEnabled", true),
-                    healthCheckInterval = conf.optLong("healthCheckInterval", 300_000L),
-                    logRetentionDays = conf.optInt("logRetentionDays", 30)
+                    healthCheckInterval = conf.optLong("healthCheckInterval", 21_600_000L)
                 )
 
                 preferences.loadDefaultConfigIfNeeded(defaultConfig)
@@ -90,24 +85,36 @@ class QuickStartManager(context: Context) {
             UnblockerVpnService.stop(appContext)
         } catch (_: Exception) {
             UnblockerVpnService.session.failed()
+        } finally {
+            cancelHealthCheckWorker()
         }
     }
 
     fun scheduleHealthCheckWorker() {
-        val intervalMinutes = preferences.healthCheckIntervalMinutes.value.toLong().coerceAtLeast(15)
+        if (!HealthCheckPolicy.shouldRun(preferences.protectionEnabled.value)) {
+            cancelHealthCheckWorker()
+            return
+        }
+        val intervalMinutes = preferences.healthCheckIntervalMinutes.value.toLong()
+            .coerceAtLeast(HealthCheckPolicy.DEFAULT_INTERVAL_MINUTES.toLong())
         val workRequest = PeriodicWorkRequestBuilder<HealthCheckWorker>(
             intervalMinutes,
             TimeUnit.MINUTES
         ).build()
 
         WorkManager.getInstance(appContext).enqueueUniquePeriodicWork(
-            "unblocker_health_check_work",
+            HEALTH_WORK_NAME,
             ExistingPeriodicWorkPolicy.UPDATE,
             workRequest
         )
     }
 
+    private fun cancelHealthCheckWorker() {
+        WorkManager.getInstance(appContext).cancelUniqueWork(HEALTH_WORK_NAME)
+    }
+
     companion object {
+        private const val HEALTH_WORK_NAME = "unblocker_health_check_work"
         @Volatile
         private var INSTANCE: QuickStartManager? = null
 

@@ -5,17 +5,7 @@
   "defaultConfig": {
     "adBlockingEnabled": true,
     "adultContentBlockingEnabled": true,
-    "parentalControlEnabled": false,
-    "backgroundMonitoringEnabled": true,
-    "connectionLoggingEnabled": false,
-    "selfCheckingEnabled": true,
     "autoRestartOnBootEnabled": true,
-    "healthCheckInterval": 300000,
-    "logRetentionDays": 30,
-    "notificationEnabled": true,
-    "notificationTitle": "unblocker is Active",
-    "notificationSubtitle": "Blocking unwanted ads & adult network traffic",
-    "updateAdListFrequency": "weekly",
-    "updateAdultListFrequency": "weekly"
+    "healthCheckInterval": 21600000
   }
 }

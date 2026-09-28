@@ -86,11 +86,12 @@ jobs:
 
       - name: Test and build APK
         env:
+          JAVA_HOME: ${{ env.JAVA_HOME }}
           UB_BLOCKER_KEYSTORE_FILE: ${{ steps.prepare_signing.outputs.has_keystore == 'true' && format('{0}/ub-blocker-test.keystore', runner.temp) || '' }}
           UB_BLOCKER_KEYSTORE_PASSWORD: ${{ secrets.UB_BLOCKER_TEST_KEYSTORE_PASSWORD }}
           UB_BLOCKER_KEY_ALIAS: ${{ secrets.UB_BLOCKER_TEST_KEY_ALIAS }}
           UB_BLOCKER_KEY_PASSWORD: ${{ secrets.UB_BLOCKER_TEST_KEY_PASSWORD }}
-        run: bash gradlew testDebugUnitTest lintDebug assembleDebug
+        run: bash gradlew testDebugUnitTest lintDebug assembleDebug -Dorg.gradle.java.home="${JAVA_HOME}"
 
       - name: Verify APK
         shell: bash

@@ -20,7 +20,10 @@ jobs:
       - uses: android-actions/setup-android@v4
         with:
           packages: 'platforms;android-36 build-tools;36.0.0'
-      - run: bash gradlew testDebugUnitTest lintDebug assembleDebug
+      - name: Build and test
+        env:
+          JAVA_HOME: ${{ env.JAVA_HOME }}
+        run: bash gradlew testDebugUnitTest lintDebug assembleDebug -Dorg.gradle.java.home="${JAVA_HOME}"
       - uses: actions/upload-artifact@v4
         with:
           name: ub-blocker-apk

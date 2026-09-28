@@ -66,9 +66,9 @@ BOOT_COMPLETED because the API 37 emulator's ordered boot queue was still draini
 This is emulator evidence; an OEM physical-device reboot test remains a release
 acceptance step because vendor background-start policies differ.
 
-Final debug APK: app/build/outputs/apk/debug/app-debug.apk. APK Signature Scheme
+Final debug APK: app/build/outputs/apk/debug/ub-blocker-1.2.0.apk. APK Signature Scheme
 v2 verification passes with the Android debug certificate. SHA-256:
-97BD77EEA4C6BC7149AAC59BE09A198C9D64B98F9F4E94DCD7F157C1525FEFC1.
+8A617FA713FC650551FE0E5A5D240770C35C363A54A7665E60F5E77A1EBB0C48.
 This debug-signed artifact is for local testing, not store distribution.
 
 Open-source distribution: the undocumented imported bulk lists were removed.

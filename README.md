@@ -28,7 +28,7 @@ upload browsing history, or require an account.
 
 1. Open the latest successful **Android checks** run.
 2. Scroll to **Artifacts**.
-3. Download **`unblocker-debug`** and extract `app-debug.apk`.
+3. Download **`ub-blocker-apk`** and extract `ub-blocker-1.2.0.apk`.
 
 GitHub may require you to sign in before downloading workflow artifacts. CI
 artifacts are debug-signed development builds and expire according to GitHub's
@@ -41,6 +41,8 @@ artifact-retention policy. They are suitable for testing, not store distribution
 Production-ready APKs will be listed on the Releases page when they are
 published. At present, the repository does not publish a release automatically;
 do not trust APKs from unofficial mirrors or unknown download sites.
+Every published APK must retain the versioned filename format
+`ub-blocker-{version}.apk` (for example, `ub-blocker-1.2.0.apk`).
 
 ## Why Un-Blocker?
 
@@ -249,8 +251,11 @@ the test installation's VPN app-op and local application data.
 Build output:
 
 ```text
-app/build/outputs/apk/debug/app-debug.apk
+app/build/outputs/apk/debug/ub-blocker-1.2.0.apk
 ```
+
+Gradle derives this filename from `versionName`, so future builds automatically
+use `ub-blocker-{version}.apk` after the project version changes.
 
 This APK is signed with a development key. A production update must use the same
 production signing key as the previously installed production release. Never

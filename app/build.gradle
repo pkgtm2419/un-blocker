@@ -4,6 +4,23 @@ plugins {
     id 'org.jetbrains.kotlin.plugin.compose'
 }
 
+def stableTestKeystorePath = System.getenv('UB_BLOCKER_KEYSTORE_FILE')
+def stableTestKeystorePassword = System.getenv('UB_BLOCKER_KEYSTORE_PASSWORD')
+def stableTestKeyAlias = System.getenv('UB_BLOCKER_KEY_ALIAS')
+def stableTestKeyPassword = System.getenv('UB_BLOCKER_KEY_PASSWORD')
+def stableTestSigningValues = [
+    stableTestKeystorePath,
+    stableTestKeystorePassword,
+    stableTestKeyAlias,
+    stableTestKeyPassword
+]
+def hasAnyStableTestSigningValue = stableTestSigningValues.any { it != null && !it.isBlank() }
+def hasStableTestSigning = stableTestSigningValues.every { it != null && !it.isBlank() }
+
+if (hasAnyStableTestSigningValue && !hasStableTestSigning) {
+    throw new GradleException('Stable test signing requires all UB_BLOCKER_KEYSTORE_* environment variables.')
+}
+
 android {
     namespace 'com.unblocker.app'
     compileSdk 36
@@ -12,8 +29,8 @@ android {
         applicationId "com.unblocker.app"
         minSdk 26
         targetSdk 36
-        versionCode 3
-        versionName "1.2.0"
+        versionCode 4
+        versionName "1.2.1"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -21,7 +38,23 @@ android {
         }
     }
 
+    signingConfigs {
+        if (hasStableTestSigning) {
+            stableTest {
+                storeFile file(stableTestKeystorePath)
+                storePassword stableTestKeystorePassword
+                keyAlias stableTestKeyAlias
+                keyPassword stableTestKeyPassword
+            }
+        }
+    }
+
     buildTypes {
+        debug {
+            if (hasStableTestSigning) {
+                signingConfig signingConfigs.stableTest
+            }
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'

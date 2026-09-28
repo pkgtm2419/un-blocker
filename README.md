@@ -2,7 +2,7 @@
 
 [![Android checks](https://github.com/pkgtm2419/un-blocker/actions/workflows/android.yml/badge.svg)](https://github.com/pkgtm2419/un-blocker/actions/workflows/android.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Version 1.2.0](https://img.shields.io/badge/version-1.2.0-orange.svg)](app/build.gradle)
+[![Version 1.2.1](https://img.shields.io/badge/version-1.2.1-orange.svg)](app/build.gradle)
 [![Android 8.0+](https://img.shields.io/badge/Android-8.0%2B-3DDC84?logo=android&logoColor=white)](#requirements)
 [![Privacy: local only](https://img.shields.io/badge/Privacy-local--only-success)](#privacy-by-design)
 
@@ -24,12 +24,13 @@ upload browsing history, or require an account.
 
 ### Current test build
 
-[**Download `ub-blocker-1.2.0.apk`**](https://github.com/pkgtm2419/un-blocker/releases/download/test-v1.2.0/ub-blocker-1.2.0.apk)
+[**Download `ub-blocker-1.2.1.apk`**](https://github.com/pkgtm2419/un-blocker/releases/download/test-v1.2.1/ub-blocker-1.2.1.apk)
 
 The link downloads the APK directly from the project's GitHub prerelease. This
-is a debug-signed test build for evaluation and contribution work, not a
-production-signed store release. If Android rejects an update because the debug
-signing key changed, uninstall the older test build before installing this one.
+is a stable test-signed build for evaluation and contribution work, not a
+production-signed store release. Future test releases use the same signing
+identity. A build signed by an older test key requires a one-time uninstall
+before installing this version.
 
 [View Android checks and temporary CI artifacts](https://github.com/pkgtm2419/un-blocker/actions/workflows/android.yml).
 
@@ -41,7 +42,7 @@ Tag-based automation publishes test builds as GitHub prereleases. A
 production-ready APK will be identified separately when reproducible production
 signing is configured. Do not trust APKs from unofficial mirrors or unknown
 download sites. Every published APK retains the versioned filename format
-`ub-blocker-{version}.apk` (for example, `ub-blocker-1.2.0.apk`).
+`ub-blocker-{version}.apk` (for example, `ub-blocker-1.2.1.apk`).
 
 ## Why Un-Blocker?
 
@@ -166,7 +167,7 @@ project's privacy model.
 
 ## Requirements
 
-- Current application version: 1.2.0 (`versionCode` 3).
+- Current application version: 1.2.1 (`versionCode` 4).
 - Android package: `com.unblocker.app`.
 - Android 8.0 or newer (API 26+).
 - Target and compile SDK: Android 16 / API 36.
@@ -250,7 +251,7 @@ the test installation's VPN app-op and local application data.
 Build output:
 
 ```text
-app/build/outputs/apk/debug/ub-blocker-1.2.0.apk
+app/build/outputs/apk/debug/ub-blocker-1.2.1.apk
 ```
 
 Gradle derives this filename from `versionName`, so future builds automatically

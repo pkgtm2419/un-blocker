@@ -21,7 +21,13 @@ class AdDetector(private val context: Context? = null) {
         Regex(".*(?:^|\\.)doubleclick\\.net$"),
         Regex(".*(?:^|\\.)googleadservices\\.com$"),
         // Major programmatic ad networks & exchanges patterns
-        Regex(".*(?:^|\\.)(?:criteo|taboola|outbrain|adnxs|pubmatic|rubiconproject|openx|smartadserver|admob|applovin|unityads|vungle|inmobi|ironsrc|branch|kochava|appsflyer|adjust|chartboost|liftoff|fyber|pangle|mintegral|revcontent|mgid|ezoic|sovrn|sharethrough|triplelift|casalemedia|bidswitch|moatads|quantserve|scorecardresearch)\\..*")
+        Regex(".*(?:^|\\.)(?:criteo|taboola|outbrain|adnxs|pubmatic|rubiconproject|openx|smartadserver|admob|applovin|unityads|vungle|inmobi|ironsrc|branch|kochava|appsflyer|adjust|chartboost|liftoff|fyber|pangle|mintegral|revcontent|mgid|ezoic|sovrn|sharethrough|triplelift|casalemedia|bidswitch|moatads|quantserve|scorecardresearch)\\..*"),
+        // Pop-under, pop-up, and aggressive push ad networks (common on movie/streaming sites like Bollyflix, MoviesMod, UHDMovies)
+        Regex(".*(?:^|\\.)(?:popads|popcash|propellerads|propellerpops|monetag|adsterra|clickadu|hilltopads|galaksion|admaven|ad-maven|evadav|rollerads|yllix|richads|richpush|exoclick|trafficjunky|tsyndicate|clickmngr|clickterra|terraclicks|onclickads|onclkds|onclasrv|traffpartners|mobtrks|adsboosters|recrampwiped|hedeuntacks|legbaratwind|ronracepub)\\..*"),
+        // Pop, popup, popunder, clicktrack prefixes/tokens
+        Regex(".*(?:^|\\.)(?:pop|popup|popunder|onclick|directlink|smartlink)\\d*\\..*"),
+        // Ad-shortener & countdown timer redirection gateways
+        Regex(".*(?:^|\\.)(?:droplink|gplinks|gplink|linkvertise|shrinkearn|adshrink|shrinkme|ouo\\.(?:io|press)|exe\\.io|rocklinks)\\..*")
     )
 
     init {
@@ -36,7 +42,10 @@ class AdDetector(private val context: Context? = null) {
                 "applovin.com", "unityads.unity3d.com", "vungle.com", "inmobi.com",
                 "ironsrc.com", "criteo.com", "taboola.com", "outbrain.com", "adnxs.com",
                 "adjust.com", "appsflyer.com", "branch.io", "kochava.com", "flurry.com",
-                "mixpanel.com", "segment.io", "amplitude.com", "hotjar.com", "clarity.ms"
+                "mixpanel.com", "segment.io", "amplitude.com", "hotjar.com", "clarity.ms",
+                "recrampwiped.com", "adsboosters.xyz", "hedeuntacks.com", "legbaratwind.com",
+                "ronracepub.com", "popads.net", "popcash.net", "adsterra.com", "propellerads.com",
+                "monetag.com", "clickadu.com", "hilltopads.com", "galaksion.com", "admaven.com"
             )
             fallback.mapNotNull(DomainName::normalize).forEach(adDomains::add)
             return
@@ -60,7 +69,10 @@ class AdDetector(private val context: Context? = null) {
                 "applovin.com", "unityads.unity3d.com", "vungle.com", "inmobi.com",
                 "ironsrc.com", "criteo.com", "taboola.com", "outbrain.com", "adnxs.com",
                 "adjust.com", "appsflyer.com", "branch.io", "kochava.com", "flurry.com",
-                "mixpanel.com", "segment.io", "amplitude.com", "hotjar.com", "clarity.ms"
+                "mixpanel.com", "segment.io", "amplitude.com", "hotjar.com", "clarity.ms",
+                "recrampwiped.com", "adsboosters.xyz", "hedeuntacks.com", "legbaratwind.com",
+                "ronracepub.com", "popads.net", "popcash.net", "adsterra.com", "propellerads.com",
+                "monetag.com", "clickadu.com", "hilltopads.com", "galaksion.com", "admaven.com"
             )
             fallback.mapNotNull(DomainName::normalize).forEach(adDomains::add)
         }

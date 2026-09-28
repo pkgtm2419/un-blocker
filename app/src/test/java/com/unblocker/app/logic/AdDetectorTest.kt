@@ -72,6 +72,27 @@ class AdDetectorTest {
     }
 
     @Test
+    fun testMovieSitePopunderAndAdNetworksBlocked() {
+        val (isAd1, _) = adDetector.isAdDomain("ds.recrampwiped.com")
+        assertTrue("recrampwiped popunder must be blocked", isAd1)
+
+        val (isAd2, _) = adDetector.isAdDomain("sads.adsboosters.xyz")
+        assertTrue("adsboosters popunder must be blocked", isAd2)
+
+        val (isAd3, _) = adDetector.isAdDomain("dh.hedeuntacks.com")
+        assertTrue("hedeuntacks popunder must be blocked", isAd3)
+
+        val (isAd4, _) = adDetector.isAdDomain("lp.legbaratwind.com")
+        assertTrue("legbaratwind popunder must be blocked", isAd4)
+
+        val (isAd5, _) = adDetector.isAdDomain("onclickads.net")
+        assertTrue("onclickads propeller network must be blocked", isAd5)
+
+        val (isAd6, _) = adDetector.isAdDomain("droplink.co")
+        assertTrue("droplink ad gateway must be blocked", isAd6)
+    }
+
+    @Test
     fun testBenignDomainsNotBlocked() {
         val (isAd1, _) = adDetector.isAdDomain("wikipedia.org")
         assertFalse("wikipedia.org should not be detected as ad", isAd1)
@@ -84,5 +105,15 @@ class AdDetectorTest {
 
         val (isAd4, _) = adDetector.isAdDomain("google.com")
         assertFalse("google.com base domain should not be detected as ad", isAd4)
+
+        // Movie content domains must remain browsable by the user
+        val (isMovie1, _) = adDetector.isAdDomain("uhdmovies.my")
+        assertFalse("uhdmovies.my base site should not be classified as ad", isMovie1)
+
+        val (isMovie2, _) = adDetector.isAdDomain("moviesmod.ai.in")
+        assertFalse("moviesmod.ai.in base site should not be classified as ad", isMovie2)
+
+        val (isMovie3, _) = adDetector.isAdDomain("gamesleech.com")
+        assertFalse("gamesleech.com base site should not be classified as ad", isMovie3)
     }
 }

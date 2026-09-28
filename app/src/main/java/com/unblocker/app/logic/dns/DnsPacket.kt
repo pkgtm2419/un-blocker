@@ -38,6 +38,59 @@ object DnsPacketUtil {
     const val TYPE_AAAA: Short = 28
     const val CLASS_IN: Short = 1
 
+    /** Returns the lowest positive answer TTL, or null when the payload is not cacheable. */
+    fun minCacheTtlSeconds(payload: ByteArray, length: Int = payload.size): Long? {
+        if (length < 12 || length > payload.size) return null
+        val flags = u16(payload, 2)
+        if (flags and 0x8000 == 0 || flags and 0x000f != 0) return null
+        val questionCount = u16(payload, 4)
+        val answerCount = u16(payload, 6)
+        if (answerCount == 0) return null
+
+        var position = 12
+        repeat(questionCount) {
+            position = skipDnsName(payload, position, length) ?: return null
+            if (position + 4 > length) return null
+            position += 4
+        }
+
+        var minimum: Long? = null
+        repeat(answerCount) {
+            position = skipDnsName(payload, position, length) ?: return null
+            if (position + 10 > length) return null
+            val ttl = u32(payload, position + 4)
+            val dataLength = u16(payload, position + 8)
+            position += 10
+            if (position + dataLength > length) return null
+            position += dataLength
+            minimum = minimum?.coerceAtMost(ttl) ?: ttl
+        }
+        return minimum?.takeIf { it > 0 }
+    }
+
+    private fun skipDnsName(payload: ByteArray, start: Int, end: Int): Int? {
+        var position = start
+        while (position < end) {
+            val length = payload[position].toInt() and 0xff
+            when {
+                length == 0 -> return position + 1
+                length and 0xc0 == 0xc0 -> return if (position + 1 < end) position + 2 else null
+                length > 63 || position + 1 + length > end -> return null
+                else -> position += 1 + length
+            }
+        }
+        return null
+    }
+
+    private fun u16(payload: ByteArray, offset: Int): Int =
+        ((payload[offset].toInt() and 0xff) shl 8) or (payload[offset + 1].toInt() and 0xff)
+
+    private fun u32(payload: ByteArray, offset: Int): Long =
+        ((payload[offset].toLong() and 0xff) shl 24) or
+            ((payload[offset + 1].toLong() and 0xff) shl 16) or
+            ((payload[offset + 2].toLong() and 0xff) shl 8) or
+            (payload[offset + 3].toLong() and 0xff)
+
     /**
      * Parse IPv4/UDP packet containing a DNS query from the TUN interface.
      * Returns null if the packet is not IPv4 UDP DNS query.

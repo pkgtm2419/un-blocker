@@ -192,7 +192,8 @@ class UnblockerVpnService : VpnService() {
                         }
                     } else {
                         // Check local high-speed DNS cache
-                        val cachedPayload = dnsCache.get(query.domain, query.queryType, query.transactionId)
+                        val cachedPayload = dnsCache.get(query.domain, query.queryType,
+                            query.transactionId, query.queryClass)
                         if (cachedPayload != null) {
                             val wrappedResponse = wrapDnsResponseInIpUdp(query, cachedPayload, cachedPayload.size)
                             synchronized(writeLock) {
@@ -262,7 +263,10 @@ class UnblockerVpnService : VpnService() {
                         val respTxId = ((receiveBuffer[0].toInt() and 0xFF) shl 8) or (receiveBuffer[1].toInt() and 0xFF)
                         if (respTxId == (query.transactionId.toInt() and 0xFFFF)) {
                             val responseData = receiveBuffer.copyOf(inPacket.length)
-                            dnsCache.put(query.domain, query.queryType, responseData)
+                            DnsPacketUtil.minCacheTtlSeconds(responseData)?.let { ttl ->
+                                dnsCache.put(query.domain, query.queryType, responseData, ttl,
+                                    query.queryClass)
+                            }
 
                             val wrappedResponse = wrapDnsResponseInIpUdp(query, responseData, inPacket.length)
                             synchronized(writeLock) {

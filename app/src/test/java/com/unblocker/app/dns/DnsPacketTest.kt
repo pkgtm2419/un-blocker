@@ -48,6 +48,13 @@ class DnsPacketTest {
         assertEquals(0.toByte(), response[end - 3])
         assertEquals(0.toByte(), response[end - 2])
         assertEquals(0.toByte(), response[end - 1])
+        assertEquals(300L, DnsPacketUtil.minCacheTtlSeconds(response.copyOfRange(28, response.size)))
+    }
+
+    @Test fun cacheTtlRejectsQueriesAndMalformedResponses() {
+        val query = createMockDnsQueryPacket("example.com", 0x4321)
+        assertEquals(null, DnsPacketUtil.minCacheTtlSeconds(query))
+        assertEquals(null, DnsPacketUtil.minCacheTtlSeconds(byteArrayOf(1, 2, 3)))
     }
 
     private fun createMockDnsQueryPacket(domain: String, txId: Short): ByteArray {

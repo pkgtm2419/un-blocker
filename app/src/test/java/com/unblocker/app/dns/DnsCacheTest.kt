@@ -10,10 +10,11 @@ import org.junit.Test
 class DnsCacheTest {
 
     private lateinit var cache: DnsCache
+    private var now = 1_000L
 
     @Before
     fun setup() {
-        cache = DnsCache(maxEntries = 50)
+        cache = DnsCache(maxEntries = 50, nowMillis = { now })
     }
 
     @Test
@@ -38,5 +39,25 @@ class DnsCacheTest {
     fun testCacheMiss() {
         val result = cache.get("nonexistent.domain.com", 1, 0x1111)
         assertNull("Cache miss should return null", result)
+    }
+
+    @Test fun honorsResolverTtlIncludingZero() {
+        val payload = byteArrayOf(0x12, 0x34, 0x81.toByte(), 0x80.toByte())
+        cache.put("short.example", 1, payload, ttlSeconds = 2)
+        now = 2_999L
+        assertNotNull(cache.get("short.example", 1, 0x1111))
+        now = 3_001L
+        assertNull(cache.get("short.example", 1, 0x1111))
+
+        cache.put("zero.example", 1, payload, ttlSeconds = 0)
+        assertNull(cache.get("zero.example", 1, 0x1111))
+    }
+
+    @Test fun dnsClassIsPartOfCacheIdentity() {
+        val payload = byteArrayOf(0x12, 0x34, 0x81.toByte(), 0x80.toByte())
+        cache.put("class.example", 1, payload, ttlSeconds = 60, queryClass = 1)
+
+        assertNotNull(cache.get("class.example", 1, 0x1111, queryClass = 1))
+        assertNull(cache.get("class.example", 1, 0x1111, queryClass = 3))
     }
 }

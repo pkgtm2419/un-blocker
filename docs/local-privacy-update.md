@@ -41,10 +41,10 @@ process-local JAVA_TOOL_OPTIONS=-Djdk.net.unixdomain.tmpdir=D:\blocker and JDK 1
 Removed the repository's hardcoded developer-specific JDK path. Build and emulator
 are run sequentially because simultaneous execution exhausted workstation memory.
 
-Current desktop verification: 72 JVM tests pass with 0 failures. Lint has 0
-errors; debug app/test APKs build. Version is 1.2.0 (3), API 26 minimum/36 target,
-and legal/privacy assets are bundled. Seven instrumentation tests are present; a
-fresh connected-device result is required before final release sign-off.
+Current desktop verification: 80 JVM tests pass with 0 failures or skips. Lint
+has 0 errors and 27 warnings; debug app/test APKs build. Version is 1.2.0 (3),
+API 26 minimum/36 target, and legal/privacy assets are bundled. Seven connected
+instrumentation tests pass with 0 failures or skips on the API 37 Pixel 10 AVD.
 
 Review corrections: scoped forwarding resources to each VPN run, serialized tunnel
 establishment with teardown, added session-generation ownership, removed premature
@@ -52,20 +52,24 @@ STOPPED publication, made runtime Keystore errors nonfatal, and made reset remov
 old snapshots even when the current store fell back to memory. The Keystore
 failure regression was observed failing before the fix and passes afterward.
 
-The earlier Android instrumentation run passed 5/5 tests. It exercised real VPN
+The final Android instrumentation run passed 7/7 tests. It exercised real VPN
 establishment, routed an actual UDP DNS query through 10.10.0.1, verified the
 blocked 0.0.0.0 response, and verified stop, restart and final shutdown states.
 It also covered persisted boot intent and consent, denied consent, Keystore-backed
-pseudonymous storage and deletion, and live settings re-evaluation.
+pseudonymous storage and deletion, and live allow/block rule re-evaluation.
 
-A separate cold emulator reboot passed after the first device unlock: genuine
+A separate cold emulator reboot passed without relaunching the app: genuine
 user-granted VPN consent survived, BOOT_COMPLETED launched the foreground service,
-the tun0 interface returned at 10.10.0.2, and desired/running state remained true.
+the tun0 interface returned at 10.10.0.2 with local DNS 10.10.0.1, and desired/
+running state remained true. Delivery occurred about 99 seconds after
+BOOT_COMPLETED because the API 37 emulator's ordered boot queue was still draining.
 This is emulator evidence; an OEM physical-device reboot test remains a release
 acceptance step because vendor background-start policies differ.
 
-The APK hash must be regenerated after final verification; the previous 1.1.0
-hash is intentionally not presented as current evidence.
+Final debug APK: app/build/outputs/apk/debug/app-debug.apk. APK Signature Scheme
+v2 verification passes with the Android debug certificate. SHA-256:
+97BD77EEA4C6BC7149AAC59BE09A198C9D64B98F9F4E94DCD7F157C1525FEFC1.
+This debug-signed artifact is for local testing, not store distribution.
 
 Open-source distribution: the undocumented imported bulk lists were removed.
 Both bundled seed files now carry Apache-2.0 SPDX headers and are documented in

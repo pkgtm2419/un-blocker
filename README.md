@@ -1,6 +1,6 @@
 # Un-Blocker
 
-[![Android checks](https://github.com/pkgtm2419/un-blocker/actions/workflows/android.yml/badge.svg)](https://github.com/pkgtm2419/un-blocker/actions/workflows/android.yml)
+[![Download APK](https://img.shields.io/badge/Download-APK%20(v1.2.1)-brightgreen?style=flat&logo=android&logoColor=white)](https://github.com/pkgtm2419/un-blocker/releases/download/test-v1.2.1/ub-blocker-1.2.1.apk)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Version 1.2.1](https://img.shields.io/badge/version-1.2.1-orange.svg)](app/build.gradle)
 [![Android 8.0+](https://img.shields.io/badge/Android-8.0%2B-3DDC84?logo=android&logoColor=white)](#requirements)
@@ -22,27 +22,23 @@ upload browsing history, or require an account.
 
 ## Download the APK
 
-### Current test build
+<div align="center">
 
-[**Download `ub-blocker-1.2.1.apk`**](https://github.com/pkgtm2419/un-blocker/releases/download/test-v1.2.1/ub-blocker-1.2.1.apk)
+[![Download APK](https://img.shields.io/badge/Download_APK-ub--blocker--1.2.1.apk-brightgreen?style=for-the-badge&logo=android&logoColor=white)](https://github.com/pkgtm2419/un-blocker/releases/download/test-v1.2.1/ub-blocker-1.2.1.apk)
+[![Releases](https://img.shields.io/badge/All_Releases-GitHub-238636?style=for-the-badge&logo=github&logoColor=white)](https://github.com/pkgtm2419/un-blocker/releases)
 
-The link downloads the APK directly from the project's GitHub prerelease. This
-is a stable test-signed build for evaluation and contribution work, not a
-production-signed store release. Future test releases use the same signing
-identity. A build signed by an older test key requires a one-time uninstall
-before installing this version.
+</div>
 
-[View Android checks and temporary CI artifacts](https://github.com/pkgtm2419/un-blocker/actions/workflows/android.yml).
+### Latest Release Package
 
-### Published releases
+| Asset | Link | Details |
+| :--- | :--- | :--- |
+| **Android APK** | [**`ub-blocker-1.2.1.apk`**](https://github.com/pkgtm2419/un-blocker/releases/download/test-v1.2.1/ub-blocker-1.2.1.apk) | Direct APK Download (Ready to install) |
+| **Release Page** | [**Release `test-v1.2.1` Notes**](https://github.com/pkgtm2419/un-blocker/releases/tag/test-v1.2.1) | View release details and changelog |
+| **All Releases** | [**GitHub Releases Catalog**](https://github.com/pkgtm2419/un-blocker/releases) | Browse all published version releases |
 
-[**Open the Un-Blocker releases page**](https://github.com/pkgtm2419/un-blocker/releases)
-
-Tag-based automation publishes test builds as GitHub prereleases. A
-production-ready APK will be identified separately when reproducible production
-signing is configured. Do not trust APKs from unofficial mirrors or unknown
-download sites. Every published APK retains the versioned filename format
-`ub-blocker-{version}.apk` (for example, `ub-blocker-1.2.1.apk`).
+> [!TIP]
+> Click the green **Download APK** button above to download the file directly to your phone. If you have an earlier build installed with an older test key, uninstall it once before installing this version.
 
 ## Why Un-Blocker?
 
@@ -177,7 +173,7 @@ project's privacy model.
 
 ## Install and use
 
-1. Download an APK from the [CI build](#latest-automated-test-build) or the
+1. Download the APK from the [Download section](#download-the-apk) or the
    [official Releases page](https://github.com/pkgtm2419/un-blocker/releases).
 2. Allow installation from the selected source if Android asks.
 3. Open **Un-Blocker** and tap the power button.

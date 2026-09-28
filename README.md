@@ -22,26 +22,25 @@ upload browsing history, or require an account.
 
 ## Download the APK
 
-### Latest automated test build
+### Current test build
 
-[**Download the latest CI APK**](https://github.com/pkgtm2419/un-blocker/actions/workflows/android.yml)
+[**Download `ub-blocker-1.2.0.apk`**](https://github.com/pkgtm2419/un-blocker/releases/download/test-v1.2.0/ub-blocker-1.2.0.apk)
 
-1. Open the latest successful **Android checks** run.
-2. Scroll to **Artifacts**.
-3. Download **`ub-blocker-apk`** and extract `ub-blocker-1.2.0.apk`.
+The link downloads the APK directly from the project's GitHub prerelease. This
+is a debug-signed test build for evaluation and contribution work, not a
+production-signed store release. If Android rejects an update because the debug
+signing key changed, uninstall the older test build before installing this one.
 
-GitHub may require you to sign in before downloading workflow artifacts. CI
-artifacts are debug-signed development builds and expire according to GitHub's
-artifact-retention policy. They are suitable for testing, not store distribution.
+[View Android checks and temporary CI artifacts](https://github.com/pkgtm2419/un-blocker/actions/workflows/android.yml).
 
 ### Published releases
 
 [**Open the Un-Blocker releases page**](https://github.com/pkgtm2419/un-blocker/releases)
 
-Production-ready APKs will be listed on the Releases page when they are
-published. At present, the repository does not publish a release automatically;
-do not trust APKs from unofficial mirrors or unknown download sites.
-Every published APK must retain the versioned filename format
+Tag-based automation publishes test builds as GitHub prereleases. A
+production-ready APK will be identified separately when reproducible production
+signing is configured. Do not trust APKs from unofficial mirrors or unknown
+download sites. Every published APK retains the versioned filename format
 `ub-blocker-{version}.apk` (for example, `ub-blocker-1.2.0.apk`).
 
 ## Why Un-Blocker?

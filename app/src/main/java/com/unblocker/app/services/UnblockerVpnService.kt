@@ -149,6 +149,20 @@ class UnblockerVpnService : VpnService() {
                 .setMtu(1500)
                 .setBlocking(true)
 
+            // Intercept IPv6 DNS to eliminate cellular and Wi-Fi dual-stack bypass
+            try {
+                builder.addAddress("fd00:1::2", 128)
+                builder.addDnsServer("fd00:1::1")
+                builder.addRoute("fd00:1::1", 128)
+            } catch (_: Exception) {
+                // Graceful fallback on devices with no IPv6 support
+            }
+
+            // Route hardcoded public DNS resolvers so direct UDP port 53 traffic is filtered
+            listOf("8.8.8.8", "8.8.4.4", "1.1.1.1", "1.0.0.1", "9.9.9.9").forEach { ip ->
+                try { builder.addRoute(ip, 32) } catch (_: Exception) {}
+            }
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 builder.setMetered(false)
             }
@@ -288,8 +302,18 @@ class UnblockerVpnService : VpnService() {
         }
     }
 
+    private val defaultUpstreamResolvers by lazy {
+        listOf(
+            InetAddress.getByName("8.8.8.8"),
+            InetAddress.getByName("1.1.1.1"),
+            InetAddress.getByName("9.9.9.9"),
+            InetAddress.getByName("8.8.4.4")
+        )
+    }
+
     private fun configuredResolvers(): List<InetAddress> {
-        return DnsResolverPolicy.sanitize(networkResolvers.values.flatten())
+        val discovered = DnsResolverPolicy.sanitize(networkResolvers.values.flatten())
+        return if (discovered.isNotEmpty()) discovered else defaultUpstreamResolvers
     }
 
     private fun refreshNetworkResolvers(network: Network) {
@@ -308,37 +332,62 @@ class UnblockerVpnService : VpnService() {
 
     private fun wrapDnsResponseInIpUdp(query: com.unblocker.app.logic.dns.DnsQuery, dnsBytes: ByteArray, dnsLength: Int): ByteArray {
         val udpLength = 8 + dnsLength
-        val ipTotalLength = 20 + udpLength
-        val buf = ByteBuffer.allocate(ipTotalLength)
-        buf.order(ByteOrder.BIG_ENDIAN)
+        return if (query.isIpv6) {
+            val ipTotalLength = 40 + udpLength
+            val buf = ByteBuffer.allocate(ipTotalLength)
+            buf.order(ByteOrder.BIG_ENDIAN)
 
-        // IPv4 Header (20 bytes)
-        buf.put(0x45.toByte())
-        buf.put(0x00.toByte())
-        buf.putShort(ipTotalLength.toShort())
-        buf.putShort(0x0000.toShort())
-        buf.putShort(0x4000.toShort())
-        buf.put(64.toByte())
-        buf.put(17.toByte()) // UDP
-        buf.putShort(0x0000.toShort()) // Placeholder for checksum
-        buf.put(query.dstIp) // Src IP
-        buf.put(query.srcIp) // Dst IP
+            // IPv6 Header (40 bytes)
+            buf.putInt(0x60000000)
+            buf.putShort(udpLength.toShort())
+            buf.put(17.toByte()) // UDP
+            buf.put(64.toByte()) // Hop Limit
+            buf.put(query.dstIp) // Src IP
+            buf.put(query.srcIp) // Dst IP
 
-        // Compute and inject mandatory IPv4 Header Checksum
-        val ipChecksum = computeIpChecksum(buf.array(), 0, 20)
-        buf.putShort(10, ipChecksum)
+            // UDP Header (8 bytes)
+            buf.putShort(query.dstPort.toShort())
+            buf.putShort(query.srcPort.toShort())
+            buf.putShort(udpLength.toShort())
+            buf.putShort(0x0000.toShort())
 
-        // UDP Header (8 bytes)
-        buf.position(20)
-        buf.putShort(query.dstPort.toShort())
-        buf.putShort(query.srcPort.toShort())
-        buf.putShort(udpLength.toShort())
-        buf.putShort(0x0000.toShort()) // Optional for IPv4 UDP
+            // DNS Payload
+            buf.put(dnsBytes, 0, dnsLength)
 
-        // DNS Response Payload
-        buf.put(dnsBytes, 0, dnsLength)
+            buf.array()
+        } else {
+            val ipTotalLength = 20 + udpLength
+            val buf = ByteBuffer.allocate(ipTotalLength)
+            buf.order(ByteOrder.BIG_ENDIAN)
 
-        return buf.array()
+            // IPv4 Header (20 bytes)
+            buf.put(0x45.toByte())
+            buf.put(0x00.toByte())
+            buf.putShort(ipTotalLength.toShort())
+            buf.putShort(0x0000.toShort())
+            buf.putShort(0x4000.toShort())
+            buf.put(64.toByte())
+            buf.put(17.toByte()) // UDP
+            buf.putShort(0x0000.toShort()) // Placeholder for checksum
+            buf.put(query.dstIp) // Src IP
+            buf.put(query.srcIp) // Dst IP
+
+            // Compute and inject mandatory IPv4 Header Checksum
+            val ipChecksum = computeIpChecksum(buf.array(), 0, 20)
+            buf.putShort(10, ipChecksum)
+
+            // UDP Header (8 bytes)
+            buf.position(20)
+            buf.putShort(query.dstPort.toShort())
+            buf.putShort(query.srcPort.toShort())
+            buf.putShort(udpLength.toShort())
+            buf.putShort(0x0000.toShort()) // Optional for IPv4 UDP
+
+            // DNS Response Payload
+            buf.put(dnsBytes, 0, dnsLength)
+
+            buf.array()
+        }
     }
 
     private fun computeIpChecksum(buf: ByteArray, offset: Int, length: Int): Short {

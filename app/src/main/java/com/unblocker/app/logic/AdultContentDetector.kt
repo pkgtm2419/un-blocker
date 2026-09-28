@@ -37,7 +37,15 @@ class AdultContentDetector(private val context: Context? = null) {
     }
 
     fun loadStaticList() {
-        if (context == null) return
+        if (context == null) {
+            val fallback = listOf(
+                "pornhub.com", "xvideos.com", "xnxx.com", "redtube.com", "youporn.com",
+                "chaturbate.com", "cam4.com", "livejasmin.com", "stripchat.com", "xhamster.com",
+                "bongacams.com", "myfreecams.com", "eporner.com", "spankbang.com", "brazzers.com"
+            )
+            fallback.mapNotNull(DomainName::normalize).forEach(adultDomains::add)
+            return
+        }
         try {
             context.assets.open("adult_domains.txt").use { inputStream ->
                 BufferedReader(InputStreamReader(inputStream)).useLines { lines ->
@@ -55,7 +63,7 @@ class AdultContentDetector(private val context: Context? = null) {
                 "chaturbate.com", "cam4.com", "livejasmin.com", "stripchat.com", "xhamster.com",
                 "bongacams.com", "myfreecams.com", "eporner.com", "spankbang.com", "brazzers.com"
             )
-            adultDomains.addAll(fallback)
+            fallback.mapNotNull(DomainName::normalize).forEach(adultDomains::add)
         }
     }
 

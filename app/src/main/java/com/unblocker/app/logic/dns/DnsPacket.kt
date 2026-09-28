@@ -16,7 +16,8 @@ data class DnsQuery(
     val srcIp: ByteArray,
     val dstIp: ByteArray,
     val srcPort: Int,
-    val dstPort: Int
+    val dstPort: Int,
+    val isIpv6: Boolean = false
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -100,18 +101,26 @@ object DnsPacketUtil {
 
         val versionAndIhl = packet[0].toInt() and 0xFF
         val version = versionAndIhl shr 4
-        if (version != 4) return null // Only IPv4 handled for local DNS spoofing
+        val isIpv6 = (version == 6)
+        if (version != 4 && version != 6) return null
 
-        val ihl = (versionAndIhl and 0x0F) * 4
-        if (ihl < 20 || length < ihl + 8) return null // RFC 791 requires min IPv4 IHL of 5 (20 bytes)
+        val (udpOffset, srcIp, dstIp) = if (isIpv6) {
+            if (length < 48) return null // 40 IPv6 + 8 UDP
+            val nextHeader = packet[6].toInt() and 0xFF
+            if (nextHeader != 17) return null // Protocol 17 = UDP
+            val src = ByteArray(16) { packet[8 + it] }
+            val dst = ByteArray(16) { packet[24 + it] }
+            Triple(40, src, dst)
+        } else {
+            val ihl = (versionAndIhl and 0x0F) * 4
+            if (ihl < 20 || length < ihl + 8) return null // RFC 791 requires min IPv4 IHL of 5 (20 bytes)
+            val protocol = packet[9].toInt() and 0xFF
+            if (protocol != 17) return null // Protocol 17 = UDP
+            val src = ByteArray(4) { packet[12 + it] }
+            val dst = ByteArray(4) { packet[16 + it] }
+            Triple(ihl, src, dst)
+        }
 
-        val protocol = packet[9].toInt() and 0xFF
-        if (protocol != 17) return null // Protocol 17 = UDP
-
-        val srcIp = ByteArray(4) { packet[12 + it] }
-        val dstIp = ByteArray(4) { packet[16 + it] }
-
-        val udpOffset = ihl
         val srcPort = ((packet[udpOffset].toInt() and 0xFF) shl 8) or (packet[udpOffset + 1].toInt() and 0xFF)
         val dstPort = ((packet[udpOffset + 2].toInt() and 0xFF) shl 8) or (packet[udpOffset + 3].toInt() and 0xFF)
 
@@ -170,7 +179,8 @@ object DnsPacketUtil {
             srcIp = srcIp,
             dstIp = dstIp,
             srcPort = srcPort,
-            dstPort = dstPort
+            dstPort = dstPort,
+            isIpv6 = isIpv6
         )
     }
 
@@ -179,73 +189,128 @@ object DnsPacketUtil {
      * wrapped in a complete IPv4/UDP packet ready to write to the TUN interface.
      */
     fun buildBlockedDnsResponsePacket(query: DnsQuery): ByteArray {
+        val isDoHCanary = query.domain == "use-application-dns.net"
         val isA = query.queryType == TYPE_A
         val isAaaa = query.queryType == TYPE_AAAA
 
         // DNS Response Body
         val questionBytes = extractQuestionSection(query.rawPacket, query.dnsOffset, query.dnsLength)
-        val answerRecordLength = if (isA) 16 else if (isAaaa) 28 else 0
+        val answerRecordLength = if (isDoHCanary) 0 else if (isA) 16 else if (isAaaa) 28 else 0
 
         val dnsResponseSize = 12 + questionBytes.size + answerRecordLength
         val udpLength = 8 + dnsResponseSize
-        val ipTotalLength = 20 + udpLength
+        val dnsFlags = if (isDoHCanary) 0x8583.toShort() else 0x8580.toShort() // NXDOMAIN (3) or NoError (0)
 
-        val responseBuffer = ByteBuffer.allocate(ipTotalLength)
-        responseBuffer.order(ByteOrder.BIG_ENDIAN)
+        return if (query.isIpv6) {
+            val ipTotalLength = 40 + udpLength
+            val responseBuffer = ByteBuffer.allocate(ipTotalLength)
+            responseBuffer.order(ByteOrder.BIG_ENDIAN)
 
-        // 1. IPv4 Header (20 bytes)
-        responseBuffer.put(0x45.toByte()) // Version 4, IHL 5
-        responseBuffer.put(0x00.toByte()) // DSCP/ECN
-        responseBuffer.putShort(ipTotalLength.toShort()) // Total length
-        responseBuffer.putShort(0x0000.toShort()) // Identification
-        responseBuffer.putShort(0x4000.toShort()) // Flags: Don't Fragment
-        responseBuffer.put(64.toByte()) // TTL
-        responseBuffer.put(17.toByte()) // Protocol: UDP
-        responseBuffer.putShort(0x0000.toShort()) // Checksum placeholder
-        responseBuffer.put(query.dstIp) // Src IP (was original dst)
-        responseBuffer.put(query.srcIp) // Dst IP (was original src)
+            // 1. IPv6 Header (40 bytes)
+            responseBuffer.putInt(0x60000000) // Version 6, Traffic Class 0, Flow Label 0
+            responseBuffer.putShort(udpLength.toShort()) // Payload length
+            responseBuffer.put(17.toByte()) // Next Header: UDP
+            responseBuffer.put(64.toByte()) // Hop Limit
+            responseBuffer.put(query.dstIp) // Src IP (16 bytes, original dst)
+            responseBuffer.put(query.srcIp) // Dst IP (16 bytes, original src)
 
-        // Compute and insert IP checksum
-        val ipChecksum = computeIpChecksum(responseBuffer.array(), 0, 20)
-        responseBuffer.putShort(10, ipChecksum)
+            // 2. UDP Header (8 bytes)
+            responseBuffer.putShort(query.dstPort.toShort()) // Src Port (53)
+            responseBuffer.putShort(query.srcPort.toShort()) // Dst Port
+            responseBuffer.putShort(udpLength.toShort()) // UDP length
+            responseBuffer.putShort(0x0000.toShort()) // Checksum
 
-        // 2. UDP Header (8 bytes)
-        responseBuffer.position(20)
-        responseBuffer.putShort(query.dstPort.toShort()) // Src Port (53)
-        responseBuffer.putShort(query.srcPort.toShort()) // Dst Port
-        responseBuffer.putShort(udpLength.toShort()) // UDP length
-        responseBuffer.putShort(0x0000.toShort()) // Checksum (optional in IPv4 UDP, 0 = disabled)
+            // 3. DNS Header (12 bytes)
+            responseBuffer.putShort(query.transactionId) // ID
+            responseBuffer.putShort(dnsFlags)
+            responseBuffer.putShort(1.toShort()) // QDCOUNT: 1
+            responseBuffer.putShort((if (answerRecordLength > 0) 1 else 0).toShort()) // ANCOUNT
+            responseBuffer.putShort(0.toShort()) // NSCOUNT: 0
+            responseBuffer.putShort(0.toShort()) // ARCOUNT: 0
 
-        // 3. DNS Header (12 bytes)
-        responseBuffer.putShort(query.transactionId) // ID
-        // Flags: QR=1 (Response), Opcode=0, AA=1, TC=0, RD=1, RA=1, Z=0, RCODE=0 (NoError) -> 0x8580
-        responseBuffer.putShort(0x8580.toShort())
-        responseBuffer.putShort(1.toShort()) // QDCOUNT: 1
-        responseBuffer.putShort((if (answerRecordLength > 0) 1 else 0).toShort()) // ANCOUNT
-        responseBuffer.putShort(0.toShort()) // NSCOUNT: 0
-        responseBuffer.putShort(0.toShort()) // ARCOUNT: 0
+            // 4. DNS Question
+            responseBuffer.put(questionBytes)
 
-        // 4. DNS Question
-        responseBuffer.put(questionBytes)
+            // 5. DNS Answer (if A or AAAA and not canary)
+            if (!isDoHCanary) {
+                if (isA) {
+                    responseBuffer.putShort(0xC00C.toShort()) // Name pointer to byte 12 (QNAME)
+                    responseBuffer.putShort(TYPE_A)
+                    responseBuffer.putShort(CLASS_IN)
+                    responseBuffer.putInt(300) // TTL: 300 seconds
+                    responseBuffer.putShort(4.toShort()) // RDLENGTH: 4 bytes
+                    responseBuffer.put(byteArrayOf(0, 0, 0, 0)) // 0.0.0.0
+                } else if (isAaaa) {
+                    responseBuffer.putShort(0xC00C.toShort())
+                    responseBuffer.putShort(TYPE_AAAA)
+                    responseBuffer.putShort(CLASS_IN)
+                    responseBuffer.putInt(300)
+                    responseBuffer.putShort(16.toShort())
+                    responseBuffer.put(ByteArray(16)) // :: (unspecified / null IPv6)
+                }
+            }
 
-        // 5. DNS Answer (if A or AAAA)
-        if (isA) {
-            responseBuffer.putShort(0xC00C.toShort()) // Name pointer to byte 12 (QNAME)
-            responseBuffer.putShort(TYPE_A)
-            responseBuffer.putShort(CLASS_IN)
-            responseBuffer.putInt(300) // TTL: 300 seconds
-            responseBuffer.putShort(4.toShort()) // RDLENGTH: 4 bytes
-            responseBuffer.put(byteArrayOf(0, 0, 0, 0)) // 0.0.0.0
-        } else if (isAaaa) {
-            responseBuffer.putShort(0xC00C.toShort())
-            responseBuffer.putShort(TYPE_AAAA)
-            responseBuffer.putShort(CLASS_IN)
-            responseBuffer.putInt(300)
-            responseBuffer.putShort(16.toShort())
-            responseBuffer.put(ByteArray(16)) // :: (unspecified / null IPv6)
+            responseBuffer.array()
+        } else {
+            val ipTotalLength = 20 + udpLength
+            val responseBuffer = ByteBuffer.allocate(ipTotalLength)
+            responseBuffer.order(ByteOrder.BIG_ENDIAN)
+
+            // 1. IPv4 Header (20 bytes)
+            responseBuffer.put(0x45.toByte()) // Version 4, IHL 5
+            responseBuffer.put(0x00.toByte()) // DSCP/ECN
+            responseBuffer.putShort(ipTotalLength.toShort()) // Total length
+            responseBuffer.putShort(0x0000.toShort()) // Identification
+            responseBuffer.putShort(0x4000.toShort()) // Flags: Don't Fragment
+            responseBuffer.put(64.toByte()) // TTL
+            responseBuffer.put(17.toByte()) // Protocol: UDP
+            responseBuffer.putShort(0x0000.toShort()) // Checksum placeholder
+            responseBuffer.put(query.dstIp) // Src IP (was original dst)
+            responseBuffer.put(query.srcIp) // Dst IP (was original src)
+
+            // Compute and insert IP checksum
+            val ipChecksum = computeIpChecksum(responseBuffer.array(), 0, 20)
+            responseBuffer.putShort(10, ipChecksum)
+
+            // 2. UDP Header (8 bytes)
+            responseBuffer.position(20)
+            responseBuffer.putShort(query.dstPort.toShort()) // Src Port (53)
+            responseBuffer.putShort(query.srcPort.toShort()) // Dst Port
+            responseBuffer.putShort(udpLength.toShort()) // UDP length
+            responseBuffer.putShort(0x0000.toShort()) // Checksum (optional in IPv4 UDP, 0 = disabled)
+
+            // 3. DNS Header (12 bytes)
+            responseBuffer.putShort(query.transactionId) // ID
+            responseBuffer.putShort(dnsFlags)
+            responseBuffer.putShort(1.toShort()) // QDCOUNT: 1
+            responseBuffer.putShort((if (answerRecordLength > 0) 1 else 0).toShort()) // ANCOUNT
+            responseBuffer.putShort(0.toShort()) // NSCOUNT: 0
+            responseBuffer.putShort(0.toShort()) // ARCOUNT: 0
+
+            // 4. DNS Question
+            responseBuffer.put(questionBytes)
+
+            // 5. DNS Answer (if A or AAAA and not canary)
+            if (!isDoHCanary) {
+                if (isA) {
+                    responseBuffer.putShort(0xC00C.toShort()) // Name pointer to byte 12 (QNAME)
+                    responseBuffer.putShort(TYPE_A)
+                    responseBuffer.putShort(CLASS_IN)
+                    responseBuffer.putInt(300) // TTL: 300 seconds
+                    responseBuffer.putShort(4.toShort()) // RDLENGTH: 4 bytes
+                    responseBuffer.put(byteArrayOf(0, 0, 0, 0)) // 0.0.0.0
+                } else if (isAaaa) {
+                    responseBuffer.putShort(0xC00C.toShort())
+                    responseBuffer.putShort(TYPE_AAAA)
+                    responseBuffer.putShort(CLASS_IN)
+                    responseBuffer.putInt(300)
+                    responseBuffer.putShort(16.toShort())
+                    responseBuffer.put(ByteArray(16)) // :: (unspecified / null IPv6)
+                }
+            }
+
+            responseBuffer.array()
         }
-
-        return responseBuffer.array()
     }
 
     private fun extractQuestionSection(packet: ByteArray, dnsOffset: Int, dnsLength: Int): ByteArray {

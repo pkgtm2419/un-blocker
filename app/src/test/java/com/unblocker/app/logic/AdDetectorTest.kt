@@ -53,6 +53,25 @@ class AdDetectorTest {
     }
 
     @Test
+    fun testDoHCanaryDomain() {
+        val (isCanary, reason) = adDetector.isAdDomain("use-application-dns.net")
+        assertTrue("use-application-dns.net should be detected to prevent DoH bypass", isCanary)
+        assertTrue("Reason should indicate canary detection", reason?.contains("canary", ignoreCase = true) == true)
+    }
+
+    @Test
+    fun testBrowserAdPatterns() {
+        val (isAd1, _) = adDetector.isAdDomain("adserver.newsportal.com")
+        assertTrue("adserver.newsportal.com should be detected as ad", isAd1)
+
+        val (isAd2, _) = adDetector.isAdDomain("bidder.openx.net")
+        assertTrue("bidder pattern should be detected", isAd2)
+
+        val (isAd3, _) = adDetector.isAdDomain("pixel.advertising.org")
+        assertTrue("pixel/advertising pattern should be detected", isAd3)
+    }
+
+    @Test
     fun testBenignDomainsNotBlocked() {
         val (isAd1, _) = adDetector.isAdDomain("wikipedia.org")
         assertFalse("wikipedia.org should not be detected as ad", isAd1)
@@ -62,5 +81,8 @@ class AdDetectorTest {
 
         val (isAd3, _) = adDetector.isAdDomain("stackoverflow.com")
         assertFalse("stackoverflow.com should not be detected as ad", isAd3)
+
+        val (isAd4, _) = adDetector.isAdDomain("google.com")
+        assertFalse("google.com base domain should not be detected as ad", isAd4)
     }
 }

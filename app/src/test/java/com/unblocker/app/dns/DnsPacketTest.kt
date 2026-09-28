@@ -110,4 +110,106 @@ class DnsPacketTest {
 
         return buf.array()
     }
+
+    @Test
+    fun testParseAndBuildBlockedDnsResponseIpv6() {
+        val domain = "adservice.google.com"
+        val txId: Short = 0x5678
+        val rawIpPacket = createMockIpv6DnsQueryPacket(domain, txId)
+
+        // 1. Parse IPv6 packet
+        val query = DnsPacketUtil.parseIpPacket(rawIpPacket, rawIpPacket.size)
+        assertNotNull("IPv6 Query should not be null", query)
+        assertTrue("Query should be marked as IPv6", query!!.isIpv6)
+        assertEquals("Domain should match", domain, query.domain)
+        assertEquals("Transaction ID should match", txId, query.transactionId)
+
+        // 2. Synthesize IPv6 blocked response
+        val response = DnsPacketUtil.buildBlockedDnsResponsePacket(query)
+        assertNotNull("IPv6 response should not be null", response)
+        assertTrue("IPv6 packet should be >= 48 bytes", response.size >= 48)
+
+        // Verify IPv6 Header (byte 0 should have version 6)
+        assertEquals(0x60.toByte(), (response[0].toInt() and 0xF0).toByte())
+        assertEquals(17.toByte(), response[6]) // Protocol UDP
+
+        // Verify Source Port is 53 at offset 40
+        val srcPort = ((response[40].toInt() and 0xFF) shl 8) or (response[41].toInt() and 0xFF)
+        assertEquals(53, srcPort)
+
+        // Verify Transaction ID in DNS response at offset 48
+        val dnsTxId = ((response[48].toInt() and 0xFF) shl 8) or (response[49].toInt() and 0xFF)
+        assertEquals(txId.toInt() and 0xFFFF, dnsTxId)
+    }
+
+    @Test
+    fun testDoHCanaryDomainReturnsNxDomain() {
+        val canary = "use-application-dns.net"
+        val txId: Short = 0x4ABC.toShort()
+        val rawIpPacket = createMockDnsQueryPacket(canary, txId)
+
+        val query = DnsPacketUtil.parseIpPacket(rawIpPacket, rawIpPacket.size)
+        assertNotNull(query)
+
+        val response = DnsPacketUtil.buildBlockedDnsResponsePacket(query!!)
+        assertNotNull(response)
+
+        // DNS Header starts at byte 28 for IPv4
+        val flags = ((response[30].toInt() and 0xFF) shl 8) or (response[31].toInt() and 0xFF)
+        val rcode = flags and 0x000F
+        assertEquals("RCODE must be 3 (NXDOMAIN) for DoH canary domain", 3, rcode)
+
+        val anCount = ((response[34].toInt() and 0xFF) shl 8) or (response[35].toInt() and 0xFF)
+        assertEquals("ANCOUNT must be 0 for DoH canary NXDOMAIN", 0, anCount)
+    }
+
+    private fun createMockIpv6DnsQueryPacket(domain: String, txId: Short): ByteArray {
+        val labels = domain.split(".")
+        var qnameLen = 1 // trailing 0
+        for (l in labels) {
+            qnameLen += 1 + l.length
+        }
+
+        val dnsLen = 12 + qnameLen + 4 // Header (12) + QNAME + QTYPE(2) + QCLASS(2)
+        val udpLen = 8 + dnsLen
+        val ipTotalLen = 40 + udpLen
+
+        val buf = ByteBuffer.allocate(ipTotalLen)
+        buf.order(ByteOrder.BIG_ENDIAN)
+
+        // IPv6 Header (40 bytes)
+        buf.putInt(0x60000000) // Version 6, Traffic Class 0, Flow Label 0
+        buf.putShort(udpLen.toShort()) // Payload length
+        buf.put(17.toByte()) // Next Header: UDP
+        buf.put(64.toByte()) // Hop Limit
+        buf.put(ByteArray(16) { 0x01 }) // Src IP (fd00:1::2)
+        buf.put(ByteArray(16) { 0x02 }) // Dst IP (fd00:1::1)
+
+        // UDP Header (8 bytes)
+        buf.putShort(54321.toShort()) // src port
+        buf.putShort(53.toShort()) // dst port
+        buf.putShort(udpLen.toShort())
+        buf.putShort(0x0000.toShort())
+
+        // DNS Header
+        buf.putShort(txId)
+        buf.putShort(0x0100.toShort()) // Standard Query, Recursion Desired
+        buf.putShort(1.toShort()) // QDCOUNT
+        buf.putShort(0.toShort()) // ANCOUNT
+        buf.putShort(0.toShort()) // NSCOUNT
+        buf.putShort(0.toShort()) // ARCOUNT
+
+        // QNAME
+        for (l in labels) {
+            buf.put(l.length.toByte())
+            buf.put(l.toByteArray(Charsets.US_ASCII))
+        }
+        buf.put(0x00.toByte())
+
+        // QTYPE A & QCLASS IN
+        buf.putShort(1.toShort())
+        buf.putShort(1.toShort())
+
+        return buf.array()
+    }
 }

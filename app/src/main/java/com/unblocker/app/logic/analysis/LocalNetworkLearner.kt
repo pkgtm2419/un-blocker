@@ -124,7 +124,16 @@ class LocalNetworkLearner(
                         cleanDomain.startsWith("ad.") ||
                         cleanDomain.startsWith("pagead") ||
                         cleanDomain.startsWith("adservice.") ||
-                        cleanDomain.startsWith("googleads.")
+                        cleanDomain.startsWith("googleads.") ||
+                        cleanDomain.startsWith("adsystem.") ||
+                        cleanDomain.startsWith("adserver.") ||
+                        cleanDomain.startsWith("pixel.") ||
+                        cleanDomain.startsWith("beacon.") ||
+                        cleanDomain.startsWith("telemetry.") ||
+                        cleanDomain.startsWith("analytics.") ||
+                        cleanDomain.startsWith("track.") ||
+                        cleanDomain.startsWith("tracker.") ||
+                        cleanDomain.startsWith("tracking.")
                 if (!isExplicitAdSubdomain) {
                     return AnalysisScore(0.0f, "Safe service domain")
                 }

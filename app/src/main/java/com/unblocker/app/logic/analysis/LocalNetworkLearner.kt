@@ -111,7 +111,7 @@ class LocalNetworkLearner(
     /**
      * Analyze a network domain query using local behavioral, lexical, and temporal heuristics.
      * Returns a composite suspicion score between 0.0 and 1.0.
-     * Supports dynamic adaptive confidence thresholds from the 7-day learning engine.
+     * Supports dynamic adaptive confidence thresholds from the two-week learning engine.
      */
     fun analyzeQuery(domain: String, threshold: Float = BLOCK_THRESHOLD): AnalysisScore {
         val cleanDomain = DomainName.normalize(domain) ?: return AnalysisScore(0.0f, "Invalid domain")

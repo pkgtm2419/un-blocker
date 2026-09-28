@@ -1,6 +1,6 @@
 # Contributing
 
-Use JDK 17 and Android SDK 35. Follow the build commands in README.md.
+Use JDK 17 and Android SDK 36. Follow the build commands in README.md.
 
 Keep filtering and learning on-device. Do not add telemetry, uploaded domain
 lists, remote models or automatic account/sync features. Treat domain names as

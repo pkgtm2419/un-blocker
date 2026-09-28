@@ -1,7 +1,7 @@
 # unblocker
 
 Open-source Android DNS blocker with on-device filtering and adaptive tracker
-learning. Kotlin, Jetpack Compose, Android 8.0+ (API 26), target API 35.
+learning. Kotlin, Jetpack Compose, Android 8.0+ (API 26), target API 36.
 
 ## Privacy and learning
 
@@ -10,17 +10,24 @@ There are no accounts, analytics, telemetry, remote model calls, subscriptions o
 automatic blocklist downloads. The app does not collect URLs or page contents.
 
 Learning uses lexical, structural and short-lived query cadence signals, with a
-confidence threshold that changes over seven days. It is a heuristic system;
+confidence threshold that changes gradually over two weeks. It is a heuristic system;
 false positives and missed trackers are possible. There is no guaranteed blocking
-percentage or latency. Learned reputations survive restarts as at most 5,000
-device-keyed HMAC-SHA256 identifiers and scores in private no-backup storage.
+percentage or latency. Learned reputations survive restarts as at most 20,000
+device-keyed HMAC-SHA256 identifiers, scores and confirmation times in private
+no-backup storage. Scores decay by 5% for each completed week without confirmation.
 The key lives in Android Keystore. Raw domain names are held temporarily in memory
 for filtering and DNS resolution; they are not written to the new learning file.
 
-Allowed queries are forwarded over ordinary UDP DNS to Google Public DNS and,
-on failure, Cloudflare/Quad9/Google secondary. These resolvers can see the queried
-domain and network address. DNS transport is not encrypted. This app is a local
-DNS filter, not an anonymity VPN or an offline DNS resolver. Private DNS, browser
+Users can add up to 1,000 exact-domain local exceptions. Exceptions use the same
+device-keyed HMAC design, so the app cannot reconstruct or display a saved domain
+list; enter a domain again to remove it, or use **Clear all**.
+
+Allowed queries are forwarded over ordinary UDP DNS only to resolvers configured
+by Android for the current validated Wi-Fi/mobile network. The app has no hard-coded
+public fallback; queries retry/fail if Android exposes no usable resolver. The
+configured resolver and network can see the queried domain and network address.
+DNS transport is not encrypted by this app. It is a local DNS filter, not an
+anonymity VPN or offline DNS resolver. Private DNS, browser
 DoH, hardcoded IPs and shared content/ad domains can bypass or limit filtering.
 See [PRIVACY.md](PRIVACY.md) for data handling and migration details.
 
@@ -42,7 +49,7 @@ force-stop and manufacturer auto-start policies can prevent automatic startup.
 
 ## Build and test
 
-Install JDK 17 and Android SDK platform/build tools 35. Set JAVA_HOME and
+Install JDK 17 and Android SDK platform 36. Set JAVA_HOME and
 ANDROID_HOME (or create an untracked local.properties with sdk.dir).
 No developer-specific JDK path is checked into the build.
 
@@ -57,7 +64,7 @@ blocking. Tests change the test installation's VPN app-op and learning data.
 Use ./gradlew on Linux/macOS. Build dependencies require internet access;
 runtime learning does not.
 
-Output: app/build/outputs/apk/debug/app-debug.apk (version 1.1.0). This uses a
+Output: app/build/outputs/apk/debug/app-debug.apk (version 1.2.0). This uses a
 development signing key. A production update must use the same signing key as the
 installed release. The tested build output above is authoritative; APK files under
 release/ are not published by Gradle and must not be treated as production builds.
@@ -70,8 +77,8 @@ only (substitute a short, existing, writable local directory).
 ## Open source
 
 Application code is licensed under [Apache License 2.0](LICENSE).
-See [NOTICE](NOTICE), [CONTRIBUTING.md](CONTRIBUTING.md) and
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Existing bundled seed-list
-provenance is documented separately; the application license does not override
-third-party rights. Contributions should include regression tests and preserve
-the local-only learning model.
+See [NOTICE](NOTICE), [CONTRIBUTING.md](CONTRIBUTING.md),
+[DATASETS.md](DATASETS.md) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Bundled seed lists are project-maintained Apache-2.0 data; no third-party bulk
+list is shipped. Contributions should include regression tests and preserve the
+local-only learning model.

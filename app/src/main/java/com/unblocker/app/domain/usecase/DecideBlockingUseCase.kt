@@ -10,7 +10,7 @@ import com.unblocker.app.logic.analysis.AdaptiveBlockingEngine
 
 /**
  * Clean Architecture Use Case for evaluating network domains and deciding blocking actions.
- * Orchestrates static lists, 7-day adaptive multi-factor learning engine, and 18+ content filters.
+ * Orchestrates static lists, two-week adaptive multi-factor learning, and 18+ content filters.
  * Aligned with Section 2.3 of un-blocker-improvement-plan.md.
  */
 class DecideBlockingUseCase(
@@ -60,7 +60,7 @@ class DecideBlockingUseCase(
                 )
             }
 
-            // B. 7-Day Adaptive Multi-Factor Analysis
+            // B. Two-week adaptive multi-factor analysis
             val adaptiveDecision = adaptiveBlockingEngine.evaluateDomain(domain)
             if (adaptiveDecision.isBlocked) {
                 return adaptiveDecision

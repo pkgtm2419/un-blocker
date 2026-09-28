@@ -15,7 +15,7 @@ import com.unblocker.app.logic.analysis.PrivateDomainSet
 
 /**
  * Autonomous local content filter engine.
- * Combines Clean Architecture UseCase orchestration with 7-day adaptive multi-factor learning,
+ * Combines Clean Architecture UseCase orchestration with two-week adaptive multi-factor learning,
  * seed heuristics, and adult content classifier.
  * Operates 100% on-device with zero logs, zero history, and zero cloud dependency.
  */

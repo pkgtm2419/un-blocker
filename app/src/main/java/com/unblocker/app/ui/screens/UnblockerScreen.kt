@@ -328,7 +328,7 @@ fun UnblockerScreen(
                     )
                     Spacer(modifier = Modifier.width(9.dp))
                     val daysActive = preferences.getDaysSinceInstall()
-                    val activeStatusText = if (daysActive < 7) {
+                    val activeStatusText = if (daysActive < 14) {
                         "SHIELD ACTIVE • DAY $daysActive LEARNING"
                     } else {
                         "SHIELD ACTIVE • AUTONOMOUS SHIELD"

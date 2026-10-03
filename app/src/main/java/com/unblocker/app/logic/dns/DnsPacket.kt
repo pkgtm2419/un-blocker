@@ -348,4 +348,124 @@ object DnsPacketUtil {
         return question
     }
 
+    private var lastErrorResetTime = 0L
+    private var errorPacketCount = 0
+    private const val MAX_ERROR_PACKETS_PER_SEC = 50
+
+    fun buildErrorResponseIfApplicable(packet: ByteArray, length: Int): ByteArray? {
+        if (length < 28) return null
+        val isIpv6 = (packet[0].toInt() and 0xF0) == 0x60
+        val (udpOffset, srcIp, dstIp) = if (isIpv6) {
+            if (length < 48) return null
+            var offset = 40
+            var nextHeader = packet[6].toInt() and 255
+            while (nextHeader in setOf(0, 43, 60, 44)) {
+                if (offset + 2 > length) return null
+                val extLen = when (nextHeader) {
+                    44 -> 8
+                    else -> ((packet[offset + 1].toInt() and 255) + 1) * 8
+                }
+                if (offset + extLen + 8 > length) return null
+                nextHeader = packet[offset].toInt() and 255
+                offset += extLen
+            }
+            if (nextHeader != 17) return null
+            val src = ByteArray(16) { packet[8 + it] }
+            val dst = ByteArray(16) { packet[24 + it] }
+            Triple(offset, src, dst)
+        } else {
+            val ihl = (packet[0].toInt() and 0x0F) * 4
+            if (ihl < 20 || length < ihl + 8) return null
+            if (packet[9].toInt() and 0xFF != 17) return null
+            val src = ByteArray(4) { packet[12 + it] }
+            val dst = ByteArray(4) { packet[16 + it] }
+            Triple(ihl, src, dst)
+        }
+
+        val dstPort = ((packet[udpOffset + 2].toInt() and 0xFF) shl 8) or (packet[udpOffset + 3].toInt() and 0xFF)
+        if (dstPort != 53) return null
+
+        val udpLength = ((packet[udpOffset + 4].toInt() and 0xFF) shl 8) or (packet[udpOffset + 5].toInt() and 0xFF)
+        val dnsOffset = udpOffset + 8
+        val dnsLength = udpLength - 8
+        if (udpLength < 20 || dnsLength < 12 || dnsOffset + dnsLength > length) return null
+
+        val txId = ((packet[dnsOffset].toInt() and 0xFF) shl 8 or (packet[dnsOffset + 1].toInt() and 0xFF)).toShort()
+        val flags = ((packet[dnsOffset + 2].toInt() and 0xFF) shl 8 or (packet[dnsOffset + 3].toInt() and 0xFF))
+        val isQuery = (flags and 0x8000) == 0
+        if (!isQuery) return null
+
+        val opcode = (flags and 0x7800) shr 11
+        val rcode = if (opcode != 0) 4 else 1
+
+        val now = System.currentTimeMillis()
+        synchronized(this) {
+            if (now - lastErrorResetTime >= 1000L) {
+                lastErrorResetTime = now
+                errorPacketCount = 0
+            }
+            if (errorPacketCount >= MAX_ERROR_PACKETS_PER_SEC) {
+                return null
+            }
+            errorPacketCount++
+        }
+
+        val srcPort = ((packet[udpOffset].toInt() and 0xFF) shl 8) or (packet[udpOffset + 1].toInt() and 0xFF)
+        val responseFlags = 0x8000 or (flags and 0x7800) or (flags and 0x0100) or rcode
+
+        val dnsResponse = ByteBuffer.allocate(12).order(ByteOrder.BIG_ENDIAN)
+        dnsResponse.putShort(txId)
+        dnsResponse.putShort(responseFlags.toShort())
+        dnsResponse.putShort(0)
+        dnsResponse.putShort(0)
+        dnsResponse.putShort(0)
+        dnsResponse.putShort(0)
+
+        val dnsBytes = dnsResponse.array()
+        val respUdpLength = 8 + 12
+        val ipHeaderLength = if (isIpv6) 40 else 20
+        val packetOut = ByteBuffer.allocate(ipHeaderLength + respUdpLength).order(ByteOrder.BIG_ENDIAN)
+
+        if (isIpv6) {
+            packetOut.putInt(0x60000000)
+            packetOut.putShort(respUdpLength.toShort())
+            packetOut.put(17.toByte())
+            packetOut.put(64.toByte())
+            packetOut.put(dstIp)
+            packetOut.put(srcIp)
+        } else {
+            packetOut.put(0x45.toByte())
+            packetOut.put(0)
+            packetOut.putShort((20 + respUdpLength).toShort())
+            packetOut.putShort(0)
+            packetOut.putShort(0x4000.toShort())
+            packetOut.put(64)
+            packetOut.put(17)
+            packetOut.putShort(0)
+            packetOut.put(dstIp)
+            packetOut.put(srcIp)
+            packetOut.putShort(10, InternetChecksum.ipv4Header(packetOut.array(), 0, 20))
+        }
+
+        packetOut.position(ipHeaderLength)
+        packetOut.putShort(53.toShort())
+        packetOut.putShort(srcPort.toShort())
+        packetOut.putShort(respUdpLength.toShort())
+        packetOut.putShort(0)
+        packetOut.put(dnsBytes)
+
+        if (isIpv6) {
+            val checksum = InternetChecksum.udpIpv6(
+                source = dstIp,
+                destination = srcIp,
+                udpSegment = packetOut.array(),
+                offset = 40,
+                length = respUdpLength
+            )
+            packetOut.putShort(46, checksum)
+        }
+
+        return packetOut.array()
+    }
+
 }

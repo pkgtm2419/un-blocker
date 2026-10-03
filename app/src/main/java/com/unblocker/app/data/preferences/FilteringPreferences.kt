@@ -33,7 +33,10 @@ class FilteringPreferences(context: Context) {
     val protectionEnabled: StateFlow<Boolean> = _protectionEnabled.asStateFlow()
 
     fun setProtectionEnabled(enabled: Boolean) {
-        check(prefs.edit().putBoolean(KEY_PROTECTION_ENABLED, enabled).commit())
+        val committed = runCatching { prefs.edit().putBoolean(KEY_PROTECTION_ENABLED, enabled).commit() }.getOrDefault(false)
+        if (!committed) {
+            prefs.edit().putBoolean(KEY_PROTECTION_ENABLED, enabled).apply()
+        }
         _protectionEnabled.value = enabled
     }
 

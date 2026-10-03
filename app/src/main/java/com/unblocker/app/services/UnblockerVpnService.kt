@@ -96,7 +96,7 @@ class UnblockerVpnService : VpnService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val action = intent?.action
         if (ACTION_STOP == action) {
-            try { preferences.setProtectionEnabled(false) } finally {
+            try { runCatching { preferences.setProtectionEnabled(false) } } finally {
                 stopVpn(publishStopped = false)
                 stopSelf(startId)
             }
@@ -186,7 +186,18 @@ class UnblockerVpnService : VpnService() {
                     if (length == 0) continue
 
                     val packetCopy = packetBuffer.copyOf(length)
-                    val query = DnsPacketUtil.parseIpPacket(packetCopy, length) ?: continue
+                    val query = DnsPacketUtil.parseIpPacket(packetCopy, length)
+                    if (query == null) {
+                        val errorPacket = DnsPacketUtil.buildErrorResponseIfApplicable(packetCopy, length)
+                        if (errorPacket != null) {
+                            run.useWhileRunning {
+                                if (session.owns(run.owner)) synchronized(writeLock) {
+                                    outputStream?.write(errorPacket)
+                                }
+                            }
+                        }
+                        continue
+                    }
 
                     // Autonomous local analysis
                     val result = synchronized(lifecycleLock) {
@@ -388,7 +399,7 @@ class UnblockerVpnService : VpnService() {
     }
 
     override fun onRevoke() {
-        try { preferences.setProtectionEnabled(false) } finally {
+        try { runCatching { preferences.setProtectionEnabled(false) } } finally {
             stopVpn(publishStopped = false)
             stopSelf()
         }

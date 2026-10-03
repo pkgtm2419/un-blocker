@@ -39,7 +39,7 @@ class ContentFilterEngine(
     )
 
     fun blockedAlias(original: String, aliases: List<String>): String? =
-        cnamePolicy.blockedAlias(original, aliases)?.also { networkLearner.observeTrustedAlias(original) }
+        cnamePolicy.blockedAlias(original, aliases)
 
     private val decideBlockingUseCase = DecideBlockingUseCase(
         adDetector = adDetector,

@@ -1,33 +1,40 @@
 package com.unblocker.app.logic
 
 import android.content.Context
+import com.unblocker.app.domain.model.BlockingCategory
 import com.unblocker.app.logic.rules.*
 
-class AdDetector(private val context: Context? = null, private val compiledRules: CompiledRuleSet? = null) {
-    private val seedRules = LinkedHashSet<DnsRule>()
-    @Volatile private var engine = DnsRuleEngine(CompiledRuleSet(emptyList()))
-
-    init { loadStaticList() }
-
-    @Synchronized fun loadStaticList() {
-        seedRules.clear()
-        if (compiledRules != null || context != null) {
-            val compiled=compiledRules ?: context!!.assets.open("dns-rules.tsv").reader().use { CompiledRuleSet.fromTsv(it) }
-            seedRules.addAll(compiled.rules.filter { it.category==com.unblocker.app.domain.model.BlockingCategory.AD })
-        } else fallback.mapNotNull(DomainName::normalize).forEach {
-            seedRules.add(DnsRule(RuleAction.BLOCK, RuleKind.SUFFIX, it))
-        }
-        engine = DnsRuleEngine(CompiledRuleSet(seedRules.toList()))
+class AdDetector(
+    private val context: Context? = null,
+    private val compiledRules: CompiledRuleSet? = null,
+    private val ruleSet: RuleSet? = null
+) {
+    private val overlay = mutableListOf<DnsRule>()
+    private val activeRuleSet: RuleSet by lazy {
+        ruleSet ?: compiledRules?.toRuleSet() ?: if (context != null) RuleSetHolder.get(context) else fallbackRuleSet()
     }
 
     @Synchronized fun addDomain(domain: String) {
         DomainName.normalize(domain)?.let {
-            seedRules.add(DnsRule(RuleAction.BLOCK, RuleKind.SUFFIX, it))
-            engine = DnsRuleEngine(CompiledRuleSet(seedRules.toList()))
+            overlay.add(DnsRule(RuleAction.BLOCK, RuleKind.SUFFIX, it))
         }
     }
 
-    fun matchRule(domain: String): DnsRule? = engine.match(domain)
+    fun matchRule(domain: String): DnsRule? {
+        val normalized = DomainName.normalize(domain) ?: return null
+        synchronized(overlay) {
+            for (action in arrayOf(RuleAction.ALLOW, RuleAction.BLOCK)) {
+                for (r in overlay) {
+                    if (r.action == action) {
+                        if (r.kind == RuleKind.EXACT && r.value == normalized) return r
+                        if (r.kind == RuleKind.SUFFIX && (normalized == r.value || normalized.endsWith("." + r.value))) return r
+                        if (r.kind == RuleKind.WILDCARD && normalized.endsWith("." + r.value)) return r
+                    }
+                }
+            }
+        }
+        return activeRuleSet.match(domain)
+    }
 
     fun isAdDomain(raw: String): Pair<Boolean, String> {
         val domain = DomainName.normalize(raw) ?: return false to ""
@@ -40,9 +47,16 @@ class AdDetector(private val context: Context? = null, private val compiledRules
             else "Domain Suffix Match (${rule.value})"
     }
 
-    @Synchronized fun getDomainCount(): Int = seedRules.size
+    @Synchronized fun getDomainCount(): Int = activeRuleSet.ruleCount + overlay.size
 
     companion object {
+        private fun fallbackRuleSet(): RuleSet {
+            val rules = fallback.mapNotNull(DomainName::normalize).map {
+                DnsRule(RuleAction.BLOCK, RuleKind.SUFFIX, it, BlockingCategory.AD)
+            }
+            return CompiledRuleSet(rules).toRuleSet()
+        }
+
         private val fallback = listOf(
             "doubleclick.net", "googleads.g.doubleclick.net", "adservice.google.com",
             "pagead2.googlesyndication.com", "pubads.g.doubleclick.net", "admob.com",

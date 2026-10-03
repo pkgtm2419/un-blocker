@@ -2,6 +2,7 @@ import hashlib
 import importlib.util
 import json
 import pathlib
+import struct
 import tempfile
 import unittest
 
@@ -26,13 +27,14 @@ class CompilerTest(unittest.TestCase):
             for folder in ('a', 'b'):
                 self.compiler.compile_sources(root, manifest, root / folder)
             self.assertEqual((root / 'a/dns-rules.tsv').read_bytes(), (root / 'b/dns-rules.tsv').read_bytes())
+            self.assertEqual((root / 'a/dns-rules.bin').read_bytes(), (root / 'b/dns-rules.bin').read_bytes())
             self.assertEqual((root / 'a/dns-rules-manifest.json').read_bytes(), (root / 'b/dns-rules-manifest.json').read_bytes())
             self.assertIn(b'ALLOW\tSUFFIX\tgood.ads.test', (root / 'a/dns-rules.tsv').read_bytes())
 
     def test_missing_provenance_unknown_license_and_checksum_fail(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = pathlib.Path(tmp)
-            for field, value in [('license', 'unknown'), ('revision', ''), ('sha256', '0' * 64), ('url', '')]:
+            for field, value in [('license', 'unknown'), ('license', 'GPL-3.0'), ('revision', ''), ('sha256', '0' * 64), ('url', '')]:
                 manifest = self.fixture(root)
                 manifest['sources'][0][field] = value
                 with self.assertRaises(ValueError):
@@ -47,6 +49,7 @@ class CompilerTest(unittest.TestCase):
             source.write_bytes(source.read_bytes().replace(b'\n', b'\r\n'))
             self.compiler.compile_sources(root, manifest, root / 'windows')
             self.assertEqual((root / 'unix/dns-rules.tsv').read_bytes(), (root / 'windows/dns-rules.tsv').read_bytes())
+            self.assertEqual((root / 'unix/dns-rules.bin').read_bytes(), (root / 'windows/dns-rules.bin').read_bytes())
 
     def test_unsupported_syntax_fails_instead_of_broadening(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -79,6 +82,65 @@ class CompilerTest(unittest.TestCase):
             tsv = (root / 'out/dns-rules.tsv').read_bytes()
             self.assertIn(b'ALLOW\tEXACT\tdashboard.example.com', tsv)
             self.assertIn(b'ALLOW\tSUFFIX\tportal.example.com', tsv)
+
+    def test_hosts_parsing_and_loopback_exclusion(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            hosts = root / 'hosts.txt'
+            hosts.write_bytes(
+                b'127.0.0.1 localhost\n'
+                b'127.0.0.1 localhost.localdomain\n'
+                b'255.255.255.255 broadcasthost\n'
+                b'::1 localhost\n'
+                b'::1 ip6-localhost\n'
+                b'0.0.0.0 0.0.0.0\n'
+                b'0.0.0.0 ad-tracker.example.com # inline comment\n'
+                b'127.0.0.1 metrics.telemetry.net\n'
+            )
+            manifest = {'sources': [{'id': 4, 'path': 'hosts.txt', 'license': 'MIT',
+                'revision': 'pinned-commit', 'sha256': hashlib.sha256(hosts.read_bytes()).hexdigest(),
+                'syntax': 'hosts', 'category': 'AD', 'url': 'https://example.test/hosts'}]}
+            self.compiler.compile_sources(root, manifest, root / 'out')
+            tsv = (root / 'out/dns-rules.tsv').read_text()
+            self.assertIn("BLOCK\tEXACT\tad-tracker.example.com\tAD\t4", tsv)
+            self.assertIn("BLOCK\tEXACT\tmetrics.telemetry.net\tAD\t4", tsv)
+            self.assertNotIn("localhost", tsv)
+            self.assertNotIn("broadcasthost", tsv)
+            self.assertNotIn("0.0.0.0\t", tsv)
+
+            bin_bytes = (root / 'out/dns-rules.bin').read_bytes()
+            magic, version, count, blob_len = struct.unpack('<4sHII', bin_bytes[:14])
+            self.assertEqual(magic, b'UBR2')
+            self.assertEqual(version, 2)
+            self.assertEqual(count, 2)
+
+    def test_bulk_invalid_ratio_failure(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            hosts = root / 'hosts.txt'
+            # 1000 lines, 3 invalid lines (0.3% > 0.1%)
+            valid_lines = [f"0.0.0.0 tracker{i}.com" for i in range(997)]
+            invalid_lines = ["0.0.0.0 bad..domain1", "0.0.0.0 bad..domain2", "0.0.0.0 bad..domain3"]
+            content = "\n".join(valid_lines + invalid_lines) + "\n"
+            hosts.write_text(content)
+            manifest = {'sources': [{'id': 4, 'path': 'hosts.txt', 'license': 'MIT',
+                'revision': 'pinned-commit', 'sha256': hashlib.sha256(hosts.read_bytes()).hexdigest(),
+                'syntax': 'hosts', 'category': 'AD', 'url': 'https://example.test/hosts'}]}
+            with self.assertRaises(ValueError) as ctx:
+                self.compiler.compile_sources(root, manifest, root / 'out')
+            self.assertIn("exceeded 0.1%", str(ctx.exception))
+
+    def test_bulk_rule_syntax_drift_failure(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            hosts = root / 'hosts.txt'
+            hosts.write_bytes(b'0.0.0.0 ||bad-syntax.test^\n')
+            manifest = {'sources': [{'id': 4, 'path': 'hosts.txt', 'license': 'MIT',
+                'revision': 'pinned-commit', 'sha256': hashlib.sha256(hosts.read_bytes()).hexdigest(),
+                'syntax': 'hosts', 'category': 'AD', 'url': 'https://example.test/hosts'}]}
+            with self.assertRaises(ValueError) as ctx:
+                self.compiler.compile_sources(root, manifest, root / 'out')
+            self.assertIn("rule-like syntax", str(ctx.exception))
 
 
 if __name__ == '__main__':

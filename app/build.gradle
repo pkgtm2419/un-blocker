@@ -118,6 +118,10 @@ android {
         }
     }
 
+    androidResources {
+        noCompress += ["bin"]
+    }
+
     applicationVariants.all { variant ->
         variant.outputs.all { output ->
             output.outputFileName = "ub-blocker-${variant.versionName}.apk"
@@ -134,6 +138,7 @@ tasks.named('preBuild').configure { dependsOn 'copyLegalAssets' }
 tasks.register('compileDnsRules', Exec) {
     inputs.files(rootProject.files('tools/filter-compiler/compiler.py', 'tools/filter-compiler/sources.json',
         'tools/filter-compiler/allow.txt', 'tools/filter-compiler/never_block.txt',
+        'tools/filter-compiler/vendor/stevenblack/21605ccaecf26941005d4a7a3c1267af234599cf/list.txt',
         'app/src/main/assets/ad_domains.txt', 'app/src/main/assets/adult_domains.txt',
         'app/src/main/assets/public_suffix_list.dat'))
     outputs.dir "$buildDir/generated/dns-assets"

@@ -18,7 +18,7 @@ class MatcherBenchmarkTest {
                 gc()
                 val before=heap()
                 val construct=System.nanoTime()
-                val match: (String)->DnsRule? = if(kind=="hash") DnsRuleEngine(rules)::match else PackedRuleMatcher(rules)::match
+                val match: (String)->DnsRule? = if(kind=="hash") DnsRuleEngine(rules)::match else rules.toRuleSet()::match
                 val constructMs=(System.nanoTime()-construct)/1_000_000.0
                 gc()
                 val retained=(heap()-before).coerceAtLeast(0)

@@ -2,14 +2,15 @@ package com.unblocker.app.services
 
 import android.content.Context
 import com.unblocker.app.data.preferences.FilteringPreferences
+import com.unblocker.app.logic.AdDetector
 import com.unblocker.app.logic.ContentFilterEngine
+import com.unblocker.app.logic.rules.RuleSetHolder
 
 data class HealthReport(
     val timestamp: Long = System.currentTimeMillis(),
     val isVpnRunning: Boolean,
     val regressionChecksPassed: Int,
     val regressionChecksTotal: Int,
-    val memoryUsageMb: Long,
     val statusMessage: String
 )
 
@@ -17,10 +18,16 @@ class HealthCheckService(private val context: Context) {
 
     private val preferences = FilteringPreferences.getInstance(context)
     // Synthetic diagnostics must never train or persist production learning.
-    private val filterEngine = ContentFilterEngine(context, preferences = preferences,
-        networkLearner = com.unblocker.app.logic.analysis.LocalNetworkLearner(),
-        allowlistedDomains = com.unblocker.app.logic.analysis.DeviceLearning.memoryDomainSet(),
-        blocklistedDomains = com.unblocker.app.logic.analysis.DeviceLearning.memoryDomainSet())
+    private val filterEngine by lazy {
+        ContentFilterEngine(
+            context = context,
+            adDetector = AdDetector(context, ruleSet = RuleSetHolder.get(context)),
+            preferences = preferences,
+            networkLearner = com.unblocker.app.logic.analysis.LocalNetworkLearner(),
+            allowlistedDomains = com.unblocker.app.logic.analysis.DeviceLearning.memoryDomainSet(),
+            blocklistedDomains = com.unblocker.app.logic.analysis.DeviceLearning.memoryDomainSet()
+        )
+    }
 
     suspend fun performHealthCheck(): HealthReport {
         val isVpnRunning = UnblockerVpnService.isServiceActive.value
@@ -49,9 +56,6 @@ class HealthCheckService(private val context: Context) {
         }
         preferences.setLastHealthCheckTime(System.currentTimeMillis())
 
-        val runtime = Runtime.getRuntime()
-        val usedMemoryMb = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024)
-
         val msg = if (result.passed == result.total) {
             "Local regression checks passed: ${result.passed}/${result.total}"
         } else {
@@ -62,7 +66,6 @@ class HealthCheckService(private val context: Context) {
             isVpnRunning = isVpnRunning,
             regressionChecksPassed = result.passed,
             regressionChecksTotal = result.total,
-            memoryUsageMb = usedMemoryMb,
             statusMessage = msg
         )
     }

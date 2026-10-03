@@ -174,6 +174,46 @@ class UnblockerVpnService : VpnService() {
 
             val packetBuffer = bufferPool.acquire()
 
+            val tcpResponder = com.unblocker.app.logic.dns.TcpDnsResponder(
+                queryResolver = { dnsWireBytes, isIpv6, clientIp ->
+                    val wireQuery = DnsPacketUtil.parseWireQuery(dnsWireBytes, isIpv6, clientIp) ?: return@TcpDnsResponder null
+                    val filterResult = filterEngine.analyzeAndFilter(wireQuery.domain)
+                    if (filterResult.shouldBlock) {
+                        DnsPacketUtil.buildBlockedWireResponse(dnsWireBytes)
+                    } else {
+                        val cached = dnsCache.getValidated(wireQuery)
+                        if (cached != null) {
+                            if (filterEngine.blockedAlias(wireQuery.domain, cached.metadata.aliases) != null) {
+                                DnsPacketUtil.buildBlockedWireResponse(dnsWireBytes)
+                            } else cached.bytes
+                        } else {
+                            val resolverSnapshot = networkResolvers.snapshot()
+                            val resolvers = resolverSnapshot.resolvers
+                            if (resolvers.isEmpty()) return@TcpDnsResponder null
+                            val response = upstreamClient.resolve(
+                                run,
+                                wireQuery,
+                                dnsWireBytes,
+                                resolvers,
+                                outboundGuard = { action ->
+                                    var allowed = false
+                                    run.useWhileRunning { allowed = networkResolvers.useCurrent(resolverSnapshot, action) }
+                                    allowed
+                                }
+                            )
+                            if (response != null) {
+                                if (filterEngine.blockedAlias(wireQuery.domain, response.metadata.aliases) != null) {
+                                    DnsPacketUtil.buildBlockedWireResponse(dnsWireBytes)
+                                } else {
+                                    dnsCache.putValidated(wireQuery, response)
+                                    response.bytes
+                                }
+                            } else null
+                        }
+                    }
+                }
+            )
+
             try {
                 while (isRunning.get()) {
                     val length = try {
@@ -188,6 +228,17 @@ class UnblockerVpnService : VpnService() {
                     val packetCopy = packetBuffer.copyOf(length)
                     val query = DnsPacketUtil.parseIpPacket(packetCopy, length)
                     if (query == null) {
+                        val tcpResponses = tcpResponder.processPacket(packetCopy, length)
+                        if (tcpResponses.isNotEmpty()) {
+                            run.useWhileRunning {
+                                if (session.owns(run.owner)) synchronized(writeLock) {
+                                    for (resp in tcpResponses) {
+                                        outputStream?.write(resp)
+                                    }
+                                }
+                            }
+                            continue
+                        }
                         val errorPacket = DnsPacketUtil.buildErrorResponseIfApplicable(packetCopy, length)
                         if (errorPacket != null) {
                             run.useWhileRunning {

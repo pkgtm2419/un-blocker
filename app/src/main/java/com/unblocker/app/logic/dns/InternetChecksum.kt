@@ -28,6 +28,46 @@ object InternetChecksum {
         return finish(sum, normalizeZero = true)
     }
 
+    fun tcpIpv4(
+        source: ByteArray,
+        destination: ByteArray,
+        tcpSegment: ByteArray,
+        offset: Int,
+        length: Int
+    ): Short {
+        require(source.size == 4 && destination.size == 4)
+        require(length in 20..0xffff && offset >= 0 && offset <= tcpSegment.size - length)
+
+        var sum = 0L
+        sum = addBytes(sum, source, 0, source.size)
+        sum = addBytes(sum, destination, 0, destination.size)
+        sum = addWord(sum, 6) // Protocol 6 = TCP
+        sum = addWord(sum, length and 0xffff)
+        sum = addBytes(sum, tcpSegment, offset, length)
+        return finish(sum, normalizeZero = true)
+    }
+
+    fun tcpIpv6(
+        source: ByteArray,
+        destination: ByteArray,
+        tcpSegment: ByteArray,
+        offset: Int,
+        length: Int
+    ): Short {
+        require(source.size == 16 && destination.size == 16)
+        require(length in 20..0xffff && offset >= 0 && offset <= tcpSegment.size - length)
+
+        var sum = 0L
+        sum = addBytes(sum, source, 0, source.size)
+        sum = addBytes(sum, destination, 0, destination.size)
+        sum = addWord(sum, (length ushr 16) and 0xffff)
+        sum = addWord(sum, length and 0xffff)
+        sum = addWord(sum, 0)
+        sum = addWord(sum, 6) // Next Header 6 = TCP
+        sum = addBytes(sum, tcpSegment, offset, length)
+        return finish(sum, normalizeZero = true)
+    }
+
     private fun sumBytes(bytes: ByteArray, offset: Int, length: Int): Long =
         addBytes(0L, bytes, offset, length)
 

@@ -241,6 +241,116 @@ object DnsPacketUtil {
         return wrapDnsResponseInIpUdp(query, dnsResponse.array(), dnsResponseSize)
     }
 
+    fun buildBlockedWireResponse(dnsWire: ByteArray): ByteArray? {
+        if (dnsWire.size < 12) return null
+        val txId = ((dnsWire[0].toInt() and 0xFF) shl 8 or (dnsWire[1].toInt() and 0xFF)).toShort()
+        val qdCount = ((dnsWire[4].toInt() and 0xFF) shl 8 or (dnsWire[5].toInt() and 0xFF))
+        if (qdCount != 1) return null
+
+        var pos = 12
+        val domainBuilder = StringBuilder()
+        while (pos < dnsWire.size) {
+            val labelLen = dnsWire[pos].toInt() and 0xFF
+            pos++
+            if (labelLen == 0) break
+            if (labelLen > 63 || pos + labelLen > dnsWire.size) return null
+            val label = DomainName.canonicalWireLabel(dnsWire, pos, labelLen) ?: return null
+            if (domainBuilder.isNotEmpty()) domainBuilder.append('.')
+            domainBuilder.append(label)
+            pos += labelLen
+        }
+        if (pos + 4 > dnsWire.size) return null
+        val qType = ((dnsWire[pos].toInt() and 0xFF) shl 8 or (dnsWire[pos + 1].toInt() and 0xFF)).toShort()
+        pos += 4
+        val questionBytes = dnsWire.copyOfRange(12, pos)
+
+        val domain = DomainName.normalize(domainBuilder.toString()) ?: return null
+        val isDoHCanary = domain == "use-application-dns.net"
+        val isA = qType == TYPE_A
+        val isAaaa = qType == TYPE_AAAA
+
+        val answerRecordLength = if (isDoHCanary) 0 else if (isA) 16 else if (isAaaa) 28 else 0
+        val dnsResponseSize = 12 + questionBytes.size + answerRecordLength
+        val dnsFlags = if (isDoHCanary) 0x8583.toShort() else 0x8580.toShort()
+
+        val dnsResponse = ByteBuffer.allocate(dnsResponseSize).order(ByteOrder.BIG_ENDIAN)
+        dnsResponse.putShort(txId)
+        dnsResponse.putShort(dnsFlags)
+        dnsResponse.putShort(1.toShort())
+        dnsResponse.putShort((if (answerRecordLength > 0) 1 else 0).toShort())
+        dnsResponse.putShort(0.toShort())
+        dnsResponse.putShort(0.toShort())
+        dnsResponse.put(questionBytes)
+
+        if (!isDoHCanary && isA) {
+            dnsResponse.putShort(0xC00C.toShort())
+            dnsResponse.putShort(TYPE_A)
+            dnsResponse.putShort(CLASS_IN)
+            dnsResponse.putInt(300)
+            dnsResponse.putShort(4.toShort())
+            dnsResponse.put(byteArrayOf(0, 0, 0, 0))
+        } else if (!isDoHCanary && isAaaa) {
+            dnsResponse.putShort(0xC00C.toShort())
+            dnsResponse.putShort(TYPE_AAAA)
+            dnsResponse.putShort(CLASS_IN)
+            dnsResponse.putInt(300)
+            dnsResponse.putShort(16.toShort())
+            dnsResponse.put(ByteArray(16))
+        }
+        return dnsResponse.array()
+    }
+
+    fun parseWireQuery(dnsWire: ByteArray, isIpv6: Boolean, clientIp: ByteArray): DnsQuery? {
+        if (dnsWire.size < 12) return null
+        val txId = ((dnsWire[0].toInt() and 0xFF) shl 8 or (dnsWire[1].toInt() and 0xFF)).toShort()
+        val flags = ((dnsWire[2].toInt() and 0xFF) shl 8 or (dnsWire[3].toInt() and 0xFF))
+        val isQuery = (flags and 0x8000) == 0
+        if (!isQuery || flags and 0x7800 != 0) return null
+
+        val qdCount = ((dnsWire[4].toInt() and 0xFF) shl 8 or (dnsWire[5].toInt() and 0xFF))
+        if (qdCount != 1) return null
+
+        var pos = 12
+        val domainBuilder = StringBuilder()
+        while (pos < dnsWire.size) {
+            val labelLen = dnsWire[pos].toInt() and 0xFF
+            pos++
+            if (labelLen == 0) break
+            if (labelLen > 63 || pos + labelLen > dnsWire.size) return null
+            val label = DomainName.canonicalWireLabel(dnsWire, pos, labelLen) ?: return null
+            if (domainBuilder.isNotEmpty()) domainBuilder.append('.')
+            domainBuilder.append(label)
+            pos += labelLen
+        }
+        if (pos + 4 > dnsWire.size) return null
+        val qType = ((dnsWire[pos].toInt() and 0xFF) shl 8 or (dnsWire[pos + 1].toInt() and 0xFF)).toShort()
+        val qClass = ((dnsWire[pos + 2].toInt() and 0xFF) shl 8 or (dnsWire[pos + 3].toInt() and 0xFF)).toShort()
+        pos += 4
+
+        val domain = DomainName.normalize(domainBuilder.toString()) ?: return null
+        val dstIp = if (isIpv6) byteArrayOf(0xfd.toByte(), 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1) else byteArrayOf(10, 10, 0, 1)
+
+        return DnsQuery(
+            transactionId = txId,
+            domain = domain,
+            queryType = qType,
+            queryClass = qClass,
+            rawPacket = dnsWire,
+            dnsOffset = 0,
+            dnsLength = dnsWire.size,
+            srcIp = clientIp,
+            dstIp = dstIp,
+            srcPort = 53,
+            dstPort = 53,
+            isIpv6 = isIpv6,
+            hasEdns = false,
+            udpPayloadLimit = 65535,
+            ednsFlags = 0,
+            cacheVariant = "$flags:tcp",
+            cacheAllowed = true
+        )
+    }
+
     /** Re-negotiate each transaction; never send a cached oversized UDP body. */
     fun wrapClientResponse(query:DnsQuery,bytes:ByteArray):ByteArray {
         val limit=minOf(query.udpPayloadLimit.coerceAtLeast(512),maxDnsPayloadLength(query))

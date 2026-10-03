@@ -1,9 +1,9 @@
 # Un-Blocker
 
-[![Download APK](https://img.shields.io/badge/Download-APK%20(v1.2.2)-brightgreen?style=flat&logo=android&logoColor=white)](https://github.com/pkgtm2419/un-blocker/releases/download/test-v1.2.2/ub-blocker-1.2.2.apk)
+[![Download APK](https://img.shields.io/badge/Download-APK%20(v1.4.0)-brightgreen?style=flat&logo=android&logoColor=white)](https://github.com/pkgtm2419/un-blocker/releases/download/test-v1.4.0/ub-blocker-1.4.0.apk)
 [![Release CI](https://github.com/pkgtm2419/un-blocker/actions/workflows/release.yml/badge.svg)](https://github.com/pkgtm2419/un-blocker/actions/workflows/release.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Development 1.3.0](https://img.shields.io/badge/development-1.3.0-orange.svg)](app/build.gradle)
+[![Development 1.4.0](https://img.shields.io/badge/development-1.4.0-orange.svg)](app/build.gradle)
 [![Android 8.0+](https://img.shields.io/badge/Android-8.0%2B-3DDC84?logo=android&logoColor=white)](#requirements)
 [![Privacy: local only](https://img.shields.io/badge/Privacy-local--only-success)](#privacy-by-design)
 
@@ -24,25 +24,22 @@ upload browsing history, or require an account.
 ## Download the APK
 
 Implementation progress and verification: [phase tracker](docs/improvement-progress.md),
+[coverage baseline](docs/coverage-baseline.md), [Private DNS bypass matrix](docs/dns-bypass-matrix.md),
 [measured matcher results](docs/performance.md), [DNS coverage and limitations](docs/dns-scope.md).
 
 <div align="center">
 
-[![Download APK](https://img.shields.io/badge/Download_APK-ub--blocker--1.2.2.apk-brightgreen?style=for-the-badge&logo=android&logoColor=white)](https://github.com/pkgtm2419/un-blocker/releases/download/test-v1.2.2/ub-blocker-1.2.2.apk)
+[![Download APK](https://img.shields.io/badge/Download_APK-ub--blocker--1.4.0.apk-brightgreen?style=for-the-badge&logo=android&logoColor=white)](https://github.com/pkgtm2419/un-blocker/releases/download/test-v1.4.0/ub-blocker-1.4.0.apk)
 [![Releases](https://img.shields.io/badge/All_Releases-GitHub-238636?style=for-the-badge&logo=github&logoColor=white)](https://github.com/pkgtm2419/un-blocker/releases)
 
 </div>
 
 ### Latest Release Package
 
-The links below are the published **1.2.2 test build**, not the new development
-version. Source on this branch is **1.3.0**; it has not been published. Publishing
-requires the stable signing secrets and a matching `test-v1.3.0` or `v1.3.0` tag.
-
 | Asset | Link | Details |
 | :--- | :--- | :--- |
-| **Android APK** | [**`ub-blocker-1.2.2.apk`**](https://github.com/pkgtm2419/un-blocker/releases/download/test-v1.2.2/ub-blocker-1.2.2.apk) | Direct APK Download (Ready to install) |
-| **Release Page** | [**Release `test-v1.2.2` Notes**](https://github.com/pkgtm2419/un-blocker/releases/tag/test-v1.2.2) | View release details and changelog |
+| **Android APK** | [**`ub-blocker-1.4.0.apk`**](https://github.com/pkgtm2419/un-blocker/releases/download/test-v1.4.0/ub-blocker-1.4.0.apk) | Direct APK Download (Ready to install) |
+| **Release Page** | [**Release `test-v1.4.0` Notes**](https://github.com/pkgtm2419/un-blocker/releases/tag/test-v1.4.0) | View release details and changelog |
 | **All Releases** | [**GitHub Releases Catalog**](https://github.com/pkgtm2419/un-blocker/releases) | Browse all published version releases |
 
 > [!TIP]
@@ -73,9 +70,12 @@ requires the stable signing secrets and a matching `test-v1.3.0` or `v1.3.0` tag
 ### DNS filtering
 
 - Local DNS interception through Android `VpnService`.
+- Scalable binary `RuleSet` (UBR2 format): ships 73,000+ rules with reversed-label binary search and compile-time never-block safety gate.
+- Integrated tunnel DNS-over-TCP responder: handles TCP queries on `10.10.0.1:53` and `[fd00:1::1]:53` when UDP answers are truncated.
+- Real-time Private DNS (DoT) detection: alerts user when system Private DNS strict mode bypasses local filtering.
 - Advertising and tracker-domain detection.
-- Optional adult-content domain filtering.
-- Deterministic local seed lists with documented provenance.
+- Optional adult-content domain filtering with hardened pattern scoping.
+- Deterministic local seed lists and MIT-licensed StevenBlack bulk lists with pinned provenance.
 - Strict domain, DNS query, and upstream-response validation.
 - Standards-correct IPv6 UDP checksums for local and forwarded responses.
 - Protected DNS-over-TCP retry when an upstream UDP response is truncated.
@@ -86,6 +86,8 @@ requires the stable signing secrets and a matching `test-v1.3.0` or `v1.3.0` tag
 ### Private self-learning
 
 - Evidence-based local learning: independent observation windows and corroborating signals; installation age never authorizes blocking.
+- Asynchronous write-behind persistence: eliminates fsync disk bottlenecks and global lock contention from the DNS packet classification hot path.
+- In-memory volatile alias cache: prevents persistent CNAME poisoning from forged upstream responses.
 - Capacity for up to 20,000 learned reputation entries.
 - Weak evidence expires after seven days; confirmed evidence expires after 30 days without renewed confirmation.
 - Android Keystore-backed HMAC-SHA256 identifiers.
@@ -110,6 +112,12 @@ latency, battery, or accuracy percentage.
 Because custom rules are stored as one-way identifiers, the app cannot display a
 saved plaintext list. Enter the same domain again to remove it, or use the
 appropriate **Clear all** action.
+
+### Known Limitations
+
+- **First-party ads**: Ads served from the same domain or video content delivery networks as the requested content (e.g., YouTube in-stream video ads, Twitter/X in-feed ads) share hostnames with primary content. Because Un-Blocker operates strictly at the DNS level without TLS decryption or HTTPS payload tampering, these cannot be blocked without breaking playback.
+- **Private DNS and encrypted browser resolvers**: When Android's Private DNS setting is configured to "Strict Hostname" mode, or browsers are configured to use third-party DoH resolvers directly, queries bypass the local port 53 VPN interface. Un-Blocker actively detects Private DNS on API 28+ and displays a warning banner with a shortcut to Android settings. See [Private DNS bypass matrix](docs/dns-bypass-matrix.md).
+- **Pure IP-based traffic**: Applications communicating directly with hardcoded numerical IP addresses without issuing DNS lookups are not filtered.
 
 ## How it works
 
@@ -341,7 +349,8 @@ application-private files for pseudonymous learning and rules.
 
 Application code is licensed under the [Apache License 2.0](LICENSE).
 Project-maintained seed lists are also Apache-2.0 data and carry SPDX headers.
-No undocumented third-party bulk list is shipped.
+Bundled StevenBlack hosts list is licensed under the MIT License; Public Suffix List
+is licensed under MPL-2.0. No undocumented third-party bulk list is shipped.
 
 Review:
 

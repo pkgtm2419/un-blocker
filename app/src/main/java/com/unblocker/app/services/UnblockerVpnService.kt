@@ -60,18 +60,34 @@ class UnblockerVpnService : VpnService() {
 
         override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
             if (isUsableUnderlyingNetwork(capabilities)) refreshNetworkResolvers(network)
-            else networkResolvers.remove(network)
+            else {
+                networkResolvers.remove(network)
+                if (network == connectivityManager.activeNetwork) {
+                    updatePrivateDnsState(null)
+                }
+            }
         }
 
         override fun onLinkPropertiesChanged(network: Network, linkProperties: LinkProperties) {
             val capabilities = connectivityManager.getNetworkCapabilities(network)
             if (capabilities != null && isUsableUnderlyingNetwork(capabilities)) {
                 networkResolvers.update(network, linkProperties.dnsServers)
-            } else networkResolvers.remove(network)
+                if (network == connectivityManager.activeNetwork) {
+                    updatePrivateDnsState(linkProperties)
+                }
+            } else {
+                networkResolvers.remove(network)
+                if (network == connectivityManager.activeNetwork) {
+                    updatePrivateDnsState(null)
+                }
+            }
         }
 
         override fun onLost(network: Network) {
             networkResolvers.remove(network)
+            if (network == connectivityManager.activeNetwork) {
+                updatePrivateDnsState(null)
+            }
         }
     }
 
@@ -81,7 +97,10 @@ class UnblockerVpnService : VpnService() {
         super.onCreate()
         preferences = FilteringPreferences.getInstance(this)
         connectivityManager = getSystemService(ConnectivityManager::class.java)
-        connectivityManager.activeNetwork?.let(::refreshNetworkResolvers)
+        connectivityManager.activeNetwork?.let { net ->
+            refreshNetworkResolvers(net)
+            connectivityManager.getLinkProperties(net)?.let(::updatePrivateDnsState)
+        }
         runCatching {
             connectivityManager.registerNetworkCallback(
                 NetworkRequest.Builder()
@@ -353,7 +372,15 @@ class UnblockerVpnService : VpnService() {
         val linkProperties = connectivityManager.getLinkProperties(network)
         if (capabilities != null && linkProperties != null && isUsableUnderlyingNetwork(capabilities)) {
             networkResolvers.update(network, linkProperties.dnsServers)
-        } else networkResolvers.remove(network)
+            if (network == connectivityManager.activeNetwork) {
+                updatePrivateDnsState(linkProperties)
+            }
+        } else {
+            networkResolvers.remove(network)
+            if (network == connectivityManager.activeNetwork) {
+                updatePrivateDnsState(null)
+            }
+        }
     }
 
     private fun isUsableUnderlyingNetwork(capabilities: NetworkCapabilities): Boolean {
@@ -419,6 +446,7 @@ class UnblockerVpnService : VpnService() {
                 }
             }
             dnsCache.clear()
+            updatePrivateDnsState(null)
         }
         runCatching { com.unblocker.app.logic.analysis.DeviceLearning.flush() }
 
@@ -465,6 +493,36 @@ class UnblockerVpnService : VpnService() {
         private val lifecycleLock = Any()
         val session = VpnSessionState()
         val isServiceActive: StateFlow<Boolean> = session.active
+
+        private val _isPrivateDnsActive = MutableStateFlow(false)
+        val isPrivateDnsActive: StateFlow<Boolean> = _isPrivateDnsActive.asStateFlow()
+
+        private val _privateDnsServerName = MutableStateFlow<String?>(null)
+        val privateDnsServerName: StateFlow<String?> = _privateDnsServerName.asStateFlow()
+
+        fun updatePrivateDnsState(active: Boolean, serverName: String?) {
+            _isPrivateDnsActive.value = active
+            _privateDnsServerName.value = if (active) serverName else null
+        }
+
+        fun updatePrivateDnsState(linkProperties: LinkProperties?) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                val active = linkProperties?.isPrivateDnsActive == true
+                val serverName = if (active) linkProperties?.privateDnsServerName else null
+                updatePrivateDnsState(active, serverName)
+            } else {
+                updatePrivateDnsState(false, null)
+            }
+        }
+
+        fun checkPrivateDns(context: Context) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                val cm = context.getSystemService(ConnectivityManager::class.java)
+                val activeNet = cm?.activeNetwork
+                val lp = activeNet?.let { cm.getLinkProperties(it) }
+                updatePrivateDnsState(lp)
+            }
+        }
 
         fun start(context: Context, fromBackground: Boolean = false) {
             val intent = Intent(context, UnblockerVpnService::class.java).apply {

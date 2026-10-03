@@ -61,7 +61,9 @@ import com.unblocker.app.logic.analysis.DeviceLearning
 import com.unblocker.app.logic.DomainName
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import com.unblocker.app.services.UnblockerVpnService
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -122,6 +124,11 @@ fun UnblockerScreen(
     var updatingException by remember { mutableStateOf(false) }
 
     val adultBlockingEnabled by preferences.adultBlockingEnabled.collectAsState()
+    val isPrivateDnsActive by UnblockerVpnService.isPrivateDnsActive.collectAsState()
+
+    LaunchedEffect(Unit) {
+        UnblockerVpnService.checkPrivateDns(context)
+    }
 
     // Smooth color transitions
     val buttonGlowColor by animateColorAsState(
@@ -342,6 +349,47 @@ fun UnblockerScreen(
                         letterSpacing = 0.8.sp,
                         color = if (isRunning) AllowedGreen else Slate400
                     )
+                }
+            }
+
+            // A.7 Private DNS Warning Banner
+            if (isPrivateDnsActive) {
+                Spacer(modifier = Modifier.height(20.dp))
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF451A03)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD97706)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .widthIn(max = 420.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Private DNS is active — encrypted queries may bypass local filtering",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFFFDE68A),
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        TextButton(
+                            onClick = {
+                                runCatching {
+                                    context.startActivity(Intent(Settings.ACTION_WIRELESS_SETTINGS).apply {
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    })
+                                }
+                            }
+                        ) {
+                            Text(
+                                text = "Open Network Settings",
+                                color = Color(0xFFFBBF24),
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
                 }
             }
 

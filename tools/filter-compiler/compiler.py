@@ -5,14 +5,15 @@ import json
 import pathlib
 import re
 
-LICENSES = {'Apache-2.0', 'MPL-2.0'}
+LICENSES = {'Apache-2.0', 'MPL-2.0', 'MIT'}
 HOST = re.compile(r'[a-z0-9_](?:[a-z0-9_-]{0,61}[a-z0-9_])?(?:\.[a-z0-9_](?:[a-z0-9_-]{0,61}[a-z0-9_])?)*\Z')
 
 
 def parse_rule(line):
     action, kind = 'BLOCK', 'EXACT'
-    if line.startswith('@@||'):
-        action, line = 'ALLOW', line[2:]
+    if line.startswith('@@'):
+        action = 'ALLOW'
+        line = line[2:]
     if line.startswith('||') and line.endswith('^'):
         kind, line = 'SUFFIX', line[2:-1]
     elif line.startswith('*.'):
@@ -21,6 +22,25 @@ def parse_rule(line):
     if len(domain) > 253 or not HOST.fullmatch(domain):
         raise ValueError('Unsupported or invalid DNS rule: ' + line)
     return action, kind, domain
+
+
+def check_never_block(rows, never_block_domains):
+    violations = []
+    for action, kind, rule_domain, category, source_id in sorted(rows):
+        if action != 'BLOCK':
+            continue
+        for host in sorted(never_block_domains):
+            matches = False
+            if kind == 'EXACT' and host == rule_domain:
+                matches = True
+            elif kind == 'SUFFIX' and (host == rule_domain or host.endswith('.' + rule_domain)):
+                matches = True
+            elif kind == 'WILDCARD' and host.endswith('.' + rule_domain):
+                matches = True
+            if matches:
+                violations.append(f"BLOCK {kind} {rule_domain} from source {source_id} matches never-block domain {host}")
+    if violations:
+        raise ValueError("Never-block violations detected:\n" + "\n".join(violations))
 
 
 def compile_sources(root, manifest, output):
@@ -54,6 +74,17 @@ def compile_sources(root, manifest, output):
             action, kind, domain = parse_rule(line)
             rows.add((action, kind, domain, entry['category'], str(entry['id'])))
         sources.append(dict(entry))
+
+    never_block_file = root / 'tools/filter-compiler/never_block.txt'
+    if not never_block_file.is_file():
+        never_block_file = root / 'never_block.txt'
+    if never_block_file.is_file():
+        never_block_domains = {
+            line.strip().lower()
+            for line in never_block_file.read_text(encoding='utf-8').splitlines()
+            if line.strip() and not line.strip().startswith('#')
+        }
+        check_never_block(rows, never_block_domains)
     encoded = ''.join('\t'.join(row) + '\n' for row in sorted(rows)).encode('utf-8')
     result = {'format': 1, 'ruleCount': len(rows), 'rulesSha256': hashlib.sha256(encoded).hexdigest(),
               'sources': sorted(sources, key=lambda entry: entry['id'])}

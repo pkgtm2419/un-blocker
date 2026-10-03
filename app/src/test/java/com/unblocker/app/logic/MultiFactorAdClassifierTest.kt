@@ -10,10 +10,14 @@ import org.junit.Test
 class MultiFactorAdClassifierTest {
 
     private lateinit var learner: LocalNetworkLearner
+    private val trackers = setOf(
+        "adjust.com", "appsflyer.com", "branch.io", "kochava.com",
+        "mixpanel.com", "segment.com", "amplitude.com", "scorecardresearch.com"
+    )
 
     @Before
     fun setup() {
-        learner = LocalNetworkLearner()
+        learner = LocalNetworkLearner(isKnownTracker = { it in trackers || trackers.any { t -> it.endsWith(".$t") } })
     }
 
     @Test

@@ -57,6 +57,29 @@ class CompilerTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.compiler.compile_sources(root, manifest, root / 'out')
 
+    def test_never_block_gate_triggers_with_readable_report(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            manifest = self.fixture(root)
+            (root / 'never_block.txt').write_text("critical.ads.test\n")
+            with self.assertRaises(ValueError) as ctx:
+                self.compiler.compile_sources(root, manifest, root / 'out')
+            self.assertIn("Never-block violations detected", str(ctx.exception))
+            self.assertIn("BLOCK SUFFIX ads.test from source 1 matches never-block domain critical.ads.test", str(ctx.exception))
+
+    def test_allow_exact_and_suffix_rules_parsed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            source = root / 'seed.txt'
+            source.write_bytes(b'@@dashboard.example.com\n@@||portal.example.com^\n')
+            manifest = {'sources': [{'id': 1, 'path': 'seed.txt', 'license': 'MIT',
+                'revision': 'test-pinned', 'sha256': hashlib.sha256(source.read_bytes()).hexdigest(),
+                'syntax': 'rules', 'category': 'AD', 'url': 'https://example.test/source'}]}
+            self.compiler.compile_sources(root, manifest, root / 'out')
+            tsv = (root / 'out/dns-rules.tsv').read_bytes()
+            self.assertIn(b'ALLOW\tEXACT\tdashboard.example.com', tsv)
+            self.assertIn(b'ALLOW\tSUFFIX\tportal.example.com', tsv)
+
 
 if __name__ == '__main__':
     unittest.main()

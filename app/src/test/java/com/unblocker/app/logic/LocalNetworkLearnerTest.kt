@@ -37,7 +37,7 @@ class LocalNetworkLearnerTest {
 
     @Test
     fun testCadenceAndBurstDetection() {
-        val testDomain = "api.burst-tracker-endpoint.com"
+        val testDomain = "tracker.burst-endpoint.com"
         val now = System.currentTimeMillis()
 
         // Simulate rapid burst of 5 queries within 200ms

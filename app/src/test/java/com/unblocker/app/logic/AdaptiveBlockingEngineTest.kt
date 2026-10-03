@@ -7,13 +7,14 @@ import org.junit.Test
 
 class AdaptiveBlockingEngineTest {
     @Test fun ageCannotChangeEvidenceThresholdOrClassification() {
-        val engine=AdaptiveBlockingEngine()
+        val learner = LocalNetworkLearner(isKnownTracker = { it == "app.adjust.com" })
+        val engine = AdaptiveBlockingEngine(networkLearner = learner)
         for(day in listOf(1,2,7,14,100)) {
             assertEquals(.8f,engine.getCurrentPhase(day).confidenceThreshold,0f)
             assertFalse(engine.evaluateDomain("metrics.school.test",day).isBlocked)
             assertFalse(engine.evaluateDomain("github.com",day).isBlocked)
-            assertTrue(engine.evaluateDomain("adjust.com",day).isBlocked)
-            assertEquals(DecisionReason.STATIC_RULE,engine.evaluateDomain("adjust.com",day).reasonCode)
+            assertTrue(engine.evaluateDomain("app.adjust.com",day).isBlocked)
+            assertEquals(DecisionReason.STATIC_RULE,engine.evaluateDomain("app.adjust.com",day).reasonCode)
         }
     }
     @Test fun independentEvidenceConfirmsButSingleBurstDoesNot() {

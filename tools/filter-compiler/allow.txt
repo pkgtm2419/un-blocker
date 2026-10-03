@@ -1,0 +1,67 @@
+# Shipped allow rules: vendor marketing, documentation, and user dashboard web hosts
+# Rationale: unblock vendor web services while keeping SDK/tracker endpoints blocked
+
+# Amplitude: marketing and login dashboard (SDKs use api.amplitude.com)
+@@amplitude.com
+@@www.amplitude.com
+@@analytics.amplitude.com
+
+# AppsFlyer: marketing and platform login (SDKs use t.appsflyer.com, app.appsflyer.com, events.appsflyer.com)
+@@appsflyer.com
+@@www.appsflyer.com
+@@hq.appsflyer.com
+
+# AppLovin: developer portal and marketing (SDKs use a.applovin.com, d.applovin.com, res.applovin.com)
+@@applovin.com
+@@www.applovin.com
+
+# Branch.io: developer dashboard and docs (SDKs use api.branch.io, api2.branch.io)
+@@branch.io
+@@www.branch.io
+@@dashboard.branch.io
+
+# Adjust: marketing and console (SDKs use app.adjust.com, view.adjust.com)
+@@adjust.com
+@@www.adjust.com
+
+# Kochava: platform login and marketing (SDKs use api.kochava.com, control.kochava.com)
+@@kochava.com
+@@www.kochava.com
+
+# Flurry: developer analytics console (SDKs use data.flurry.com)
+@@flurry.com
+@@www.flurry.com
+
+# Singular: platform login and marketing (SDKs use api.singular.net, sdk.singular.net)
+@@singular.net
+@@www.singular.net
+
+# Braze: documentation and customer dashboard (SDKs use sdk.iad-01.braze.com)
+@@braze.com
+@@www.braze.com
+@@dashboard.braze.com
+
+# Mixpanel: user product dashboard and docs (SDKs use api.mixpanel.com, decide.mixpanel.com)
+@@mixpanel.com
+@@www.mixpanel.com
+
+# Segment: developer dashboard and workspace (SDKs use api.segment.io, cdn.segment.com)
+@@segment.com
+@@www.segment.com
+@@app.segment.com
+@@segment.io
+@@www.segment.io
+
+# Clarity (Microsoft): analytics portal (collectors use c.clarity.ms)
+@@clarity.ms
+@@www.clarity.ms
+
+# Hotjar: user feedback portal and dashboard (scripts use script.hotjar.com, static.hotjar.com)
+@@hotjar.com
+@@www.hotjar.com
+@@insights.hotjar.com
+
+# New Relic: observability portal and dashboard (mobile telemetry uses mobile-collector.newrelic.com)
+@@newrelic.com
+@@www.newrelic.com
+@@one.newrelic.com

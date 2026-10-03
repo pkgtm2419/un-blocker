@@ -24,7 +24,10 @@ class ContentFilterEngine(
     private val context: Context,
     private val adDetector: AdDetector = AdDetector(context),
     private val adultContentDetector: AdultContentDetector = AdultContentDetector(context),
-    private val networkLearner: LocalNetworkLearner = LocalNetworkLearner(context),
+    private val networkLearner: LocalNetworkLearner = LocalNetworkLearner(
+        context = context,
+        isKnownTracker = { adDetector.matchRule(it)?.action == com.unblocker.app.logic.rules.RuleAction.BLOCK }
+    ),
     private val preferences: FilteringPreferences = FilteringPreferences.getInstance(context),
     private val allowlistedDomains: PrivateDomainSet = DeviceLearning.allowlist(context),
     private val blocklistedDomains: PrivateDomainSet = DeviceLearning.blocklist(context),

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
-# Unblocker Comprehensive Mobile & Web Ad Blocklist
 # Curated high-impact ad networks, programmatic exchanges, trackers, telemetry, and DoH canaries.
+# Unblocker Comprehensive Mobile & Web Ad Blocklist
 07c225f3.online
 19706903.xyz
 2mdn.net
@@ -36,7 +36,6 @@ adfalcon.com
 adform.net
 adformdsp.net
 adincube.com
-adjust.com
 adkernel.com
 admanmedia.com
 admaven.com
@@ -397,14 +396,15 @@ allowpush.com
 alwingulla.com
 amazon-adsystem.com
 amplify.outbrain.com
-amplitude.com
 ams1-ib.adnxs.com
 aniview.com
 api.amplitude.com
+api.appsflyer.com
 api.branch.io
 api.kochava.com
 api.mixpanel.com
 api.segment.io
+api.singular.net
 api.taboola.com
 api.vungle.com
 api2.amplitude.com
@@ -413,11 +413,9 @@ app-measurement.com
 app.adjust.com
 app.appsflyer.com
 appbrain.com
-applovin.com
 appnext-a.akamaihd.net
 appnext.com
 appnexus.com
-appsflyer.com
 apptentive.com
 asg.clckhss.com
 assoc-amazon.com
@@ -441,9 +439,7 @@ bidtheatre.com
 bidvertiser.com
 bingsads.microsoft.com
 bluekai.com
-branch.io
 branch.metrics.io
-braze.com
 brightroll.com
 browser-intake-datadoghq.com
 bugsnag.com
@@ -456,6 +452,7 @@ c.mgid.com
 carbonads.com
 carbonads.net
 casalemedia.com
+cdn.segment.com
 cdn.taboola.com
 cedexis.com
 chango.com
@@ -464,7 +461,6 @@ chartbeat.net
 chartboost.com
 chitika.com
 choice.microsoft.com
-clarity.ms
 clckd.net
 clevertap.com
 clickadu.com
@@ -545,7 +541,6 @@ finedonut.com
 flashtalking.com
 fls-eu.amazon.com
 fls-na.amazon.com
-flurry.com
 fra1-ib.adnxs.com
 fullstory.com
 fundingchoicesmessages.google.com
@@ -581,7 +576,6 @@ harrenmedia.com
 heapanalytics.com
 hedeuntacks.com
 hilltopads.com
-hotjar.com
 hptk.net
 htmonster.com
 hubcloud.club
@@ -615,7 +609,6 @@ jumptap.com
 justpremium.com
 kargo.com
 kiosked.com
-kochava.com
 komoona.com
 krxd.net
 lax1-ib.adnxs.com
@@ -660,7 +653,6 @@ mgid.com
 microad.jp
 millennialmedia.com
 mintegral.com
-mixpanel.com
 moatads.com
 mobclix.com
 mobfox.com
@@ -682,7 +674,6 @@ nativo.com
 nend.net
 neodatagroup.com
 netmng.com
-newrelic.com
 nexage.com
 ninthdecimal.com
 notificationallow.com
@@ -796,12 +787,11 @@ scenestealer.tv
 scorecardresearch.com
 script.hotjar.com
 sdk.iad-01.braze.com
+sdk.singular.net
 secure.adnxs.com
 securepubads.g.doubleclick.net
 see-work.info
 seedtag.com
-segment.com
-segment.io
 selectmedia.asia
 sentry.io
 serv-v2.mgid.com
@@ -818,7 +808,6 @@ shrinkme.org
 silvermob.com
 simpli.fi
 sin3-ib.adnxs.com
-singular.net
 sitescout.com
 sizmek.com
 slftps.com

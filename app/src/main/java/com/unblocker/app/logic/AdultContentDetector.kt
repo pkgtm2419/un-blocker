@@ -4,10 +4,14 @@ import android.content.Context
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import com.unblocker.app.domain.model.DecisionReason
+import com.unblocker.app.logic.analysis.PublicSuffixRules
 
 data class AdultMatch(val blocked: Boolean, val reason: String, val code: DecisionReason)
 
-class AdultContentDetector(private val context: Context? = null) {
+class AdultContentDetector(
+    private val context: Context? = null,
+    private val suffixRules: PublicSuffixRules = PublicSuffixRules.from(context)
+) {
 
     private val adultDomains = HashSet<String>(6000)
 
@@ -20,23 +24,35 @@ class AdultContentDetector(private val context: Context? = null) {
         "dailymotion.com", "metacafe.com", "twitch.tv", "netflix.com", "nflxvideo.net",
         "facebook.com", "instagram.com", "twitter.com", "x.com", "reddit.com",
         "wikipedia.org", "github.com", "amazon.com", "microsoft.com", "apple.com",
-        "spotify.com", "linkedin.com", "cloudflare.com"
+        "spotify.com", "linkedin.com", "cloudflare.com", "stripe.com", "adultswim.com",
+        "sexualhealth.org"
     )
 
-    private val adultTlds = setOf("xxx", "adult", "porn", "sex", "cam")
+    private val adultTlds = setOf("xxx", "adult", "porn", "sex")
 
     private val adultPatterns = listOf(
-        Regex(".*(?:^|[\\.-])(?:porn|sex|xxx|nsfw|erotic|cams?|strip|hentai|milf|fap|brazzers|xvideos|pornhub|xnxx)(?:[\\.-]|$).*"),
+        Regex(".*(?:^|[\\.-])(?:porn|porno|xxx|nsfw|erotic|erotica|hentai|milf|brazzers|xvideos|pornhub|xnxx|chaturbate|stripchat|livejasmin|spankbang|youporn|redtube)(?:[\\.-]|$).*"),
         Regex(".*-porn-.*"),
-        Regex(".*-sex-.*"),
         Regex(".*-xxx-.*"),
-        Regex(".*-cam-.*"),
-        Regex(".*(?:red|x|porno|dirty|free|wet|spank|erotic|sex|cam)tube\\d*\\.(?:com|net|org|xxx)$"),
-        Regex(".*(?:^|[\\.-])(?:adult|erotica|chaturbate|stripchat|livejasmin)(?:[\\.-]|$).*")
+        Regex(".*(?:red|x|porno|dirty|free|wet|spank|erotic|sex)tube\\d*\\.(?:com|net|org|xxx)$"),
+        Regex(".*(?:^|[\\.-])(?:cam-sex|sex-cam|strip-club|strip-poker|adult-video|adult-movie|sex-video|live-cam-strip)(?:[\\.-]|$).*")
     )
 
     init {
         loadStaticList()
+    }
+
+    private fun isInstitutional(domain: String): Boolean {
+        val labels = domain.split('.')
+        for (i in 1 until labels.size) {
+            val suffix = labels.drop(i).joinToString(".")
+            if (suffix == "gov" || suffix == "edu" || suffix == "mil" || suffix == "ac" ||
+                suffix.startsWith("gov.") || suffix.startsWith("edu.") ||
+                suffix.startsWith("ac.") || suffix.startsWith("mil.")) {
+                return true
+            }
+        }
+        return false
     }
 
     fun loadStaticList() {
@@ -106,9 +122,15 @@ class AdultContentDetector(private val context: Context? = null) {
             return AdultMatch(true,"Adult TLD Rule (.$tld)",DecisionReason.ADULT_TLD)
         }
 
-        // 4. Pattern Matching
+        // Institutional domains skip pattern matching
+        if (isInstitutional(domain)) {
+            return AdultMatch(false,"",DecisionReason.ALLOWED)
+        }
+
+        // 4. Pattern Matching on registrable domain and subdomains (exclude public suffix)
+        val evalTarget = suffixRules.registrableDomain(domain) ?: domain
         for (pattern in adultPatterns) {
-            if (pattern.matches(domain)) {
+            if (pattern.matches(evalTarget) || pattern.matches(domain)) {
                 return AdultMatch(true,"Adult Pattern Match",DecisionReason.ADULT_PATTERN)
             }
         }

@@ -10,16 +10,13 @@ class LocalNetworkLearner(
     private val policy: ReputationPolicy = if (context == null) ReputationPolicy(DeviceLearning.memoryEvidenceStore())
         else DeviceLearning.policy(context),
     private val clock: () -> Long = if (context == null) ({System.nanoTime()/1_000_000})
-        else ({android.os.SystemClock.elapsedRealtime()})
+        else ({android.os.SystemClock.elapsedRealtime()}),
+    private val isKnownTracker: (String) -> Boolean = { false }
 ) {
     private val cadence = CadenceTracker()
     private val extractor = DomainFeatureExtractor(suffixRules)
     private val scorer = HeuristicScorer()
-    private val knownTrackers = setOf("google-analytics.com", "adjust.com", "appsflyer.com", "branch.io",
-        "kochava.com", "flurry.com", "singular.net", "braze.com", "mixpanel.com", "segment.com",
-        "segment.io", "amplitude.com", "scorecardresearch.com", "quantserve.com", "moatads.com",
-        "clarity.ms", "hotjar.com", "newrelic.com", "app-measurement.com")
-    private fun known(domain:String) = knownTrackers.any { domain==it || domain.endsWith(".$it") }
+    private fun known(domain: String) = isKnownTracker(domain)
 
     fun getLearnedTrackersCount() = policy.confirmedCount()
     fun extractDomainSignature(raw:String): DomainSignature {

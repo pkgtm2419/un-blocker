@@ -133,6 +133,7 @@ tasks.named('preBuild').configure { dependsOn 'copyLegalAssets' }
 
 tasks.register('compileDnsRules', Exec) {
     inputs.files(rootProject.files('tools/filter-compiler/compiler.py', 'tools/filter-compiler/sources.json',
+        'tools/filter-compiler/allow.txt', 'tools/filter-compiler/never_block.txt',
         'app/src/main/assets/ad_domains.txt', 'app/src/main/assets/adult_domains.txt',
         'app/src/main/assets/public_suffix_list.dat'))
     outputs.dir "$buildDir/generated/dns-assets"

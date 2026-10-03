@@ -1,118 +1,58 @@
 package com.unblocker.app.logic
 
 import android.content.Context
-import java.io.BufferedReader
-import java.io.InputStreamReader
+import com.unblocker.app.logic.rules.*
 
-class AdDetector(private val context: Context? = null) {
+class AdDetector(private val context: Context? = null, private val compiledRules: CompiledRuleSet? = null) {
+    private val seedRules = LinkedHashSet<DnsRule>()
+    @Volatile private var engine = DnsRuleEngine(CompiledRuleSet(emptyList()))
 
-    private val adDomains = HashSet<String>(15000)
+    init { loadStaticList() }
 
-    private val adPatterns = listOf(
-        // DoH Canary Domain
-        Regex(".*(?:^|\\.)use-application-dns\\.net$"),
-        // Ad subdomains & servers: ad, ads, adserver, adsystem, adservice, adclick, adview, adtech, adnetwork, advertising
-        Regex(".*(?:^|\\.)ad[s]?(?:erver|service|system|vertising|vert|click|view|counter|form|tech|track|network|delivery|manager)?\\d*\\..*"),
-        // Tracking, metrics, telemetry, pixel, beacon, analytics
-        Regex(".*(?:^|\\.)(?:track|tracker|tracking|telemetry|analytics|metrics|pixel|beacon|syndication|affiliate|sponsor|bidder|monetiz)\\d*\\..*"),
-        // Pagead, Google Syndication, Doubleclick, Google Ad Services
-        Regex(".*(?:^|\\.)pagead\\d?\\..*"),
-        Regex(".*(?:^|\\.)googlesyndication\\.com$"),
-        Regex(".*(?:^|\\.)doubleclick\\.net$"),
-        Regex(".*(?:^|\\.)googleadservices\\.com$"),
-        // Major programmatic ad networks & exchanges patterns
-        Regex(".*(?:^|\\.)(?:criteo|taboola|outbrain|adnxs|pubmatic|rubiconproject|openx|smartadserver|admob|applovin|unityads|vungle|inmobi|ironsrc|branch|kochava|appsflyer|adjust|chartboost|liftoff|fyber|pangle|mintegral|revcontent|mgid|ezoic|sovrn|sharethrough|triplelift|casalemedia|bidswitch|moatads|quantserve|scorecardresearch)\\..*"),
-        // Pop-under, pop-up, and aggressive push ad networks (common on movie/streaming sites like Bollyflix, MoviesMod, UHDMovies)
-        Regex(".*(?:^|\\.)(?:popads|popcash|propellerads|propellerpops|monetag|adsterra|clickadu|hilltopads|galaksion|admaven|ad-maven|evadav|rollerads|yllix|richads|richpush|exoclick|trafficjunky|tsyndicate|clickmngr|clickterra|terraclicks|onclickads|onclkds|onclasrv|traffpartners|mobtrks|adsboosters|recrampwiped|hedeuntacks|legbaratwind|ronracepub)\\..*"),
-        // Pop, popup, popunder, clicktrack prefixes/tokens
-        Regex(".*(?:^|\\.)(?:pop|popup|popunder|onclick|directlink|smartlink)\\d*\\..*"),
-        // Ad-shortener & countdown timer redirection gateways
-        Regex(".*(?:^|\\.)(?:droplink|gplinks|gplink|linkvertise|shrinkearn|adshrink|shrinkme|ouo\\.(?:io|press)|exe\\.io|rocklinks)\\..*")
-    )
-
-    init {
-        loadStaticList()
+    @Synchronized fun loadStaticList() {
+        seedRules.clear()
+        if (compiledRules != null || context != null) {
+            val compiled=compiledRules ?: context!!.assets.open("dns-rules.tsv").reader().use { CompiledRuleSet.fromTsv(it) }
+            seedRules.addAll(compiled.rules.filter { it.category==com.unblocker.app.domain.model.BlockingCategory.AD })
+        } else fallback.mapNotNull(DomainName::normalize).forEach {
+            seedRules.add(DnsRule(RuleAction.BLOCK, RuleKind.SUFFIX, it))
+        }
+        engine = DnsRuleEngine(CompiledRuleSet(seedRules.toList()))
     }
 
-    fun loadStaticList() {
-        if (context == null) {
-            val fallback = listOf(
-                "doubleclick.net", "googleads.g.doubleclick.net", "adservice.google.com",
-                "pagead2.googlesyndication.com", "pubads.g.doubleclick.net", "admob.com",
-                "applovin.com", "unityads.unity3d.com", "vungle.com", "inmobi.com",
-                "ironsrc.com", "criteo.com", "taboola.com", "outbrain.com", "adnxs.com",
-                "adjust.com", "appsflyer.com", "branch.io", "kochava.com", "flurry.com",
-                "mixpanel.com", "segment.io", "amplitude.com", "hotjar.com", "clarity.ms",
-                "recrampwiped.com", "adsboosters.xyz", "hedeuntacks.com", "legbaratwind.com",
-                "ronracepub.com", "popads.net", "popcash.net", "adsterra.com", "propellerads.com",
-                "monetag.com", "clickadu.com", "hilltopads.com", "galaksion.com", "admaven.com"
-            )
-            fallback.mapNotNull(DomainName::normalize).forEach(adDomains::add)
-            return
-        }
-        try {
-            context.assets.open("ad_domains.txt").use { inputStream ->
-                BufferedReader(InputStreamReader(inputStream)).useLines { lines ->
-                    lines.forEach { line ->
-                        val trimmed = line.trim()
-                        if (trimmed.isNotEmpty() && !trimmed.startsWith("#")) {
-                            DomainName.normalize(trimmed)?.let(adDomains::add)
-                        }
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            // Fallback default top domains
-            val fallback = listOf(
-                "doubleclick.net", "googleads.g.doubleclick.net", "adservice.google.com",
-                "pagead2.googlesyndication.com", "pubads.g.doubleclick.net", "admob.com",
-                "applovin.com", "unityads.unity3d.com", "vungle.com", "inmobi.com",
-                "ironsrc.com", "criteo.com", "taboola.com", "outbrain.com", "adnxs.com",
-                "adjust.com", "appsflyer.com", "branch.io", "kochava.com", "flurry.com",
-                "mixpanel.com", "segment.io", "amplitude.com", "hotjar.com", "clarity.ms",
-                "recrampwiped.com", "adsboosters.xyz", "hedeuntacks.com", "legbaratwind.com",
-                "ronracepub.com", "popads.net", "popcash.net", "adsterra.com", "propellerads.com",
-                "monetag.com", "clickadu.com", "hilltopads.com", "galaksion.com", "admaven.com"
-            )
-            fallback.mapNotNull(DomainName::normalize).forEach(adDomains::add)
+    @Synchronized fun addDomain(domain: String) {
+        DomainName.normalize(domain)?.let {
+            seedRules.add(DnsRule(RuleAction.BLOCK, RuleKind.SUFFIX, it))
+            engine = DnsRuleEngine(CompiledRuleSet(seedRules.toList()))
         }
     }
 
-    fun addDomain(domain: String) {
-        DomainName.normalize(domain)?.let(adDomains::add)
-    }
+    fun matchRule(domain: String): DnsRule? = engine.match(domain)
 
-    fun isAdDomain(rawDomain: String): Pair<Boolean, String> {
-        val domain = DomainName.normalize(rawDomain) ?: return Pair(false, "")
-
-        // 0. DoH Canary Domain Check (forces Chrome & Firefox to use local DNS)
+    fun isAdDomain(raw: String): Pair<Boolean, String> {
+        val domain = DomainName.normalize(raw) ?: return false to ""
         if (domain == "use-application-dns.net" || domain.endsWith(".use-application-dns.net")) {
-            return Pair(true, "DoH Canary Domain Block")
+            return true to "Firefox DoH canary compatibility rule"
         }
-
-        // 1. Direct match
-        if (adDomains.contains(domain)) {
-            return Pair(true, "Static List Match ($domain)")
-        }
-
-        // 2. Subdomain check (e.g. sub.domain.com -> domain.com)
-        var parentDomain = domain
-        while (parentDomain.contains('.')) {
-            parentDomain = parentDomain.substringAfter('.')
-            if (adDomains.contains(parentDomain)) {
-                return Pair(true, "Domain Suffix Match ($parentDomain)")
-            }
-        }
-
-        // 3. Pattern match
-        for (pattern in adPatterns) {
-            if (pattern.matches(domain)) {
-                return Pair(true, "Pattern Match: ${pattern.pattern}")
-            }
-        }
-
-        return Pair(false, "")
+        val rule = matchRule(domain) ?: return false to ""
+        if (rule.action == RuleAction.ALLOW) return false to "Shipped exception"
+        return true to if (domain == rule.value) "Static List Match ($domain)"
+            else "Domain Suffix Match (${rule.value})"
     }
 
-    fun getDomainCount(): Int = adDomains.size
+    @Synchronized fun getDomainCount(): Int = seedRules.size
+
+    companion object {
+        private val fallback = listOf(
+            "doubleclick.net", "googleads.g.doubleclick.net", "adservice.google.com",
+            "pagead2.googlesyndication.com", "pubads.g.doubleclick.net", "admob.com",
+            "applovin.com", "unityads.unity3d.com", "vungle.com", "inmobi.com", "ironsrc.com",
+            "criteo.com", "taboola.com", "outbrain.com", "adnxs.com", "adjust.com", "appsflyer.com",
+            "branch.io", "kochava.com", "flurry.com", "mixpanel.com", "segment.io", "amplitude.com",
+            "hotjar.com", "clarity.ms", "recrampwiped.com", "adsboosters.xyz", "hedeuntacks.com",
+            "legbaratwind.com", "ronracepub.com", "popads.net", "popcash.net", "adsterra.com",
+            "propellerads.com", "monetag.com", "clickadu.com", "hilltopads.com", "galaksion.com",
+            "admaven.com", "onclickads.net", "droplink.co", "openx.net"
+        )
+    }
 }

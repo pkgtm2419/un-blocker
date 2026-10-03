@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: Apache-2.0
+# Project-authored curated vendor roots and synthetic benign lookalikes. Baseline FP=0.
+# domain expected category provenance
+doubleclick.net	BLOCK	AD	project-curated
+ads.doubleclick.net	BLOCK	AD	project-synthetic
+applovin.com	BLOCK	AD	project-curated
+vungle.com	BLOCK	AD	project-curated
+inmobi.com	BLOCK	AD	project-curated
+criteo.com	BLOCK	AD	project-curated
+taboola.com	BLOCK	AD	project-curated
+outbrain.com	BLOCK	AD	project-curated
+adnxs.com	BLOCK	AD	project-curated
+popads.net	BLOCK	AD	project-curated
+ads.example.com	ALLOW	BENIGN	project-synthetic
+analytics.example.com	ALLOW	BENIGN	project-synthetic
+doubleclick.net.example.org	ALLOW	BENIGN	project-synthetic
+notdoubleclick.net	ALLOW	BENIGN	project-synthetic
+example.com	ALLOW	BENIGN	project-synthetic
+shop.example.org	ALLOW	BENIGN	project-synthetic
+tracking-help.example.net	ALLOW	BENIGN	project-synthetic
+advice.example.com	ALLOW	BENIGN	project-synthetic
+amplitude.example.net	ALLOW	BENIGN	project-synthetic
+static.example.org	ALLOW	BENIGN	project-synthetic
+news.example.org	ALLOW	BENIGN	project-synthetic
+api.example.com	ALLOW	BENIGN	project-synthetic
+stripe.com	ALLOW	BENIGN	project-curated
+api.stripe.com	ALLOW	BENIGN	project-synthetic
+cambridge.org	ALLOW	BENIGN	project-curated
+camera.example.test	ALLOW	BENIGN	project-synthetic
+adultlearning.example.test	ALLOW	BENIGN	project-synthetic
+sexeducation.example.test	ALLOW	BENIGN	project-synthetic
+pornhub.com	BLOCK	ADULT_CONTENT	project-curated
+m.pornhub.com	BLOCK	ADULT_CONTENT	project-synthetic
+chaturbate.com	BLOCK	ADULT_CONTENT	project-curated
+streaming.porn	BLOCK	ADULT_CONTENT	project-synthetic

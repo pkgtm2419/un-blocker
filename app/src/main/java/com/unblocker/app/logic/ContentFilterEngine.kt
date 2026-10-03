@@ -12,10 +12,11 @@ import com.unblocker.app.logic.analysis.AdaptiveBlockingEngine
 import com.unblocker.app.logic.analysis.DeviceLearning
 import com.unblocker.app.logic.analysis.LocalNetworkLearner
 import com.unblocker.app.logic.analysis.PrivateDomainSet
+import com.unblocker.app.logic.rules.CnamePolicy
 
 /**
  * Autonomous local content filter engine.
- * Combines Clean Architecture UseCase orchestration with two-week adaptive multi-factor learning,
+ * Combines UseCase orchestration with evidence-based local learning,
  * seed heuristics, and adult content classifier.
  * Operates 100% on-device with zero logs, zero history, and zero cloud dependency.
  */
@@ -29,6 +30,13 @@ class ContentFilterEngine(
     private val blocklistedDomains: PrivateDomainSet = DeviceLearning.blocklist(context),
     val adaptiveEngine: AdaptiveBlockingEngine = AdaptiveBlockingEngine(preferences, networkLearner)
 ) {
+
+    private val cnamePolicy = CnamePolicy(
+        { preferences.adBlockingEnabled.value }, allowlistedDomains::contains, adDetector::matchRule
+    )
+
+    fun blockedAlias(original: String, aliases: List<String>): String? =
+        cnamePolicy.blockedAlias(original, aliases)?.also { networkLearner.observeTrustedAlias(original) }
 
     private val decideBlockingUseCase = DecideBlockingUseCase(
         adDetector = adDetector,
@@ -68,17 +76,14 @@ class ContentFilterEngine(
             BlockingCategory.NORMAL -> ContentType.NORMAL
         }
 
-        val method = if (decision.category == BlockingCategory.CUSTOM) {
-            DetectionMethod.CUSTOM_RULE
-        } else if (!decision.isBlocked) {
-            DetectionMethod.NONE
-        } else if (decision.category == BlockingCategory.ADULT_CONTENT) {
-            if (decision.reason.contains("TLD")) DetectionMethod.TLD_RULE
-            else if (decision.reason.contains("Pattern")) DetectionMethod.PATTERN_MATCH
-            else DetectionMethod.STATIC_LIST
-        } else {
-            if (decision.reason.contains("Static") || decision.reason.contains("Suffix")) DetectionMethod.STATIC_LIST
-            else DetectionMethod.PATTERN_MATCH
+        val method = when (decision.reasonCode) {
+            com.unblocker.app.domain.model.DecisionReason.USER_BLOCK -> DetectionMethod.CUSTOM_RULE
+            com.unblocker.app.domain.model.DecisionReason.STATIC_RULE,
+            com.unblocker.app.domain.model.DecisionReason.ADULT_STATIC -> DetectionMethod.STATIC_LIST
+            com.unblocker.app.domain.model.DecisionReason.ADULT_TLD -> DetectionMethod.TLD_RULE
+            com.unblocker.app.domain.model.DecisionReason.ADULT_PATTERN -> DetectionMethod.PATTERN_MATCH
+            com.unblocker.app.domain.model.DecisionReason.LEARNED_EVIDENCE -> DetectionMethod.HEURISTIC_ANALYSIS
+            else -> DetectionMethod.NONE
         }
 
         return FilterResult(

@@ -13,16 +13,19 @@ enum class BlockingCategory {
     NORMAL
 }
 
+enum class DecisionReason { ALLOWED, USER_ALLOW, USER_BLOCK, STATIC_RULE, LEARNED_EVIDENCE,
+    ADULT_STATIC, ADULT_TLD, ADULT_PATTERN }
+
 /**
  * Domain model representing a verified blocking decision produced by the on-device filtering pipeline.
- * Aligned with Clean Architecture specifications in un-blocker-improvement-plan.md.
  */
 data class BlockingDecision(
     val action: BlockingAction,
     val reason: String,
     val confidence: Float,
     val category: BlockingCategory,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val reasonCode: DecisionReason = DecisionReason.ALLOWED
 ) {
     val isBlocked: Boolean get() = action == BlockingAction.BLOCK
 

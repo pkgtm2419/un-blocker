@@ -4,9 +4,7 @@ import java.util.concurrent.ArrayBlockingQueue
 
 /**
  * Reusable object pool for packet byte arrays.
- * Drastically reduces memory churn, CPU garbage collection pause times,
- * and maintains steady sub-0.05ms packet handling latency under heavy network load.
- * Aligned with Section 4.1 Memory Management in un-blocker-improvement-plan.md.
+ * Bounds retained packet buffers and reduces allocation churn in the TUN loop.
  */
 class ByteArrayPool(
     val arraySize: Int = 4096,

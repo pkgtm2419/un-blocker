@@ -4,12 +4,32 @@ import com.unblocker.app.logic.dns.DnsPacketUtil
 import com.unblocker.app.logic.dns.DnsQuery
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 class DnsPacketTest {
+
+    private fun ipv4Query(): DnsQuery {
+        val packet = createMockDnsQueryPacket("ads.example", 0x1234)
+        return DnsPacketUtil.parseIpPacket(packet, packet.size)!!
+    }
+
+    @Test fun ipv4WrapperEnforcesMaximumRepresentableDnsPayload() {
+        val query = ipv4Query()
+
+        val maximum = DnsPacketUtil.maxDnsPayloadLength(query)
+        val packet = DnsPacketUtil.wrapDnsResponseInIpUdp(query, ByteArray(maximum), maximum)
+
+        assertEquals(65_507, maximum)
+        assertEquals(65_535, packet.size)
+        assertEquals(0xffff, ((packet[2].toInt() and 0xff) shl 8) or (packet[3].toInt() and 0xff))
+        assertThrows(IllegalArgumentException::class.java) {
+            DnsPacketUtil.wrapDnsResponseInIpUdp(query, ByteArray(maximum + 1), maximum + 1)
+        }
+    }
 
     @Test
     fun testParseAndBuildBlockedDnsResponse() {
@@ -57,8 +77,23 @@ class DnsPacketTest {
         assertEquals(null, DnsPacketUtil.minCacheTtlSeconds(byteArrayOf(1, 2, 3)))
     }
 
+    @Test fun queryParserRejectsSingleWireLabelContainingDot() {
+        val packet = createMockDnsQueryPacketFromLabels(listOf("ads.example"), 0x1234)
+
+        assertEquals(null, DnsPacketUtil.parseIpPacket(packet, packet.size))
+    }
+
+    @Test fun queryParserRejectsWireLabelThatWouldOnlyMatchAfterTrimming() {
+        val packet = createMockDnsQueryPacketFromLabels(listOf(" ads", "example"), 0x1234)
+
+        assertEquals(null, DnsPacketUtil.parseIpPacket(packet, packet.size))
+    }
+
     private fun createMockDnsQueryPacket(domain: String, txId: Short): ByteArray {
-        val labels = domain.split(".")
+        return createMockDnsQueryPacketFromLabels(domain.split("."), txId)
+    }
+
+    private fun createMockDnsQueryPacketFromLabels(labels: List<String>, txId: Short): ByteArray {
         var qnameLen = 1 // trailing 0
         for (l in labels) {
             qnameLen += 1 + l.length
@@ -140,6 +175,31 @@ class DnsPacketTest {
         // Verify Transaction ID in DNS response at offset 48
         val dnsTxId = ((response[48].toInt() and 0xFF) shl 8) or (response[49].toInt() and 0xFF)
         assertEquals(txId.toInt() and 0xFFFF, dnsTxId)
+        assertValidIpv6UdpChecksum(response)
+    }
+
+    @Test fun blockedIpv6AaaaResponseHasValidUdpChecksum() {
+        val packet = createMockIpv6DnsQueryPacket(
+            domain = "ipv6-ads.example",
+            txId = 0x5a5a,
+            queryType = DnsPacketUtil.TYPE_AAAA
+        )
+        val query = DnsPacketUtil.parseIpPacket(packet, packet.size)!!
+
+        val response = DnsPacketUtil.buildBlockedDnsResponsePacket(query)
+
+        assertValidIpv6UdpChecksum(response)
+    }
+
+    @Test fun wrappedOddLengthIpv6ResponseHasValidUdpChecksum() {
+        val packet = createMockIpv6DnsQueryPacket("allowed.example", 0x6b6b)
+        val query = DnsPacketUtil.parseIpPacket(packet, packet.size)!!
+        val dnsPayload = ByteArray(13) { (it + 1).toByte() }
+
+        val response = DnsPacketUtil.wrapDnsResponseInIpUdp(query, dnsPayload, dnsPayload.size)
+
+        assertEquals(dnsPayload.toList(), response.copyOfRange(48, response.size).toList())
+        assertValidIpv6UdpChecksum(response)
     }
 
     @Test
@@ -163,7 +223,11 @@ class DnsPacketTest {
         assertEquals("ANCOUNT must be 0 for DoH canary NXDOMAIN", 0, anCount)
     }
 
-    private fun createMockIpv6DnsQueryPacket(domain: String, txId: Short): ByteArray {
+    private fun createMockIpv6DnsQueryPacket(
+        domain: String,
+        txId: Short,
+        queryType: Short = DnsPacketUtil.TYPE_A
+    ): ByteArray {
         val labels = domain.split(".")
         var qnameLen = 1 // trailing 0
         for (l in labels) {
@@ -206,10 +270,32 @@ class DnsPacketTest {
         }
         buf.put(0x00.toByte())
 
-        // QTYPE A & QCLASS IN
-        buf.putShort(1.toShort())
-        buf.putShort(1.toShort())
+        buf.putShort(queryType)
+        buf.putShort(DnsPacketUtil.CLASS_IN)
 
         return buf.array()
     }
+
+    private fun assertValidIpv6UdpChecksum(packet: ByteArray) {
+        val udpLength = unsignedShort(packet, 44)
+        val checksum = unsignedShort(packet, 46)
+        assertTrue("IPv6 UDP checksum must be non-zero", checksum != 0)
+
+        var sum = 0L
+        fun addWord(high: Int, low: Int) {
+            sum += ((high and 0xff) shl 8) or (low and 0xff)
+            while (sum > 0xffff) sum = (sum and 0xffff) + (sum ushr 16)
+        }
+        for (offset in 8 until 40 step 2) addWord(packet[offset].toInt(), packet[offset + 1].toInt())
+        addWord(0, 0)
+        addWord((udpLength ushr 8) and 0xff, udpLength and 0xff)
+        addWord(0, 17)
+        for (offset in 40 until 40 + udpLength step 2) {
+            addWord(packet[offset].toInt(), if (offset + 1 < 40 + udpLength) packet[offset + 1].toInt() else 0)
+        }
+        assertEquals("IPv6 pseudo-header plus UDP segment must sum to all ones", 0xffff, sum.toInt())
+    }
+
+    private fun unsignedShort(bytes: ByteArray, offset: Int): Int =
+        ((bytes[offset].toInt() and 0xff) shl 8) or (bytes[offset + 1].toInt() and 0xff)
 }

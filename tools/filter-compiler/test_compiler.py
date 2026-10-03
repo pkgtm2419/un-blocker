@@ -1,0 +1,62 @@
+import hashlib
+import importlib.util
+import json
+import pathlib
+import tempfile
+import unittest
+
+
+class CompilerTest(unittest.TestCase):
+    def setUp(self):
+        spec = importlib.util.spec_from_file_location('compiler', pathlib.Path(__file__).with_name('compiler.py'))
+        self.compiler = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.compiler)
+
+    def fixture(self, root):
+        source = root / 'seed.txt'
+        source.write_bytes(b'||ads.test^\n@@||good.ads.test^\n*.wild.test\nexact.test\n')
+        return {'sources': [{'id': 1, 'path': 'seed.txt', 'license': 'Apache-2.0',
+            'revision': 'test-pinned', 'sha256': hashlib.sha256(source.read_bytes()).hexdigest(),
+            'syntax': 'rules', 'category': 'AD', 'url': 'https://example.test/source'}]}
+
+    def test_deterministic_and_typed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            manifest = self.fixture(root)
+            for folder in ('a', 'b'):
+                self.compiler.compile_sources(root, manifest, root / folder)
+            self.assertEqual((root / 'a/dns-rules.tsv').read_bytes(), (root / 'b/dns-rules.tsv').read_bytes())
+            self.assertEqual((root / 'a/dns-rules-manifest.json').read_bytes(), (root / 'b/dns-rules-manifest.json').read_bytes())
+            self.assertIn(b'ALLOW\tSUFFIX\tgood.ads.test', (root / 'a/dns-rules.tsv').read_bytes())
+
+    def test_missing_provenance_unknown_license_and_checksum_fail(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            for field, value in [('license', 'unknown'), ('revision', ''), ('sha256', '0' * 64), ('url', '')]:
+                manifest = self.fixture(root)
+                manifest['sources'][0][field] = value
+                with self.assertRaises(ValueError):
+                    self.compiler.compile_sources(root, manifest, root / 'out')
+
+    def test_windows_line_endings_have_identical_canonical_bytes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            manifest = self.fixture(root)
+            self.compiler.compile_sources(root, manifest, root / 'unix')
+            source = root / 'seed.txt'
+            source.write_bytes(source.read_bytes().replace(b'\n', b'\r\n'))
+            self.compiler.compile_sources(root, manifest, root / 'windows')
+            self.assertEqual((root / 'unix/dns-rules.tsv').read_bytes(), (root / 'windows/dns-rules.tsv').read_bytes())
+
+    def test_unsupported_syntax_fails_instead_of_broadening(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            manifest = self.fixture(root)
+            (root / 'seed.txt').write_bytes(b'||ads.test^$important\n')
+            manifest['sources'][0]['sha256'] = hashlib.sha256((root / 'seed.txt').read_bytes()).hexdigest()
+            with self.assertRaises(ValueError):
+                self.compiler.compile_sources(root, manifest, root / 'out')
+
+
+if __name__ == '__main__':
+    unittest.main()

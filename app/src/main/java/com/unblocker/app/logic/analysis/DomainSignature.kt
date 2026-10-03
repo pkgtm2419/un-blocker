@@ -2,8 +2,7 @@ package com.unblocker.app.logic.analysis
 
 /**
  * Multi-factor domain signature extraction for on-device network analysis.
- * Encapsulates structural, lexical, entropy, cadence, and reputation indicators
- * as specified in Section 1.1.1 of un-blocker-improvement-plan.md.
+ * Encapsulates structural, lexical, entropy, cadence, and reputation indicators.
  */
 data class DomainSignature(
     val domain: String,

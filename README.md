@@ -3,7 +3,7 @@
 [![Download APK](https://img.shields.io/badge/Download-APK%20(v1.2.2)-brightgreen?style=flat&logo=android&logoColor=white)](https://github.com/pkgtm2419/un-blocker/releases/download/test-v1.2.2/ub-blocker-1.2.2.apk)
 [![Release CI](https://github.com/pkgtm2419/un-blocker/actions/workflows/release.yml/badge.svg)](https://github.com/pkgtm2419/un-blocker/actions/workflows/release.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Version 1.2.2](https://img.shields.io/badge/version-1.2.2-orange.svg)](app/build.gradle)
+[![Development 1.3.0](https://img.shields.io/badge/development-1.3.0-orange.svg)](app/build.gradle)
 [![Android 8.0+](https://img.shields.io/badge/Android-8.0%2B-3DDC84?logo=android&logoColor=white)](#requirements)
 [![Privacy: local only](https://img.shields.io/badge/Privacy-local--only-success)](#privacy-by-design)
 
@@ -23,6 +23,9 @@ upload browsing history, or require an account.
 
 ## Download the APK
 
+Implementation progress and verification: [phase tracker](docs/improvement-progress.md),
+[measured matcher results](docs/performance.md), [DNS coverage and limitations](docs/dns-scope.md).
+
 <div align="center">
 
 [![Download APK](https://img.shields.io/badge/Download_APK-ub--blocker--1.2.2.apk-brightgreen?style=for-the-badge&logo=android&logoColor=white)](https://github.com/pkgtm2419/un-blocker/releases/download/test-v1.2.2/ub-blocker-1.2.2.apk)
@@ -31,6 +34,10 @@ upload browsing history, or require an account.
 </div>
 
 ### Latest Release Package
+
+The links below are the published **1.2.2 test build**, not the new development
+version. Source on this branch is **1.3.0**; it has not been published. Publishing
+requires the stable signing secrets and a matching `test-v1.3.0` or `v1.3.0` tag.
 
 | Asset | Link | Details |
 | :--- | :--- | :--- |
@@ -53,7 +60,9 @@ upload browsing history, or require an account.
 - **Transparent behavior:** source code, filtering limitations, datasets, tests,
   and privacy boundaries are documented publicly.
 - **No hidden resolver:** allowed queries use only Android-configured resolvers;
-  there is no hardcoded Google, Cloudflare, Quad9, or other public fallback.
+  there is no hardcoded Google, Cloudflare, Quad9, or other public fallback. If
+  resolver discovery is temporarily empty, the request fails closed and the
+  client can retry after Android publishes current network resolvers.
 - **Resilient VPN lifecycle:** protection intent survives ordinary process death
   and can restart after boot when consent and Android policy allow it.
 - **Open source:** application code and project-maintained seed data are released
@@ -67,19 +76,21 @@ upload browsing history, or require an account.
 - Advertising and tracker-domain detection.
 - Optional adult-content domain filtering.
 - Deterministic local seed lists with documented provenance.
-- Strict domain and DNS packet validation.
+- Strict domain, DNS query, and upstream-response validation.
+- Standards-correct IPv6 UDP checksums for local and forwarded responses.
+- Protected DNS-over-TCP retry when an upstream UDP response is truncated.
 - TTL-aware DNS response cache with a defensive ten-minute maximum.
 - Android network resolver discovery with VPN, loopback, unspecified, and
   duplicate addresses excluded.
 
 ### Private self-learning
 
-- Adaptive two-week confidence schedule.
+- Evidence-based local learning: independent observation windows and corroborating signals; installation age never authorizes blocking.
 - Capacity for up to 20,000 learned reputation entries.
-- Five-percent score decay for each completed week without confirmation.
+- Weak evidence expires after seven days; confirmed evidence expires after 30 days without renewed confirmation.
 - Android Keystore-backed HMAC-SHA256 identifiers.
 - Atomic snapshots stored in Android's private no-backup directory.
-- Legacy plaintext learning migration and cleanup.
+- New v3 learning namespace resets old evidence without re-keying opaque IDs; existing user rules retain compatible keys.
 - No raw DNS history, URL history, page content, or reconstructed domain list.
 
 The learning system is intentionally heuristic. False positives and missed
@@ -115,6 +126,8 @@ Local VpnService (DNS traffic only)
         +--> Local block/seed/heuristic? -> return local blocked response
         |
         +--> Allowed query --------------> Android-configured network DNS
+                                             |
+                                             +--> Truncated UDP? protected TCP retry
                                              |
                                              v
                                       TTL-aware memory cache
@@ -155,16 +168,21 @@ local VPN. Filtering may be bypassed or limited by:
 - hardcoded server IP addresses;
 - cached DNS results created before protection started;
 - ads served from the same domain as wanted content;
-- IPv6 or non-UDP DNS behavior outside the supported local interception path;
+- encrypted or non-DNS traffic outside the local DNS interception path;
 - manufacturer background-start and battery policies.
 
 The project deliberately avoids TLS interception and certificate installation.
 Those techniques would expand access to sensitive traffic and conflict with this
 project's privacy model.
 
+For Firefox's automatic DoH compatibility mechanism, Un-Blocker returns a local
+negative response for `use-application-dns.net`. This does not disable Chrome
+DoH, Android Private DNS, or DoH that a user deliberately configured in an app;
+those encrypted paths can bypass a DNS-only VPN.
+
 ## Requirements
 
-- Current application version: 1.2.2 (`versionCode` 5).
+- Current source version: 1.3.0 (`versionCode` 6); published test APK: 1.2.2.
 - Android package: `com.unblocker.app`.
 - Android 8.0 or newer (API 26+).
 - Target and compile SDK: Android 16 / API 36.
@@ -225,7 +243,7 @@ git clone https://github.com/pkgtm2419/un-blocker.git
 cd un-blocker
 ```
 
-Install JDK 17 and Android SDK platform 36. Set `JAVA_HOME` and `ANDROID_HOME`, or
+Install JDK 17, Python 3.11 (CI version) and Android SDK platform 36. Set `JAVA_HOME` and `ANDROID_HOME`, or
 create an untracked `local.properties` containing `sdk.dir`.
 
 Windows PowerShell:
@@ -233,6 +251,7 @@ Windows PowerShell:
 ```powershell
 .\gradlew.bat testDebugUnitTest lintDebug assembleDebug
 .\gradlew.bat connectedDebugAndroidTest
+python -m unittest discover -s tools/filter-compiler -p 'test_*.py' -v
 ```
 
 Linux or macOS:
@@ -240,6 +259,7 @@ Linux or macOS:
 ```bash
 ./gradlew testDebugUnitTest lintDebug assembleDebug
 ./gradlew connectedDebugAndroidTest
+python -m unittest discover -s tools/filter-compiler -p 'test_*.py' -v
 ```
 
 The connected suite requires a disposable emulator or test device. It changes
@@ -248,7 +268,7 @@ the test installation's VPN app-op and local application data.
 Build output:
 
 ```text
-app/build/outputs/apk/debug/ub-blocker-1.2.2.apk
+app/build/outputs/apk/debug/ub-blocker-1.3.0.apk
 ```
 
 Gradle derives this filename from `versionName`, so future builds automatically
@@ -258,22 +278,25 @@ This APK is signed with a development key. A production update must use the same
 production signing key as the previously installed production release. Never
 commit signing keys, credentials, `local.properties`, or captured traffic.
 
-On Windows systems affected by Java's Unix-domain socket temporary-path error,
-set a short writable path for that build shell only:
+On Windows systems affected by Java's Unix-domain socket error inside a managed
+desktop runner, point Java at a short path that does not exist for that build
+shell only. This makes Java use its TCP selector fallback:
 
 ```powershell
-$env:JAVA_TOOL_OPTIONS='-Djdk.net.unixdomain.tmpdir=D:\blocker'
+$env:JAVA_TOOL_OPTIONS='-Djdk.net.unixdomain.tmpdir=C:/codex-java-no-uds'
 ```
 
-Replace `D:\blocker` with a short existing directory on your machine.
+Do not create that directory. Normal terminals that do not reproduce this Java
+error do not need the workaround.
 
 ## Testing and verified scope
 
 The current project suite includes:
 
-- 80 JVM tests covering filtering, learning, DNS parsing, caching, concurrency,
-  domain validation, lifecycle state, resolver policy, and dataset provenance;
-- 7 Android instrumentation tests covering Android Keystore persistence, private
+- JVM tests covering filtering, learning, DNS parsing, checksums, strict response
+  validation, UDP-to-TCP fallback, caching, concurrency, lifecycle state,
+  resolver policy, and dataset provenance;
+- Android instrumentation tests covering Android Keystore persistence, private
   rules, settings, boot policy, denied consent, and a real VPN-routed DNS block;
 - Android lint, debug APK assembly, test APK assembly, manifest checks, and APK
   signature verification;
@@ -281,6 +304,15 @@ The current project suite includes:
 
 See [the local privacy and reliability update](docs/local-privacy-update.md) for
 the exact verification record and remaining production acceptance work.
+
+The [Phase 5 quality record](docs/phase5-verification.md) covers the small labeled
+corpus, seeded malformed packets and resolver transitions. CI exports confusion
+metrics and the compiler's rule count/SHA-256 manifest. Stable check names are
+`build` and `instrumentation`; both run for every pull request to `main`.
+
+APK binaries are no longer tracked in the source tree (history is preserved).
+Release CI fails if stable signing secrets, an exact version tag or the expected
+certificate are missing. Existing release assets are never silently overwritten.
 
 Not yet claimed by the project: a 24-hour physical-device soak, every OEM's
 background policy, independently certified false-positive rates, production

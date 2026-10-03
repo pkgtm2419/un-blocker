@@ -26,14 +26,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.net.DatagramPacket
-import java.net.DatagramSocket
 import java.net.InetAddress
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.ArrayBlockingQueue
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.RejectedExecutionException
@@ -50,9 +45,15 @@ class UnblockerVpnService : VpnService() {
 
     private val dnsCache = com.unblocker.app.logic.dns.DnsCache()
     private val bufferPool = com.unblocker.app.logic.dns.ByteArrayPool(4096, 64)
+    private val upstreamClient by lazy {
+        DnsUpstreamClient(
+            protectDatagramSocket = { socket -> protect(socket) },
+            protectTcpSocket = { socket -> protect(socket) }
+        )
+    }
 
     private lateinit var connectivityManager: ConnectivityManager
-    private val networkResolvers = ConcurrentHashMap<Network, List<InetAddress>>()
+    private val networkResolvers = ResolverRegistry<Network> { dnsCache.clear() }
     private var networkCallbackRegistered = false
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) = refreshNetworkResolvers(network)
@@ -65,7 +66,7 @@ class UnblockerVpnService : VpnService() {
         override fun onLinkPropertiesChanged(network: Network, linkProperties: LinkProperties) {
             val capabilities = connectivityManager.getNetworkCapabilities(network)
             if (capabilities != null && isUsableUnderlyingNetwork(capabilities)) {
-                networkResolvers[network] = DnsResolverPolicy.sanitize(linkProperties.dnsServers)
+                networkResolvers.update(network, linkProperties.dnsServers)
             } else networkResolvers.remove(network)
         }
 
@@ -158,11 +159,6 @@ class UnblockerVpnService : VpnService() {
                 // Graceful fallback on devices with no IPv6 support
             }
 
-            // Route hardcoded public DNS resolvers so direct UDP port 53 traffic is filtered
-            listOf("8.8.8.8", "8.8.4.4", "1.1.1.1", "1.0.0.1", "9.9.9.9").forEach { ip ->
-                try { builder.addRoute(ip, 32) } catch (_: Exception) {}
-            }
-
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 builder.setMetered(false)
             }
@@ -201,23 +197,37 @@ class UnblockerVpnService : VpnService() {
                     if (result.shouldBlock) {
                         // Local blocked response.
                         val responsePacket = DnsPacketUtil.buildBlockedDnsResponsePacket(query)
-                        synchronized(writeLock) {
-                            outputStream?.write(responsePacket)
+                        run.useWhileRunning {
+                            if (session.owns(run.owner)) synchronized(writeLock) {
+                                outputStream?.write(responsePacket)
+                            }
                         }
                     } else {
                         // Check local high-speed DNS cache
-                        val cachedPayload = dnsCache.get(query.domain, query.queryType,
-                            query.transactionId, query.queryClass)
-                        if (cachedPayload != null) {
-                            val wrappedResponse = wrapDnsResponseInIpUdp(query, cachedPayload, cachedPayload.size)
-                            synchronized(writeLock) {
-                                outputStream?.write(wrappedResponse)
+                        val resolverSnapshot = networkResolvers.snapshot()
+                        val cached = dnsCache.getValidated(query)
+                        if (cached != null) {
+                            val cachedPayload = cached.bytes
+                            val metadata = cached.metadata
+                            run.useWhileRunning {
+                                if (session.owns(run.owner)) networkResolvers.useCurrent(resolverSnapshot) { synchronized(writeLock) {
+                                    val wrappedResponse = if (filterEngine.blockedAlias(query.domain, metadata.aliases) != null)
+                                        DnsPacketUtil.buildBlockedDnsResponsePacket(query)
+                                    else DnsPacketUtil.wrapClientResponse(query, cachedPayload)
+                                    outputStream?.write(wrappedResponse)
+                                } }
                             }
                         } else {
                             // Bounded forwarding; blocking resolver I/O stays off the TUN loop.
                             val currentOut = outputStream
                             try {
-                                run.forwarding.execute { resolveAndForward(run, query, currentOut) }
+                                run.forwarding.execute {
+                                    try {
+                                        resolveAndForward(run, query, currentOut, filterEngine, resolverSnapshot)
+                                    } catch (_: Exception) {
+                                        // Closing the run or malformed upstream data fails this query closed.
+                                    }
+                                }
                             } catch (_: RejectedExecutionException) {
                                 // Saturation: drop this query; client DNS retries. Memory stays bounded.
                             }
@@ -231,7 +241,7 @@ class UnblockerVpnService : VpnService() {
             // State below records failure; exception text can contain user domains.
         } finally {
             synchronized(lifecycleLock) {
-                val failed = isRunning.getAndSet(false)
+                val failed = isRunning.get()
                 run.close()
                 if (failed && session.owns(run.owner)) {
                     session.failed(run.owner)
@@ -247,80 +257,42 @@ class UnblockerVpnService : VpnService() {
         }
     }
 
-    private fun resolveAndForward(run: TunnelRun, query: com.unblocker.app.logic.dns.DnsQuery, outputStream: FileOutputStream?) {
+    private fun resolveAndForward(run: TunnelRun, query: com.unblocker.app.logic.dns.DnsQuery, outputStream: FileOutputStream?, filterEngine: ContentFilterEngine, resolverSnapshot: ResolverRegistry.Snapshot) {
         val isRunning = run.running
         val dnsPayload = ByteArray(query.dnsLength)
         System.arraycopy(query.rawPacket, query.dnsOffset, dnsPayload, 0, query.dnsLength)
 
         if (!isRunning.get()) return
-        val socket = try { DatagramSocket() } catch (_: Exception) { return }
-        run.sockets.add(socket)
+        val resolvers = resolverSnapshot.resolvers
+        if (resolvers.isEmpty()) return
+        val response = upstreamClient.resolve(run, query, dnsPayload, resolvers,
+            outboundGuard={ action ->
+                var allowed=false
+                run.useWhileRunning { allowed=networkResolvers.useCurrent(resolverSnapshot,action) }
+                allowed
+            }) ?: return
+        if (!isRunning.get() || !session.owns(run.owner)) return
 
-        val receiveBuffer = bufferPool.acquire()
-        try {
-            if (!isRunning.get() || !protect(socket)) return
-            socket.soTimeout = 700
-            for (upstream in configuredResolvers()) {
-                if (!isRunning.get() || Thread.currentThread().isInterrupted) return
-                try {
-                    // Safe disconnect before reconnecting across upstreams
-                    runCatching { socket.disconnect() }
-                    // A connected UDP socket accepts only this resolver's replies.
-                    socket.connect(upstream, 53)
-                    val outPacket = DatagramPacket(dnsPayload, dnsPayload.size, upstream, 53)
-                    socket.send(outPacket)
-
-                    val inPacket = DatagramPacket(receiveBuffer, receiveBuffer.size)
-                    socket.receive(inPacket)
-
-                    if (inPacket.length >= 12) {
-                        val respTxId = ((receiveBuffer[0].toInt() and 0xFF) shl 8) or (receiveBuffer[1].toInt() and 0xFF)
-                        if (respTxId == (query.transactionId.toInt() and 0xFFFF)) {
-                            val responseData = receiveBuffer.copyOf(inPacket.length)
-                            DnsPacketUtil.minCacheTtlSeconds(responseData)?.let { ttl ->
-                                dnsCache.put(query.domain, query.queryType, responseData, ttl,
-                                    query.queryClass)
-                            }
-
-                            val wrappedResponse = wrapDnsResponseInIpUdp(query, responseData, inPacket.length)
-                            synchronized(writeLock) {
-                                outputStream?.write(wrappedResponse)
-                            }
-                            break
-                        }
-                    }
-                } catch (timeoutOrIo: Exception) {
-                    // Failover to next upstream DNS resolver
-                }
+        run.useWhileRunning {
+            if (!session.owns(run.owner)) return@useWhileRunning
+            networkResolvers.useCurrent(resolverSnapshot) {
+            val aliasBlocked = response.metadata.rcode == 0 &&
+                filterEngine.blockedAlias(query.domain, response.metadata.aliases) != null
+            val wrappedResponse = if (aliasBlocked) DnsPacketUtil.buildBlockedDnsResponsePacket(query)
+                else DnsPacketUtil.wrapClientResponse(query,response.bytes)
+            synchronized(writeLock) {
+                outputStream?.write(wrappedResponse)
             }
-        } catch (e: Exception) {
-            // Network failure
-        } finally {
-            bufferPool.release(receiveBuffer)
-            try { socket.close() } catch (ignored: Exception) {}
-            run.sockets.remove(socket)
+            if (!aliasBlocked) dnsCache.putValidated(query,response)
+            }
         }
-    }
-
-    private val defaultUpstreamResolvers by lazy {
-        listOf(
-            InetAddress.getByName("8.8.8.8"),
-            InetAddress.getByName("1.1.1.1"),
-            InetAddress.getByName("9.9.9.9"),
-            InetAddress.getByName("8.8.4.4")
-        )
-    }
-
-    private fun configuredResolvers(): List<InetAddress> {
-        val discovered = DnsResolverPolicy.sanitize(networkResolvers.values.flatten())
-        return if (discovered.isNotEmpty()) discovered else defaultUpstreamResolvers
     }
 
     private fun refreshNetworkResolvers(network: Network) {
         val capabilities = connectivityManager.getNetworkCapabilities(network)
         val linkProperties = connectivityManager.getLinkProperties(network)
         if (capabilities != null && linkProperties != null && isUsableUnderlyingNetwork(capabilities)) {
-            networkResolvers[network] = DnsResolverPolicy.sanitize(linkProperties.dnsServers)
+            networkResolvers.update(network, linkProperties.dnsServers)
         } else networkResolvers.remove(network)
     }
 
@@ -328,78 +300,6 @@ class UnblockerVpnService : VpnService() {
         return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
             capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) &&
             !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
-    }
-
-    private fun wrapDnsResponseInIpUdp(query: com.unblocker.app.logic.dns.DnsQuery, dnsBytes: ByteArray, dnsLength: Int): ByteArray {
-        val udpLength = 8 + dnsLength
-        return if (query.isIpv6) {
-            val ipTotalLength = 40 + udpLength
-            val buf = ByteBuffer.allocate(ipTotalLength)
-            buf.order(ByteOrder.BIG_ENDIAN)
-
-            // IPv6 Header (40 bytes)
-            buf.putInt(0x60000000)
-            buf.putShort(udpLength.toShort())
-            buf.put(17.toByte()) // UDP
-            buf.put(64.toByte()) // Hop Limit
-            buf.put(query.dstIp) // Src IP
-            buf.put(query.srcIp) // Dst IP
-
-            // UDP Header (8 bytes)
-            buf.putShort(query.dstPort.toShort())
-            buf.putShort(query.srcPort.toShort())
-            buf.putShort(udpLength.toShort())
-            buf.putShort(0x0000.toShort())
-
-            // DNS Payload
-            buf.put(dnsBytes, 0, dnsLength)
-
-            buf.array()
-        } else {
-            val ipTotalLength = 20 + udpLength
-            val buf = ByteBuffer.allocate(ipTotalLength)
-            buf.order(ByteOrder.BIG_ENDIAN)
-
-            // IPv4 Header (20 bytes)
-            buf.put(0x45.toByte())
-            buf.put(0x00.toByte())
-            buf.putShort(ipTotalLength.toShort())
-            buf.putShort(0x0000.toShort())
-            buf.putShort(0x4000.toShort())
-            buf.put(64.toByte())
-            buf.put(17.toByte()) // UDP
-            buf.putShort(0x0000.toShort()) // Placeholder for checksum
-            buf.put(query.dstIp) // Src IP
-            buf.put(query.srcIp) // Dst IP
-
-            // Compute and inject mandatory IPv4 Header Checksum
-            val ipChecksum = computeIpChecksum(buf.array(), 0, 20)
-            buf.putShort(10, ipChecksum)
-
-            // UDP Header (8 bytes)
-            buf.position(20)
-            buf.putShort(query.dstPort.toShort())
-            buf.putShort(query.srcPort.toShort())
-            buf.putShort(udpLength.toShort())
-            buf.putShort(0x0000.toShort()) // Optional for IPv4 UDP
-
-            // DNS Response Payload
-            buf.put(dnsBytes, 0, dnsLength)
-
-            buf.array()
-        }
-    }
-
-    private fun computeIpChecksum(buf: ByteArray, offset: Int, length: Int): Short {
-        var sum = 0
-        for (i in offset until offset + length step 2) {
-            val word = ((buf[i].toInt() and 0xFF) shl 8) or (buf[i + 1].toInt() and 0xFF)
-            sum += word
-        }
-        while ((sum shr 16) > 0) {
-            sum = (sum and 0xFFFF) + (sum shr 16)
-        }
-        return (sum.inv() and 0xFFFF).toShort()
     }
 
     private fun buildNotification(): Notification {

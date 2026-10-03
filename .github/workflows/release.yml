@@ -12,6 +12,10 @@ on:
         required: false
         type: string
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
@@ -19,102 +23,137 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Validate Gradle Wrapper
+        uses: gradle/actions/wrapper-validation@0bdd871935719febd78681f197cd39af5b6e16a6 # v4.2.2
+      - uses: actions/setup-java@3a4f6e1af504cf6a31855fa899c6aa5355ba6c12 # v4.7.0
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v4
+      - uses: android-actions/setup-android@b6a12cb4da58a474c2e6f47700a89d7fa9a99fc6 # v4.0.0
         with:
           packages: 'platforms;android-36 build-tools;36.0.0'
-      - name: Verify tag matches app version
+      - name: Verify no tracked binaries
+        shell: bash
+        run: bash scripts/check-no-binaries.sh
+      - name: Validate tag and release policy
+        env:
+          INPUT_TAG: ${{ inputs.tag_name }}
+          TEST_KEYSTORE_BASE64: ${{ secrets.UB_BLOCKER_TEST_KEYSTORE_BASE64 }}
+          UB_BLOCKER_KEYSTORE_PASSWORD: ${{ secrets.UB_BLOCKER_TEST_KEYSTORE_PASSWORD }}
+          UB_BLOCKER_KEY_ALIAS: ${{ secrets.UB_BLOCKER_TEST_KEY_ALIAS }}
+          UB_BLOCKER_KEY_PASSWORD: ${{ secrets.UB_BLOCKER_TEST_KEY_PASSWORD }}
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.UB_RELEASE_KEYSTORE_BASE64 }}
+          UB_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.UB_RELEASE_KEYSTORE_PASSWORD }}
+          UB_RELEASE_KEY_ALIAS: ${{ secrets.UB_RELEASE_KEY_ALIAS }}
+          UB_RELEASE_KEY_PASSWORD: ${{ secrets.UB_RELEASE_KEY_PASSWORD }}
         shell: bash
         run: |
-          VERSION_NAME="$(sed -n 's/^[[:space:]]*versionName[[:space:]]*"\([^"]*\)".*/\1/p' app/build.gradle)"
-          test -n "${VERSION_NAME}"
-
           TAG="${GITHUB_REF_NAME}"
-          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ] && [ -n "${{ inputs.tag_name }}" ]; then
-            TAG="${{ inputs.tag_name }}"
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ] && [ -n "${INPUT_TAG}" ]; then
+            TAG="${INPUT_TAG}"
           fi
-
-          if [[ "${TAG}" == test-v* ]]; then
-            EXPECTED_TAG="test-v${VERSION_NAME}"
-            TITLE="Un-Blocker ${VERSION_NAME} test build"
-            PRERELEASE_FLAG="--prerelease"
-            NOTES="Stable test-signed build. Not a production store release. APK signer SHA-256: 0686161d8dc3051bfda2e03dd0406e1a6cddadf38c976f606bd8c474a872374e. Builds signed by an older test key require a one-time uninstall."
-          elif [[ "${TAG}" == v* ]]; then
-            EXPECTED_TAG="v${VERSION_NAME}"
-            TITLE="Un-Blocker ${VERSION_NAME}"
-            PRERELEASE_FLAG=""
-            NOTES="Release build for Un-Blocker v${VERSION_NAME}."
-          else
-            EXPECTED_TAG="test-v${VERSION_NAME}"
-            TITLE="Un-Blocker ${VERSION_NAME} test build"
-            PRERELEASE_FLAG="--prerelease"
-            NOTES="Automated build for ${VERSION_NAME}."
+          if ! [[ "${TAG}" =~ ^(v|test-v)[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: Invalid tag format '${TAG}'. Must match ^(v|test-v)[0-9]+\.[0-9]+\.[0-9]+$" >&2
+            exit 1
           fi
+          export RELEASE_INPUT_TAG="${TAG}"
+          python3 scripts/release-policy.py
 
-          if [ "${GITHUB_EVENT_NAME}" != "workflow_dispatch" ] || [ -z "${{ inputs.tag_name }}" ]; then
-            test "${TAG}" = "${EXPECTED_TAG}" || {
-              echo "Error: Tag ${TAG} does not match expected tag ${EXPECTED_TAG}" >&2
-              exit 1
-            }
-          fi
-
-          echo "RELEASE_TAG=${TAG}" >> "${GITHUB_ENV}"
-          echo "RELEASE_TITLE=${TITLE}" >> "${GITHUB_ENV}"
-          echo "PRERELEASE_FLAG=${PRERELEASE_FLAG}" >> "${GITHUB_ENV}"
-          echo "RELEASE_NOTES=${NOTES}" >> "${GITHUB_ENV}"
-          echo "APK_PATH=app/build/outputs/apk/debug/ub-blocker-${VERSION_NAME}.apk" >> "${GITHUB_ENV}"
-          echo "VERSION_NAME=${VERSION_NAME}" >> "${GITHUB_ENV}"
-
-      - name: Prepare stable test signing key
+      - name: Prepare signing keys
         id: prepare_signing
         env:
           TEST_KEYSTORE_BASE64: ${{ secrets.UB_BLOCKER_TEST_KEYSTORE_BASE64 }}
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.UB_RELEASE_KEYSTORE_BASE64 }}
         shell: bash
         run: |
-          if [ -n "${TEST_KEYSTORE_BASE64}" ]; then
-            umask 077
-            printf '%s' "${TEST_KEYSTORE_BASE64}" | base64 --decode > "${RUNNER_TEMP}/ub-blocker-test.keystore"
-            echo "has_keystore=true" >> "${GITHUB_OUTPUT}"
+          umask 077
+          if [ "${BUILD_TYPE}" = "release" ]; then
+            if [ -z "${RELEASE_KEYSTORE_BASE64}" ]; then
+              echo "Error: Release keystore secret is required for production builds." >&2
+              exit 1
+            fi
+            printf '%s' "${RELEASE_KEYSTORE_BASE64}" | base64 --decode > "${RUNNER_TEMP}/ub-blocker-release.keystore"
+            echo "release_keystore_path=${RUNNER_TEMP}/ub-blocker-release.keystore" >> "${GITHUB_OUTPUT}"
           else
-            echo "No custom keystore provided. Standard debug signing will be used."
-            echo "has_keystore=false" >> "${GITHUB_OUTPUT}"
+            if [ -z "${TEST_KEYSTORE_BASE64}" ]; then
+              echo "Error: Test keystore secret is required for test builds." >&2
+              exit 1
+            fi
+            printf '%s' "${TEST_KEYSTORE_BASE64}" | base64 --decode > "${RUNNER_TEMP}/ub-blocker-test.keystore"
+            echo "test_keystore_path=${RUNNER_TEMP}/ub-blocker-test.keystore" >> "${GITHUB_OUTPUT}"
           fi
 
       - name: Test and build APK
         env:
           JAVA_HOME: ${{ env.JAVA_HOME }}
-          UB_BLOCKER_KEYSTORE_FILE: ${{ steps.prepare_signing.outputs.has_keystore == 'true' && format('{0}/ub-blocker-test.keystore', runner.temp) || '' }}
+          UB_BLOCKER_KEYSTORE_FILE: ${{ steps.prepare_signing.outputs.test_keystore_path }}
           UB_BLOCKER_KEYSTORE_PASSWORD: ${{ secrets.UB_BLOCKER_TEST_KEYSTORE_PASSWORD }}
           UB_BLOCKER_KEY_ALIAS: ${{ secrets.UB_BLOCKER_TEST_KEY_ALIAS }}
           UB_BLOCKER_KEY_PASSWORD: ${{ secrets.UB_BLOCKER_TEST_KEY_PASSWORD }}
-        run: bash gradlew testDebugUnitTest lintDebug assembleDebug -Dorg.gradle.java.home="${JAVA_HOME}"
+          UB_RELEASE_KEYSTORE_FILE: ${{ steps.prepare_signing.outputs.release_keystore_path }}
+          UB_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.UB_RELEASE_KEYSTORE_PASSWORD }}
+          UB_RELEASE_KEY_ALIAS: ${{ secrets.UB_RELEASE_KEY_ALIAS }}
+          UB_RELEASE_KEY_PASSWORD: ${{ secrets.UB_RELEASE_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          if [ "${BUILD_TYPE}" = "release" ]; then
+            bash gradlew testDebugUnitTest lintDebug assembleRelease -Dorg.gradle.java.home="${JAVA_HOME}"
+          else
+            bash gradlew testDebugUnitTest lintDebug assembleDebug -Dorg.gradle.java.home="${JAVA_HOME}"
+          fi
 
-      - name: Verify APK
+      - name: Verify APK non-debuggable and signature
+        env:
+          UB_RELEASE_SIGNER_SHA256: ${{ vars.UB_RELEASE_SIGNER_SHA256 }}
         shell: bash
         run: |
           test -f "${APK_PATH}"
-          if [ "${{ steps.prepare_signing.outputs.has_keystore }}" = "true" ]; then
-            export APKSIGNER="${ANDROID_HOME}/build-tools/36.0.0/apksigner"
-            bash scripts/verify-apk-signature.sh \
-              "${APK_PATH}" \
-              "0686161d8dc3051bfda2e03dd0406e1a6cddadf38c976f606bd8c474a872374e"
+          export APKSIGNER="${ANDROID_HOME}/build-tools/36.0.0/apksigner"
+          export AAPT2="${ANDROID_HOME}/build-tools/36.0.0/aapt2"
+
+          if [ "${BUILD_TYPE}" = "release" ]; then
+            # Verify APK is not debuggable
+            if "${AAPT2}" dump badging "${APK_PATH}" | grep -q "application-debuggable"; then
+              echo "Error: Release APK must not be debuggable!" >&2
+              exit 1
+            fi
+            if [ -n "${UB_RELEASE_SIGNER_SHA256}" ]; then
+              bash scripts/verify-apk-signature.sh "${APK_PATH}" "${UB_RELEASE_SIGNER_SHA256}"
+            fi
+          else
+            bash scripts/verify-apk-signature.sh "${APK_PATH}" "0686161d8dc3051bfda2e03dd0406e1a6cddadf38c976f606bd8c474a872374e"
           fi
+
+      - name: Generate Checksums
+        shell: bash
+        run: |
+          cd "$(dirname "${APK_PATH}")"
+          sha256sum "$(basename "${APK_PATH}")" > SHA256SUMS
+          echo "CHECKSUM_PATH=$(dirname "${APK_PATH}")/SHA256SUMS" >> "${GITHUB_ENV}"
 
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          gh release create "${RELEASE_TAG}" "${APK_PATH}" \
+          RELEASE_ASSETS=("${APK_PATH}" "${CHECKSUM_PATH}")
+          MAPPING_PATH="app/build/outputs/mapping/release/mapping.txt"
+          if [ "${BUILD_TYPE}" = "release" ] && [ -f "${MAPPING_PATH}" ]; then
+            RELEASE_ASSETS+=("${MAPPING_PATH}")
+          fi
+
+          TITLE="Un-Blocker ${VERSION_NAME}"
+          if [ "${PRERELEASE_FLAG}" = "--prerelease" ]; then
+            TITLE="Un-Blocker ${VERSION_NAME} test build"
+            NOTES="Stable test-signed build. Not a production store release. APK signer SHA-256: 0686161d8dc3051bfda2e03dd0406e1a6cddadf38c976f606bd8c474a872374e."
+          else
+            NOTES="Production release for Un-Blocker v${VERSION_NAME}."
+          fi
+
+          gh release create "${RELEASE_TAG}" "${RELEASE_ASSETS[@]}" \
             --repo "${GITHUB_REPOSITORY}" \
-            --title "${RELEASE_TITLE}" \
-            --notes "${RELEASE_NOTES}" \
+            --title "${TITLE}" \
+            --notes "${NOTES}" \
             ${PRERELEASE_FLAG} \
-            --verify-tag || \
-          gh release upload "${RELEASE_TAG}" "${APK_PATH}" \
-            --repo "${GITHUB_REPOSITORY}" \
-            --clobber
+            --verify-tag

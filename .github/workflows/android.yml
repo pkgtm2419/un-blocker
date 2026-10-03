@@ -12,19 +12,24 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Validate Gradle Wrapper
+        uses: gradle/actions/wrapper-validation@0bdd871935719febd78681f197cd39af5b6e16a6 # v4.2.2
+      - uses: actions/setup-java@3a4f6e1af504cf6a31855fa899c6aa5355ba6c12 # v4.7.0
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v4
+      - uses: android-actions/setup-android@b6a12cb4da58a474c2e6f47700a89d7fa9a99fc6 # v4.0.0
         with:
           packages: 'platforms;android-36 build-tools;36.0.0'
+      - name: Verify no tracked binaries
+        shell: bash
+        run: bash scripts/check-no-binaries.sh
       - name: Build and test
         env:
           JAVA_HOME: ${{ env.JAVA_HOME }}
         run: bash gradlew testDebugUnitTest lintDebug assembleDebug -Dorg.gradle.java.home="${JAVA_HOME}"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
         with:
           name: ub-blocker-apk
           if-no-files-found: error

@@ -21,6 +21,23 @@ if (hasAnyStableTestSigningValue && !hasStableTestSigning) {
     throw new GradleException('Stable test signing requires all UB_BLOCKER_KEYSTORE_* environment variables.')
 }
 
+def releaseKeystorePath = System.getenv('UB_RELEASE_KEYSTORE_FILE')
+def releaseKeystorePassword = System.getenv('UB_RELEASE_KEYSTORE_PASSWORD')
+def releaseKeyAlias = System.getenv('UB_RELEASE_KEY_ALIAS')
+def releaseKeyPassword = System.getenv('UB_RELEASE_KEY_PASSWORD')
+def releaseSigningValues = [
+    releaseKeystorePath,
+    releaseKeystorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword
+]
+def hasAnyReleaseSigningValue = releaseSigningValues.any { it != null && !it.isBlank() }
+def hasReleaseSigning = releaseSigningValues.every { it != null && !it.isBlank() }
+
+if (hasAnyReleaseSigningValue && !hasReleaseSigning) {
+    throw new GradleException('Production release signing requires all UB_RELEASE_KEYSTORE_* environment variables.')
+}
+
 android {
     namespace 'com.unblocker.app'
     compileSdk 36
@@ -47,6 +64,14 @@ android {
                 keyPassword stableTestKeyPassword
             }
         }
+        if (hasReleaseSigning) {
+            release {
+                storeFile file(releaseKeystorePath)
+                storePassword releaseKeystorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
     }
 
     buildTypes {
@@ -56,11 +81,21 @@ android {
             }
         }
         release {
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        releaseTest {
+            initWith release
+            matchingFallbacks = ['release']
             if (hasStableTestSigning) {
                 signingConfig signingConfigs.stableTest
+            } else {
+                signingConfig signingConfigs.debug
             }
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
     compileOptions {

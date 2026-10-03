@@ -3,8 +3,11 @@ import os
 import pathlib
 import re
 
-SIGNING_FIELDS = ('TEST_KEYSTORE_BASE64', 'UB_BLOCKER_KEYSTORE_PASSWORD',
-                  'UB_BLOCKER_KEY_ALIAS', 'UB_BLOCKER_KEY_PASSWORD')
+TEST_SIGNING_FIELDS = ('TEST_KEYSTORE_BASE64', 'UB_BLOCKER_KEYSTORE_PASSWORD',
+                      'UB_BLOCKER_KEY_ALIAS', 'UB_BLOCKER_KEY_PASSWORD')
+RELEASE_SIGNING_FIELDS = ('RELEASE_KEYSTORE_BASE64', 'UB_RELEASE_KEYSTORE_PASSWORD',
+                         'UB_RELEASE_KEY_ALIAS', 'UB_RELEASE_KEY_PASSWORD')
+SIGNING_FIELDS = RELEASE_SIGNING_FIELDS
 
 
 def validate_release(version, tag, signing):
@@ -12,9 +15,11 @@ def validate_release(version, tag, signing):
         raise ValueError('Invalid application version')
     if tag not in ('v' + version, 'test-v' + version):
         raise ValueError('Release tag must exactly match application version')
-    if not all(signing.get(name, '').strip() for name in SIGNING_FIELDS):
-        raise ValueError('Stable signing secrets required; random debug signing cannot be published')
     prerelease = tag.startswith('test-v')
+    required_fields = TEST_SIGNING_FIELDS if prerelease else RELEASE_SIGNING_FIELDS
+    if not all(signing.get(name, '').strip() for name in required_fields):
+        mode = 'test' if prerelease else 'production release'
+        raise ValueError(f'{mode} signing secrets required; cannot publish without configured keys')
     return dict(tag=tag, version=version, apk_name=f'ub-blocker-{version}.apk',
                 prerelease=prerelease, build_type='debug' if prerelease else 'release')
 

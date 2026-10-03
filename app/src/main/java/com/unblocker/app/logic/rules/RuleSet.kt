@@ -157,6 +157,7 @@ class RuleSet private constructor(
                 putShort(2.toShort())
                 putInt(0)
                 putInt(0)
+                flip()
             }
             return fromByteBuffer(emptyHeader)
         }

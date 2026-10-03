@@ -11,4 +11,12 @@ class HeuristicScorer {
         val positive = mask and 1 != 0 && Integer.bitCount(mask) >= 2
         return ScoredFeatures(if (positive) .8f else if (mask != 0) .4f else 0f, mask)
     }
+
+    /**
+     * Identifies immediate high-confidence ad/tracker domains where an explicit ad token
+     * is strongly corroborated by high entropy (randomized tracking hashes) or structural nesting.
+     */
+    fun isHighConfidenceAd(features: DomainFeatures): Boolean {
+        return features.lexical >= 0.8f && (features.entropy >= 0.65f || features.structural >= 0.65f)
+    }
 }

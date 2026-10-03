@@ -29,12 +29,15 @@ class LocalNetworkLearner(
     @Suppress("UNUSED_PARAMETER")
     fun analyzeQuery(raw:String, threshold:Float=BLOCK_THRESHOLD): AnalysisScore {
         val domain=DomainName.normalize(raw) ?: return AnalysisScore(0f,"Invalid domain")
+        if (NeverBlockPolicy.isNeverBlock(domain)) return AnalysisScore(0f, "Protected infrastructure", ReputationState.SUPPRESSED, DecisionReason.ALLOWED)
         if(known(domain)) return AnalysisScore(.95f,"Known tracker rule",ReputationState.CONFIRMED,DecisionReason.STATIC_RULE)
         val now=clock()
         val features=extractor.extract(domain,cadence.observe(domain,now))
         val evidence=policy.observe(domain,features,now)
+        val isHighConfidence = scorer.isHighConfidenceAd(features)
+        val reason = if (isHighConfidence) "Autonomous on-device ad detection" else "Local evidence: ${evidence.state}"
         return AnalysisScore(if(evidence.confirmed) maxOf(evidence.score,.8f) else scorer.score(features).score,
-            "Local evidence: ${evidence.state}",evidence.state,DecisionReason.LEARNED_EVIDENCE)
+            reason,evidence.state,DecisionReason.LEARNED_EVIDENCE)
     }
     fun observeTrustedAlias(original:String) = policy.trustedAlias(original)
     fun syncFeedback(domain:String,feedback:UserFeedback) {

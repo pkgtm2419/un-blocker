@@ -4,10 +4,15 @@ import kotlin.math.ln
 
 /** Stateless features; PSL limits entropy to labels controlled by the registrant. */
 class DomainFeatureExtractor(private val suffixes: PublicSuffixRules) {
-    private val tokens = setOf("ad", "ads", "track", "tracker", "tracking", "telemetry", "pixel",
+    private val tokens = setOf(
+        "ad", "ads", "track", "tracker", "tracking", "telemetry", "pixel",
         "beacon", "analytics", "metrics", "banner", "affiliate", "sponsor", "adserver", "bidder",
-        "adservice", "adsystem", "adtech", "pagead", "rtb", "ssp", "dsp", "sdk-api")
+        "adservice", "adsystem", "adtech", "pagead", "rtb", "ssp", "dsp", "sdk-api",
+        "adclick", "adlog", "adcounter", "popunder", "statcounter"
+    )
+
     fun extract(domain: String, cadence: Float = 0f): DomainFeatures {
+        if (domain.length > 253) return DomainFeatures(0f, 0f, 0f, 0f)
         val subdomain = suffixes.subdomain(domain)
         val lexical = if (subdomain.isNotEmpty() &&
             subdomain.split('.', '_').flatMap { listOf(it) + it.split('-') }.any { it in tokens }) .8f else 0f

@@ -7,6 +7,7 @@ class ReputationPolicy(private val store: PrivateEvidenceStore) {
     fun peek(domain: String) = store.get(domain) ?: ReputationEvidence()
     fun confirmedCount() = store.confirmedCount()
     @Synchronized fun observe(domain: String, features: DomainFeatures, now: Long): ReputationEvidence {
+        if (NeverBlockPolicy.isNeverBlock(domain)) return ReputationEvidence(state = ReputationState.SUPPRESSED)
         val old=peek(domain)
         val scored=scorer.score(features)
         if (scored.score < .65f) return old

@@ -52,6 +52,10 @@ class DecideBlockingUseCase(
         }
         adaptiveBlockingEngine.networkLearner.syncFeedback(domain,UserFeedback.NONE)
 
+        if (com.unblocker.app.logic.analysis.NeverBlockPolicy.isNeverBlock(domain)) {
+            return BlockingDecision.allow("Protected infrastructure", 1.0f).copy(reasonCode = DecisionReason.ALLOWED)
+        }
+
         val isAdBlocking = isAdBlockingEnabled()
         val isAdultBlocking = isAdultBlockingEnabled()
 

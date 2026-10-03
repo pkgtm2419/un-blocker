@@ -4,7 +4,7 @@
 In accordance with `ANTIGRAVITY_UNBLOCKER_SPEC.md` §0.3 and §6, Un-Blocker does not publish bare, unmeasured, or marketing-style effectiveness percentages. Blocking recall and false-positive rates are strictly grounded in deterministic evaluation of a reproducible, labeled corpus against specific list and code revisions.
 
 ## 2. Evaluation Metadata
-- **Evaluated Commit**: `d0855c7` (Branch `main`, development `1.4.0`, `versionCode 7`)
+- **Evaluated Commit**: Development `1.4.1` (`versionCode 8`)
 - **Date**: 2026-10-04
 - **Rule Engine**: Binary `RuleSet` (UBR2 format, little-endian reversed-label binary search)
 - **Active Rule Count**: **73,213** rules in `dns-rules.bin` (2.0 MB compressed asset)

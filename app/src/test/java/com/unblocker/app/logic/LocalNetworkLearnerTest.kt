@@ -18,10 +18,10 @@ class LocalNetworkLearnerTest {
 
     @Test
     fun testLexicalTokenDetection() {
-        assertTrue("ads.example.com should be flagged by lexical analysis", learner.isAdOrTracker("ads.example.com"))
-        assertTrue("pixel.tracker.net should be flagged by lexical analysis", learner.isAdOrTracker("pixel.tracker.net"))
-        assertTrue("telemetry.vendor.org should be flagged by lexical analysis", learner.isAdOrTracker("telemetry.vendor.org"))
-        assertTrue("adserver.metrics.io should be flagged by lexical analysis", learner.isAdOrTracker("adserver.metrics.io"))
+        listOf("ads.example.com", "pixel.tracker.net", "telemetry.vendor.org", "adserver.metrics.io").forEach {
+            assertTrue(learner.evaluateLexical(it)>.5f)
+            assertFalse("Lexical evidence alone cannot confirm",learner.isAdOrTracker(it))
+        }
     }
 
     @Test
@@ -64,8 +64,8 @@ class LocalNetworkLearnerTest {
         assertFalse("i.ytimg.com should not be flagged", learner.isAdOrTracker("i.ytimg.com"))
 
         // Explicit ad subdomains MUST still be blocked
-        assertTrue("ads.google.com must be blocked", learner.isAdOrTracker("ads.google.com"))
-        assertTrue("ads.youtube.com must be blocked", learner.isAdOrTracker("ads.youtube.com"))
+        assertFalse("Unknown ad words require corroboration", learner.isAdOrTracker("ads.google.com"))
+        assertFalse("Unknown ad words require corroboration", learner.isAdOrTracker("ads.youtube.com"))
     }
 
     @Test

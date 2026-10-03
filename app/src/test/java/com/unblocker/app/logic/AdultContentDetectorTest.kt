@@ -90,4 +90,11 @@ class AdultContentDetectorTest {
         val (isAdult6, _) = adultDetector.isAdultContent("rr1---sn-4g5ednle.googlevideo.com")
         assertFalse("googlevideo CDN must NOT be identified as adult content", isAdult6)
     }
+
+    @Test fun benignPrefixesDoNotGainAdultBlockingAuthority() {
+        for(domain in listOf("stripe.com","api.stripe.com","cambridge.org","camera.example.test",
+            "adultlearning.example.test","sexeducation.example.test","striped.example.test")) {
+            assertFalse("Benign prefix blocked: $domain",adultDetector.match(domain).blocked)
+        }
+    }
 }

@@ -3,6 +3,9 @@ package com.unblocker.app.logic
 import android.content.Context
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import com.unblocker.app.domain.model.DecisionReason
+
+data class AdultMatch(val blocked: Boolean, val reason: String, val code: DecisionReason)
 
 class AdultContentDetector(private val context: Context? = null) {
 
@@ -23,13 +26,13 @@ class AdultContentDetector(private val context: Context? = null) {
     private val adultTlds = setOf("xxx", "adult", "porn", "sex", "cam")
 
     private val adultPatterns = listOf(
-        Regex(".*(?:^|[\\.-])(?:porn|sex|xxx|nsfw|erotic|cams?|strip|hentai|milf|fap|brazzers|xvideos|pornhub|xnxx).*"),
+        Regex(".*(?:^|[\\.-])(?:porn|sex|xxx|nsfw|erotic|cams?|strip|hentai|milf|fap|brazzers|xvideos|pornhub|xnxx)(?:[\\.-]|$).*"),
         Regex(".*-porn-.*"),
         Regex(".*-sex-.*"),
         Regex(".*-xxx-.*"),
         Regex(".*-cam-.*"),
         Regex(".*(?:red|x|porno|dirty|free|wet|spank|erotic|sex|cam)tube\\d*\\.(?:com|net|org|xxx)$"),
-        Regex(".*(?:adult|erotica|chaturbate|stripchat|livejasmin).*")
+        Regex(".*(?:^|[\\.-])(?:adult|erotica|chaturbate|stripchat|livejasmin)(?:[\\.-]|$).*")
     )
 
     init {
@@ -71,19 +74,21 @@ class AdultContentDetector(private val context: Context? = null) {
         DomainName.normalize(domain)?.let(adultDomains::add)
     }
 
-    fun isAdultContent(rawDomain: String): Pair<Boolean, String> {
-        val domain = DomainName.normalize(rawDomain) ?: return Pair(false, "")
+    fun isAdultContent(rawDomain: String): Pair<Boolean, String> = match(rawDomain).let { it.blocked to it.reason }
+
+    fun match(rawDomain: String): AdultMatch {
+        val domain = DomainName.normalize(rawDomain) ?: return AdultMatch(false,"",DecisionReason.ALLOWED)
 
         // False positive prevention
         for (safe in safeExceptions) {
             if (domain == safe || domain.endsWith(".$safe")) {
-                return Pair(false, "")
+                return AdultMatch(false,"",DecisionReason.ALLOWED)
             }
         }
 
         // 1. Direct match in adult domains
         if (adultDomains.contains(domain)) {
-            return Pair(true, "Adult Database Match ($domain)")
+            return AdultMatch(true,"Adult Database Match ($domain)",DecisionReason.ADULT_STATIC)
         }
 
         // 2. Subdomain check
@@ -91,24 +96,24 @@ class AdultContentDetector(private val context: Context? = null) {
         while (parentDomain.contains('.')) {
             parentDomain = parentDomain.substringAfter('.')
             if (adultDomains.contains(parentDomain)) {
-                return Pair(true, "Adult Domain Suffix Match ($parentDomain)")
+                return AdultMatch(true,"Adult Domain Suffix Match ($parentDomain)",DecisionReason.ADULT_STATIC)
             }
         }
 
         // 3. TLD Check (.xxx, .adult, .porn, .sex)
         val tld = domain.substringAfterLast('.', "")
         if (adultTlds.contains(tld)) {
-            return Pair(true, "Adult TLD Rule (.$tld)")
+            return AdultMatch(true,"Adult TLD Rule (.$tld)",DecisionReason.ADULT_TLD)
         }
 
         // 4. Pattern Matching
         for (pattern in adultPatterns) {
             if (pattern.matches(domain)) {
-                return Pair(true, "Adult Pattern Match: ${pattern.pattern}")
+                return AdultMatch(true,"Adult Pattern Match",DecisionReason.ADULT_PATTERN)
             }
         }
 
-        return Pair(false, "")
+        return AdultMatch(false,"",DecisionReason.ALLOWED)
     }
 
     fun getDomainCount(): Int = adultDomains.size

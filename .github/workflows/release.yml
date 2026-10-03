@@ -2,13 +2,11 @@ name: Publish release APK
 
 on:
   push:
-    tags:
-      - 'test-v*'
-      - 'v*'
+    tags: ['test-v*', 'v*']
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Release tag to publish (leave empty to use current ref)'
+        description: 'Existing release tag (must match app version)'
         required: false
         type: string
 
@@ -20,101 +18,62 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag_name || github.ref }}
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
       - uses: android-actions/setup-android@v4
         with:
           packages: 'platforms;android-36 build-tools;36.0.0'
-      - name: Verify tag matches app version
-        shell: bash
-        run: |
-          VERSION_NAME="$(sed -n 's/^[[:space:]]*versionName[[:space:]]*"\([^"]*\)".*/\1/p' app/build.gradle)"
-          test -n "${VERSION_NAME}"
-
-          TAG="${GITHUB_REF_NAME}"
-          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ] && [ -n "${{ inputs.tag_name }}" ]; then
-            TAG="${{ inputs.tag_name }}"
-          fi
-
-          if [[ "${TAG}" == test-v* ]]; then
-            EXPECTED_TAG="test-v${VERSION_NAME}"
-            TITLE="Un-Blocker ${VERSION_NAME} test build"
-            PRERELEASE_FLAG="--prerelease"
-            NOTES="Stable test-signed build. Not a production store release. APK signer SHA-256: 0686161d8dc3051bfda2e03dd0406e1a6cddadf38c976f606bd8c474a872374e. Builds signed by an older test key require a one-time uninstall."
-          elif [[ "${TAG}" == v* ]]; then
-            EXPECTED_TAG="v${VERSION_NAME}"
-            TITLE="Un-Blocker ${VERSION_NAME}"
-            PRERELEASE_FLAG=""
-            NOTES="Release build for Un-Blocker v${VERSION_NAME}."
-          else
-            EXPECTED_TAG="test-v${VERSION_NAME}"
-            TITLE="Un-Blocker ${VERSION_NAME} test build"
-            PRERELEASE_FLAG="--prerelease"
-            NOTES="Automated build for ${VERSION_NAME}."
-          fi
-
-          if [ "${GITHUB_EVENT_NAME}" != "workflow_dispatch" ] || [ -z "${{ inputs.tag_name }}" ]; then
-            test "${TAG}" = "${EXPECTED_TAG}" || {
-              echo "Error: Tag ${TAG} does not match expected tag ${EXPECTED_TAG}" >&2
-              exit 1
-            }
-          fi
-
-          echo "RELEASE_TAG=${TAG}" >> "${GITHUB_ENV}"
-          echo "RELEASE_TITLE=${TITLE}" >> "${GITHUB_ENV}"
-          echo "PRERELEASE_FLAG=${PRERELEASE_FLAG}" >> "${GITHUB_ENV}"
-          echo "RELEASE_NOTES=${NOTES}" >> "${GITHUB_ENV}"
-          echo "APK_PATH=app/build/outputs/apk/debug/ub-blocker-${VERSION_NAME}.apk" >> "${GITHUB_ENV}"
-          echo "VERSION_NAME=${VERSION_NAME}" >> "${GITHUB_ENV}"
-
-      - name: Prepare stable test signing key
-        id: prepare_signing
+      - name: Validate tag and require stable signing
+        env:
+          RELEASE_INPUT_TAG: ${{ inputs.tag_name }}
+          TEST_KEYSTORE_BASE64: ${{ secrets.UB_BLOCKER_TEST_KEYSTORE_BASE64 }}
+          UB_BLOCKER_KEYSTORE_PASSWORD: ${{ secrets.UB_BLOCKER_TEST_KEYSTORE_PASSWORD }}
+          UB_BLOCKER_KEY_ALIAS: ${{ secrets.UB_BLOCKER_TEST_KEY_ALIAS }}
+          UB_BLOCKER_KEY_PASSWORD: ${{ secrets.UB_BLOCKER_TEST_KEY_PASSWORD }}
+        run: python scripts/release-policy.py
+      - name: Prepare stable signing key
         env:
           TEST_KEYSTORE_BASE64: ${{ secrets.UB_BLOCKER_TEST_KEYSTORE_BASE64 }}
         shell: bash
         run: |
-          if [ -n "${TEST_KEYSTORE_BASE64}" ]; then
-            umask 077
-            printf '%s' "${TEST_KEYSTORE_BASE64}" | base64 --decode > "${RUNNER_TEMP}/ub-blocker-test.keystore"
-            echo "has_keystore=true" >> "${GITHUB_OUTPUT}"
-          else
-            echo "No custom keystore provided. Standard debug signing will be used."
-            echo "has_keystore=false" >> "${GITHUB_OUTPUT}"
-          fi
-
+          umask 077
+          printf '%s' "${TEST_KEYSTORE_BASE64}" | base64 --decode > "${RUNNER_TEMP}/ub-blocker-test.keystore"
+          test -s "${RUNNER_TEMP}/ub-blocker-test.keystore"
+      - name: Test compiler and release policy
+        run: python -m unittest discover -s tools/filter-compiler -p 'test_*.py' -v
       - name: Test and build APK
         env:
-          JAVA_HOME: ${{ env.JAVA_HOME }}
-          UB_BLOCKER_KEYSTORE_FILE: ${{ steps.prepare_signing.outputs.has_keystore == 'true' && format('{0}/ub-blocker-test.keystore', runner.temp) || '' }}
+          UB_BLOCKER_KEYSTORE_FILE: ${{ runner.temp }}/ub-blocker-test.keystore
           UB_BLOCKER_KEYSTORE_PASSWORD: ${{ secrets.UB_BLOCKER_TEST_KEYSTORE_PASSWORD }}
           UB_BLOCKER_KEY_ALIAS: ${{ secrets.UB_BLOCKER_TEST_KEY_ALIAS }}
           UB_BLOCKER_KEY_PASSWORD: ${{ secrets.UB_BLOCKER_TEST_KEY_PASSWORD }}
-        run: bash gradlew testDebugUnitTest lintDebug assembleDebug -Dorg.gradle.java.home="${JAVA_HOME}"
-
-      - name: Verify APK
         shell: bash
         run: |
-          test -f "${APK_PATH}"
-          if [ "${{ steps.prepare_signing.outputs.has_keystore }}" = "true" ]; then
-            export APKSIGNER="${ANDROID_HOME}/build-tools/36.0.0/apksigner"
-            bash scripts/verify-apk-signature.sh \
-              "${APK_PATH}" \
-              "0686161d8dc3051bfda2e03dd0406e1a6cddadf38c976f606bd8c474a872374e"
-          fi
-
-      - name: Publish GitHub Release
+          if [ "${BUILD_TYPE}" = release ]; then TASK=assembleRelease; else TASK=assembleDebug; fi
+          bash gradlew testDebugUnitTest lintDebug "${TASK}" -Dorg.gradle.java.home="${JAVA_HOME}"
+      - name: Verify stable APK signer
+        shell: bash
+        run: |
+          export APKSIGNER="${ANDROID_HOME}/build-tools/36.0.0/apksigner"
+          bash scripts/verify-apk-signature.sh "${APK_PATH}" "0686161d8dc3051bfda2e03dd0406e1a6cddadf38c976f606bd8c474a872374e"
+      - name: Publish immutable GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           gh release create "${RELEASE_TAG}" "${APK_PATH}" \
-            --repo "${GITHUB_REPOSITORY}" \
-            --title "${RELEASE_TITLE}" \
-            --notes "${RELEASE_NOTES}" \
-            ${PRERELEASE_FLAG} \
-            --verify-tag || \
-          gh release upload "${RELEASE_TAG}" "${APK_PATH}" \
-            --repo "${GITHUB_REPOSITORY}" \
-            --clobber
+            --repo "${GITHUB_REPOSITORY}" --verify-tag \
+            --title "Un-Blocker ${VERSION_NAME}" \
+            --notes "Stable-signed ${BUILD_TYPE} APK. On-device DNS protection; see README for limitations." \
+            ${PRERELEASE_FLAG}
+      - name: Remove temporary signing key
+        if: always()
+        shell: bash
+        run: rm -f "${RUNNER_TEMP}/ub-blocker-test.keystore"

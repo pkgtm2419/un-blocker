@@ -327,12 +327,7 @@ fun UnblockerScreen(
                             )
                     )
                     Spacer(modifier = Modifier.width(9.dp))
-                    val daysActive = preferences.getDaysSinceInstall()
-                    val activeStatusText = if (daysActive < 14) {
-                        "SHIELD ACTIVE • DAY $daysActive LEARNING"
-                    } else {
-                        "SHIELD ACTIVE • AUTONOMOUS SHIELD"
-                    }
+                    val activeStatusText = "SHIELD ACTIVE • LOCAL EVIDENCE LEARNING"
 
                     Text(
                         text = when (serviceStatus) {
@@ -459,9 +454,7 @@ fun UnblockerScreen(
                                     scope.launch {
                                         val removed = withContext(Dispatchers.IO) {
                                             val appContext = context.applicationContext
-                                            val allowed = DeviceLearning.allowlist(appContext).remove(domain)
-                                            val blocked = DeviceLearning.blocklist(appContext).remove(domain)
-                                            allowed || blocked
+                                            DeviceLearning.setUserRule(appContext,domain,com.unblocker.app.logic.analysis.UserFeedback.NONE)
                                         }
                                         exceptionMessage = if (removed) "Local rule removed." else "No saved rule matched."
                                         exceptionDomain = ""
@@ -478,8 +471,7 @@ fun UnblockerScreen(
                                     scope.launch {
                                         val added = withContext(Dispatchers.IO) {
                                             val appContext = context.applicationContext
-                                            DeviceLearning.allowlist(appContext).remove(domain)
-                                            DeviceLearning.blocklist(appContext).add(domain)
+                                            DeviceLearning.setUserRule(appContext,domain,com.unblocker.app.logic.analysis.UserFeedback.BLOCK)
                                         }
                                         exceptionMessage = if (added) "Block rule saved locally." else "Block rule already saved."
                                         exceptionDomain = ""
@@ -496,8 +488,7 @@ fun UnblockerScreen(
                                     scope.launch {
                                         val added = withContext(Dispatchers.IO) {
                                             val appContext = context.applicationContext
-                                            DeviceLearning.blocklist(appContext).remove(domain)
-                                            DeviceLearning.allowlist(appContext).add(domain)
+                                            DeviceLearning.setUserRule(appContext,domain,com.unblocker.app.logic.analysis.UserFeedback.ALLOW)
                                         }
                                         exceptionMessage = if (added) "Allow rule saved locally." else "Allow rule already saved."
                                         exceptionDomain = ""

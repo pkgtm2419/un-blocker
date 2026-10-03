@@ -16,4 +16,20 @@ object DomainName {
 
         return domain
     }
+
+    /** Canonicalizes one DNS wire label without trimming or changing label boundaries. */
+    fun canonicalWireLabel(packet: ByteArray, offset: Int, length: Int): String? {
+        if (length !in 1..63 || offset < 0 || offset > packet.size - length) return null
+        val chars = CharArray(length)
+        for (index in 0 until length) {
+            val value = packet[offset + index].toInt() and 0xff
+            chars[index] = when (value) {
+                in 'A'.code..'Z'.code -> (value + ('a'.code - 'A'.code)).toChar()
+                in 'a'.code..'z'.code, in '0'.code..'9'.code, '-'.code, '_'.code -> value.toChar()
+                else -> return null
+            }
+        }
+        if (chars.first() == '-' || chars.last() == '-') return null
+        return String(chars)
+    }
 }

@@ -1,5 +1,6 @@
 package com.unblocker.app.logic
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -43,32 +44,34 @@ class AdDetectorTest {
     @Test
     fun testPatternMatch() {
         val (isAd1, _) = adDetector.isAdDomain("ads.randomwebsite.com")
-        assertTrue("ads.randomwebsite.com should match ad pattern", isAd1)
+        assertFalse("Generic ad words are not deterministic authority", isAd1)
 
         val (isAd2, _) = adDetector.isAdDomain("telemetry.vendor.net")
-        assertTrue("telemetry.vendor.net should match telemetry pattern", isAd2)
+        assertFalse("Generic telemetry words are not deterministic authority", isAd2)
 
         val (isAd3, _) = adDetector.isAdDomain("tracker.metrics.org")
-        assertTrue("tracker.metrics.org should match tracker pattern", isAd3)
+        assertFalse("Generic tracker words are not deterministic authority", isAd3)
     }
 
     @Test
     fun testDoHCanaryDomain() {
         val (isCanary, reason) = adDetector.isAdDomain("use-application-dns.net")
-        assertTrue("use-application-dns.net should be detected to prevent DoH bypass", isCanary)
-        assertTrue("Reason should indicate canary detection", reason?.contains("canary", ignoreCase = true) == true)
+        assertTrue("Firefox automatic DoH canary should receive the compatibility response", isCanary)
+        assertEquals("Firefox DoH canary compatibility rule", reason)
+        assertFalse(reason.contains("Chrome", ignoreCase = true))
+        assertFalse(reason.contains("prevent", ignoreCase = true))
     }
 
     @Test
     fun testBrowserAdPatterns() {
         val (isAd1, _) = adDetector.isAdDomain("adserver.newsportal.com")
-        assertTrue("adserver.newsportal.com should be detected as ad", isAd1)
+        assertFalse("Generic adserver names are only learning evidence", isAd1)
 
         val (isAd2, _) = adDetector.isAdDomain("bidder.openx.net")
         assertTrue("bidder pattern should be detected", isAd2)
 
         val (isAd3, _) = adDetector.isAdDomain("pixel.advertising.org")
-        assertTrue("pixel/advertising pattern should be detected", isAd3)
+        assertFalse("Generic pixel names are only learning evidence", isAd3)
     }
 
     @Test

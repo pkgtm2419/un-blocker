@@ -6,6 +6,7 @@ import android.content.ContextWrapper
 import android.content.Intent
 import android.net.VpnService
 import android.net.ConnectivityManager
+import android.net.LinkProperties
 import android.net.NetworkCapabilities
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -31,6 +32,51 @@ class LocalPrivacyAndVpnTest {
     private val context = instrumentation.targetContext
     private val preferences = FilteringPreferences.getInstance(context)
 
+    private fun forgetLearningInstancesForUpgradeTest() {
+        // Test-only process-restart simulation; no reset hook in production.
+        for(name in listOf("instance","allowlistInstance","blocklistInstance","evidenceInstance","policyInstance")) {
+            DeviceLearning::class.java.getDeclaredField(name).apply {isAccessible=true}.set(null,null)
+        }
+    }
+
+    @Test fun productionV3InitializationRemovesRawLegacyLearningAndPreservesUserKeys() {
+        forgetLearningInstancesForUpgradeTest()
+        try {
+            val alias="unblocker.learning.hmac.v1"
+            val keystore=java.security.KeyStore.getInstance("AndroidKeyStore").apply {load(null)}
+            val key=(keystore.getKey(alias,null) as? javax.crypto.SecretKey) ?:
+                javax.crypto.KeyGenerator.getInstance("HmacSHA256","AndroidKeyStore").apply {
+                    init(android.security.keystore.KeyGenParameterSpec.Builder(alias,
+                        android.security.keystore.KeyProperties.PURPOSE_SIGN)
+                        .setDigests(android.security.keystore.KeyProperties.DIGEST_SHA256).build())
+                }.generateKey()
+            val allowFile=File(context.noBackupFilesDir,"allowlist-v1")
+            val blockFile=File(context.noBackupFilesDir,"blocklist-v1")
+            com.unblocker.app.logic.analysis.PrivateDomainSet(key,allowFile).add("allowed-upgrade.example")
+            com.unblocker.app.logic.analysis.PrivateDomainSet(key,blockFile).add("blocked-upgrade.example")
+            val allowBefore=allowFile.readBytes();val blockBefore=blockFile.readBytes()
+            val raw=File(context.filesDir,"learned_trackers.txt").apply {writeText("private-upgrade.example:0.9")}
+            val old=File(context.noBackupFilesDir,"learning-v1").apply {writeText("obsolete")}
+            DeviceLearning.evidenceStore(context)
+            assertFalse("Legacy raw domains remain after actual initialization",raw.exists())
+            assertFalse(old.exists())
+            assertArrayEquals(allowBefore,allowFile.readBytes());assertArrayEquals(blockBefore,blockFile.readBytes())
+            assertTrue(DeviceLearning.allowlist(context).contains("allowed-upgrade.example"))
+            assertTrue(DeviceLearning.blocklist(context).contains("blocked-upgrade.example"))
+        } finally {forgetLearningInstancesForUpgradeTest()}
+    }
+
+    @Test fun evidenceFeedbackStaysPrivateAndRemovingManualBlockRemovesAuthority() {
+        val domain="manual-feedback.example.test"
+        DeviceLearning.setUserRule(context,domain,com.unblocker.app.logic.analysis.UserFeedback.BLOCK)
+        assertTrue(DeviceLearning.policy(context).peek(domain).confirmed)
+        val snapshot=File(context.noBackupFilesDir,"learning-v3")
+        assertTrue(snapshot.readText().startsWith("v3:"))
+        assertFalse(snapshot.readText().contains(domain))
+        DeviceLearning.setUserRule(context,domain,com.unblocker.app.logic.analysis.UserFeedback.NONE)
+        assertFalse(DeviceLearning.policy(context).peek(domain).confirmed)
+    }
+
     private fun shell(command: String) {
         instrumentation.uiAutomation.executeShellCommand(command).use {
             android.os.ParcelFileDescriptor.AutoCloseInputStream(it).readBytes()
@@ -38,7 +84,8 @@ class LocalPrivacyAndVpnTest {
     }
 
     private fun awaitState(expected: ServiceStatus) {
-        val deadline = System.nanoTime() + 20_000_000_000L
+        // A freshly booted emulator can spend over 20 seconds on first Activity/JIT startup.
+        val deadline = System.nanoTime() + 45_000_000_000L
         while (UnblockerVpnService.session.status.value != expected && System.nanoTime() < deadline) {
             Thread.sleep(50)
         }
@@ -51,16 +98,18 @@ class LocalPrivacyAndVpnTest {
         Thread.sleep(500)
     }
 
-    private fun awaitVpnRouting() {
+    private fun awaitVpnRouting(): LinkProperties {
         val connectivity = context.getSystemService(ConnectivityManager::class.java)
         val deadline = System.nanoTime() + 20_000_000_000L
         while (System.nanoTime() < deadline) {
             val network = connectivity.activeNetwork
+            val linkProperties = connectivity.getLinkProperties(network)
             if (connectivity.getNetworkCapabilities(network)?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true &&
-                connectivity.getLinkProperties(network)?.dnsServers?.any { it.hostAddress == "10.10.0.1" } == true) return
+                linkProperties?.dnsServers?.any { it.hostAddress == "10.10.0.1" } == true) return linkProperties
             Thread.sleep(50)
         }
         fail("Android did not publish the VPN as the app's default DNS network")
+        throw AssertionError("unreachable")
     }
 
     @After fun cleanup() {
@@ -106,7 +155,7 @@ class LocalPrivacyAndVpnTest {
         val allowlist = DeviceLearning.allowlist(context)
         assertTrue(allowlist.add(domain))
 
-        val file = File(context.noBackupFilesDir, "allowlist-v1")
+        val file = listOf("allowlist-v1","allowlist-v3").map { File(context.noBackupFilesDir,it) }.first { it.exists() }
         assertTrue(file.exists())
         assertFalse(file.readText().contains(domain))
         assertTrue(DeviceLearning.allowlist(context).contains(domain))
@@ -124,7 +173,7 @@ class LocalPrivacyAndVpnTest {
         val blocklist = DeviceLearning.blocklist(context)
         assertTrue(blocklist.add(domain))
 
-        val file = File(context.noBackupFilesDir, "blocklist-v1")
+        val file = listOf("blocklist-v1","blocklist-v3").map { File(context.noBackupFilesDir,it) }.first { it.exists() }
         assertTrue(file.exists())
         assertFalse(file.readText().contains(domain))
         assertTrue(DeviceLearning.blocklist(context).contains(domain))
@@ -177,8 +226,8 @@ class LocalPrivacyAndVpnTest {
         // establish() returns before ConnectivityService finishes publishing routing.
         awaitVpnRouting()
         val question = byteArrayOf(0x12, 0x34, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0) +
-            byteArrayOf(3) + "ads".toByteArray() + byteArrayOf(7) + "example".toByteArray() +
-            byteArrayOf(3) + "com".toByteArray() + byteArrayOf(0, 0, 1, 0, 1)
+            byteArrayOf(3) + "ads".toByteArray() + byteArrayOf(11) + "doubleclick".toByteArray() +
+            byteArrayOf(3) + "net".toByteArray() + byteArrayOf(0, 0, 1, 0, 1)
         DatagramSocket().use { socket ->
             socket.soTimeout = 5000
             socket.send(DatagramPacket(question, question.size, InetAddress.getByName("10.10.0.1"), 53))
@@ -198,5 +247,24 @@ class LocalPrivacyAndVpnTest {
         assertTrue(UnblockerVpnService.isServiceActive.value)
         UnblockerVpnService.stop(context)
         awaitState(ServiceStatus.STOPPED)
+    }
+
+    @Test fun vpnDoesNotPublishPublicResolverHostRoutes() {
+        openApp()
+        shell("appops set com.unblocker.app ACTIVATE_VPN allow")
+        assertNull(VpnService.prepare(context))
+        preferences.setProtectionEnabled(true)
+        UnblockerVpnService.start(context)
+        awaitState(ServiceStatus.RUNNING)
+
+        val routedHosts = awaitVpnRouting().routes
+            .filter { it.destination.prefixLength == 32 }
+            .mapNotNull { it.destination.address.hostAddress }
+            .toSet()
+
+        assertTrue(
+            "DNS-only VPN must not capture all traffic to public resolver hosts: $routedHosts",
+            routedHosts.intersect(setOf("8.8.8.8", "8.8.4.4", "1.1.1.1", "1.0.0.1", "9.9.9.9")).isEmpty()
+        )
     }
 }

@@ -1,0 +1,7 @@
+{
+  "sources": [
+    {"id": 1, "path": "app/src/main/assets/ad_domains.txt", "license": "Apache-2.0", "revision": "db3d915", "url": "https://github.com/pkgtm2419/un-blocker", "sha256": "b37afea9994a98a99ee16fbda9998a0106499b7acca5a34e6b3038a33822dd06", "syntax": "suffix-seeds", "category": "AD"},
+    {"id": 2, "path": "app/src/main/assets/adult_domains.txt", "license": "Apache-2.0", "revision": "db3d915", "url": "https://github.com/pkgtm2419/un-blocker", "sha256": "9f641bf169816172c8450dfd387d313dfddf6c2a36feb4fcf7acd3a10407bd85", "syntax": "suffix-seeds", "category": "ADULT_CONTENT"},
+    {"id": 3, "path": "app/src/main/assets/public_suffix_list.dat", "license": "MPL-2.0", "revision": "a179a48c465e818cfd8d626691cb317985da87fb", "url": "https://github.com/publicsuffix/list", "sha256": "7333192f818588d9d0044d27d67210c782acd6d87cf71f54a00dfa20a561cfc9", "syntax": "psl"}
+  ]
+}

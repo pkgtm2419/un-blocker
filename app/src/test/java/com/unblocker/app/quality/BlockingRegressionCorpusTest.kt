@@ -32,10 +32,6 @@ class BlockingRegressionCorpusTest {
             "unityads.unity3d.com",
             "api.vungle.com",
             "ads.inmobi.com",
-            "telemetry.vendor.example",
-            "analytics.vendor.example",
-            "metrics.vendor.example",
-            "tracker.vendor.example",
             "adjust.com",
             "api.appsflyer.com",
             "branch.io",
@@ -79,6 +75,13 @@ class BlockingRegressionCorpusTest {
 
         allowed.forEach { domain ->
             assertFalse("Expected regression corpus to allow $domain", classifier(domain).isBlocked)
+        }
+    }
+
+    @Test fun lexicalOnlyUnknownNamesRemainAllowed() {
+        listOf("telemetry.vendor.example", "analytics.vendor.example", "metrics.vendor.example",
+            "tracker.vendor.example").forEach {
+            assertFalse("A word alone cannot authorize blocking $it", classifier(it).isBlocked)
         }
     }
 }

@@ -11,6 +11,10 @@
 app/build/
 *.hprof
 *.orig
+__pycache__/
+*.pyc
 
-# Keep release APK
-!release/unblocker-v1.0.0.apk
+# Build binaries and signing material stay outside source control.
+*.apk
+*.jks
+*.keystore

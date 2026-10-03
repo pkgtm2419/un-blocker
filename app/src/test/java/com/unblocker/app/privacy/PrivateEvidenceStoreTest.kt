@@ -15,6 +15,7 @@ class PrivateEvidenceStoreTest {
         val file = File(temp.root,"evidence")
         val s = PrivateEvidenceStore(key(),file,8,{100})
         repeat(20) { s.put("ads$it.test", ReputationEvidence(.8f,ReputationState.SUSPECT,3,1,UserFeedback.NONE,100)) }
+        s.flush()
         assertEquals(8,s.size())
         assertFalse(file.readText().contains("ads"))
         assertEquals(8,PrivateEvidenceStore(key(),file,8,{100}).size())
@@ -26,6 +27,7 @@ class PrivateEvidenceStoreTest {
         val file = File(temp.root,"evidence")
         val s=PrivateEvidenceStore(key(),file,8,{100})
         s.put("weak.test",ReputationEvidence(.4f,ReputationState.OBSERVING,1,1,UserFeedback.NONE,100))
+        s.flush()
         val header=file.readLines().first()
         val id=file.readLines()[1].substringBefore(':')
         for (row in listOf("$id:NaN:SUSPECT:1:1:0:100", "$id:0.8:BAD:1:1:0:100",
@@ -34,6 +36,7 @@ class PrivateEvidenceStoreTest {
             assertEquals(0,PrivateEvidenceStore(key(),file,8,{100}).size())
         }
         s.put("weak.test",ReputationEvidence(.4f,ReputationState.OBSERVING,1,1,UserFeedback.NONE,100))
+        s.flush()
         assertEquals(0,PrivateEvidenceStore(key(),file,8,{108}).size())
     }
 }

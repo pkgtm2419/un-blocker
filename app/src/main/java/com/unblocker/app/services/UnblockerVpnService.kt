@@ -200,10 +200,8 @@ class UnblockerVpnService : VpnService() {
                     }
 
                     // Autonomous local analysis
-                    val result = synchronized(lifecycleLock) {
-                        if (!isRunning.get()) return
-                        filterEngine.analyzeAndFilter(query.domain)
-                    }
+                    if (!isRunning.get()) break
+                    val result = filterEngine.analyzeAndFilter(query.domain)
 
                     if (result.shouldBlock) {
                         // Local blocked response.
@@ -371,6 +369,7 @@ class UnblockerVpnService : VpnService() {
             }
             dnsCache.clear()
         }
+        runCatching { com.unblocker.app.logic.analysis.DeviceLearning.flush() }
 
         stopForeground(STOP_FOREGROUND_REMOVE)
     }

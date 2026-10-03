@@ -19,8 +19,12 @@ class ReputationPolicy(private val store: PrivateEvidenceStore) {
         // A process restart has no monotonic history: first observation only starts a fresh window.
         val windows=if (last == null && old.positiveWindows > 0) old.positiveWindows else
             (old.positiveWindows+1).coerceAtMost(255)
-        lastPositive[domain]=now
-        while(lastPositive.size>2000) lastPositive.remove(lastPositive.keys.first())
+        lastPositive[domain] = now
+        val it = lastPositive.iterator()
+        while (lastPositive.size > 2000 && it.hasNext()) {
+            it.next()
+            it.remove()
+        }
         val updated=old.copy(score=maxOf(old.score,scored.score),mask=old.mask or scored.mask,
             positiveWindows=windows,dayBucket=store.currentBucket())
         val state=if(updated.feedback == UserFeedback.ALLOW) ReputationState.SUPPRESSED else normalState(updated)

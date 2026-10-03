@@ -35,6 +35,9 @@ object DeviceLearning {
     }
     @Synchronized fun policy(context:Context):ReputationPolicy = policyInstance ?: ReputationPolicy(evidenceStore(context))
         .also { policyInstance=it }
+    @Synchronized fun flush() {
+        evidenceInstance?.flush()
+    }
     fun memoryEvidenceStore()=PrivateEvidenceStore(KeyGenerator.getInstance("HmacSHA256").apply {init(256)}.generateKey())
     private fun ruleFile(context:Context,name:String):File {
         val legacy=File(context.noBackupFilesDir,"$name-v1")

@@ -43,6 +43,7 @@ class ReviewPrivacyRegressionTest {
         val key=SecretKeySpec(ByteArray(32){7},"HmacSHA256")
         val store=PrivateEvidenceStore(key,file,1,{100})
         store.put("weak.test",ReputationEvidence(.4f,ReputationState.OBSERVING,1,1,UserFeedback.NONE,100))
+        store.flush()
         val valid=file.readText()
         file.writeText(valid+"x".repeat(2000))
         assertEquals(0,PrivateEvidenceStore(key,file,1,{100}).size())

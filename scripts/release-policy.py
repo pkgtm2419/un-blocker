@@ -25,8 +25,8 @@ def validate_release(version, tag, signing):
 
 
 if __name__ == '__main__':
-    gradle = pathlib.Path('app/build.gradle').read_text()
-    version = re.search(r'^\s*versionName\s+"([^"]+)"', gradle, re.MULTILINE).group(1)
+    gradle = pathlib.Path('app/build.gradle.kts').read_text()
+    version = re.search(r'^\s*versionName\s*=\s*"([^"]+)"', gradle, re.MULTILINE).group(1)
     tag = os.environ.get('RELEASE_INPUT_TAG') or os.environ.get('GITHUB_REF_NAME', '')
     release = validate_release(version, tag, os.environ)
     with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as output:

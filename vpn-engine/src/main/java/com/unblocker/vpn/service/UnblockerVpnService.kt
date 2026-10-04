@@ -63,26 +63,11 @@ class UnblockerVpnService : VpnService() {
     // ─── Injected dependencies ────────────────────────────────────────────────
 
     /**
-     * Checks whether a [domain] is blocked by the in-memory Bloom Filter.
-     * Injected so the data-store module stays decoupled from the VPN module.
-     * This lambda MUST be non-blocking (returns immediately from an AtomicReference read).
+     * External dependencies injected by the app module.
+     * Keeps the data-store decoupled from the VPN module without relying on
+     * Dagger wildcard matching for Kotlin functions.
      */
-    @JvmSuppressWildcards
-    @Inject lateinit var isBlocked: (domain: String) -> Boolean
-
-    /**
-     * Asynchronously records each DNS request to the local Room database.
-     * Called inside a fire-and-forget coroutine so the packet loop is never blocked.
-     */
-    @JvmSuppressWildcards
-    @Inject lateinit var logDnsRequest: suspend (domain: String, blocked: Boolean) -> Unit
-
-    /**
-     * Initializes the Bloom Filter from the database. Must be called before
-     * processing packets to ensure rules are loaded into memory.
-     */
-    @JvmSuppressWildcards
-    @Inject lateinit var initFilter: suspend () -> Unit
+    @Inject lateinit var vpnDependencies: VpnDependencies
 
     // ─── Internal state ───────────────────────────────────────────────────────
 
@@ -144,7 +129,7 @@ class UnblockerVpnService : VpnService() {
         VpnStateHolder.transitionTo(VpnStateHolder.State.RUNNING)
 
         packetJob = serviceScope.launch {
-            initFilter()
+            vpnDependencies.initFilter()
             processPackets(dnsForwarder)
         }
     }
@@ -181,11 +166,11 @@ class UnblockerVpnService : VpnService() {
             val dnsQuery = DnsPacketParser.extractDnsQuery(buf, length)
 
             if (dnsQuery != null) {
-                val blocked = isBlocked(dnsQuery.domain)
+                val blocked = vpnDependencies.isBlocked(dnsQuery.domain)
 
                 // Fire-and-forget async DB log — must not block this thread
                 launch(Dispatchers.IO) {
-                    runCatching { logDnsRequest(dnsQuery.domain, blocked) }
+                    runCatching { vpnDependencies.logDnsRequest(dnsQuery.domain, blocked) }
                 }
 
                 if (blocked) {

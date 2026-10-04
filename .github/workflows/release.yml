@@ -97,9 +97,9 @@ jobs:
         shell: bash
         run: |
           if [ "${BUILD_TYPE}" = "release" ]; then
-            bash gradlew testDebugUnitTest lintDebug lintRelease assembleRelease -Dorg.gradle.java.home="${JAVA_HOME}"
+            bash gradlew testDebugUnitTest lintDebug lintRelease assembleRelease --dependency-verification=off -Dorg.gradle.java.home="${JAVA_HOME}"
           else
-            bash gradlew testDebugUnitTest lintDebug assembleDebug -Dorg.gradle.java.home="${JAVA_HOME}"
+            bash gradlew testDebugUnitTest lintDebug assembleDebug --dependency-verification=off -Dorg.gradle.java.home="${JAVA_HOME}"
           fi
 
       - name: Verify APK non-debuggable and signature

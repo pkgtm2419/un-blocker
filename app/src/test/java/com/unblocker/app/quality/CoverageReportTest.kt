@@ -14,7 +14,7 @@ import org.junit.Test
 import java.io.File
 
 /**
- * Coverage evaluation harness implementing ANTIGRAVITY_UNBLOCKER_SPEC Section 6.
+ * Coverage evaluation harness implementing docs/archive/ANTIGRAVITY_UNBLOCKER_SPEC.md Section 6.
  *
  * Evaluates the compiled RuleSet against a labeled host corpus (AD, TRACKER, NEEDED, OTHER).
  * Outputs recall on AD+TRACKER and gates false positives on NEEDED hosts strictly at 0.
@@ -103,7 +103,7 @@ class CoverageReportTest {
 
         val reportSummary = buildString {
             appendLine("================================================================================")
-            appendLine("UN-BLOCKER COVERAGE REPORT (ANTIGRAVITY_UNBLOCKER_SPEC Section 6)")
+            appendLine("UN-BLOCKER COVERAGE REPORT (docs/archive/ANTIGRAVITY_UNBLOCKER_SPEC.md Section 6)")
             appendLine("================================================================================")
             appendLine(String.format("Rules in binary RuleSet: %d", ruleSet.ruleCount))
             appendLine(String.format("AD Hosts:                %d / %d blocked (%.1f%%)", blockedAd, totalAd, if (totalAd > 0) blockedAd * 100.0 / totalAd else 0.0))

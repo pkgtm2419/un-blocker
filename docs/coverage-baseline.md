@@ -1,7 +1,7 @@
 # Coverage Baseline & Evaluation Report
 
 ## 1. Overview and Numbers Policy
-In accordance with `ANTIGRAVITY_UNBLOCKER_SPEC.md` §0.3 and §6, Un-Blocker does not publish bare, unmeasured, or marketing-style effectiveness percentages. Blocking recall and false-positive rates are strictly grounded in deterministic evaluation of a reproducible, labeled corpus against specific list and code revisions.
+In accordance with `docs/archive/ANTIGRAVITY_UNBLOCKER_SPEC.md` §0.3 and §6, Un-Blocker does not publish bare, unmeasured, or marketing-style effectiveness percentages. Blocking recall and false-positive rates are strictly grounded in deterministic evaluation of a reproducible, labeled corpus against specific list and code revisions.
 
 ## 2. Evaluation Metadata
 - **Evaluated Commit**: Development `1.4.1` (`versionCode 8`)

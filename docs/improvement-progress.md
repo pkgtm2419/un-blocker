@@ -1,7 +1,7 @@
 # Un-Blocker Improvement Progress & Verification Tracker
 
 ## 1. Overview
-This document tracks the end-to-end implementation and verification of the architectural improvements specified in `ANTIGRAVITY_UNBLOCKER_SPEC.md` and subsequent security and autonomous on-device enhancements up to release **1.4.1** (`versionCode 8`).
+This document tracks the end-to-end implementation and verification of the architectural improvements specified in `docs/archive/ANTIGRAVITY_UNBLOCKER_SPEC.md` and subsequent security and autonomous on-device enhancements up to release **1.4.1** (`versionCode 8`).
 
 ---
 

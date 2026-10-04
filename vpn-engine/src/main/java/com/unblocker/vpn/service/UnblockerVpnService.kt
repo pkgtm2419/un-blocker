@@ -67,18 +67,21 @@ class UnblockerVpnService : VpnService() {
      * Injected so the data-store module stays decoupled from the VPN module.
      * This lambda MUST be non-blocking (returns immediately from an AtomicReference read).
      */
+    @JvmSuppressWildcards
     @Inject lateinit var isBlocked: (domain: String) -> Boolean
 
     /**
      * Asynchronously records each DNS request to the local Room database.
      * Called inside a fire-and-forget coroutine so the packet loop is never blocked.
      */
+    @JvmSuppressWildcards
     @Inject lateinit var logDnsRequest: suspend (domain: String, blocked: Boolean) -> Unit
 
     /**
      * Initializes the Bloom Filter from the database. Must be called before
      * processing packets to ensure rules are loaded into memory.
      */
+    @JvmSuppressWildcards
     @Inject lateinit var initFilter: suspend () -> Unit
 
     // ─── Internal state ───────────────────────────────────────────────────────

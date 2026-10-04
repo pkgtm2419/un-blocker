@@ -1,6 +1,6 @@
 # Un-Blocker
 
-[![Download APK](https://img.shields.io/badge/Download-APK%20(v2.0.0)-brightgreen?style=flat&logo=android&logoColor=white)](https://github.com/pkgtm2419/un-blocker/releases/download/v2.0.0/ub-blocker-2.0.0.apk)
+[![Download APK](https://img.shields.io/badge/Download-APK%20(v2.0.0)-brightgreen?style=flat&logo=android&logoColor=white)](https://github.com/pkgtm2419/un-blocker/releases/download/test-v2.0.0/ub-blocker-2.0.0.apk)
 [![Release CI](https://github.com/pkgtm2419/un-blocker/actions/workflows/release.yml/badge.svg)](https://github.com/pkgtm2419/un-blocker/actions/workflows/release.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Development 2.0.0](https://img.shields.io/badge/development-2.0.0-orange.svg)](app/build.gradle.kts)

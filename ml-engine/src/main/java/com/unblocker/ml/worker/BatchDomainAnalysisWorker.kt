@@ -76,6 +76,9 @@ class BatchDomainAnalysisWorker @AssistedInject constructor(
 
         /** WorkManager unique work name for the daytime backlog scan. */
         const val WORK_NAME_BACKLOG = "unblocker_backlog_scan"
+
+        /** Input data key: true for throttled daytime backlog scans. */
+        const val KEY_IS_BACKLOG_RUN = "is_backlog_run"
     }
 
     /**
@@ -125,10 +128,5 @@ class BatchDomainAnalysisWorker @AssistedInject constructor(
         }
 
         Result.success()
-    }
-
-    companion object {
-        /** Input data key: true for throttled daytime backlog scans. */
-        const val KEY_IS_BACKLOG_RUN = "is_backlog_run"
     }
 }

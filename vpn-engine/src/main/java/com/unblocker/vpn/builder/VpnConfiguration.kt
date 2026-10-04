@@ -24,7 +24,7 @@ class VpnConfiguration(
      * Returns null if the VPN permission has been revoked.
      */
     fun establish(): android.os.ParcelFileDescriptor? {
-        val builder = VpnService.Builder()
+        val builder = service.Builder()
             .setSession("UnblockerLocalVpn")
             .addAddress("10.0.0.2", 32)
             .addRoute("0.0.0.0", 0)
@@ -37,8 +37,16 @@ class VpnConfiguration(
         }
 
         // Exclude our own app process to avoid VPN routing loops
-        runCatching { builder.addDisallowedApplication(service.packageName) }
+        try {
+            builder.addDisallowedApplication(service.packageName)
+        } catch (e: Exception) {
+            // Ignore, e.g. if package not found
+        }
 
-        return runCatching { builder.establish() }.getOrNull()
+        return try {
+            builder.establish()
+        } catch (e: Exception) {
+            null
+        }
     }
 }

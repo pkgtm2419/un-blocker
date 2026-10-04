@@ -11,7 +11,9 @@ import androidx.compose.ui.Modifier
 import com.unblocker.app.ui.MainScreen
 import com.unblocker.app.ui.adaptive.ProvideAdaptiveWindow
 import com.unblocker.app.ui.theme.UnblockerTheme
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {

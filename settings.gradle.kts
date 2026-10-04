@@ -20,4 +20,9 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "unblocker"
-include ':app'
+
+include(":app")
+include(":common")
+include(":vpn-engine")
+include(":data-store")
+include(":ml-engine")

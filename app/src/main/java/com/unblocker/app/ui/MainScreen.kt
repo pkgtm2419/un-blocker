@@ -7,6 +7,9 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -57,11 +60,36 @@ fun MainScreen(
         }
     }
 
-    Surface(modifier = Modifier.fillMaxSize()) {
-        UnblockerScreen(
-            preferences = preferences,
-            quickStartManager = quickStartManager,
-            onRequestVpnPermission = requestPermissionsAndStart
-        )
+    var selectedTab by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0) }
+
+    androidx.compose.material3.Scaffold(
+        bottomBar = {
+            androidx.compose.material3.NavigationBar {
+                androidx.compose.material3.NavigationBarItem(
+                    icon = { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Filled.Security, contentDescription = "Home") },
+                    label = { androidx.compose.material3.Text("Home") },
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 }
+                )
+                androidx.compose.material3.NavigationBarItem(
+                    icon = { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Filled.List, contentDescription = "Logs") },
+                    label = { androidx.compose.material3.Text("Logs") },
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 }
+                )
+            }
+        }
+    ) { paddingValues ->
+        Surface(modifier = Modifier.fillMaxSize().androidx.compose.foundation.layout.padding(paddingValues)) {
+            if (selectedTab == 0) {
+                UnblockerScreen(
+                    preferences = preferences,
+                    quickStartManager = quickStartManager,
+                    onRequestVpnPermission = requestPermissionsAndStart
+                )
+            } else {
+                com.unblocker.app.ui.logs.LogViewerScreen()
+            }
+        }
     }
 }

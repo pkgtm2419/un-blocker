@@ -1,0 +1,52 @@
+--- tools/filter-compiler/compiler.py
++++ tools/filter-compiler/compiler.py
+@@ -107,7 +107,7 @@
+         source_info['skippedInvalid'] = skipped_invalid
+         sources.append(source_info)
+ 
+-    never_block_file = root / 'tools/filter-compiler/never_block.txt'
++    never_block_file = root / 'tools/filter-compiler/never_block.txt'
+     if not never_block_file.is_file():
+         never_block_file = root / 'never_block.txt'
+     if never_block_file.is_file():
+@@ -117,21 +117,25 @@
+             if line.strip() and not line.strip().startswith('#')
+         }
+         check_never_block(rows, never_block_domains)
++        output_assets = pathlib.Path(output_assets_dir)
++        output_assets.mkdir(parents=True, exist_ok=True)
++        (output_assets / 'never-block-hosts.txt').write_text('\n'.join(sorted(never_block_domains)) + '\n', encoding='utf-8')
+ 
+     tsv_encoded = ''.join('\t'.join(row) + '\n' for row in sorted(rows)).encode('utf-8')
+     bin_bytes = build_binary_ruleset(rows)
+ 
+     result = {
+         'format': 2,
+         'ruleCount': len(rows),
+         'rulesSha256': hashlib.sha256(tsv_encoded).hexdigest(),
+         'binarySha256': hashlib.sha256(bin_bytes).hexdigest(),
+         'sources': sorted(sources, key=lambda entry: entry['id'])
+     }
+-    output = pathlib.Path(output)
+-    output.mkdir(parents=True, exist_ok=True)
+-    (output / 'dns-rules.tsv').write_bytes(tsv_encoded)
+-    (output / 'dns-rules.bin').write_bytes(bin_bytes)
+-    (output / 'dns-rules-manifest.json').write_bytes((json.dumps(result, sort_keys=True, indent=2) + '\n').encode())
++    output_assets = pathlib.Path(output_assets_dir)
++    output_assets.mkdir(parents=True, exist_ok=True)
++    (output_assets / 'dns-rules.bin').write_bytes(bin_bytes)
++    (output_assets / 'dns-rules-manifest.json').write_bytes((json.dumps(result, sort_keys=True, indent=2) + '\n').encode())
++    output_test = pathlib.Path(output_test_dir)
++    output_test.mkdir(parents=True, exist_ok=True)
++    (output_test / 'dns-rules.tsv').write_bytes(tsv_encoded)
+ 
+ 
+ if __name__ == '__main__':
+     parser = argparse.ArgumentParser()
+     parser.add_argument('--root', type=pathlib.Path, required=True)
+-    parser.add_argument('--output', type=pathlib.Path, required=True)
++    parser.add_argument('--output-assets', type=pathlib.Path, required=True)
++    parser.add_argument('--output-test', type=pathlib.Path, required=True)
+     args = parser.parse_args()
+-    compile_sources(args.root, json.loads((args.root / 'tools/filter-compiler/sources.json').read_text()), args.output)
++    compile_sources(args.root, json.loads((args.root / 'tools/filter-compiler/sources.json').read_text()), args.output_assets, args.output_test)

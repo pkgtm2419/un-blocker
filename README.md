@@ -190,7 +190,7 @@ those encrypted paths can bypass a DNS-only VPN.
 
 ## Requirements
 
-- Current source version: 1.3.0 (`versionCode` 6); published test APK: 1.2.2.
+- Current source version: 2.0.0 (`versionCode` 7); published test APK: 2.0.0.
 - Android package: `com.unblocker.app`.
 - Android 8.0 or newer (API 26+).
 - Target and compile SDK: Android 16 / API 36.
@@ -276,7 +276,7 @@ the test installation's VPN app-op and local application data.
 Build output:
 
 ```text
-app/build/outputs/apk/debug/ub-blocker-1.3.0.apk
+app/build/outputs/apk/debug/ub-blocker-2.0.0.apk
 ```
 
 Gradle derives this filename from `versionName`, so future builds automatically

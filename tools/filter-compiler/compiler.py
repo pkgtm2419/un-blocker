@@ -6,7 +6,7 @@ import pathlib
 import re
 import struct
 
-LICENSES = {'Apache-2.0', 'MPL-2.0', 'MIT'}
+LICENSES = {'Apache-2.0', 'MPL-2.0', 'MIT', 'CC0-1.0'}
 HOST = re.compile(r'[a-z0-9_](?:[a-z0-9_-]{0,61}[a-z0-9_])?(?:\.[a-z0-9_](?:[a-z0-9_-]{0,61}[a-z0-9_])?)*\Z')
 
 META_HOSTS = {
@@ -113,7 +113,7 @@ def build_binary_ruleset(rows):
     return header + offsets_bytes + blob_bytes
 
 
-def compile_sources(root, manifest, output):
+def compile_sources(root, manifest, output_assets_dir, output_test_dir):
     root = pathlib.Path(root).resolve()
     rows, sources, ids = set(), [], set()
     for entry in manifest['sources']:
@@ -218,6 +218,9 @@ def compile_sources(root, manifest, output):
             if line.strip() and not line.strip().startswith('#')
         }
         check_never_block(rows, never_block_domains)
+        output_assets = pathlib.Path(output_assets_dir)
+        output_assets.mkdir(parents=True, exist_ok=True)
+        (output_assets / 'never-block-hosts.txt').write_text('\n'.join(sorted(never_block_domains)) + '\n', encoding='utf-8')
 
     tsv_encoded = ''.join('\t'.join(row) + '\n' for row in sorted(rows)).encode('utf-8')
     bin_bytes = build_binary_ruleset(rows)
@@ -229,16 +232,20 @@ def compile_sources(root, manifest, output):
         'binarySha256': hashlib.sha256(bin_bytes).hexdigest(),
         'sources': sorted(sources, key=lambda entry: entry['id'])
     }
-    output = pathlib.Path(output)
-    output.mkdir(parents=True, exist_ok=True)
-    (output / 'dns-rules.tsv').write_bytes(tsv_encoded)
-    (output / 'dns-rules.bin').write_bytes(bin_bytes)
-    (output / 'dns-rules-manifest.json').write_bytes((json.dumps(result, sort_keys=True, indent=2) + '\n').encode())
+    output_assets = pathlib.Path(output_assets_dir)
+    output_assets.mkdir(parents=True, exist_ok=True)
+    (output_assets / 'dns-rules.bin').write_bytes(bin_bytes)
+    (output_assets / 'dns-rules-manifest.json').write_bytes((json.dumps(result, sort_keys=True, indent=2) + '\n').encode())
+    
+    output_test = pathlib.Path(output_test_dir)
+    output_test.mkdir(parents=True, exist_ok=True)
+    (output_test / 'dns-rules.tsv').write_bytes(tsv_encoded)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--root', type=pathlib.Path, required=True)
-    parser.add_argument('--output', type=pathlib.Path, required=True)
+    parser.add_argument('--output-assets', type=pathlib.Path, required=True)
+    parser.add_argument('--output-test', type=pathlib.Path, required=True)
     args = parser.parse_args()
-    compile_sources(args.root, json.loads((args.root / 'tools/filter-compiler/sources.json').read_text()), args.output)
+    compile_sources(args.root, json.loads((args.root / 'tools/filter-compiler/sources.json').read_text()), args.output_assets, args.output_test)

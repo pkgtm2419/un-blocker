@@ -52,32 +52,56 @@ class DecideBlockingUseCase(
         }
         adaptiveBlockingEngine.networkLearner.syncFeedback(domain,UserFeedback.NONE)
 
-        if (com.unblocker.app.logic.analysis.NeverBlockPolicy.isNeverBlock(domain)) {
-            return BlockingDecision.allow("Protected infrastructure", 1.0f).copy(reasonCode = DecisionReason.ALLOWED)
-        }
-
         val isAdBlocking = isAdBlockingEnabled()
         val isAdultBlocking = isAdultBlockingEnabled()
-
-        // 1. Check Ad / Tracker Detection (Option 1)
+        var shippedRuleDecision: BlockingDecision? = null
+        
+        // 1. Check Ad / Tracker Detection Static Rules
         if (isAdBlocking) {
-            // A. Static Seed List & Pre-default Patterns
             val (isAdSeed, seedReason) = adDetector.isAdDomain(domain)
             if (isAdSeed) {
-                return BlockingDecision(
+                shippedRuleDecision = BlockingDecision(
                     action = BlockingAction.BLOCK,
                     reason = seedReason,
                     confidence = 0.98f,
                     category = BlockingCategory.AD,
                     reasonCode = DecisionReason.STATIC_RULE
                 )
+            } else {
+                val rule = adDetector.matchRule(domain)
+                if (rule != null) {
+                    if (rule.action == com.unblocker.app.logic.rules.RuleAction.BLOCK) {
+                        shippedRuleDecision = BlockingDecision(
+                            action = BlockingAction.BLOCK,
+                            reason = "Shipped block rule",
+                            confidence = 0.98f,
+                            category = rule.category,
+                            reasonCode = DecisionReason.STATIC_RULE
+                        )
+                    } else if (rule.action == com.unblocker.app.logic.rules.RuleAction.ALLOW) {
+                        shippedRuleDecision = BlockingDecision(
+                            action = BlockingAction.ALLOW,
+                            reason = "Shipped allow rule",
+                            confidence = 1.0f,
+                            category = rule.category,
+                            reasonCode = DecisionReason.ALLOWED
+                        )
+                    }
+                }
             }
-
-            // B. Two-week adaptive multi-factor analysis
-            if (adDetector.matchRule(domain)?.action != com.unblocker.app.logic.rules.RuleAction.ALLOW) {
-                val adaptiveDecision = adaptiveBlockingEngine.evaluateDomain(domain)
-                if (adaptiveDecision.isBlocked) return adaptiveDecision
-            }
+        }
+        
+        if (shippedRuleDecision != null) return shippedRuleDecision
+        
+        // 2. NeverBlock Guard
+        if (com.unblocker.app.logic.analysis.NeverBlockPolicy.isNeverBlock(domain)) {
+            return BlockingDecision.allow("Protected infrastructure", 1.0f).copy(reasonCode = DecisionReason.ALLOWED)
+        }
+        
+        // 3. Adaptive learner
+        if (isAdBlocking) {
+            val adaptiveDecision = adaptiveBlockingEngine.evaluateDomain(domain)
+            if (adaptiveDecision.isBlocked) return adaptiveDecision
         }
 
         // 2. Check 18+ Adult Content Filtering (Option 2)

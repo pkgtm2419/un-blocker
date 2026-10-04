@@ -230,13 +230,28 @@ fun CompiledRuleSet.toRuleSet(): RuleSet {
  * Process-wide thread-safe lazy holder for the compiled [RuleSet].
  * Shared between UnblockerVpnService and HealthCheckService.
  */
+sealed class RuleSetStatus {
+    data class Loaded(val count: Int, val source: String) : RuleSetStatus()
+    data class Fallback(val reason: String) : RuleSetStatus()
+    object Failed : RuleSetStatus()
+}
+
 object RuleSetHolder {
     @Volatile
     private var cached: RuleSet? = null
+    
+    private val _status = kotlinx.coroutines.flow.MutableStateFlow<RuleSetStatus>(RuleSetStatus.Failed)
+    val status: kotlinx.coroutines.flow.StateFlow<RuleSetStatus> = _status
 
     fun get(context: Context): RuleSet {
-        return cached ?: synchronized(this) {
-            cached ?: load(context).also { cached = it }
+        val current = cached
+        if (current != null) return current
+        return synchronized(this) {
+            cached ?: load(context).also { 
+                if (it != fallbackRuleSet) {
+                    cached = it 
+                }
+            }
         }
     }
 
@@ -247,36 +262,54 @@ object RuleSetHolder {
     fun clearForTesting() {
         synchronized(this) { cached = null }
     }
+    
+    private val fallbackRuleSet: RuleSet by lazy {
+        val rules = com.unblocker.app.logic.AdDetector.defaultSeedRules.map {
+            DnsRule(RuleAction.BLOCK, RuleKind.SUFFIX, it, com.unblocker.app.domain.model.BlockingCategory.AD, 0)
+        }
+        val cr = CompiledRuleSet(rules)
+        cr.toRuleSet()
+    }
 
     private fun load(context: Context): RuleSet {
-        // 1. Try mmap via openFd (zero-copy from APK uncompressed asset)
+        return loadWithOpener { name -> context.assets.open(name) }
+    }
+    
+    fun loadWithOpener(openAsset: (String) -> java.io.InputStream): RuleSet {
+        var expectedSha256 = ""
         try {
-            context.assets.openFd("dns-rules.bin").use { fd ->
-                val channel = java.io.FileInputStream(fd.fileDescriptor).channel
-                val buffer = channel.map(FileChannel.MapMode.READ_ONLY, fd.startOffset, fd.length)
-                return RuleSet.fromByteBuffer(buffer)
+            openAsset("dns-rules-manifest.json").reader().use { reader ->
+                val text = reader.readText()
+                val json = org.json.JSONObject(text)
+                expectedSha256 = json.optString("binarySha256", "")
             }
-        } catch (_: Throwable) {
-            // openFd may fail on compressed assets or certain environments
+        } catch (e: Exception) {
+            if (e is VirtualMachineError) throw e
+            _status.value = RuleSetStatus.Fallback("manifest")
+            return fallbackRuleSet
         }
-
-        // 2. Try direct stream for dns-rules.bin
+        
         try {
-            context.assets.open("dns-rules.bin").use { input ->
-                val bytes = input.readBytes()
-                return RuleSet.fromByteArray(bytes)
+            val bytes = openAsset("dns-rules.bin").use { input -> input.readBytes() }
+            val md = java.security.MessageDigest.getInstance("SHA-256")
+            val digest = md.digest(bytes)
+            val actualSha256 = digest.joinToString("") { "%02x".format(it) }
+            
+            if (expectedSha256.isNotEmpty() && expectedSha256 != actualSha256) {
+                _status.value = RuleSetStatus.Fallback("integrity")
+                return fallbackRuleSet
             }
-        } catch (_: Throwable) {
-            // Fallback to TSV
+            val ruleSet = RuleSet.fromByteArray(bytes)
+            _status.value = RuleSetStatus.Loaded(ruleSet.ruleCount, "bin")
+            return ruleSet
+        } catch (e: java.io.IOException) {
+            _status.value = RuleSetStatus.Fallback("io")
+        } catch (e: IllegalArgumentException) {
+            _status.value = RuleSetStatus.Fallback("format")
+        } catch (e: RuntimeException) {
+            _status.value = RuleSetStatus.Fallback("runtime")
         }
-
-        // 3. Fallback to dns-rules.tsv
-        return try {
-            context.assets.open("dns-rules.tsv").reader().use { reader ->
-                CompiledRuleSet.fromTsv(reader).toRuleSet()
-            }
-        } catch (_: Throwable) {
-            RuleSet.empty()
-        }
+        
+        return fallbackRuleSet
     }
 }

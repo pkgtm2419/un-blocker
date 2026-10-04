@@ -16,12 +16,11 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
-permissions:
-  contents: write
-
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Validate Gradle Wrapper
@@ -98,7 +97,7 @@ jobs:
         shell: bash
         run: |
           if [ "${BUILD_TYPE}" = "release" ]; then
-            bash gradlew testDebugUnitTest lintDebug assembleRelease -Dorg.gradle.java.home="${JAVA_HOME}"
+            bash gradlew testDebugUnitTest lintDebug lintRelease assembleRelease -Dorg.gradle.java.home="${JAVA_HOME}"
           else
             bash gradlew testDebugUnitTest lintDebug assembleDebug -Dorg.gradle.java.home="${JAVA_HOME}"
           fi
@@ -120,6 +119,9 @@ jobs:
             fi
             if [ -n "${UB_RELEASE_SIGNER_SHA256}" ]; then
               bash scripts/verify-apk-signature.sh "${APK_PATH}" "${UB_RELEASE_SIGNER_SHA256}"
+            else
+              echo "Error: UB_RELEASE_SIGNER_SHA256 is required for production builds." >&2
+              exit 1
             fi
           else
             bash scripts/verify-apk-signature.sh "${APK_PATH}" "0686161d8dc3051bfda2e03dd0406e1a6cddadf38c976f606bd8c474a872374e"
@@ -157,3 +159,12 @@ jobs:
             --notes "${NOTES}" \
             ${PRERELEASE_FLAG} \
             --verify-tag
+
+      - name: Post-publish Verification
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UB_RELEASE_SIGNER_SHA256: ${{ vars.UB_RELEASE_SIGNER_SHA256 }}
+        shell: bash
+        run: |
+          bash scripts/verify-release.sh "${RELEASE_TAG}"
+

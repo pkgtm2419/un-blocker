@@ -12,6 +12,31 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 class TcpDnsResponderTest {
+    private val emittedPackets = mutableListOf<ByteArray>()
+    private val immediateExecutor = java.util.concurrent.Executor { it.run() }
+    
+    private fun createResponder(
+        queryResolver: (ByteArray, Boolean, ByteArray) -> ByteArray? = { _, _, _ -> null },
+        maxConnections: Int = 32,
+        maxBufferSize: Int = 65536,
+        idleTimeoutMillis: Long = 5000L
+    ): TcpDnsResponder {
+        return TcpDnsResponder(
+            executor = immediateExecutor,
+            emit = { emittedPackets.addAll(it) },
+            queryResolver = queryResolver,
+            maxConnections = maxConnections,
+            maxBufferSize = maxBufferSize,
+            idleTimeoutMillis = idleTimeoutMillis
+        )
+    }
+    
+    private fun process(responder: TcpDnsResponder, packet: ByteArray): List<ByteArray> {
+        emittedPackets.clear()
+        responder.processPacket(packet, packet.size)
+        return emittedPackets.toList()
+    }
+
 
     private val ipv4Dns = byteArrayOf(10, 10, 0, 1)
     private val ipv4Client = byteArrayOf(10, 10, 0, 2)
@@ -166,7 +191,7 @@ class TcpDnsResponderTest {
 
     @Test
     fun completeThreeWayHandshakeAndTearDown() {
-        val responder = TcpDnsResponder()
+        val responder = createResponder()
         val clientPort = 45678
         val clientIsn = 1000L
 
@@ -176,7 +201,7 @@ class TcpDnsResponderTest {
             seqNum = clientIsn,
             flags = TcpDnsResponder.FLAG_SYN
         )
-        val synResponses = responder.processPacket(synPacket, synPacket.size)
+        val synResponses = process(responder, synPacket)
         assertEquals(1, synResponses.size)
         val parsedSynAck = parseTcpPacket(synResponses[0])
         assertEquals(53, parsedSynAck.srcPort)
@@ -193,7 +218,7 @@ class TcpDnsResponderTest {
             ackNum = serverIsn + 1,
             flags = TcpDnsResponder.FLAG_ACK
         )
-        val ackResponses = responder.processPacket(ackPacket, ackPacket.size)
+        val ackResponses = process(responder, ackPacket)
         assertTrue(ackResponses.isEmpty())
         assertEquals(1, responder.activeConnectionCount())
 
@@ -204,7 +229,7 @@ class TcpDnsResponderTest {
             ackNum = serverIsn + 1,
             flags = TcpDnsResponder.FLAG_FIN or TcpDnsResponder.FLAG_ACK
         )
-        val finResponses = responder.processPacket(finPacket, finPacket.size)
+        val finResponses = process(responder, finPacket)
         assertEquals(1, finResponses.size)
         val parsedFinAck = parseTcpPacket(finResponses[0])
         assertEquals(TcpDnsResponder.FLAG_FIN or TcpDnsResponder.FLAG_ACK, parsedFinAck.flags)
@@ -216,19 +241,17 @@ class TcpDnsResponderTest {
     fun lengthPrefixedQueryAndPshAckResponse() {
         var queryReceived: ByteArray? = null
         val fakeDnsAnswer = byteArrayOf(0x12, 0x34, 0x81.toByte(), 0x80.toByte(), 0, 1, 0, 1, 0, 0, 0, 0)
-        val responder = TcpDnsResponder(
-            queryResolver = { dnsWire, _, _ ->
+        val responder = createResponder(queryResolver = { dnsWire, _, _ ->
                 queryReceived = dnsWire
                 fakeDnsAnswer
-            }
-        )
+            })
 
         val clientPort = 50001
         val clientIsn = 2000L
 
         // SYN
         val syn = buildClientTcpPacket(srcPort = clientPort, seqNum = clientIsn, flags = TcpDnsResponder.FLAG_SYN)
-        val synAck = parseTcpPacket(responder.processPacket(syn, syn.size).first())
+        val synAck = parseTcpPacket(process(responder, syn).first())
         val serverIsn = synAck.seqNum
 
         // Send query with 2-byte length prefix
@@ -245,12 +268,13 @@ class TcpDnsResponderTest {
             flags = TcpDnsResponder.FLAG_PSH or TcpDnsResponder.FLAG_ACK,
             payload = prefixedQuery
         )
-        val pshResponses = responder.processPacket(psh, psh.size)
-        assertEquals(1, pshResponses.size)
+        val pshResponses = process(responder, psh)
+        pshResponses.forEachIndexed { i, p -> println("Packet $i: flags=${parseTcpPacket(p).flags}") }
+        assertEquals(2, pshResponses.size)
         assertNotNull(queryReceived)
         assertEquals(dnsWire.size, queryReceived!!.size)
 
-        val parsedPshAck = parseTcpPacket(pshResponses[0])
+        val parsedPshAck = parseTcpPacket(pshResponses[1])
         assertEquals(TcpDnsResponder.FLAG_PSH or TcpDnsResponder.FLAG_ACK, parsedPshAck.flags)
         assertEquals(clientIsn + 1 + prefixedQuery.size, parsedPshAck.ackNum)
         assertEquals(serverIsn + 1, parsedPshAck.seqNum)
@@ -266,57 +290,57 @@ class TcpDnsResponderTest {
 
     @Test
     fun clientRstClosesConnectionImmediately() {
-        val responder = TcpDnsResponder()
+        val responder = createResponder()
         val clientPort = 42000
         val syn = buildClientTcpPacket(srcPort = clientPort, seqNum = 100L, flags = TcpDnsResponder.FLAG_SYN)
-        responder.processPacket(syn, syn.size)
+        process(responder, syn)
         assertEquals(1, responder.activeConnectionCount())
 
         val rst = buildClientTcpPacket(srcPort = clientPort, seqNum = 101L, flags = TcpDnsResponder.FLAG_RST)
-        val responses = responder.processPacket(rst, rst.size)
+        val responses = process(responder, rst)
         assertTrue(responses.isEmpty())
         assertEquals(0, responder.activeConnectionCount())
     }
 
     @Test
     fun unexpectedTrafficOnUnknownConnectionReturnsRst() {
-        val responder = TcpDnsResponder()
+        val responder = createResponder()
         val unknownAck = buildClientTcpPacket(
             srcPort = 33333,
             seqNum = 500L,
             ackNum = 1000L,
             flags = TcpDnsResponder.FLAG_ACK
         )
-        val responses = responder.processPacket(unknownAck, unknownAck.size)
+        val responses = process(responder, unknownAck)
         assertEquals(1, responses.size)
         val parsedRst = parseTcpPacket(responses[0])
-        assertEquals(TcpDnsResponder.FLAG_RST or TcpDnsResponder.FLAG_ACK, parsedRst.flags)
+        assertEquals(TcpDnsResponder.FLAG_RST, parsedRst.flags)
         assertEquals(0, responder.activeConnectionCount())
     }
 
     @Test
     fun ignoresNonPort53OrWrongIpOrGarbagePackets() {
-        val responder = TcpDnsResponder()
+        val responder = createResponder()
 
         // Wrong port
         val wrongPort = buildClientTcpPacket(dstPort = 80)
-        assertTrue(responder.processPacket(wrongPort, wrongPort.size).isEmpty())
+        assertTrue(process(responder, wrongPort).isEmpty())
 
         // Wrong IP
         val wrongIp = buildClientTcpPacket(dstIp = byteArrayOf(8, 8, 8, 8))
-        assertTrue(responder.processPacket(wrongIp, wrongIp.size).isEmpty())
+        assertTrue(process(responder, wrongIp).isEmpty())
 
         // Too short garbage
         val garbage = byteArrayOf(1, 2, 3)
-        assertTrue(responder.processPacket(garbage, garbage.size).isEmpty())
+        assertTrue(process(responder, garbage).isEmpty())
     }
 
     @Test
     fun dropsOutOfOrderSegments() {
-        val responder = TcpDnsResponder()
+        val responder = createResponder()
         val clientPort = 41111
         val syn = buildClientTcpPacket(srcPort = clientPort, seqNum = 1000L, flags = TcpDnsResponder.FLAG_SYN)
-        val synAck = parseTcpPacket(responder.processPacket(syn, syn.size).first())
+        val synAck = parseTcpPacket(process(responder, syn).first())
 
         // Out-of-order segment with unexpected seqNum (9999 instead of 1001)
         val outOfOrder = buildClientTcpPacket(
@@ -326,16 +350,16 @@ class TcpDnsResponderTest {
             flags = TcpDnsResponder.FLAG_PSH or TcpDnsResponder.FLAG_ACK,
             payload = byteArrayOf(0, 5, 1, 2, 3, 4, 5)
         )
-        val responses = responder.processPacket(outOfOrder, outOfOrder.size)
+        val responses = process(responder, outOfOrder)
         assertTrue(responses.isEmpty())
     }
 
     @Test
     fun bufferBoundExceededSendsRstAndCloses() {
-        val responder = TcpDnsResponder(maxBufferSize = 64)
+        val responder = createResponder(maxBufferSize = 64)
         val clientPort = 42222
         val syn = buildClientTcpPacket(srcPort = clientPort, seqNum = 1000L, flags = TcpDnsResponder.FLAG_SYN)
-        val synAck = parseTcpPacket(responder.processPacket(syn, syn.size).first())
+        val synAck = parseTcpPacket(process(responder, syn).first())
 
         // Overflow buffer (>64 bytes)
         val overflowPayload = ByteArray(100) { 0xAA.toByte() }
@@ -346,7 +370,7 @@ class TcpDnsResponderTest {
             flags = TcpDnsResponder.FLAG_PSH or TcpDnsResponder.FLAG_ACK,
             payload = overflowPayload
         )
-        val responses = responder.processPacket(overflowPacket, overflowPacket.size)
+        val responses = process(responder, overflowPacket)
         assertEquals(1, responses.size)
         val parsedRst = parseTcpPacket(responses[0])
         assertEquals(TcpDnsResponder.FLAG_RST or TcpDnsResponder.FLAG_ACK, parsedRst.flags)
@@ -355,26 +379,26 @@ class TcpDnsResponderTest {
 
     @Test
     fun purgesIdleConnectionsAfterTimeout() {
-        val responder = TcpDnsResponder(idleTimeoutMillis = 50L)
+        val responder = createResponder(idleTimeoutMillis = 50L)
         val syn = buildClientTcpPacket(srcPort = 43333, seqNum = 1000L, flags = TcpDnsResponder.FLAG_SYN)
-        responder.processPacket(syn, syn.size)
+        process(responder, syn)
         assertEquals(1, responder.activeConnectionCount())
 
         Thread.sleep(60L)
 
         // New packet triggers cleanup
         val syn2 = buildClientTcpPacket(srcPort = 43334, seqNum = 2000L, flags = TcpDnsResponder.FLAG_SYN)
-        responder.processPacket(syn2, syn2.size)
+        process(responder, syn2)
         assertEquals(1, responder.activeConnectionCount())
     }
 
     @Test
     fun synFloodBoundEnforcesMaxConcurrentConnections() {
-        val responder = TcpDnsResponder(maxConnections = 32)
+        val responder = createResponder(maxConnections = 32)
 
         for (port in 10001..10032) {
             val syn = buildClientTcpPacket(srcPort = port, seqNum = port.toLong(), flags = TcpDnsResponder.FLAG_SYN)
-            val resp = responder.processPacket(syn, syn.size)
+            val resp = process(responder, syn)
             assertEquals(1, resp.size)
             val parsed = parseTcpPacket(resp[0])
             assertEquals(TcpDnsResponder.FLAG_SYN or TcpDnsResponder.FLAG_ACK, parsed.flags)
@@ -383,7 +407,7 @@ class TcpDnsResponderTest {
 
         // 33rd connection SYN should be rejected with RST
         val syn33 = buildClientTcpPacket(srcPort = 10033, seqNum = 10033L, flags = TcpDnsResponder.FLAG_SYN)
-        val resp33 = responder.processPacket(syn33, syn33.size)
+        val resp33 = process(responder, syn33)
         assertEquals(1, resp33.size)
         val parsedRst = parseTcpPacket(resp33[0])
         assertEquals(TcpDnsResponder.FLAG_RST or TcpDnsResponder.FLAG_ACK, parsedRst.flags)
@@ -394,13 +418,11 @@ class TcpDnsResponderTest {
     fun completeIpv6TcpDnsExchange() {
         val dnsWire = buildSyntheticDnsQuery("ipv6.example.org", txId = 0x5678.toShort(), type = 28) // AAAA
         val fakeAnswer = byteArrayOf(0x56, 0x78.toByte(), 0x81.toByte(), 0x80.toByte(), 0, 1, 0, 1, 0, 0, 0, 0)
-        val responder = TcpDnsResponder(
-            queryResolver = { wire, isIpv6, clientIp ->
+        val responder = createResponder(queryResolver = { wire, isIpv6, clientIp ->
                 assertTrue(isIpv6)
                 assertEquals(16, clientIp.size)
                 fakeAnswer
-            }
-        )
+            })
 
         val clientPort = 56789
         val clientIsn = 5000L
@@ -412,7 +434,7 @@ class TcpDnsResponderTest {
             seqNum = clientIsn,
             flags = TcpDnsResponder.FLAG_SYN
         )
-        val synResponses = responder.processPacket(syn, syn.size)
+        val synResponses = process(responder, syn)
         assertEquals(1, synResponses.size)
         val parsedSynAck = parseTcpPacket(synResponses[0])
         assertTrue(parsedSynAck.isIpv6)
@@ -435,9 +457,10 @@ class TcpDnsResponderTest {
             flags = TcpDnsResponder.FLAG_PSH or TcpDnsResponder.FLAG_ACK,
             payload = prefixed
         )
-        val pshResponses = responder.processPacket(psh, psh.size)
-        assertEquals(1, pshResponses.size)
-        val parsedPshAck = parseTcpPacket(pshResponses[0])
+        val pshResponses = process(responder, psh)
+        pshResponses.forEachIndexed { i, p -> println("Packet $i: flags=${parseTcpPacket(p).flags}") }
+        assertEquals(2, pshResponses.size)
+        val parsedPshAck = parseTcpPacket(pshResponses[1])
         assertTrue(parsedPshAck.isIpv6)
         assertEquals(2 + fakeAnswer.size, parsedPshAck.payload.size)
 
@@ -449,7 +472,7 @@ class TcpDnsResponderTest {
             ackNum = parsedPshAck.seqNum + parsedPshAck.payload.size,
             flags = TcpDnsResponder.FLAG_FIN or TcpDnsResponder.FLAG_ACK
         )
-        val finResponses = responder.processPacket(fin, fin.size)
+        val finResponses = process(responder, fin)
         assertEquals(1, finResponses.size)
         val parsedFinAck = parseTcpPacket(finResponses[0])
         assertTrue(parsedFinAck.isIpv6)

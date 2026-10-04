@@ -13,6 +13,8 @@ app/build/
 *.orig
 __pycache__/
 *.pyc
+*.pyo
+.pytest_cache/
 
 # Build binaries and signing material stay outside source control.
 *.apk

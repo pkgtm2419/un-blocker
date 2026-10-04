@@ -194,6 +194,18 @@ class UnblockerVpnService : VpnService() {
             val packetBuffer = bufferPool.acquire()
 
             val tcpResponder = com.unblocker.app.logic.dns.TcpDnsResponder(
+                executor = run.forwarding,
+                emit = { packets ->
+                    run.useWhileRunning {
+                        if (session.owns(run.owner)) synchronized(writeLock) {
+                            try {
+                                for (p in packets) outputStream?.write(p)
+                            } catch (e: Exception) {
+                                // Ignore
+                            }
+                        }
+                    }
+                },
                 queryResolver = { dnsWireBytes, isIpv6, clientIp ->
                     val wireQuery = DnsPacketUtil.parseWireQuery(dnsWireBytes, isIpv6, clientIp) ?: return@TcpDnsResponder null
                     val filterResult = filterEngine.analyzeAndFilter(wireQuery.domain)
@@ -244,20 +256,12 @@ class UnblockerVpnService : VpnService() {
                     if (length < 0) break
                     if (length == 0) continue
 
-                    val packetCopy = packetBuffer.copyOf(length)
+                    try {
+                        val packetCopy = packetBuffer.copyOf(length)
                     val query = DnsPacketUtil.parseIpPacket(packetCopy, length)
                     if (query == null) {
-                        val tcpResponses = tcpResponder.processPacket(packetCopy, length)
-                        if (tcpResponses.isNotEmpty()) {
-                            run.useWhileRunning {
-                                if (session.owns(run.owner)) synchronized(writeLock) {
-                                    for (resp in tcpResponses) {
-                                        outputStream?.write(resp)
-                                    }
-                                }
-                            }
-                            continue
-                        }
+                        try { tcpResponder.processPacket(packetCopy, length) } catch (e: Exception) { }
+                        continue
                         val errorPacket = DnsPacketUtil.buildErrorResponseIfApplicable(packetCopy, length)
                         if (errorPacket != null) {
                             run.useWhileRunning {
@@ -311,6 +315,9 @@ class UnblockerVpnService : VpnService() {
                                 // Saturation: drop this query; client DNS retries. Memory stays bounded.
                             }
                         }
+                    }
+                    } catch (e: Exception) {
+                        continue
                     }
                 }
             } finally {
@@ -499,6 +506,10 @@ class UnblockerVpnService : VpnService() {
 
         private val _privateDnsServerName = MutableStateFlow<String?>(null)
         val privateDnsServerName: StateFlow<String?> = _privateDnsServerName.asStateFlow()
+
+        fun shouldWarn(active: Boolean, serverName: String?): Boolean {
+            return serverName != null
+        }
 
         fun updatePrivateDnsState(active: Boolean, serverName: String?) {
             _isPrivateDnsActive.value = active

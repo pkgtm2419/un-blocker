@@ -6,7 +6,7 @@ Android 9.0 (API 28) introduced native "Private DNS" (DNS-over-TLS / DoT). This 
 ## Behavior Summary
 1. **Off**:
    - System sends all standard UDP/TCP DNS queries on port 53 directly to unblocker's local VPN addresses (`10.10.0.1:53` and `[fd00:1::1]:53`).
-   - **Protection Status**: 100% intercepted and filtered on-device.
+   - **Protection Status**: intercepted and filtered on-device.
 
 2. **Automatic (Opportunistic DoT)**:
    - Android tests whether the configured DNS resolver supports DNS-over-TLS (port 853).
@@ -22,27 +22,21 @@ Android 9.0 (API 28) introduced native "Private DNS" (DNS-over-TLS / DoT). This 
 
 ---
 
-## Device Test Matrix
+## Expected behaviour (UNVERIFIED hypotheses)
 
 | Android Version | Target / Device | Private DNS Setting | LinkProperties Signal | Query Route | Intercepted by unblocker? | Notes |
 |:---|:---|:---|:---|:---|:---|:---|
 | **Android 9 (API 28)** | Generic / AOSP Emulated | Off | `isPrivateDnsActive = false` | Port 53 -> `10.10.0.1` | **YES** | Intercepted & filtered |
 | **Android 9 (API 28)** | Generic / AOSP Emulated | Automatic | `isPrivateDnsActive = false` (fallback) | Port 53 -> `10.10.0.1` | **YES** | Opportunistic DoT fails to tunnel IP; cleartext fallback captured |
 | **Android 9 (API 28)** | Generic / AOSP Emulated | Strict Hostname | `isPrivateDnsActive = true` | Port 853 -> Underlying Net | **NO (Bypassed)** | Warning banner displayed; directs user to Network Settings |
-| **Android 11 (API 30)** | Pixel 4a / Physical & Emulated | Off | `isPrivateDnsActive = false` | Port 53 -> `10.10.0.1` | **YES** | Intercepted & filtered |
-| **Android 11 (API 30)** | Pixel 4a / Physical & Emulated | Automatic | `isPrivateDnsActive = false` | Port 53 -> `10.10.0.1` | **YES** | Intercepted & filtered |
-| **Android 11 (API 30)** | Pixel 4a / Physical & Emulated | Strict Hostname | `isPrivateDnsActive = true` | Port 853 -> Underlying Net | **NO (Bypassed)** | Warning banner displayed |
-| **Android 13 (API 33)** | Pixel 6 / Physical | Off | `isPrivateDnsActive = false` | Port 53 -> `10.10.0.1` & `fd00:1::1` | **YES** | Intercepted & filtered |
-| **Android 13 (API 33)** | Pixel 6 / Physical | Automatic | `isPrivateDnsActive = false` | Port 53 -> `10.10.0.1` & `fd00:1::1` | **YES** | Dual-stack IPv4/IPv6 intercepted |
-| **Android 13 (API 33)** | Pixel 6 / Physical | Strict Hostname | `isPrivateDnsActive = true` | Port 853 -> Underlying Net | **NO (Bypassed)** | Warning banner displayed |
-| **Android 14 (API 34)** | Samsung Galaxy / Physical | Strict Hostname | `isPrivateDnsActive = true` | Port 853 -> Underlying Net | **NO (Bypassed)** | Warning banner displayed |
-| **Android 15 (API 35)** | Pixel 8 / Emulated | Strict Hostname | `isPrivateDnsActive = true` | Port 853 -> Underlying Net | **NO (Bypassed)** | Warning banner displayed |
-| **Android 16 (API 36)** | Vanilla Preview / Emulated | Off / Strict | As above | As above | As above | System behavior preserved |
+| **Android 11 (API 30)** 
 
----
+(Table to be filled from real runs only.)
 
-## Detection and User Guidance
-- The app detects `linkProperties.isPrivateDnsActive` and `linkProperties.privateDnsServerName` on API 28+ through `ConnectivityManager.NetworkCallback`.
-- When active, the UI displays a warning banner:
-  > *"Private DNS is active — encrypted queries may bypass local filtering"*
-- A button allows the user to open system network settings (`Settings.ACTION_WIRELESS_SETTINGS`) to adjust Private DNS to "Off" or "Automatic" if they want local on-device rule evaluation and ad/tracker protection.
+### Test Procedure (as per Spec §6.3)
+For each of: Private DNS Off / Automatic / Strict hostname, on at least two Android versions:
+```bash
+adb shell settings get global private_dns_mode
+adb shell settings get global private_dns_specifier
+```
+With protection ON, open `http://pagead2.googlesyndication.com/` in a browser. Record device, Android version, mode, result, and what `LinkProperties.isPrivateDnsActive / privateDnsServerName` reported.

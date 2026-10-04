@@ -87,7 +87,7 @@ Implementation progress and verification: [phase tracker](docs/improvement-progr
 
 - Evidence-based local learning: independent observation windows and corroborating signals; installation age never authorizes blocking.
 - Asynchronous write-behind persistence: eliminates fsync disk bottlenecks and global lock contention from the DNS packet classification hot path.
-- In-memory volatile alias cache: prevents persistent CNAME poisoning from forged upstream responses.
+- Stops observing trusted alias changes to prevent persistent CNAME poisoning from forged upstream responses.
 - Capacity for up to 20,000 learned reputation entries.
 - Weak evidence expires after seven days; confirmed evidence expires after 30 days without renewed confirmation.
 - Android Keystore-backed HMAC-SHA256 identifiers.

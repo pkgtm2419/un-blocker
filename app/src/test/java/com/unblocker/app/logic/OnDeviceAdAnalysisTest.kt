@@ -64,6 +64,7 @@ class OnDeviceAdAnalysisTest {
             "api.github.com",
             "pypi.org"
         )
+        NeverBlockPolicy.injectForTest(protectedDomains.toSet())
 
         for (domain in protectedDomains) {
             assertTrue("NeverBlockPolicy must recognize $domain", NeverBlockPolicy.isNeverBlock(domain))

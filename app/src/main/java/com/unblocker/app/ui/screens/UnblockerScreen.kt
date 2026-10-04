@@ -38,6 +38,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PowerSettingsNew
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -125,6 +127,7 @@ fun UnblockerScreen(
 
     val adultBlockingEnabled by preferences.adultBlockingEnabled.collectAsState()
     val isPrivateDnsActive by UnblockerVpnService.isPrivateDnsActive.collectAsState()
+    val privateDnsServerName by UnblockerVpnService.privateDnsServerName.collectAsState()
 
     LaunchedEffect(Unit) {
         UnblockerVpnService.checkPrivateDns(context)
@@ -353,7 +356,7 @@ fun UnblockerScreen(
             }
 
             // A.7 Private DNS Warning Banner
-            if (isPrivateDnsActive) {
+            if (UnblockerVpnService.shouldWarn(isPrivateDnsActive, privateDnsServerName)) {
                 Spacer(modifier = Modifier.height(20.dp))
                 Card(
                     shape = RoundedCornerShape(16.dp),
@@ -441,6 +444,48 @@ fun UnblockerScreen(
                             uncheckedTrackColor = Slate800
                         )
                     )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Coverage & Limitations Card
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Slate900),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Slate800),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = 420.dp)
+            ) {
+                var expanded by remember { mutableStateOf(false) }
+                Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { expanded = !expanded },
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Coverage & limits", style = MaterialTheme.typography.titleSmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, color = Color(0xFFE2E8F0))
+                        Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = "Expand", tint = Slate400)
+                    }
+                    if (expanded) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "✅ Blocks ad-network domains in apps, games, and browsers\n" +
+                            "✅ Blocks tracker, telemetry, and analytics domains\n" +
+                            "✅ Blocks pop-under ad domains\n" +
+                            "❌ Cannot block ads served from the same domain as the content " +
+                                "(e.g. YouTube in-stream ads)\n" +
+                            "❌ Cannot block JavaScript-injected ads inside browser pages " +
+                                "— use a browser extension (uBlock Origin) for that\n" +
+                            "❌ Cannot block ads when Private DNS strict mode is on " +
+                                "(see warning above)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Slate400
+                        )
+                    }
                 }
             }
 

@@ -35,7 +35,7 @@ class HealthCheckService(private val context: Context) {
         // Fixed local smoke cases detect rule regressions; they do not measure real-world effectiveness.
         val testAdDomains = listOf(
             "googleads.g.doubleclick.net", "adservice.google.com", "pagead2.googlesyndication.com",
-            "applovin.com", "unityads.unity3d.com", "vungle.com", "criteo.com", "taboola.com"
+            "a.applovin.com", "unityads.unity3d.com", "vungle.com", "criteo.com", "taboola.com"
         )
         val testAdultDomains = listOf(
             "pornhub.com", "xvideos.com", "xnxx.com", "chaturbate.com", "stripchat.com"

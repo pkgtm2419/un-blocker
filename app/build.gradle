@@ -142,10 +142,12 @@ tasks.register('compileDnsRules', Exec) {
         'app/src/main/assets/ad_domains.txt', 'app/src/main/assets/adult_domains.txt',
         'app/src/main/assets/public_suffix_list.dat'))
     outputs.dir "$buildDir/generated/dns-assets"
+    outputs.dir "$buildDir/generated/dns-test"
     def pythonExec = System.getenv('UB_BLOCKER_PYTHON') ?: (System.getProperty('os.name').toLowerCase().contains('windows') ? 'python' : 'python3')
     commandLine(pythonExec,
         rootProject.file('tools/filter-compiler/compiler.py'), '--root', rootProject.projectDir,
-        '--output', file("$buildDir/generated/dns-assets"))
+        '--output-assets', file("$buildDir/generated/dns-assets"),
+        '--output-test', file("$buildDir/generated/dns-test"))
 }
 tasks.named('preBuild').configure { dependsOn 'compileDnsRules' }
 

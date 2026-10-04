@@ -57,16 +57,21 @@ class AdDetector(
             return CompiledRuleSet(rules).toRuleSet()
         }
 
-        private val fallback = listOf(
+        val defaultSeedRules = listOf(
             "doubleclick.net", "googleads.g.doubleclick.net", "adservice.google.com",
             "pagead2.googlesyndication.com", "pubads.g.doubleclick.net", "admob.com",
-            "applovin.com", "unityads.unity3d.com", "vungle.com", "inmobi.com", "ironsrc.com",
-            "criteo.com", "taboola.com", "outbrain.com", "adnxs.com", "adjust.com", "appsflyer.com",
-            "branch.io", "kochava.com", "flurry.com", "mixpanel.com", "segment.io", "amplitude.com",
-            "hotjar.com", "clarity.ms", "recrampwiped.com", "adsboosters.xyz", "hedeuntacks.com",
+            "a.applovin.com", "unityads.unity3d.com", "vungle.com", "inmobi.com", "ironsrc.com",
+            "criteo.com", "taboola.com", "outbrain.com", "adnxs.com", "app.adjust.com", "appsflyer.com",
+            "branch.io", "kochava.com", "flurry.com", "api.mixpanel.com", "api.segment.io", "api.amplitude.com",
+            "static.hotjar.com", "clarity.ms", "recrampwiped.com", "adsboosters.xyz", "hedeuntacks.com",
             "legbaratwind.com", "ronracepub.com", "popads.net", "popcash.net", "adsterra.com",
             "propellerads.com", "monetag.com", "clickadu.com", "hilltopads.com", "galaksion.com",
-            "admaven.com", "onclickads.net", "droplink.co", "openx.net"
+            "admaven.com", "onclickads.net", "droplink.co", "openx.net",
+            "mintegral.com", "rayjump.com", "ironsource.com", "pangle.io",
+            "chartboost.com", "fyber.com", "tapjoy.com", "an.facebook.com",
+            "atlassbx.com", "mopub.com", "advertising.apple.com"
         )
+        
+        val fallback = defaultSeedRules
     }
 }

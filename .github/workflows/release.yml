@@ -168,3 +168,25 @@ jobs:
         run: |
           bash scripts/verify-release.sh "${RELEASE_TAG}"
 
+      - name: Update README.md with new release links
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git checkout main
+
+          sed -i "s|Download-APK%20(v[0-9\.]*)|Download-APK%20(v${VERSION_NAME})|g" README.md
+          sed -i "s|download/[^/]*/ub-blocker-[0-9\.]*\.apk|download/${RELEASE_TAG}/ub-blocker-${VERSION_NAME}.apk|g" README.md
+          sed -i "s|Download_APK-ub--blocker--[0-9\.]*\.apk|Download_APK-ub--blocker--${VERSION_NAME}.apk|g" README.md
+          sed -i "s|\*\*[\`]*ub-blocker-[0-9\.]*\.apk[\`]*\*\*|\*\*\`ub-blocker-${VERSION_NAME}.apk\`\*\*|g" README.md
+          sed -i "s|Release \`[^\`]*\` Notes|Release \`${RELEASE_TAG}\` Notes|g" README.md
+          sed -i "s|releases/tag/[^)]*|releases/tag/${RELEASE_TAG}|g" README.md
+
+          git add README.md
+          if ! git diff --cached --quiet; then
+            git commit -m "docs: update download links for ${RELEASE_TAG} [skip ci]"
+            git push origin main
+          fi

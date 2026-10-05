@@ -7,6 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -16,11 +17,30 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+data class GroupedLogEntry(
+    val domain: String,
+    val count: Int,
+    val latestTimestamp: Long,
+    val isBlocked: Boolean
+)
+
 @Composable
 fun LogViewerScreen(
     viewModel: LogViewModel = hiltViewModel()
 ) {
     val logs by viewModel.recentLogs.collectAsState()
+    
+    val groupedLogs = remember(logs) {
+        logs.groupBy { it.domain }.map { (domain, logsForDomain) ->
+            val latestLog = logsForDomain.maxByOrNull { it.timestamp } ?: logsForDomain.first()
+            GroupedLogEntry(
+                domain = domain,
+                count = logsForDomain.size,
+                latestTimestamp = latestLog.timestamp,
+                isBlocked = latestLog.isBlocked
+            )
+        }.sortedByDescending { it.latestTimestamp }
+    }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Text(
@@ -29,11 +49,11 @@ fun LogViewerScreen(
         )
         Spacer(modifier = Modifier.height(16.dp))
         
-        if (logs.isEmpty()) {
+        if (groupedLogs.isEmpty()) {
             Text("No network logs found.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(logs) { log ->
+                items(groupedLogs) { log ->
                     LogEntryRow(
                         log = log,
                         onWhitelistClick = { viewModel.unblockDomain(log.domain) }
@@ -47,11 +67,11 @@ fun LogViewerScreen(
 
 @Composable
 fun LogEntryRow(
-    log: DnsLogEntity,
+    log: GroupedLogEntry,
     onWhitelistClick: () -> Unit
 ) {
     val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-    val formattedTime = timeFormat.format(Date(log.timestamp))
+    val formattedTime = timeFormat.format(Date(log.latestTimestamp))
 
     Row(
         modifier = Modifier
@@ -67,7 +87,7 @@ fun LogEntryRow(
                 color = if (log.isBlocked) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = "$formattedTime • ${if (log.isBlocked) "BLOCKED" else "ALLOWED"}",
+                text = "$formattedTime • ${if (log.isBlocked) "BLOCKED" else "ALLOWED"} • Calls: ${log.count}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

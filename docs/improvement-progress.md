@@ -28,3 +28,12 @@ All test suites pass deterministically offline:
 - **Compiler & Release Policy Tests**: 13 tests passing via `python3 -m unittest test_compiler test_release`.
 - **HAR Host Evaluation**: 2 tests passing via `python3 -m unittest tools/eval/test_har_hosts.py`.
 - **Binary Check**: Verified 0 tracked keystore/apk binaries via `scripts/check-no-binaries.sh`.
+
+## 4. Version 2.0.0 Fixes & Verification
+
+| Workstream | Objective | Status | Key Deliverables & Changes |
+| :--- | :--- | :--- | :--- |
+| **Fix 1** | Network Routing Restoration | **Complete** | Modified `VpnConfiguration.kt` to remove the overly broad `0.0.0.0/0` and `::/0` routes. Added specific routes for the internal fake DNS IPs (`10.10.0.1`, `fd00:1::1`) to correctly implement the split-tunnel DNS intercept without dropping standard non-DNS traffic. |
+| **Fix 2** | UI Component Collision Fix | **Complete** | Modified `MainScreen.kt` to correctly sequence the Notification Permission Request and VPN Permission Request. Fixed the silent Activity Launcher collision that prevented the main shield button from turning on the protection. |
+| **Fix 3** | Samsung One UI 9.0 Styling | **Complete** | Updated the `NavigationBar` in `MainScreen.kt` to have a modern, elevated, floating pill shape with rounded corners (32.dp), precise borders, and proper spacing mirroring One UI aesthetics. |
+| **Fix 4** | Log Deduplication | **Complete** | Updated `LogViewerScreen.kt` and created `GroupedLogEntry` to group incoming queries by domain. The logs UI now displays the total call count and the latest timestamp for each domain, rather than redundantly listing every individual request. |

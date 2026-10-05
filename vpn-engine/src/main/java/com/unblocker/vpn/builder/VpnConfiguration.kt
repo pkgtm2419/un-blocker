@@ -27,14 +27,15 @@ class VpnConfiguration(
         val builder = service.Builder()
             .setSession("UnblockerLocalVpn")
             .addAddress("10.0.0.2", 32)
-            .addRoute("0.0.0.0", 0)
-            .addRoute("::", 0)            // IPv6 route to intercept v6 DNS
+            .addAddress("fd00:1::2", 128)
+            .addRoute("10.10.0.1", 32)
+            .addRoute("fd00:1::1", 128)
             .setMtu(1500)
             .setBlocking(true)
 
-        upstreamServers.forEach { server ->
-            builder.addDnsServer(server.address)
-        }
+        // Set the tunnel's DNS servers so Android sends DNS requests here
+        builder.addDnsServer("10.10.0.1")
+        builder.addDnsServer("fd00:1::1")
 
         // Exclude our own app process to avoid VPN routing loops
         try {

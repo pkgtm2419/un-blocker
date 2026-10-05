@@ -153,12 +153,18 @@ jobs:
             NOTES="Production release for Un-Blocker v${VERSION_NAME}."
           fi
 
-          gh release create "${RELEASE_TAG}" "${RELEASE_ASSETS[@]}" \
-            --repo "${GITHUB_REPOSITORY}" \
-            --title "${TITLE}" \
-            --notes "${NOTES}" \
-            ${PRERELEASE_FLAG} \
-            --verify-tag
+          if gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "Release ${RELEASE_TAG} already exists. Updating assets..."
+            gh release upload "${RELEASE_TAG}" "${RELEASE_ASSETS[@]}" --clobber --repo "${GITHUB_REPOSITORY}"
+          else
+            echo "Creating new release ${RELEASE_TAG}..."
+            gh release create "${RELEASE_TAG}" "${RELEASE_ASSETS[@]}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --title "${TITLE}" \
+              --notes "${NOTES}" \
+              ${PRERELEASE_FLAG} \
+              --verify-tag
+          fi
 
       - name: Post-publish Verification
         env:

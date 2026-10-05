@@ -185,6 +185,7 @@ jobs:
           git checkout main
 
           sed -i "s|Download-APK%20(v[0-9\.]*)|Download-APK%20(v${VERSION_NAME})|g" README.md
+          sed -i "s|development-[0-9\.]*|development-${VERSION_NAME}|g" README.md
           sed -i "s|download/[^/]*/ub-blocker-[0-9\.]*\.apk|download/${RELEASE_TAG}/ub-blocker-${VERSION_NAME}.apk|g" README.md
           sed -i "s|Download_APK-ub--blocker--[0-9\.]*\.apk|Download_APK-ub--blocker--${VERSION_NAME}.apk|g" README.md
           sed -i "s|\*\*[\`]*ub-blocker-[0-9\.]*\.apk[\`]*\*\*|\*\*\`ub-blocker-${VERSION_NAME}.apk\`\*\*|g" README.md

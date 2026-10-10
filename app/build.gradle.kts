@@ -46,6 +46,7 @@ if (hasAnyReleaseSigningValue && !hasReleaseSigning) {
 android {
     namespace = "com.unblocker.app"
     compileSdk = 35
+    buildToolsVersion = "35.0.0"
 
     defaultConfig {
         applicationId = "com.unblocker.app"
@@ -143,18 +144,8 @@ val copyLegalAssets by tasks.registering(Copy::class) {
 tasks.named("preBuild").configure { dependsOn(copyLegalAssets) }
 
 val compileDnsRules by tasks.registering(Exec::class) {
-    inputs.files(
-        rootProject.files(
-            "tools/filter-compiler/compiler.py",
-            "tools/filter-compiler/sources.json",
-            "tools/filter-compiler/allow.txt",
-            "tools/filter-compiler/never_block.txt",
-            "tools/filter-compiler/vendor/stevenblack/21605ccaecf26941005d4a7a3c1267af234599cf/list.txt",
-            "app/src/main/assets/ad_domains.txt",
-            "app/src/main/assets/adult_domains.txt",
-            "app/src/main/assets/public_suffix_list.dat"
-        )
-    )
+    inputs.dir(rootProject.file("tools/filter-compiler")).withPropertyName("filterCompiler")
+    inputs.files(fileTree("src/main/assets") { include("*.txt", "*.dat") }).withPropertyName("assets")
     outputs.dir("${layout.buildDirectory.get()}/generated/dns-assets")
     outputs.dir("${layout.buildDirectory.get()}/generated/dns-test")
 

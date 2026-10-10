@@ -1,14 +1,15 @@
 *.iml
-.gradle
+.gradle/
 .kotlin/
 /local.properties
+local.properties
 /.idea/
 .DS_Store
 /build
+**/build/
 /captures
 .externalNativeBuild
 .cxx
-app/build/
 *.hprof
 *.orig
 __pycache__/
@@ -18,9 +19,14 @@ __pycache__/
 
 # Build binaries and signing material stay outside source control.
 *.apk
+*.aab
 *.jks
 *.keystore
-jdk-17.0.8.1+1/
-jdk.tar.gz
-jdk-17.0.8.1+1/
-jdk.tar.gz
+*.p12
+*.pfx
+*.so
+*.dex
+*.class
+jdk*/
+*.tar.gz
+.env

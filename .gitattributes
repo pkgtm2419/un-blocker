@@ -1,7 +1,11 @@
-app/src/main/assets/*.txt text eol=lf
-app/src/main/assets/*.dat text eol=lf
-tools/filter-compiler/*.json text eol=lf
-scripts/*.sh text eol=lf
-scripts/*.py text eol=lf
-.github/workflows/*.yml text eol=lf
-gradlew text eol=lf
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.png binary
+*.jpg binary
+*.webp binary
+*.jar binary
+*.bin binary
+*.tflite binary
+*.keystore binary
+*.jks binary

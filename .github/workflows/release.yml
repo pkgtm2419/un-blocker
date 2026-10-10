@@ -3,201 +3,237 @@ name: Publish release APK
 on:
   push:
     tags:
-      - 'test-v*'
-      - 'v*'
+      - 'test-v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+'
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Release tag to publish (leave empty to use current ref)'
-        required: false
+        description: 'Existing tag to build (dry run) or publish'
+        required: true
         type: string
+      dry_run:
+        description: 'Build and verify only; do not publish'
+        required: true
+        type: boolean
+        default: true
+
+permissions: {}
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ inputs.tag_name || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
-  release:
+  preflight:
+    name: Preflight (tag, version, branch)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
-      contents: write
+      contents: read
+    outputs:
+      tag: ${{ steps.policy.outputs.tag }}
+      version: ${{ steps.policy.outputs.version }}
+      build_type: ${{ steps.policy.outputs.build_type }}
+      prerelease: ${{ steps.policy.outputs.prerelease }}
+      environment: ${{ steps.policy.outputs.environment }}
+      apk_path: ${{ steps.policy.outputs.apk_path }}
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - name: Validate Gradle Wrapper
+      - name: Checkout tag (full history for the main-branch check)
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ inputs.tag_name && format('refs/tags/{0}', inputs.tag_name) || github.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate tag, version and branch policy
+        id: policy
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_TAG: ${{ inputs.tag_name }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          tag="${REF_NAME}"
+          if [ "${EVENT_NAME}" = "workflow_dispatch" ]; then tag="${INPUT_TAG}"; fi
+          python3 scripts/release-policy.py preflight --tag "${tag}" --github-output "${GITHUB_OUTPUT}"
+      - name: Repository hygiene
+        run: bash scripts/check-no-binaries.sh
+
+  verify:
+    name: Test, lint and R8 smoke build (no secrets)
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: refs/tags/${{ needs.preflight.outputs.tag }}
+          persist-credentials: false
+      - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@0bdd871935719febd78681f197cd39af5b6e16a6 # v4.2.2
-      - uses: actions/setup-java@3a4f6e1af504cf6a31855fa899c6aa5355ba6c12 # v4.7.0
+      - name: Dependency verification metadata must exist
+        run: test -s gradle/verification-metadata.xml
+      - name: Set up JDK 17
+        uses: actions/setup-java@3a4f6e1af504cf6a31855fa899c6aa5355ba6c12 # v4.7.0
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
         with:
-          packages: 'platforms;android-36 build-tools;36.0.0'
-      - name: Verify no tracked binaries
-        shell: bash
-        run: bash scripts/check-no-binaries.sh
-      - name: Validate tag and release policy
+          packages: 'platforms;android-35 build-tools;35.0.0'
+      - name: Tooling tests
+        run: |
+          set -euo pipefail
+          bash scripts/tests/run-all.sh
+          python3 -m unittest discover -s scripts -p 'test_*.py'
+          (cd tools/filter-compiler && python3 -m unittest discover -p 'test_*.py')
+      - name: Unit tests, lint and R8 smoke build
+        run: bash gradlew testDebugUnitTest lintDebug lintRelease assembleReleaseTest
+      - name: Upload reports (also on failure)
+        if: ${{ always() }}
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        with:
+          name: release-verify-reports-${{ github.run_id }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            **/build/reports/tests/
+            **/build/reports/lint-results-*.html
+
+  publish:
+    name: Sign, verify and publish
+    needs: [preflight, verify]
+    if: ${{ github.event_name == 'push' || inputs.dry_run == false }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: ${{ needs.preflight.outputs.environment }}
+    permissions:
+      contents: write # create the GitHub release and upload its assets (only job with write access)
+    env:
+      TAG: ${{ needs.preflight.outputs.tag }}
+      VERSION_NAME: ${{ needs.preflight.outputs.version }}
+      BUILD_TYPE: ${{ needs.preflight.outputs.build_type }}
+      PRERELEASE: ${{ needs.preflight.outputs.prerelease }}
+      APK_PATH: ${{ needs.preflight.outputs.apk_path }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: refs/tags/${{ needs.preflight.outputs.tag }}
+          persist-credentials: false
+      - name: Set up JDK 17
+        uses: actions/setup-java@3a4f6e1af504cf6a31855fa899c6aa5355ba6c12 # v4.7.0
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+        with:
+          packages: 'platforms;android-35 build-tools;35.0.0'
+      - name: Check signing secrets exist (names only are printed)
         env:
-          INPUT_TAG: ${{ inputs.tag_name }}
-          TEST_KEYSTORE_BASE64: ${{ secrets.UB_BLOCKER_TEST_KEYSTORE_BASE64 }}
+          UB_BLOCKER_KEYSTORE_BASE64: ${{ secrets.UB_BLOCKER_TEST_KEYSTORE_BASE64 }}
           UB_BLOCKER_KEYSTORE_PASSWORD: ${{ secrets.UB_BLOCKER_TEST_KEYSTORE_PASSWORD }}
           UB_BLOCKER_KEY_ALIAS: ${{ secrets.UB_BLOCKER_TEST_KEY_ALIAS }}
           UB_BLOCKER_KEY_PASSWORD: ${{ secrets.UB_BLOCKER_TEST_KEY_PASSWORD }}
-          RELEASE_KEYSTORE_BASE64: ${{ secrets.UB_RELEASE_KEYSTORE_BASE64 }}
+          UB_RELEASE_KEYSTORE_BASE64: ${{ secrets.UB_RELEASE_KEYSTORE_BASE64 }}
           UB_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.UB_RELEASE_KEYSTORE_PASSWORD }}
           UB_RELEASE_KEY_ALIAS: ${{ secrets.UB_RELEASE_KEY_ALIAS }}
           UB_RELEASE_KEY_PASSWORD: ${{ secrets.UB_RELEASE_KEY_PASSWORD }}
-        shell: bash
-        run: |
-          TAG="${GITHUB_REF_NAME}"
-          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ] && [ -n "${INPUT_TAG}" ]; then
-            TAG="${INPUT_TAG}"
-          fi
-          if ! [[ "${TAG}" =~ ^(v|test-v)[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Error: Invalid tag format '${TAG}'. Must match ^(v|test-v)[0-9]+\.[0-9]+\.[0-9]+$" >&2
-            exit 1
-          fi
-          export RELEASE_INPUT_TAG="${TAG}"
-          python3 scripts/release-policy.py
-
-      - name: Prepare signing keys
-        id: prepare_signing
+        run: python3 scripts/release-policy.py secrets --build-type "${BUILD_TYPE}"
+      - name: Prepare signing keystore
+        id: keys
         env:
           TEST_KEYSTORE_BASE64: ${{ secrets.UB_BLOCKER_TEST_KEYSTORE_BASE64 }}
           RELEASE_KEYSTORE_BASE64: ${{ secrets.UB_RELEASE_KEYSTORE_BASE64 }}
-        shell: bash
         run: |
+          set -euo pipefail
           umask 077
+          keystore="${RUNNER_TEMP}/ub-blocker-signing.keystore"
           if [ "${BUILD_TYPE}" = "release" ]; then
-            if [ -z "${RELEASE_KEYSTORE_BASE64}" ]; then
-              echo "Error: Release keystore secret is required for production builds." >&2
-              exit 1
-            fi
-            printf '%s' "${RELEASE_KEYSTORE_BASE64}" | base64 --decode > "${RUNNER_TEMP}/ub-blocker-release.keystore"
-            echo "release_keystore_path=${RUNNER_TEMP}/ub-blocker-release.keystore" >> "${GITHUB_OUTPUT}"
+            printf '%s' "${RELEASE_KEYSTORE_BASE64}" | base64 --decode > "${keystore}"
+            echo "release_keystore=${keystore}" >> "${GITHUB_OUTPUT}"
           else
-            if [ -z "${TEST_KEYSTORE_BASE64}" ]; then
-              echo "Error: Test keystore secret is required for test builds." >&2
-              exit 1
-            fi
-            printf '%s' "${TEST_KEYSTORE_BASE64}" | base64 --decode > "${RUNNER_TEMP}/ub-blocker-test.keystore"
-            echo "test_keystore_path=${RUNNER_TEMP}/ub-blocker-test.keystore" >> "${GITHUB_OUTPUT}"
+            printf '%s' "${TEST_KEYSTORE_BASE64}" | base64 --decode > "${keystore}"
+            echo "test_keystore=${keystore}" >> "${GITHUB_OUTPUT}"
           fi
-
-      - name: Test and build APK
+      - name: Build signed APK
         env:
-          JAVA_HOME: ${{ env.JAVA_HOME }}
-          UB_BLOCKER_KEYSTORE_FILE: ${{ steps.prepare_signing.outputs.test_keystore_path }}
+          UB_BLOCKER_KEYSTORE_FILE: ${{ steps.keys.outputs.test_keystore }}
           UB_BLOCKER_KEYSTORE_PASSWORD: ${{ secrets.UB_BLOCKER_TEST_KEYSTORE_PASSWORD }}
           UB_BLOCKER_KEY_ALIAS: ${{ secrets.UB_BLOCKER_TEST_KEY_ALIAS }}
           UB_BLOCKER_KEY_PASSWORD: ${{ secrets.UB_BLOCKER_TEST_KEY_PASSWORD }}
-          UB_RELEASE_KEYSTORE_FILE: ${{ steps.prepare_signing.outputs.release_keystore_path }}
+          UB_RELEASE_KEYSTORE_FILE: ${{ steps.keys.outputs.release_keystore }}
           UB_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.UB_RELEASE_KEYSTORE_PASSWORD }}
           UB_RELEASE_KEY_ALIAS: ${{ secrets.UB_RELEASE_KEY_ALIAS }}
           UB_RELEASE_KEY_PASSWORD: ${{ secrets.UB_RELEASE_KEY_PASSWORD }}
-        shell: bash
         run: |
+          set -euo pipefail
           if [ "${BUILD_TYPE}" = "release" ]; then
-            bash gradlew testDebugUnitTest lintDebug lintRelease assembleRelease --dependency-verification=off -Dorg.gradle.java.home="${JAVA_HOME}"
+            bash gradlew assembleRelease
           else
-            bash gradlew testDebugUnitTest lintDebug assembleDebug --dependency-verification=off -Dorg.gradle.java.home="${JAVA_HOME}"
+            bash gradlew assembleDebug
           fi
-
-      - name: Verify APK non-debuggable and signature
+      - name: Remove signing keystore
+        if: ${{ always() }}
+        run: rm -f "${RUNNER_TEMP}/ub-blocker-signing.keystore"
+      - name: Verify APK before publishing
         env:
           UB_RELEASE_SIGNER_SHA256: ${{ vars.UB_RELEASE_SIGNER_SHA256 }}
-        shell: bash
+          UB_TEST_SIGNER_SHA256: ${{ vars.UB_TEST_SIGNER_SHA256 || '0686161d8dc3051bfda2e03dd0406e1a6cddadf38c976f606bd8c474a872374e' }}
         run: |
+          set -euo pipefail
           test -f "${APK_PATH}"
-          export APKSIGNER="${ANDROID_HOME}/build-tools/36.0.0/apksigner"
-          export AAPT2="${ANDROID_HOME}/build-tools/36.0.0/aapt2"
-
+          build_tools="$(find "${ANDROID_HOME}/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
           if [ "${BUILD_TYPE}" = "release" ]; then
-            # Verify APK is not debuggable
-            if "${AAPT2}" dump badging "${APK_PATH}" | grep -q "application-debuggable"; then
-              echo "Error: Release APK must not be debuggable!" >&2
-              exit 1
+            if "${build_tools}/aapt2" dump badging "${APK_PATH}" | grep -q application-debuggable; then
+              echo "Release APK must not be debuggable" >&2; exit 1
             fi
-            if [ -n "${UB_RELEASE_SIGNER_SHA256}" ]; then
-              bash scripts/verify-apk-signature.sh "${APK_PATH}" "${UB_RELEASE_SIGNER_SHA256}"
-            else
-              echo "Error: UB_RELEASE_SIGNER_SHA256 is required for production builds." >&2
-              exit 1
-            fi
+            test -n "${UB_RELEASE_SIGNER_SHA256}" || { echo "Repository variable UB_RELEASE_SIGNER_SHA256 is required" >&2; exit 1; }
+            APKSIGNER="${build_tools}/apksigner" bash scripts/verify-apk-signature.sh "${APK_PATH}" "${UB_RELEASE_SIGNER_SHA256}"
           else
-            bash scripts/verify-apk-signature.sh "${APK_PATH}" "0686161d8dc3051bfda2e03dd0406e1a6cddadf38c976f606bd8c474a872374e"
+            APKSIGNER="${build_tools}/apksigner" bash scripts/verify-apk-signature.sh "${APK_PATH}" "${UB_TEST_SIGNER_SHA256}"
           fi
-
-      - name: Generate Checksums
-        shell: bash
+      - name: Checksums
         run: |
+          set -euo pipefail
           cd "$(dirname "${APK_PATH}")"
           sha256sum "$(basename "${APK_PATH}")" > SHA256SUMS
-          echo "CHECKSUM_PATH=$(dirname "${APK_PATH}")/SHA256SUMS" >> "${GITHUB_ENV}"
-
-      - name: Publish GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
+      - name: Publish (assets are immutable; no overwrite)
         run: |
-          RELEASE_ASSETS=("${APK_PATH}" "${CHECKSUM_PATH}")
-          MAPPING_PATH="app/build/outputs/mapping/release/mapping.txt"
-          if [ "${BUILD_TYPE}" = "release" ] && [ -f "${MAPPING_PATH}" ]; then
-            RELEASE_ASSETS+=("${MAPPING_PATH}")
+          set -euo pipefail
+          dir="$(dirname "${APK_PATH}")"
+          assets=("${APK_PATH}" "${dir}/SHA256SUMS")
+          if [ "${BUILD_TYPE}" = "release" ] && [ -f app/build/outputs/mapping/release/mapping.txt ]; then
+            assets+=("app/build/outputs/mapping/release/mapping.txt")
           fi
-
-          TITLE="Un-Blocker ${VERSION_NAME}"
-          if [ "${PRERELEASE_FLAG}" = "--prerelease" ]; then
-            TITLE="Un-Blocker ${VERSION_NAME} test build"
-            NOTES="Stable test-signed build. Not a production store release. APK signer SHA-256: 0686161d8dc3051bfda2e03dd0406e1a6cddadf38c976f606bd8c474a872374e."
+          if [ "${PRERELEASE}" = "true" ]; then
+            title="Un-Blocker ${VERSION_NAME} test build"
+            notes="Test-signed build for testing only (debuggable). Verify with SHA256SUMS."
+            flags=(--prerelease)
           else
-            NOTES="Production release for Un-Blocker v${VERSION_NAME}."
+            title="Un-Blocker ${VERSION_NAME}"
+            notes="Production release ${VERSION_NAME}. Verify with SHA256SUMS."
+            flags=()
           fi
-
-          if gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
-            echo "Release ${RELEASE_TAG} already exists. Updating assets..."
-            gh release upload "${RELEASE_TAG}" "${RELEASE_ASSETS[@]}" --clobber --repo "${GITHUB_REPOSITORY}"
+          if gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            count="$(gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" --json assets --jq '.assets | length')"
+            if [ "${count}" -gt 0 ]; then
+              echo "Release ${TAG} already has ${count} asset(s); published assets are immutable. Bump the version." >&2
+              exit 1
+            fi
+            gh release upload "${TAG}" "${assets[@]}" --repo "${GITHUB_REPOSITORY}"
+            gh release edit "${TAG}" --repo "${GITHUB_REPOSITORY}" --title "${title}" --notes "${notes}" "${flags[@]}"
           else
-            echo "Creating new release ${RELEASE_TAG}..."
-            gh release create "${RELEASE_TAG}" "${RELEASE_ASSETS[@]}" \
-              --repo "${GITHUB_REPOSITORY}" \
-              --title "${TITLE}" \
-              --notes "${NOTES}" \
-              ${PRERELEASE_FLAG} \
-              --verify-tag
+            gh release create "${TAG}" "${assets[@]}" --repo "${GITHUB_REPOSITORY}" \
+              --title "${title}" --notes "${notes}" --verify-tag "${flags[@]}"
           fi
-
-      - name: Post-publish Verification
+      - name: Post-publish verification (downloads and re-checks the published assets)
         env:
-          GH_TOKEN: ${{ github.token }}
           UB_RELEASE_SIGNER_SHA256: ${{ vars.UB_RELEASE_SIGNER_SHA256 }}
-        shell: bash
-        run: |
-          bash scripts/verify-release.sh "${RELEASE_TAG}"
-
-      - name: Update README.md with new release links
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git fetch origin main
-          git checkout main
-
-          sed -i "s|Download-APK%20(v[0-9\.]*)|Download-APK%20(v${VERSION_NAME})|g" README.md
-          sed -i "s|development-[0-9\.]*|development-${VERSION_NAME}|g" README.md
-          sed -i "s|\[Development [0-9\.]*\]|[Development ${VERSION_NAME}]|g" README.md
-          sed -i "s|Current source version: [0-9\.]*|Current source version: ${VERSION_NAME}|g" README.md
-          sed -i "s|published test APK: [0-9\.]*|published test APK: ${VERSION_NAME}|g" README.md
-          sed -i "s|ub-blocker-[0-9\.]*\.apk|ub-blocker-${VERSION_NAME}.apk|g" README.md
-          sed -i "s|download/[^/]*/ub-blocker-[0-9\.]*\.apk|download/${RELEASE_TAG}/ub-blocker-${VERSION_NAME}.apk|g" README.md
-          sed -i "s|Download_APK-ub--blocker--[0-9\.]*\.apk|Download_APK-ub--blocker--${VERSION_NAME}.apk|g" README.md
-          sed -i "s|\*\*[\`]*ub-blocker-[0-9\.]*\.apk[\`]*\*\*|\*\*\`ub-blocker-${VERSION_NAME}.apk\`\*\*|g" README.md
-          sed -i "s|Release \`[^\`]*\` Notes|Release \`${RELEASE_TAG}\` Notes|g" README.md
-          sed -i "s|releases/tag/[^)]*|releases/tag/${RELEASE_TAG}|g" README.md
-
-          git add README.md
-          if ! git diff --cached --quiet; then
-            git commit -m "docs: update download links for ${RELEASE_TAG} [skip ci]"
-            git push origin main
-          fi
+          UB_TEST_SIGNER_SHA256: ${{ vars.UB_TEST_SIGNER_SHA256 || '0686161d8dc3051bfda2e03dd0406e1a6cddadf38c976f606bd8c474a872374e' }}
+        run: bash scripts/verify-release.sh "${TAG}"

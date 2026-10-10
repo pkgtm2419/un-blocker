@@ -2,38 +2,96 @@ name: Android checks
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  build:
+  hygiene:
+    name: Repository hygiene and tooling tests
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - name: Validate Gradle Wrapper
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: No tracked binaries, build outputs or secrets
+        run: bash scripts/check-no-binaries.sh
+      - name: Script tests (release verification, hygiene)
+        run: bash scripts/tests/run-all.sh
+      - name: Release policy tests
+        run: python3 -m unittest discover -s scripts -p 'test_*.py' -v
+      - name: Rule compiler and evaluation tests
+        run: |
+          set -euo pipefail
+          (cd tools/filter-compiler && python3 -m unittest discover -p 'test_*.py' -v)
+          (cd tools/eval && python3 -m unittest discover -p 'test_*.py' -v)
+      - name: Rule compiler is deterministic
+        run: |
+          set -euo pipefail
+          for run in a b; do
+            python3 tools/filter-compiler/compiler.py --root . \
+              --output-assets "${RUNNER_TEMP}/rules-${run}/assets" --output-test "${RUNNER_TEMP}/rules-${run}/test"
+          done
+          diff -r "${RUNNER_TEMP}/rules-a" "${RUNNER_TEMP}/rules-b"
+
+  build:
+    name: Build, unit tests, lint and R8 smoke build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@0bdd871935719febd78681f197cd39af5b6e16a6 # v4.2.2
-      - uses: actions/setup-java@3a4f6e1af504cf6a31855fa899c6aa5355ba6c12 # v4.7.0
+      - name: Dependency verification metadata must exist
+        run: test -s gradle/verification-metadata.xml
+      - name: Set up JDK 17
+        uses: actions/setup-java@3a4f6e1af504cf6a31855fa899c6aa5355ba6c12 # v4.7.0
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
         with:
-          packages: 'platforms;android-36 build-tools;36.0.0'
-      - name: Verify no tracked binaries
-        shell: bash
-        run: bash scripts/check-no-binaries.sh
-      - name: Build and test
-        env:
-          JAVA_HOME: ${{ env.JAVA_HOME }}
-        run: bash gradlew testDebugUnitTest lintDebug assembleDebug --dependency-verification=off -Dorg.gradle.java.home="${JAVA_HOME}"
-      - uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+          packages: 'platforms;android-35 build-tools;35.0.0'
+      - name: Set up Gradle (cache)
+        uses: gradle/actions/setup-gradle@0bdd871935719febd78681f197cd39af5b6e16a6 # v4.2.2
         with:
-          name: ub-blocker-apk
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+      - name: Unit tests, lint and builds (dependency verification stays ON)
+        run: bash gradlew testDebugUnitTest lintDebug lintRelease assembleDebug assembleReleaseTest
+      - name: Upload reports (also on failure)
+        if: ${{ always() }}
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        with:
+          name: reports-${{ github.run_id }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            **/build/reports/tests/
+            **/build/reports/lint-results-*.html
+            **/build/test-results/
+      - name: Upload debug and R8-smoke APKs
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        with:
+          name: apks-${{ github.run_id }}
           if-no-files-found: error
+          retention-days: 14
           path: |
             app/build/outputs/apk/debug/ub-blocker-*.apk
-            app/build/reports/tests/testDebugUnitTest/
-            app/build/reports/lint-results-debug.*
+            app/build/outputs/apk/releaseTest/ub-blocker-*.apk

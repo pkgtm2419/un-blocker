@@ -4,7 +4,22 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
+    groups:
+      androidx:
+        patterns: ["androidx.*"]
+      kotlin-and-ksp:
+        patterns: ["org.jetbrains.kotlin*", "com.google.devtools.ksp*"]
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]

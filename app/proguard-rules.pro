@@ -1,6 +1,8 @@
 # Proguard rules for unblocker
 -keepattributes *Annotation*
 -dontwarn javax.annotation.**
+-dontwarn com.google.j2objc.annotations.**
+-dontwarn org.codehaus.mojo.animal_sniffer.IgnoreJRERequirement
 
 # WorkManager reflectively instantiates workers
 -keep class * extends androidx.work.ListenableWorker {

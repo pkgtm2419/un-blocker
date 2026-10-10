@@ -39,7 +39,7 @@ jobs:
       apk_path: ${{ steps.policy.outputs.apk_path }}
     steps:
       - name: Checkout tag (full history for the main-branch check)
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.tag_name && format('refs/tags/{0}', inputs.tag_name) || github.ref }}
           fetch-depth: 0
@@ -67,16 +67,16 @@ jobs:
       contents: read
     steps:
       - name: Checkout tag
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: refs/tags/${{ needs.preflight.outputs.tag }}
           persist-credentials: false
       - name: Validate Gradle wrapper
-        uses: gradle/actions/wrapper-validation@0bdd871935719febd78681f197cd39af5b6e16a6 # v4.2.2
+        uses: gradle/actions/wrapper-validation@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
       - name: Dependency verification metadata must exist
         run: test -s gradle/verification-metadata.xml
       - name: Set up JDK 17
-        uses: actions/setup-java@3a4f6e1af504cf6a31855fa899c6aa5355ba6c12 # v4.7.0
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin
           java-version: '17'
@@ -94,7 +94,7 @@ jobs:
         run: bash gradlew testDebugUnitTest lintDebug lintRelease assembleReleaseTest
       - name: Upload reports (also on failure)
         if: ${{ always() }}
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: release-verify-reports-${{ github.run_id }}
           if-no-files-found: warn
@@ -121,12 +121,12 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     steps:
       - name: Checkout tag
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: refs/tags/${{ needs.preflight.outputs.tag }}
           persist-credentials: false
       - name: Set up JDK 17
-        uses: actions/setup-java@3a4f6e1af504cf6a31855fa899c6aa5355ba6c12 # v4.7.0
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin
           java-version: '17'

@@ -16,7 +16,7 @@ room = "2.6.1"
 tflite = "2.16.1"
 guava = "33.2.1-android"
 hiltNavigationCompose = "1.2.0"
-hiltWork = "1.2.0"
+hiltWork = "1.4.0"
 archCoreTesting = "2.2.0"
 
 [libraries]

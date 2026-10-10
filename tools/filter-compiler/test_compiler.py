@@ -122,7 +122,7 @@ class CompilerTest(unittest.TestCase):
             valid_lines = [f"0.0.0.0 tracker{i}.com" for i in range(997)]
             invalid_lines = ["0.0.0.0 bad..domain1", "0.0.0.0 bad..domain2", "0.0.0.0 bad..domain3"]
             content = "\n".join(valid_lines + invalid_lines) + "\n"
-            hosts.write_text(content)
+            hosts.write_bytes(content.encode('utf-8'))
             manifest = {'sources': [{'id': 4, 'path': 'hosts.txt', 'license': 'MIT',
                 'revision': 'pinned-commit', 'sha256': hashlib.sha256(hosts.read_bytes()).hexdigest(),
                 'syntax': 'hosts', 'category': 'AD', 'url': 'https://example.test/hosts'}]}

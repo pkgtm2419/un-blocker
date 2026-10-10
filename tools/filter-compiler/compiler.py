@@ -113,7 +113,7 @@ def build_binary_ruleset(rows):
     return header + offsets_bytes + blob_bytes
 
 
-def compile_sources(root, manifest, output_assets_dir, output_test_dir):
+def compile_sources(root, manifest, output_assets_dir, output_test_dir=None):
     root = pathlib.Path(root).resolve()
     rows, sources, ids = set(), [], set()
     for entry in manifest['sources']:
@@ -237,7 +237,7 @@ def compile_sources(root, manifest, output_assets_dir, output_test_dir):
     (output_assets / 'dns-rules.bin').write_bytes(bin_bytes)
     (output_assets / 'dns-rules-manifest.json').write_bytes((json.dumps(result, sort_keys=True, indent=2) + '\n').encode())
     
-    output_test = pathlib.Path(output_test_dir)
+    output_test = pathlib.Path(output_test_dir) if output_test_dir is not None else output_assets
     output_test.mkdir(parents=True, exist_ok=True)
     (output_test / 'dns-rules.tsv').write_bytes(tsv_encoded)
 

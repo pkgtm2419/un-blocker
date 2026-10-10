@@ -15,43 +15,38 @@ class ReleasePolicyTest(unittest.TestCase):
 
     def test_matching_tags_and_apk_names(self):
         policy = self.policy()
-        test_secrets = {name: 'present' for name in policy.TEST_SIGNING_FIELDS}
-        release_secrets = {name: 'present' for name in policy.RELEASE_SIGNING_FIELDS}
-        test_release = policy.validate_release('1.4.1', 'test-v1.4.1', test_secrets)
-        self.assertEqual('ub-blocker-1.4.1.apk', test_release['apk_name'])
+        test_release = policy.validate_release('2.0.2', 'test-v2.0.2')
+        self.assertTrue(test_release['apk_path'].endswith('ub-blocker-2.0.2.apk'))
         self.assertEqual(True, test_release['prerelease'])
         self.assertEqual('debug', test_release['build_type'])
 
-        prod_release = policy.validate_release('1.4.1', 'v1.4.1', release_secrets)
-        self.assertEqual('ub-blocker-1.4.1.apk', prod_release['apk_name'])
+        prod_release = policy.validate_release('2.0.2', 'v2.0.2')
+        self.assertTrue(prod_release['apk_path'].endswith('ub-blocker-2.0.2.apk'))
         self.assertEqual(False, prod_release['prerelease'])
         self.assertEqual('release', prod_release['build_type'])
 
     def test_mismatched_or_injected_dispatch_tags_are_rejected(self):
         policy = self.policy()
-        secrets = {name: 'present' for name in policy.RELEASE_SIGNING_FIELDS}
         for tag in ['test-v1.2.2', 'main', 'v1.4.1\nINJECT=true', '$(touch unwanted)', 'v1.4.1-extra']:
             with self.assertRaises(ValueError):
-                policy.validate_release('1.4.1', tag, secrets)
+                policy.validate_release('2.0.2', tag)
 
     def test_every_signing_secret_is_required(self):
         policy = self.policy()
-        # Missing for test release
-        for missing in policy.TEST_SIGNING_FIELDS:
-            secrets = {name: 'present' for name in policy.TEST_SIGNING_FIELDS if name != missing}
-            with self.assertRaises(ValueError):
-                policy.validate_release('1.4.1', 'test-v1.4.1', secrets)
-        # Missing for production release
-        for missing in policy.RELEASE_SIGNING_FIELDS:
-            secrets = {name: 'present' for name in policy.RELEASE_SIGNING_FIELDS if name != missing}
-            with self.assertRaises(ValueError):
-                policy.validate_release('1.4.1', 'v1.4.1', secrets)
+        # Test missing secrets
+        for missing in policy.TEST_FIELDS:
+            env = {name: 'present' for name in policy.TEST_FIELDS if name != missing}
+            self.assertIn(missing, policy.missing_secrets(env, True))
+        # Production missing secrets
+        for missing in policy.RELEASE_FIELDS:
+            env = {name: 'present' for name in policy.RELEASE_FIELDS if name != missing}
+            self.assertIn(missing, policy.missing_secrets(env, False))
 
     def test_production_release_fails_if_only_test_keys_provided(self):
         policy = self.policy()
-        test_only = {name: 'present' for name in policy.TEST_SIGNING_FIELDS}
-        with self.assertRaises(ValueError):
-            policy.validate_release('1.4.1', 'v1.4.1', test_only)
+        test_only = {name: 'present' for name in policy.TEST_FIELDS}
+        missing = policy.missing_secrets(test_only, False)
+        self.assertEqual(list(policy.RELEASE_FIELDS), missing)
 
 
 if __name__ == '__main__':

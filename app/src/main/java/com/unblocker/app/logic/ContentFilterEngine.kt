@@ -33,6 +33,9 @@ class ContentFilterEngine(
     private val blocklistedDomains: PrivateDomainSet = DeviceLearning.blocklist(context),
     val adaptiveEngine: AdaptiveBlockingEngine = AdaptiveBlockingEngine(preferences, networkLearner)
 ) {
+    init {
+        com.unblocker.app.logic.analysis.NeverBlockPolicy.load(context)
+    }
 
     private val cnamePolicy = CnamePolicy(
         { preferences.adBlockingEnabled.value }, allowlistedDomains::contains, adDetector::matchRule

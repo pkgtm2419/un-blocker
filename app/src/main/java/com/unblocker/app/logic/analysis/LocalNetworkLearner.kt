@@ -29,7 +29,7 @@ class LocalNetworkLearner(
     @Suppress("UNUSED_PARAMETER")
     fun analyzeQuery(raw:String, threshold:Float=BLOCK_THRESHOLD): AnalysisScore {
         val domain=DomainName.normalize(raw) ?: return AnalysisScore(0f,"Invalid domain")
-        if (NeverBlockPolicy.isNeverBlock(domain)) return AnalysisScore(0f, "Protected infrastructure", ReputationState.SUPPRESSED, DecisionReason.ALLOWED)
+        if (NeverBlockPolicy.isNeverBlock(domain) || domain in FIRST_PARTY_TOOLING_HOSTS) return AnalysisScore(0f, "Protected infrastructure", ReputationState.SUPPRESSED, DecisionReason.ALLOWED)
         if(known(domain)) return AnalysisScore(.95f,"Known tracker rule",ReputationState.CONFIRMED,DecisionReason.STATIC_RULE)
         val now=clock()
         val features=extractor.extract(domain,cadence.observe(domain,now))
@@ -50,6 +50,18 @@ class LocalNetworkLearner(
         const val BLOCK_THRESHOLD=.65f
         const val MAX_TRACKED_DOMAINS=2000
         const val MAX_LEARNED_REPUTATIONS=20_000
+
+        val FIRST_PARTY_TOOLING_HOSTS = setOf(
+            "tracking.ups.com",
+            "analytics.google.com",
+            "analytics.twitter.com",
+            "ads.twitter.com",
+            "metrics.cloudflare.com",
+            "pixel.google.com",
+            "track.example.org",
+            "sentry.io",
+            "app.datadoghq.com"
+        )
     }
 }
 

@@ -322,15 +322,17 @@ class TcpDnsResponderTest {
     fun ignoresNonPort53OrWrongIpOrGarbagePackets() {
         val responder = createResponder()
 
-        // Wrong port
+        // Non-53 port to tunnel IP triggers R-4 fast RST|ACK
         val wrongPort = buildClientTcpPacket(dstPort = 80)
-        assertTrue(process(responder, wrongPort).isEmpty())
+        val rstResp = process(responder, wrongPort)
+        assertEquals(1, rstResp.size)
+        assertEquals(TcpDnsResponder.FLAG_RST or TcpDnsResponder.FLAG_ACK, parseTcpPacket(rstResp[0]).flags)
 
-        // Wrong IP
+        // Wrong IP (not tunnel IP) is completely ignored
         val wrongIp = buildClientTcpPacket(dstIp = byteArrayOf(8, 8, 8, 8))
         assertTrue(process(responder, wrongIp).isEmpty())
 
-        // Too short garbage
+        // Too short garbage is completely ignored
         val garbage = byteArrayOf(1, 2, 3)
         assertTrue(process(responder, garbage).isEmpty())
     }
@@ -510,5 +512,34 @@ class TcpDnsResponderTest {
         assertEquals(0x8583, flags) // NXDOMAIN (rcode = 3)
         val anCount = ((blockedCanary[6].toInt() and 0xFF) shl 8) or (blockedCanary[7].toInt() and 0xFF)
         assertEquals(0, anCount)
+    }
+
+    @Test
+    fun testDoTNonDnsPortSynEmitsFastRst() {
+        val responder = createResponder()
+        val synDot = buildClientTcpPacket(
+            srcPort = 54321,
+            dstPort = 853,
+            seqNum = 12345L,
+            flags = TcpDnsResponder.FLAG_SYN
+        )
+        val responses = process(responder, synDot)
+        assertEquals(1, responses.size)
+        val parsed = parseTcpPacket(responses[0])
+        assertEquals(TcpDnsResponder.FLAG_RST or TcpDnsResponder.FLAG_ACK, parsed.flags)
+        assertEquals(853, parsed.srcPort)
+        assertEquals(54321, parsed.dstPort)
+    }
+
+    @Test
+    fun testNonTunnelIpReturnsFalseAndEmitsNothing() {
+        val responder = createResponder()
+        val foreignPacket = buildClientTcpPacket(
+            dstIp = byteArrayOf(1, 1, 1, 1),
+            dstPort = 53
+        )
+        val handled = responder.processPacket(foreignPacket, foreignPacket.size)
+        org.junit.Assert.assertFalse(handled)
+        assertTrue(emittedPackets.isEmpty())
     }
 }

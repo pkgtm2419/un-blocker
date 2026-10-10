@@ -35,7 +35,7 @@
         </activity>
 
         <service
-            android:name="com.unblocker.vpn.service.UnblockerVpnService"
+            android:name="com.unblocker.app.services.UnblockerVpnService"
             android:exported="false"
             android:foregroundServiceType="specialUse"
             android:permission="android.permission.BIND_VPN_SERVICE">

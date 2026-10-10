@@ -108,7 +108,8 @@ import com.unblocker.app.ui.theme.TealAccent
 fun UnblockerScreen(
     preferences: FilteringPreferences,
     quickStartManager: QuickStartManager,
-    onRequestVpnPermission: () -> Unit
+    onRequestVpnPermission: () -> Unit,
+    contentPadding: androidx.compose.foundation.layout.PaddingValues = androidx.compose.foundation.layout.PaddingValues(0.dp)
 ) {
     val dimensions = LocalWindowDimensions.current
     val haptic = LocalHapticFeedback.current
@@ -190,7 +191,8 @@ fun UnblockerScreen(
                 .padding(
                     horizontal = if (dimensions.widthClass == WindowWidthClass.COMPACT) 24.dp else 48.dp,
                     vertical = 36.dp
-                ),
+                )
+                .padding(bottom = contentPadding.calculateBottomPadding() + 64.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {

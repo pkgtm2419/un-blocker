@@ -1,39 +1,39 @@
 package com.unblocker.app.ui
 
 import android.app.Activity
-import android.content.Context
 import android.net.VpnService
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.border
-import androidx.compose.material3.surfaceColorAtElevation
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import com.unblocker.app.data.preferences.FilteringPreferences
 import com.unblocker.app.services.QuickStartManager
+import com.unblocker.app.ui.components.FloatingPillNavBar
+import com.unblocker.app.ui.components.NavItem
+import com.unblocker.app.ui.logs.LogViewerScreen
 import com.unblocker.app.ui.screens.UnblockerScreen
 
+/**
+ * Main application host container with Samsung One UI 9 style floating pill navigation.
+ */
 @Composable
 fun MainScreen(
     preferences: FilteringPreferences,
@@ -48,7 +48,6 @@ fun MainScreen(
         if (result.resultCode == Activity.RESULT_OK) {
             quickStartManager.startBlockingServices(onPermissionRequired = {})
         } else {
-            // User cancelled or denied VPN permission
             preferences.setAdBlockingEnabled(false)
         }
     }
@@ -66,7 +65,6 @@ fun MainScreen(
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { _ ->
-        // Continue regardless of notification permission result
         launchVpn()
     }
 
@@ -75,7 +73,6 @@ fun MainScreen(
             androidx.core.content.ContextCompat.checkSelfPermission(
                 context, android.Manifest.permission.POST_NOTIFICATIONS
             ) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            // Wait for notification permission callback to launch VPN
             notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
         } else {
             launchVpn()
@@ -83,49 +80,37 @@ fun MainScreen(
     }
 
     var selectedTab by remember { mutableStateOf(0) }
+    val navItems = remember {
+        listOf(
+            NavItem(title = "Home", icon = Icons.Filled.Security),
+            NavItem(title = "Logs", icon = Icons.AutoMirrored.Filled.List)
+        )
+    }
 
-    Scaffold(
-        bottomBar = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
-                contentAlignment = androidx.compose.ui.Alignment.Center
-            ) {
-                NavigationBar(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(32.dp))
-                        .border(1.dp, androidx.compose.ui.graphics.Color(0xFF333333), androidx.compose.foundation.shape.RoundedCornerShape(32.dp)),
-                    containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp),
-                    tonalElevation = 8.dp
-                ) {
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Filled.Security, contentDescription = "Home") },
-                        label = { Text("Home") },
-                        selected = selectedTab == 0,
-                        onClick = { selectedTab = 0 }
-                    )
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Filled.List, contentDescription = "Logs") },
-                        label = { Text("Logs") },
-                        selected = selectedTab == 1,
-                        onClick = { selectedTab = 1 }
-                    )
-                }
-            }
-        }
-    ) { paddingValues ->
-        Surface(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+    val navBarBottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val contentPadding = PaddingValues(bottom = 64.dp + 16.dp + navBarBottomInset)
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Surface(modifier = Modifier.fillMaxSize()) {
             if (selectedTab == 0) {
                 UnblockerScreen(
                     preferences = preferences,
                     quickStartManager = quickStartManager,
-                    onRequestVpnPermission = requestPermissionsAndStart
+                    onRequestVpnPermission = requestPermissionsAndStart,
+                    contentPadding = contentPadding
                 )
             } else {
-                com.unblocker.app.ui.logs.LogViewerScreen()
+                LogViewerScreen(
+                    contentPadding = contentPadding
+                )
             }
         }
+
+        FloatingPillNavBar(
+            items = navItems,
+            selectedItem = selectedTab,
+            onItemSelected = { selectedTab = it },
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 }

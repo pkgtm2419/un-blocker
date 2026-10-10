@@ -15,7 +15,7 @@ class UnblockerApplication : Application(), Configuration.Provider {
     lateinit var workerFactory: HiltWorkerFactory
 
     @Inject
-    lateinit var workScheduler: com.unblocker.ml.worker.WorkScheduler
+    lateinit var domainLogDao: com.unblocker.data.db.dao.DomainLogDao
 
     lateinit var preferences: FilteringPreferences
         private set
@@ -30,10 +30,11 @@ class UnblockerApplication : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        com.unblocker.app.logic.analysis.NeverBlockPolicy.load(this)
+        com.unblocker.app.data.logs.QueryLogSink.init(domainLogDao)
+
         preferences = FilteringPreferences.getInstance(this)
         quickStartManager = QuickStartManager.getInstance(this)
         quickStartManager.loadDefaultConfiguration()
-
-        workScheduler.scheduleNightlyBatch()
     }
 }

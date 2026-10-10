@@ -109,14 +109,26 @@ class PrivateEvidenceStore(
         records.entries.removeAll { stale(it.value) }
     }
     private fun trim() {
-        val overflow = records.size - capacity
+        var overflow = records.size - capacity
         if (overflow <= 0) return
-        val it = records.iterator()
-        var removed = 0
-        while (it.hasNext() && removed < overflow) {
-            it.next()
-            it.remove()
-            removed++
+        // Evict non-confirmed records first so confirmed records survive bursts/floods
+        val itNonConfirmed = records.entries.iterator()
+        while (itNonConfirmed.hasNext() && overflow > 0) {
+            val entry = itNonConfirmed.next()
+            if (!entry.value.confirmed) {
+                itNonConfirmed.remove()
+                overflow--
+            }
+        }
+        // If still overflowing, evict oldest remaining records
+        if (overflow > 0) {
+            val itAny = records.iterator()
+            var removed = 0
+            while (itAny.hasNext() && removed < overflow) {
+                itAny.next()
+                itAny.remove()
+                removed++
+            }
         }
     }
 

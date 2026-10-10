@@ -98,6 +98,15 @@ class FilterRepository @Inject constructor(
         bloomFilterManager.reloadFilterFromDatabase()
     }
 
+    /**
+     * User-initiated block override: removes from whitelist if present and adds a USER block rule.
+     */
+    suspend fun blacklistDomain(domain: String) {
+        whitelistDao.removeEntry(domain)
+        blockRuleDao.insertRule(BlockRuleEntity(domain = domain, confidenceScore = 1.0f, source = RuleSource.USER.name))
+        bloomFilterManager.reloadFilterFromDatabase()
+    }
+
     /** Reactive flow of all user whitelist entries for the whitelist management screen. */
     val whitelistFlow: Flow<List<WhitelistEntity>> = whitelistDao.getWhitelistFlow()
 

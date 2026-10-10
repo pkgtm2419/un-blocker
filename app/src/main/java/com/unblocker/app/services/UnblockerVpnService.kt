@@ -209,6 +209,8 @@ class UnblockerVpnService : VpnService() {
                 queryResolver = { dnsWireBytes, isIpv6, clientIp ->
                     val wireQuery = DnsPacketUtil.parseWireQuery(dnsWireBytes, isIpv6, clientIp) ?: return@TcpDnsResponder null
                     val filterResult = filterEngine.analyzeAndFilter(wireQuery.domain)
+                    val wireDecision = if (filterResult.shouldBlock) 1 else 0
+                    com.unblocker.app.data.logs.QueryLogSink.record(wireQuery.domain, wireDecision, filterResult.detectionMethod.ordinal)
                     if (filterResult.shouldBlock) {
                         DnsPacketUtil.buildBlockedWireResponse(dnsWireBytes)
                     } else {
@@ -258,24 +260,28 @@ class UnblockerVpnService : VpnService() {
 
                     try {
                         val packetCopy = packetBuffer.copyOf(length)
-                    val query = DnsPacketUtil.parseIpPacket(packetCopy, length)
-                    if (query == null) {
-                        try { tcpResponder.processPacket(packetCopy, length) } catch (e: Exception) { }
-                        continue
-                        val errorPacket = DnsPacketUtil.buildErrorResponseIfApplicable(packetCopy, length)
-                        if (errorPacket != null) {
-                            run.useWhileRunning {
-                                if (session.owns(run.owner)) synchronized(writeLock) {
-                                    outputStream?.write(errorPacket)
+                        val query = DnsPacketUtil.parseIpPacket(packetCopy, length)
+                        if (query == null) {
+                            val consumed = try { tcpResponder.processPacket(packetCopy, length) } catch (e: Exception) { false }
+                            if (consumed) {
+                                continue
+                            }
+                            val errorPacket = DnsPacketUtil.buildErrorResponseIfApplicable(packetCopy, length)
+                            if (errorPacket != null) {
+                                run.useWhileRunning {
+                                    if (session.owns(run.owner)) synchronized(writeLock) {
+                                        outputStream?.write(errorPacket)
+                                    }
                                 }
                             }
+                            continue
                         }
-                        continue
-                    }
 
-                    // Autonomous local analysis
-                    if (!isRunning.get()) break
-                    val result = filterEngine.analyzeAndFilter(query.domain)
+                        // Autonomous local analysis
+                        if (!isRunning.get()) break
+                        val result = filterEngine.analyzeAndFilter(query.domain)
+                        val queryDecision = if (result.shouldBlock) 1 else 0
+                        com.unblocker.app.data.logs.QueryLogSink.record(query.domain, queryDecision, result.detectionMethod.ordinal)
 
                     if (result.shouldBlock) {
                         // Local blocked response.

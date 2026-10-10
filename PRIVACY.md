@@ -21,10 +21,19 @@ learning model or cloud synchronization. No learning data is sent to the develop
 - Volatile data: DNS packet buffers, cached DNS responses and short cadence windows
   used for classification. These disappear with the process. Raw names necessarily
   exist in RAM while DNS is processed.
+- Local domain logs: when enabled, query observations are aggregated in an on-device
+  local database (`unblocker_logs.db`) providing one entry per domain (`domain_stats`:
+  total counts, blocked/allowed counters, first/last seen) and bounded timestamp history
+  (`domain_events`: up to 50 recent events per domain, automatic 7-day retention pruning).
+  The database is local-only, excluded from backup and device transfer, and never
+  uploaded or synced. Logging can be paused or cleared at any time from the in-app
+  Logs tab. Domain names are never written to Logcat.
 
 HMAC identifiers are pseudonymous, not anonymous against a compromised device or
-an attacker who can use the app's key. The score store records no URLs, page
-contents, accounts, per-query timestamps or complete query history. Independent
+an attacker who can use the app's key. The adaptive evidence store records no URLs,
+page contents, accounts, per-query timestamps or complete query history. Optional
+local query logging is bounded (capped per domain and pruned after 7 days) and strictly
+confined to private on-device storage with user pause/clear controls. Independent
 local evidence windows replace calendar thresholds; no cloud or large language model is trained.
 
 App backup is disabled and explicit cloud/device-transfer exclusions cover private

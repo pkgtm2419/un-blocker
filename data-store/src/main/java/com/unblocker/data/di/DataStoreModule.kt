@@ -49,6 +49,10 @@ object DataStoreModule {
 
     @Provides
     @Singleton
+    fun provideDomainLogDao(db: UnblockerDatabase): com.unblocker.data.db.dao.DomainLogDao = db.domainLogDao()
+
+    @Provides
+    @Singleton
     fun provideBlockRuleDao(db: UnblockerDatabase): BlockRuleDao = db.blockRuleDao()
 
     @Provides

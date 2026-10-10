@@ -35,6 +35,10 @@ find_tool() { # name, env override
   if [ -n "${override}" ]; then printf '%s' "${override}"; return; fi
   local root="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
   if [ -n "${root}" ]; then
+    if [ -f "${root}/build-tools/35.0.0/${name}" ]; then
+      printf '%s' "${root}/build-tools/35.0.0/${name}"
+      return
+    fi
     find "${root}/build-tools" -name "${name}" -type f 2>/dev/null | sort -V | tail -n 1
   fi
 }

@@ -188,7 +188,10 @@ jobs:
         run: |
           set -euo pipefail
           test -f "${APK_PATH}"
-          build_tools="$(find "${ANDROID_HOME}/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          build_tools="${ANDROID_HOME}/build-tools/35.0.0"
+          if [ ! -d "${build_tools}" ]; then
+            build_tools="$(find "${ANDROID_HOME}/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          fi
           if [ "${BUILD_TYPE}" = "release" ]; then
             if "${build_tools}/aapt2" dump badging "${APK_PATH}" | grep -q application-debuggable; then
               echo "Release APK must not be debuggable" >&2; exit 1
@@ -236,4 +239,9 @@ jobs:
         env:
           UB_RELEASE_SIGNER_SHA256: ${{ vars.UB_RELEASE_SIGNER_SHA256 }}
           UB_TEST_SIGNER_SHA256: ${{ vars.UB_TEST_SIGNER_SHA256 || '0686161d8dc3051bfda2e03dd0406e1a6cddadf38c976f606bd8c474a872374e' }}
-        run: bash scripts/verify-release.sh "${TAG}"
+        run: |
+          build_tools="${ANDROID_HOME}/build-tools/35.0.0"
+          if [ ! -d "${build_tools}" ]; then
+            build_tools="$(find "${ANDROID_HOME}/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          fi
+          AAPT2="${build_tools}/aapt2" APKSIGNER="${build_tools}/apksigner" bash scripts/verify-release.sh "${TAG}"

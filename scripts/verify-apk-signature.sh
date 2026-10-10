@@ -15,15 +15,31 @@ if [[ ! -f "$apk_path" ]]; then
   exit 2
 fi
 
-certificate_output="$("$apksigner_command" verify --print-certs "$apk_path")"
+certificate_output="$("$apksigner_command" verify --print-certs "$apk_path" 2>&1)" || {
+  echo "apksigner command failed ($apksigner_command):" >&2
+  echo "$certificate_output" >&2
+  exit 1
+}
 actual_sha256="$(printf '%s\n' "$certificate_output" \
-  | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' \
+  | sed -n 's/^[[:space:]]*Signer #1 certificate SHA-256 digest:[[:space:]]*//p' \
   | head -n 1 \
   | tr '[:upper:]' '[:lower:]' \
   | tr -d ':[:space:]')"
 
 if [[ -z "$actual_sha256" ]]; then
+  actual_sha256="$(printf '%s\n' "$certificate_output" \
+    | grep -i "SHA-256 digest" \
+    | head -n 1 \
+    | sed -n -E 's/.*SHA-256 digest:[[:space:]]*([0-9a-fA-F:]+).*/\1/p' \
+    | tr '[:upper:]' '[:lower:]' \
+    | tr -d ':[:space:]')"
+fi
+
+if [[ -z "$actual_sha256" ]]; then
   echo "Unable to read the APK signing certificate SHA-256 digest." >&2
+  echo "apksigner command: ${apksigner_command}" >&2
+  echo "Raw output was:" >&2
+  printf '%s\n' "${certificate_output}" >&2
   exit 1
 fi
 

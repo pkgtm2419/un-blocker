@@ -28,6 +28,7 @@ import com.unblocker.app.data.preferences.FilteringPreferences
 import com.unblocker.app.services.QuickStartManager
 import com.unblocker.app.ui.components.FloatingPillNavBar
 import com.unblocker.app.ui.components.NavItem
+import com.unblocker.app.ui.extensions.ExtensionsScreen
 import com.unblocker.app.ui.logs.LogViewerScreen
 import com.unblocker.app.ui.screens.UnblockerScreen
 
@@ -79,6 +80,7 @@ fun MainScreen(
         }
     }
 
+    var isExtensionsOpen by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableStateOf(0) }
     val navItems = remember {
         listOf(
@@ -90,27 +92,34 @@ fun MainScreen(
     val navBarBottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val contentPadding = PaddingValues(bottom = 64.dp + 16.dp + navBarBottomInset)
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Surface(modifier = Modifier.fillMaxSize()) {
-            if (selectedTab == 0) {
-                UnblockerScreen(
-                    preferences = preferences,
-                    quickStartManager = quickStartManager,
-                    onRequestVpnPermission = requestPermissionsAndStart,
-                    contentPadding = contentPadding
-                )
-            } else {
-                LogViewerScreen(
-                    contentPadding = contentPadding
-                )
-            }
-        }
-
-        FloatingPillNavBar(
-            items = navItems,
-            selectedItem = selectedTab,
-            onItemSelected = { selectedTab = it },
-            modifier = Modifier.align(Alignment.BottomCenter)
+    if (isExtensionsOpen) {
+        ExtensionsScreen(
+            onNavigateBack = { isExtensionsOpen = false }
         )
+    } else {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Surface(modifier = Modifier.fillMaxSize()) {
+                if (selectedTab == 0) {
+                    UnblockerScreen(
+                        preferences = preferences,
+                        quickStartManager = quickStartManager,
+                        onRequestVpnPermission = requestPermissionsAndStart,
+                        contentPadding = contentPadding,
+                        onOpenSettings = { isExtensionsOpen = true }
+                    )
+                } else {
+                    LogViewerScreen(
+                        contentPadding = contentPadding
+                    )
+                }
+            }
+
+            FloatingPillNavBar(
+                items = navItems,
+                selectedItem = selectedTab,
+                onItemSelected = { selectedTab = it },
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
+        }
     }
 }

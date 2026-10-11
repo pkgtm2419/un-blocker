@@ -33,6 +33,7 @@ class AdDetector(
                 }
             }
         }
+        ExtensionRuleStore.matchRule(normalized)?.let { return it }
         return activeRuleSet.match(domain)
     }
 
@@ -47,7 +48,7 @@ class AdDetector(
             else "Domain Suffix Match (${rule.value})"
     }
 
-    @Synchronized fun getDomainCount(): Int = activeRuleSet.ruleCount + overlay.size
+    @Synchronized fun getDomainCount(): Int = activeRuleSet.ruleCount + overlay.size + ExtensionRuleStore.ruleCount
 
     companion object {
         private fun fallbackRuleSet(): RuleSet {

@@ -31,3 +31,4 @@ jdk*/
 *.tar.gz
 *.zip
 .env
+Screenshot_*.png

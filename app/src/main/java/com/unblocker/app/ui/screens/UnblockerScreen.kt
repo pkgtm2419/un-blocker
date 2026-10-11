@@ -101,7 +101,8 @@ fun UnblockerScreen(
     preferences: FilteringPreferences,
     quickStartManager: QuickStartManager,
     onRequestVpnPermission: () -> Unit,
-    contentPadding: PaddingValues = PaddingValues(0.dp)
+    contentPadding: PaddingValues = PaddingValues(0.dp),
+    onOpenSettings: () -> Unit = {}
 ) {
     val dimensions = LocalWindowDimensions.current
     val haptic = LocalHapticFeedback.current
@@ -282,7 +283,8 @@ fun UnblockerScreen(
                 AgentStatusPanel(
                     serviceStatus = serviceStatus,
                     isPrivateDnsActive = isPrivateDnsActive,
-                    privateDnsServerName = privateDnsServerName
+                    privateDnsServerName = privateDnsServerName,
+                    onOpenSettings = onOpenSettings
                 )
 
                 // Standalone Private DNS Warning Card if detected

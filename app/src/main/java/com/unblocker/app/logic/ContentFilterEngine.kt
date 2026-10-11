@@ -35,6 +35,7 @@ class ContentFilterEngine(
 ) {
     init {
         com.unblocker.app.logic.analysis.NeverBlockPolicy.load(context)
+        com.unblocker.app.data.repository.ExtensionRepository.getInstance(context).reloadActiveRules()
     }
 
     private val cnamePolicy = CnamePolicy(

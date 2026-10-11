@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -49,7 +50,8 @@ fun AgentStatusPanel(
     serviceStatus: ServiceStatus,
     isPrivateDnsActive: Boolean,
     privateDnsServerName: String?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onOpenSettings: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val stateColors = LocalVpnStateColors.current
@@ -139,12 +141,12 @@ fun AgentStatusPanel(
             }
 
             IconButton(
-                onClick = { isExpanded = !isExpanded },
+                onClick = onOpenSettings,
                 modifier = Modifier.size(32.dp)
             ) {
                 Icon(
-                    imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (isExpanded) "Collapse Diagnostics" else "Expand Diagnostics",
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "Extensions & Filter Settings",
                     tint = Slate400
                 )
             }

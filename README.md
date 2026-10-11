@@ -276,7 +276,7 @@ the test installation's VPN app-op and local application data.
 Build output:
 
 ```text
-app/build/outputs/apk/debug/ub-blocker-2.0.1.apk
+app/build/outputs/apk/debug/ub-blocker-2.0.2.apk
 ```
 
 Gradle derives this filename from `versionName`, so future builds automatically

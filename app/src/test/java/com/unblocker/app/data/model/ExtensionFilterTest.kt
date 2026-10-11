@@ -56,4 +56,36 @@ class ExtensionFilterTest {
         )
         assertEquals("N/A", customNoDate.formattedLastUpdated())
     }
+
+    @Test
+    fun testCategoryAndDescriptionDefaults() {
+        val defaultFilter = ExtensionFilter(
+            id = "test_default",
+            name = "Default Filter"
+        )
+        assertEquals(FilterCategories.PRIVACY, defaultFilter.category)
+        assertEquals("", defaultFilter.description)
+
+        val customFilter = ExtensionFilter(
+            id = "test_custom",
+            name = "Custom Filter",
+            category = FilterCategories.SECURITY,
+            description = "High-priority malware feed"
+        )
+        assertEquals(FilterCategories.SECURITY, customFilter.category)
+        assertEquals("High-priority malware feed", customFilter.description)
+    }
+
+    @Test
+    fun testCategoriesList() {
+        assertTrue(FilterCategories.ALL_CATEGORIES.contains(FilterCategories.ALL))
+        assertTrue(FilterCategories.ALL_CATEGORIES.contains(FilterCategories.RECOMMENDED))
+        assertTrue(FilterCategories.ALL_CATEGORIES.contains(FilterCategories.MASTER_DNS))
+        assertTrue(FilterCategories.ALL_CATEGORIES.contains(FilterCategories.MOBILE_OEM))
+        assertTrue(FilterCategories.ALL_CATEGORIES.contains(FilterCategories.SECURITY))
+        assertTrue(FilterCategories.ALL_CATEGORIES.contains(FilterCategories.PARENTAL))
+        assertTrue(FilterCategories.ALL_CATEGORIES.contains(FilterCategories.SMART_DEVICES))
+        assertTrue(FilterCategories.ALL_CATEGORIES.contains(FilterCategories.PRIVACY))
+        assertTrue(FilterCategories.ALL_CATEGORIES.contains(FilterCategories.REGIONAL))
+    }
 }

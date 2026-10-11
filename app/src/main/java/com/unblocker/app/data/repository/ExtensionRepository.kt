@@ -3,7 +3,7 @@ package com.unblocker.app.data.repository
 import android.content.Context
 import android.content.SharedPreferences
 import com.unblocker.app.data.model.ExtensionFilter
-import com.unblocker.app.logic.rules.DnsRule
+import com.unblocker.app.data.model.FilterCategories
 import com.unblocker.app.logic.rules.ExtensionRuleStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -70,7 +70,9 @@ class ExtensionRepository private constructor(private val context: Context) {
             sizeBytes = 0L,
             lastUpdatedEpochMs = System.currentTimeMillis(),
             isEnabled = true,
-            isCustom = true
+            isCustom = true,
+            category = FilterCategories.CUSTOM,
+            description = "User custom domain rules and exceptions"
         )
         val updated = listOf(customFilter) + _extensions.value
         _extensions.value = updated
@@ -88,7 +90,7 @@ class ExtensionRepository private constructor(private val context: Context) {
 
     fun reloadActiveRules() {
         try {
-            val rules = mutableListOf<DnsRule>()
+            val builder = ExtensionRuleStore.Builder()
 
             // 1. Load bundled default rules if any enabled
             val anyEnabled = _extensions.value.any { it.isEnabled }
@@ -97,7 +99,7 @@ class ExtensionRepository private constructor(private val context: Context) {
                     context.assets.open("extensions/bundled_rules.txt").use { stream ->
                         BufferedReader(InputStreamReader(stream)).useLines { lines ->
                             for (line in lines) {
-                                ExtensionRuleStore.parseLine(line)?.let { rules.add(it) }
+                                builder.addLine(line)
                             }
                         }
                     }
@@ -111,13 +113,13 @@ class ExtensionRepository private constructor(private val context: Context) {
                 if (ruleFile.exists()) {
                     runCatching {
                         ruleFile.forEachLine { line ->
-                            ExtensionRuleStore.parseLine(line)?.let { rules.add(it) }
+                            builder.addLine(line)
                         }
                     }
                 }
             }
 
-            ExtensionRuleStore.setRules(rules)
+            ExtensionRuleStore.applyBuilder(builder)
         } catch (_: Exception) {
             // Safe fallback
         }
@@ -245,26 +247,35 @@ class ExtensionRepository private constructor(private val context: Context) {
 
     private fun loadExtensions() {
         val savedJson = prefs.getString(KEY_EXTENSIONS_JSON, null)
-        if (!savedJson.isNullOrBlank()) {
-            runCatching {
-                val list = parseJsonToExtensions(savedJson)
-                if (list.isNotEmpty()) {
-                    _extensions.value = list
-                    return
-                }
-            }
+        val savedVersion = prefs.getInt(KEY_MANIFEST_VERSION, 0)
+        val (manifestVersion, bundledList) = loadBundledManifestWithVersion()
+
+        if (savedJson.isNullOrBlank()) {
+            _extensions.value = bundledList
+            persistExtensions(bundledList)
+            prefs.edit().putInt(KEY_MANIFEST_VERSION, manifestVersion).apply()
+            return
         }
 
-        // Load bundled manifest
-        val list = loadBundledManifest()
-        _extensions.value = list
-        persistExtensions(list)
+        val savedList = runCatching { parseJsonToExtensions(savedJson) }.getOrDefault(emptyList())
+
+        if (savedVersion < manifestVersion) {
+            val merged = migrateExtensions(savedList, bundledList)
+            _extensions.value = merged
+            persistExtensions(merged)
+            prefs.edit().putInt(KEY_MANIFEST_VERSION, manifestVersion).apply()
+        } else {
+            _extensions.value = if (savedList.isNotEmpty()) savedList else bundledList
+        }
     }
 
-    private fun loadBundledManifest(): List<ExtensionFilter> {
+
+
+    private fun loadBundledManifestWithVersion(): Pair<Int, List<ExtensionFilter>> {
         return runCatching {
             context.assets.open("extensions/extensions_manifest.json").reader().use { reader ->
                 val jsonObject = JSONObject(reader.readText())
+                val version = jsonObject.optInt("version", 1)
                 val array = jsonObject.getJSONArray("extensions")
                 val result = mutableListOf<ExtensionFilter>()
                 for (i in 0 until array.length()) {
@@ -279,13 +290,15 @@ class ExtensionRepository private constructor(private val context: Context) {
                             lastUpdatedEpochMs = obj.optLong("lastUpdated", 0L),
                             isEnabled = obj.optBoolean("enabled", true),
                             isCustom = obj.optBoolean("custom", false),
-                            syntax = obj.optString("syntax", "rules")
+                            syntax = obj.optString("syntax", "rules"),
+                            category = obj.optString("category", if (obj.optBoolean("custom", false)) FilterCategories.CUSTOM else FilterCategories.PRIVACY),
+                            description = obj.optString("description", "")
                         )
                     )
                 }
-                result
+                Pair(version, result)
             }
-        }.getOrDefault(emptyList())
+        }.getOrDefault(Pair(1, emptyList()))
     }
 
     private fun persistExtensions(list: List<ExtensionFilter>) {
@@ -301,6 +314,8 @@ class ExtensionRepository private constructor(private val context: Context) {
                 put("enabled", item.isEnabled)
                 put("custom", item.isCustom)
                 put("syntax", item.syntax)
+                put("category", item.category)
+                put("description", item.description)
             }
             array.put(obj)
         }
@@ -322,7 +337,9 @@ class ExtensionRepository private constructor(private val context: Context) {
                     lastUpdatedEpochMs = obj.optLong("lastUpdated", 0L),
                     isEnabled = obj.optBoolean("enabled", true),
                     isCustom = obj.optBoolean("custom", false),
-                    syntax = obj.optString("syntax", "rules")
+                    syntax = obj.optString("syntax", "rules"),
+                    category = obj.optString("category", if (obj.optBoolean("custom", false)) FilterCategories.CUSTOM else FilterCategories.PRIVACY),
+                    description = obj.optString("description", "")
                 )
             )
         }
@@ -330,8 +347,33 @@ class ExtensionRepository private constructor(private val context: Context) {
     }
 
     companion object {
-        private const val KEY_EXTENSIONS_JSON = "key_extensions_json"
+        const val KEY_EXTENSIONS_JSON = "key_extensions_json"
+        const val KEY_MANIFEST_VERSION = "key_manifest_version"
         private const val KEY_AUTO_UPDATE = "key_auto_update_extensions"
+
+        fun migrateExtensions(
+            savedList: List<ExtensionFilter>,
+            bundledList: List<ExtensionFilter>
+        ): List<ExtensionFilter> {
+            val customFilters = savedList.filter { it.isCustom }
+            val savedMap = savedList.associateBy { it.id }
+
+            val mergedBundled = bundledList.map { bundled ->
+                val saved = savedMap[bundled.id]
+                if (saved != null) {
+                    bundled.copy(
+                        isEnabled = saved.isEnabled,
+                        filterCount = if (saved.filterCount > 0) saved.filterCount else bundled.filterCount,
+                        sizeBytes = if (saved.sizeBytes > 0) saved.sizeBytes else bundled.sizeBytes,
+                        lastUpdatedEpochMs = if (saved.lastUpdatedEpochMs > 0) saved.lastUpdatedEpochMs else bundled.lastUpdatedEpochMs
+                    )
+                } else {
+                    bundled
+                }
+            }
+
+            return customFilters + mergedBundled
+        }
 
         @Volatile
         private var INSTANCE: ExtensionRepository? = null

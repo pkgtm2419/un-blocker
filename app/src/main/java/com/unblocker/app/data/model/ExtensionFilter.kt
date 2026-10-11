@@ -5,6 +5,34 @@ import java.util.Date
 import java.util.Locale
 
 /**
+ * Filter list category constants.
+ */
+object FilterCategories {
+    const val ALL = "All"
+    const val RECOMMENDED = "Recommended"
+    const val MASTER_DNS = "Master DNS"
+    const val MOBILE_OEM = "Mobile & OEM"
+    const val SECURITY = "Security"
+    const val PARENTAL = "Parental"
+    const val SMART_DEVICES = "Smart Devices"
+    const val PRIVACY = "Privacy"
+    const val REGIONAL = "Regional"
+    const val CUSTOM = "Custom"
+
+    val ALL_CATEGORIES = listOf(
+        ALL,
+        RECOMMENDED,
+        MASTER_DNS,
+        MOBILE_OEM,
+        SECURITY,
+        PARENTAL,
+        SMART_DEVICES,
+        PRIVACY,
+        REGIONAL
+    )
+}
+
+/**
  * Data model representing a content-filtering extension / hosts list.
  */
 data class ExtensionFilter(
@@ -16,7 +44,9 @@ data class ExtensionFilter(
     val lastUpdatedEpochMs: Long = 0L,
     val isEnabled: Boolean = true,
     val isCustom: Boolean = false,
-    val syntax: String = "rules"
+    val syntax: String = "rules",
+    val category: String = FilterCategories.PRIVACY,
+    val description: String = ""
 ) {
     fun formattedSize(): String {
         if (sizeBytes <= 0L) {

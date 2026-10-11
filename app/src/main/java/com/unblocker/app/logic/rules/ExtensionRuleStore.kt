@@ -9,7 +9,7 @@ import com.unblocker.app.logic.DomainName
  */
 object ExtensionRuleStore {
 
-    private class RuleSnapshot(
+    internal class RuleSnapshot(
         val allowExact: Set<String>,
         val allowSuffix: Set<String>,
         val blockExact: Set<String>,
@@ -68,21 +68,26 @@ object ExtensionRuleStore {
         return null
     }
 
-    @Synchronized
-    fun setRules(rules: Collection<DnsRule>) {
+    class Builder {
         val allowExact = HashSet<String>()
         val allowSuffix = HashSet<String>()
         val blockExact = HashSet<String>()
         val blockSuffix = HashSet<String>()
         val blockWildcard = HashSet<String>()
+        var count = 0
 
-        for (rule in rules) {
+        fun addLine(line: String, category: BlockingCategory = BlockingCategory.AD) {
+            val rule = parseLine(line, category) ?: return
+            addRule(rule)
+        }
+
+        fun addRule(rule: DnsRule) {
+            count++
             when (rule.action) {
                 RuleAction.ALLOW -> {
                     when (rule.kind) {
                         RuleKind.EXACT -> allowExact.add(rule.value)
-                        RuleKind.SUFFIX -> allowSuffix.add(rule.value)
-                        RuleKind.WILDCARD -> allowSuffix.add(rule.value)
+                        RuleKind.SUFFIX, RuleKind.WILDCARD -> allowSuffix.add(rule.value)
                     }
                 }
                 RuleAction.BLOCK -> {
@@ -95,17 +100,33 @@ object ExtensionRuleStore {
             }
         }
 
-        snapshot = RuleSnapshot(
-            allowExact = allowExact,
-            allowSuffix = allowSuffix,
-            blockExact = blockExact,
-            blockSuffix = blockSuffix,
-            blockWildcard = blockWildcard,
-            totalCount = rules.size
-        )
+        internal fun build(): RuleSnapshot {
+            return RuleSnapshot(
+                allowExact = allowExact,
+                allowSuffix = allowSuffix,
+                blockExact = blockExact,
+                blockSuffix = blockSuffix,
+                blockWildcard = blockWildcard,
+                totalCount = count
+            )
+        }
     }
 
-    fun parseLine(rawLine: String): DnsRule? {
+    @Synchronized
+    fun applyBuilder(builder: Builder) {
+        snapshot = builder.build()
+    }
+
+    @Synchronized
+    fun setRules(rules: Collection<DnsRule>) {
+        val builder = Builder()
+        for (rule in rules) {
+            builder.addRule(rule)
+        }
+        applyBuilder(builder)
+    }
+
+    fun parseLine(rawLine: String, defaultCategory: BlockingCategory = BlockingCategory.AD): DnsRule? {
         var line = rawLine.trim()
         if (line.isEmpty() || line.startsWith('!') || line.startsWith('#')) return null
 
@@ -151,7 +172,7 @@ object ExtensionRuleStore {
             action = action,
             kind = kind,
             value = normalized,
-            category = BlockingCategory.AD
+            category = defaultCategory
         )
     }
 

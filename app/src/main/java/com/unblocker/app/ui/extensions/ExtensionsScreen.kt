@@ -1,17 +1,16 @@
 package com.unblocker.app.ui.extensions
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +24,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -33,11 +33,13 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
@@ -47,7 +49,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -72,11 +73,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.unblocker.app.data.model.ExtensionFilter
-import com.unblocker.app.ui.theme.CyanGlow
+import com.unblocker.app.data.model.FilterCategories
 import com.unblocker.app.ui.theme.Slate300
 import com.unblocker.app.ui.theme.Slate400
 import com.unblocker.app.ui.theme.Slate700
@@ -97,9 +99,11 @@ fun ExtensionsScreen(
 
     val filteredExtensions by viewModel.filteredExtensions.collectAsState()
     val activeFilterCount by viewModel.activeFilterCount.collectAsState()
+    val totalEnabledRulesCount by viewModel.totalEnabledRulesCount.collectAsState()
     val isUpdating by viewModel.isUpdating.collectAsState()
     val autoUpdateEnabled by viewModel.autoUpdateEnabled.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
+    val selectedCategory by viewModel.selectedCategory.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
     var isSearchActive by remember { mutableStateOf(false) }
@@ -209,7 +213,6 @@ fun ExtensionsScreen(
                             onDismissRequest = { showMenu = false },
                             modifier = Modifier.background(Slate900)
                         ) {
-                            // 1. Auto-update extensions checkbox option
                             DropdownMenuItem(
                                 text = {
                                     Row(
@@ -241,7 +244,6 @@ fun ExtensionsScreen(
                                 }
                             )
 
-                            // 2. Update all extensions
                             DropdownMenuItem(
                                 text = { Text("Update all extensions", color = Color.White, fontSize = 14.sp) },
                                 onClick = {
@@ -250,7 +252,6 @@ fun ExtensionsScreen(
                                 }
                             )
 
-                            // 3. Enable all
                             DropdownMenuItem(
                                 text = { Text("Enable all", color = Color.White, fontSize = 14.sp) },
                                 onClick = {
@@ -259,7 +260,6 @@ fun ExtensionsScreen(
                                 }
                             )
 
-                            // 4. Disable all
                             DropdownMenuItem(
                                 text = { Text("Disable all", color = Color.White, fontSize = 14.sp) },
                                 onClick = {
@@ -296,21 +296,121 @@ fun ExtensionsScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Subheader: Total active filters
-            Text(
-                text = "Total active filters: $activeFilterCount",
-                fontSize = 13.sp,
-                color = Slate400,
-                fontWeight = FontWeight.Medium,
+            // Horizontal Category Filtering Chips
+            LazyRow(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            )
+                    .padding(horizontal = 14.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(FilterCategories.ALL_CATEGORIES) { category ->
+                    val isSelected = category.equals(selectedCategory, ignoreCase = true)
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = if (isSelected) TealPrimary else Slate900,
+                        border = BorderStroke(1.dp, if (isSelected) TealAccent else Slate800),
+                        modifier = Modifier.clickable { viewModel.onCategorySelect(category) }
+                    ) {
+                        Text(
+                            text = category,
+                            color = if (isSelected) Color.White else Slate300,
+                            fontSize = 13.sp,
+                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
+                        )
+                    }
+                }
+            }
+
+            // Informational Note about DNS-Level Filtering vs In-Stream Video Ads
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = Slate900,
+                border = BorderStroke(1.dp, Slate800),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 4.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        tint = TealAccent,
+                        modifier = Modifier
+                            .size(18.dp)
+                            .padding(top = 2.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = "DNS filtering blocks ad servers and trackers network-wide. In-stream video ads (YouTube, Instagram) share video delivery CDNs and cannot be blocked via DNS without disrupting media playback.",
+                        color = Slate300,
+                        fontSize = 11.sp,
+                        lineHeight = 15.sp
+                    )
+                }
+            }
+
+            // Capacity warning pill if total active rules exceed 300,000
+            if (totalEnabledRulesCount > 300000) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFF451A03),
+                    border = BorderStroke(1.dp, Color(0xFFD97706)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 4.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = Color(0xFFFBBF24),
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "High rule count (~$totalEnabledRulesCount rules). Large heap is active, but enabling too many massive lists may impact device performance.",
+                            color = Color(0xFFFEF3C7),
+                            fontSize = 11.sp
+                        )
+                    }
+                }
+            }
+
+            // Subheader: Total active filters
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Total active filters: $activeFilterCount",
+                    fontSize = 13.sp,
+                    color = Slate400,
+                    fontWeight = FontWeight.Medium
+                )
+                if (totalEnabledRulesCount > 0) {
+                    Text(
+                        text = "Rules: ~$totalEnabledRulesCount",
+                        fontSize = 12.sp,
+                        color = TealAccent,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
 
             // Extension Lists
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(filteredExtensions, key = { it.id }) { item ->
@@ -410,7 +510,7 @@ fun ExtensionCard(
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Left Icon (Pencil for custom / manual filters, Globe for others)
+            // Left Icon
             Box(
                 modifier = Modifier
                     .size(36.dp)
@@ -429,14 +529,47 @@ fun ExtensionCard(
 
             // Details
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = item.name,
-                    color = Color.White,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = item.name,
+                        color = Color.White,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.weight(1f, fill = false),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = Slate800,
+                        modifier = Modifier.padding(start = 2.dp)
+                    ) {
+                        Text(
+                            text = item.category,
+                            color = TealAccent,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
 
-                Spacer(modifier = Modifier.height(2.dp))
+                if (item.description.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = item.description,
+                        color = Slate300,
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(3.dp))
 
                 Text(
                     text = if (item.isCustom && item.filterCount == 0 && item.sizeBytes == 0L) {

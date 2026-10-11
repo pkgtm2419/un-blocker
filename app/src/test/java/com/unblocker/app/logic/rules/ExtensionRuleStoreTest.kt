@@ -92,4 +92,35 @@ class ExtensionRuleStoreTest {
         val mClean = ExtensionRuleStore.matchRule("wikipedia.org")
         assertNull(mClean)
     }
+
+    @Test
+    fun testBuilderStreamingDirectIngestion() {
+        val builder = ExtensionRuleStore.Builder()
+        builder.addLine("! Header comment")
+        builder.addLine("||samsungads.com^")
+        builder.addLine("0.0.0.0 tracking.miui.com")
+        builder.addLine("@@||allowme.samsungads.com^")
+        builder.addLine("   ")
+
+        assertEquals(3, builder.count)
+
+        ExtensionRuleStore.applyBuilder(builder)
+        assertEquals(3, ExtensionRuleStore.ruleCount)
+
+        val blocked1 = ExtensionRuleStore.matchRule("samsungads.com")
+        assertNotNull(blocked1)
+        assertEquals(RuleAction.BLOCK, blocked1!!.action)
+
+        val blocked2 = ExtensionRuleStore.matchRule("sub.samsungads.com")
+        assertNotNull(blocked2)
+        assertEquals(RuleAction.BLOCK, blocked2!!.action)
+
+        val allowed = ExtensionRuleStore.matchRule("allowme.samsungads.com")
+        assertNotNull(allowed)
+        assertEquals(RuleAction.ALLOW, allowed!!.action)
+
+        val blockedHost = ExtensionRuleStore.matchRule("tracking.miui.com")
+        assertNotNull(blockedHost)
+        assertEquals(RuleAction.BLOCK, blockedHost!!.action)
+    }
 }

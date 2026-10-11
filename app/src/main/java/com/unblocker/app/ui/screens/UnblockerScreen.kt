@@ -34,10 +34,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PowerSettingsNew
+import androidx.compose.material.icons.filled.VpnKey
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -76,8 +79,11 @@ import com.unblocker.app.ui.components.SkeuomorphicCard
 import com.unblocker.app.ui.motion.rememberBreathingPulse
 import com.unblocker.app.ui.theme.AdultBlockedPurple
 import com.unblocker.app.ui.theme.LocalVpnStateColors
+import com.unblocker.app.ui.theme.Slate300
 import com.unblocker.app.ui.theme.Slate400
+import com.unblocker.app.ui.theme.Slate700
 import com.unblocker.app.ui.theme.Slate800
+import com.unblocker.app.ui.theme.Slate900
 import com.unblocker.app.ui.theme.TealAccent
 import com.unblocker.app.ui.theme.rememberVpnStateColors
 
@@ -363,6 +369,39 @@ fun UnblockerScreen(
                             )
                         )
                     }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Tactile Always-on VPN Settings Action Button (No extra text)
+                OutlinedButton(
+                    onClick = {
+                        runCatching {
+                            context.startActivity(Intent(Settings.ACTION_VPN_SETTINGS).apply {
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                            })
+                        }
+                    },
+                    shape = RoundedCornerShape(14.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Slate700.copy(alpha = 0.7f)),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = Slate900.copy(alpha = 0.5f),
+                        contentColor = Slate300
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.VpnKey,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = TealAccent
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Always-on VPN settings",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Slate300
+                    )
                 }
 
             }

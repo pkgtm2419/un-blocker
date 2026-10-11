@@ -1,9 +1,9 @@
 # Un-Blocker
 
-[![Download APK](https://img.shields.io/badge/Download-APK%20(v2.0.2)-brightgreen?style=flat&logo=android&logoColor=white)](https://github.com/pkgtm2419/un-blocker/releases/download/v2.0.2/ub-blocker-2.0.2.apk)
+[![Download APK](https://img.shields.io/badge/Download-APK%20(v2.0.3)-brightgreen?style=flat&logo=android&logoColor=white)](https://github.com/pkgtm2419/un-blocker/releases/download/v2.0.3/ub-blocker-2.0.3.apk)
 [![Release CI](https://github.com/pkgtm2419/un-blocker/actions/workflows/release.yml/badge.svg)](https://github.com/pkgtm2419/un-blocker/actions/workflows/release.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Development ](https://img.shields.io/badge/development-2.0.2-orange.svg)](app/build.gradle.kts)
+[![Development ](https://img.shields.io/badge/development-2.0.3-orange.svg)](app/build.gradle.kts)
 [![Android 8.0+](https://img.shields.io/badge/Android-8.0%2B-3DDC84?logo=android&logoColor=white)](#requirements)
 [![Privacy: local only](https://img.shields.io/badge/Privacy-local--only-success)](#privacy-by-design)
 
@@ -29,7 +29,7 @@ Implementation progress and verification: [phase tracker](docs/improvement-progr
 
 <div align="center">
 
-[![Download APK](https://img.shields.io/badge/Download_APK-ub--blocker--2.0.2.apk-brightgreen?style=for-the-badge&logo=android&logoColor=white)](https://github.com/pkgtm2419/un-blocker/releases/download/v2.0.2/ub-blocker-2.0.2.apk)
+[![Download APK](https://img.shields.io/badge/Download_APK-ub--blocker--2.0.3.apk-brightgreen?style=for-the-badge&logo=android&logoColor=white)](https://github.com/pkgtm2419/un-blocker/releases/download/v2.0.3/ub-blocker-2.0.3.apk)
 [![Releases](https://img.shields.io/badge/All_Releases-GitHub-238636?style=for-the-badge&logo=github&logoColor=white)](https://github.com/pkgtm2419/un-blocker/releases)
 
 </div>
@@ -38,8 +38,8 @@ Implementation progress and verification: [phase tracker](docs/improvement-progr
 
 | Asset | Link | Details |
 | :--- | :--- | :--- |
-| **Android APK** | [**`ub-blocker-2.0.2.apk`**](https://github.com/pkgtm2419/un-blocker/releases/download/v2.0.2/ub-blocker-2.0.2.apk) | Direct APK Download (Ready to install) |
-| **Release Page** | [**Release `v2.0.2` Notes**](https://github.com/pkgtm2419/un-blocker/releases/tag/v2.0.2) | View release details and changelog |
+| **Android APK** | [**`ub-blocker-2.0.3.apk`**](https://github.com/pkgtm2419/un-blocker/releases/download/v2.0.3/ub-blocker-2.0.3.apk) | Direct APK Download (Ready to install) |
+| **Release Page** | [**Release `v2.0.3` Notes**](https://github.com/pkgtm2419/un-blocker/releases/tag/v2.0.3) | View release details and changelog |
 | **All Releases** | [**GitHub Releases Catalog**](https://github.com/pkgtm2419/un-blocker/releases) | Browse all published version releases |
 
 > [!TIP]
@@ -190,7 +190,7 @@ those encrypted paths can bypass a DNS-only VPN.
 
 ## Requirements
 
-- Current source version: 2.0.1 (`versionCode` 7); published test APK: 2.0.1.
+- Current source version: 2.0.3 (`versionCode` 11); published test APK: 2.0.3.
 - Android package: `com.unblocker.app`.
 - Android 8.0 or newer (API 26+).
 - Target and compile SDK: Android 16 / API 36.
@@ -206,7 +206,7 @@ those encrypted paths can bypass a DNS-only VPN.
 3. Open **Un-Blocker** and tap the power button.
 4. Review and accept Android's VPN consent dialog.
 5. Review the adult-content filter and disable it if you do not want it.
-6. Use **Local domain rule** to allow or block an exact domain.
+6. Inspect connection logs and query decisions in the **Logs** tab.
 7. Open **Always-on VPN settings** if you want Android-managed startup.
 
 Leave **Block connections without VPN** disabled. Un-Blocker is a DNS-only split

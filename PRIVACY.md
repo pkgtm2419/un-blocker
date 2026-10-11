@@ -39,10 +39,8 @@ local evidence windows replace calendar thresholds; no cloud or large language m
 App backup is disabled and explicit cloud/device-transfer exclusions cover private
 files, preferences and databases. Learning is additionally kept in no-backup
 storage. Older backups made before this update cannot be removed by the app.
-Uninstalling/clearing app storage removes local data through Android. Stop
-protection and choose **Clear local learning** to reset scores and the learning
-start date without reinstalling. Use **Clear all** in Local domain rule to erase
-allow and block rules. This does not erase another app's DNS cache.
+Uninstalling/clearing app storage removes local data through Android.
+This does not erase another app's DNS cache.
 
 ## Network traffic
 

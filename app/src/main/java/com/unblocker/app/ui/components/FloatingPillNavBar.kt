@@ -64,14 +64,19 @@ fun FloatingPillNavBar(
         Surface(
             shape = CircleShape,
             color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
-            tonalElevation = 3.dp,
-            shadowElevation = 8.dp,
+            tonalElevation = 4.dp,
+            shadowElevation = 12.dp,
             modifier = Modifier
                 .widthIn(min = 220.dp, max = 360.dp)
                 .height(64.dp)
                 .border(
                     width = 1.dp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                        colors = listOf(
+                            androidx.compose.ui.graphics.Color.White.copy(alpha = 0.22f),
+                            androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.45f)
+                        )
+                    ),
                     shape = CircleShape
                 )
         ) {

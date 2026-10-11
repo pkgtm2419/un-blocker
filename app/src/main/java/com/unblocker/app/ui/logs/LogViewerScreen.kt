@@ -3,7 +3,6 @@ package com.unblocker.app.ui.logs
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,13 +21,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.unblocker.app.ui.components.HaikeiAtmosphericBackground
+import com.unblocker.app.ui.components.SkeuomorphicCard
+import com.unblocker.app.ui.theme.Slate400
+import com.unblocker.app.ui.theme.Slate700
 import com.unblocker.data.db.entity.DomainEventEntity
 import com.unblocker.data.db.entity.DomainStatEntity
 import java.text.SimpleDateFormat
@@ -36,13 +38,14 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Samsung One UI 9 style Logs tab.
+ * Redesigned Connection Logs Screen.
  *
- * Implements WP-3 and WP-4:
- * - Shows each unique domain once with total call counts.
- * - Expanding shows timestamped history (up to 50 events) grouped chronologically.
- * - Filter chips (All / Blocked / Allowed) and sort options (Recent / Most calls).
- * - Live aggregate counters, history wiping, and pause/resume logging.
+ * Implements:
+ * - Haikei atmospheric background layer
+ * - Skeuomorphic tactile depth cards with specular rim lighting
+ * - Unique domain aggregation with call counts & timestamped event records (up to 50 events)
+ * - Filter chips (All / Blocked / Allowed) and sort options (Recent / Most calls)
+ * - Live aggregate counters, history wiping, and pause/resume logging
  */
 @Composable
 fun LogViewerScreen(
@@ -86,24 +89,23 @@ fun LogViewerScreen(
         )
     }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-            start = 16.dp,
-            end = 16.dp,
-            top = 16.dp,
-            bottom = contentPadding.calculateBottomPadding() + 80.dp
-        ),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        // One UI 9 Header Card
-        item {
-            Card(
-                shape = RoundedCornerShape(28.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(20.dp)) {
+    HaikeiAtmosphericBackground {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                top = 16.dp,
+                bottom = contentPadding.calculateBottomPadding() + 80.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            // Skeuomorphic Header Card
+            item {
+                SkeuomorphicCard(
+                    shape = RoundedCornerShape(24.dp),
+                    elevation = 6.dp
+                ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -161,17 +163,13 @@ fun LogViewerScreen(
                     }
                 }
             }
-        }
 
-        // Search and Filters Card
-        item {
-            Card(
-                shape = RoundedCornerShape(28.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+            // Skeuomorphic Search and Filters Card
+            item {
+                SkeuomorphicCard(
+                    shape = RoundedCornerShape(22.dp),
+                    elevation = 4.dp
+                ) {
                     // Search Bar
                     OutlinedTextField(
                         value = searchQuery,
@@ -189,7 +187,7 @@ fun LogViewerScreen(
                         shape = CircleShape,
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                            unfocusedBorderColor = Slate700.copy(alpha = 0.6f)
                         )
                     )
 
@@ -238,34 +236,34 @@ fun LogViewerScreen(
                     }
                 }
             }
-        }
 
-        // Domain List Rows
-        if (domainStats.isEmpty()) {
-            item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 48.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = if (searchQuery.isEmpty()) "No connections logged yet" else "No matching domains found",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+            // Domain List Rows
+            if (domainStats.isEmpty()) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 48.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (searchQuery.isEmpty()) "No connections logged yet" else "No matching domains found",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else {
+                items(domainStats, key = { it.domain }) { stat ->
+                    DomainStatCard(
+                        stat = stat,
+                        isExpanded = expandedDomain == stat.domain,
+                        events = if (expandedDomain == stat.domain) domainEvents else emptyList(),
+                        onToggleExpand = { viewModel.toggleExpandDomain(stat.domain) },
+                        onAllow = { viewModel.allowDomain(stat.domain) },
+                        onBlock = { viewModel.blockDomain(stat.domain) }
                     )
                 }
-            }
-        } else {
-            items(domainStats, key = { it.domain }) { stat ->
-                DomainStatCard(
-                    stat = stat,
-                    isExpanded = expandedDomain == stat.domain,
-                    events = if (expandedDomain == stat.domain) domainEvents else emptyList(),
-                    onToggleExpand = { viewModel.toggleExpandDomain(stat.domain) },
-                    onAllow = { viewModel.allowDomain(stat.domain) },
-                    onBlock = { viewModel.blockDomain(stat.domain) }
-                )
             }
         }
     }
@@ -284,10 +282,9 @@ fun DomainStatCard(
         formatRelativeTime(stat.lastSeen)
     }
 
-    Card(
+    SkeuomorphicCard(
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        elevation = 3.dp,
         modifier = Modifier
             .fillMaxWidth()
             .animateContentSize(animationSpec = tween(200))
@@ -296,7 +293,6 @@ fun DomainStatCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable { onToggleExpand() }
-                .padding(16.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),

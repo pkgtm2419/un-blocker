@@ -2,11 +2,9 @@ package com.unblocker.app.ui.screens
 
 import android.content.Intent
 import android.provider.Settings
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -35,16 +33,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -55,10 +48,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -75,8 +65,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.unblocker.app.data.preferences.FilteringPreferences
-import com.unblocker.app.logic.DomainName
-import com.unblocker.app.logic.analysis.DeviceLearning
 import com.unblocker.app.services.QuickStartManager
 import com.unblocker.app.services.ServiceStatus
 import com.unblocker.app.services.UnblockerVpnService
@@ -87,17 +75,11 @@ import com.unblocker.app.ui.components.HaikeiAtmosphericBackground
 import com.unblocker.app.ui.components.SkeuomorphicCard
 import com.unblocker.app.ui.motion.rememberBreathingPulse
 import com.unblocker.app.ui.theme.AdultBlockedPurple
-import com.unblocker.app.ui.theme.AllowedGreen
 import com.unblocker.app.ui.theme.LocalVpnStateColors
 import com.unblocker.app.ui.theme.Slate400
-import com.unblocker.app.ui.theme.Slate700
 import com.unblocker.app.ui.theme.Slate800
-import com.unblocker.app.ui.theme.Slate900
 import com.unblocker.app.ui.theme.TealAccent
 import com.unblocker.app.ui.theme.rememberVpnStateColors
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /**
  * Redesigned Unblocker main screen featuring:
@@ -123,12 +105,6 @@ fun UnblockerScreen(
     val isStarting = serviceStatus == ServiceStatus.STARTING
     val isStopping = serviceStatus == ServiceStatus.STOPPING
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var resetMessage by remember { mutableStateOf("") }
-    var resetting by remember { mutableStateOf(false) }
-    var exceptionDomain by remember { mutableStateOf("") }
-    var exceptionMessage by remember { mutableStateOf("") }
-    var updatingException by remember { mutableStateOf(false) }
 
     val adultBlockingEnabled by preferences.adultBlockingEnabled.collectAsState()
     val isPrivateDnsActive by UnblockerVpnService.isPrivateDnsActive.collectAsState()
@@ -269,7 +245,7 @@ fun UnblockerScreen(
                                 shape = CircleShape
                             )
                             .clickable(
-                                enabled = !isStarting && !isStopping && !resetting,
+                                enabled = !isStarting && !isStopping,
                                 interactionSource = interactionSource,
                                 indication = ripple(bounded = true, radius = buttonSize / 2),
                                 onClick = {
@@ -389,227 +365,6 @@ fun UnblockerScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // 4. SKEUOMORPHIC COVERAGE & LIMITATIONS CARD
-                SkeuomorphicCard(
-                    modifier = Modifier.widthIn(max = 420.dp),
-                    shape = RoundedCornerShape(20.dp)
-                ) {
-                    var expanded by remember { mutableStateOf(false) }
-                    Column {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { expanded = !expanded },
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                "Coverage & limits",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFE2E8F0)
-                            )
-                            Icon(
-                                if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                contentDescription = "Expand",
-                                tint = Slate400
-                            )
-                        }
-                        if (expanded) {
-                            Spacer(Modifier.height(10.dp))
-                            Text(
-                                "✅ Blocks ad-network domains in apps, games, and browsers\n" +
-                                "✅ Blocks tracker, telemetry, and analytics domains\n" +
-                                "✅ Blocks pop-under ad domains\n" +
-                                "❌ Cannot block ads served from the same domain as the content " +
-                                "(e.g. YouTube in-stream ads)\n" +
-                                "❌ Cannot block JavaScript-injected ads inside browser pages " +
-                                "— use a browser extension (uBlock Origin) for that\n" +
-                                "❌ Cannot block ads when Private DNS strict mode is on " +
-                                "(see warning above)",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Slate400,
-                                lineHeight = 18.sp
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // 5. SKEUOMORPHIC LOCAL DOMAIN RULE BUILDER
-                SkeuomorphicCard(
-                    modifier = Modifier.widthIn(max = 420.dp),
-                    shape = RoundedCornerShape(20.dp)
-                ) {
-                    Column {
-                        Text(
-                            text = "Local domain rule",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Allow or block one exact domain. Only device-keyed fingerprints are saved.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Slate400
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        OutlinedTextField(
-                            value = exceptionDomain,
-                            onValueChange = { exceptionDomain = it; exceptionMessage = "" },
-                            enabled = !updatingException,
-                            singleLine = true,
-                            label = { Text("example.com") },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = stateColors.coreAccent,
-                                unfocusedBorderColor = Slate700
-                            ),
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            TextButton(
-                                enabled = !updatingException,
-                                onClick = {
-                                    updatingException = true
-                                    scope.launch {
-                                        exceptionMessage = withContext(Dispatchers.IO) {
-                                            try {
-                                                DeviceLearning.clearRules(context.applicationContext)
-                                                "All local rules cleared."
-                                            } catch (_: Exception) { "Could not clear local rules. Please retry." }
-                                        }
-                                        exceptionDomain = ""
-                                        updatingException = false
-                                    }
-                                }
-                            ) {
-                                Text("Clear all", color = Slate400)
-                            }
-                            Row {
-                                TextButton(
-                                    enabled = !updatingException,
-                                    onClick = {
-                                        val domain = DomainName.normalize(exceptionDomain)
-                                        if (domain == null) {
-                                            exceptionMessage = "Enter a valid domain name."
-                                        } else {
-                                            updatingException = true
-                                            scope.launch {
-                                                val removed = withContext(Dispatchers.IO) {
-                                                    val appContext = context.applicationContext
-                                                    DeviceLearning.setUserRule(appContext, domain, com.unblocker.app.logic.analysis.UserFeedback.NONE)
-                                                }
-                                                exceptionMessage = if (removed) "Local rule removed." else "No saved rule matched."
-                                                exceptionDomain = ""
-                                                updatingException = false
-                                            }
-                                        }
-                                    }
-                                ) {
-                                    Text("Remove")
-                                }
-                                TextButton(
-                                    enabled = !updatingException,
-                                    onClick = {
-                                        val domain = DomainName.normalize(exceptionDomain)
-                                        if (domain == null) {
-                                            exceptionMessage = "Enter a valid domain name."
-                                        } else {
-                                            updatingException = true
-                                            scope.launch {
-                                                val added = withContext(Dispatchers.IO) {
-                                                    val appContext = context.applicationContext
-                                                    DeviceLearning.setUserRule(appContext, domain, com.unblocker.app.logic.analysis.UserFeedback.BLOCK)
-                                                }
-                                                exceptionMessage = if (added) "Block rule saved locally." else "Block rule already saved."
-                                                exceptionDomain = ""
-                                                updatingException = false
-                                            }
-                                        }
-                                    }
-                                ) {
-                                    Text("Block", color = Color(0xFFEF4444))
-                                }
-                                TextButton(
-                                    enabled = !updatingException,
-                                    onClick = {
-                                        val domain = DomainName.normalize(exceptionDomain)
-                                        if (domain == null) {
-                                            exceptionMessage = "Enter a valid domain name."
-                                        } else {
-                                            updatingException = true
-                                            scope.launch {
-                                                val added = withContext(Dispatchers.IO) {
-                                                    val appContext = context.applicationContext
-                                                    DeviceLearning.setUserRule(appContext, domain, com.unblocker.app.logic.analysis.UserFeedback.ALLOW)
-                                                }
-                                                exceptionMessage = if (added) "Allow rule saved locally." else "Allow rule already saved."
-                                                exceptionDomain = ""
-                                                updatingException = false
-                                            }
-                                        }
-                                    }
-                                ) {
-                                    Text("Allow", color = AllowedGreen)
-                                }
-                            }
-                        }
-                        if (exceptionMessage.isNotEmpty()) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(exceptionMessage, style = MaterialTheme.typography.bodySmall, color = Slate400)
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                // Minimal Privacy Footnote & System Links
-                Text(
-                    text = "Learning stays on this device. No telemetry.\nAllowed DNS queries go to your resolver.",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Slate400.copy(alpha = 0.6f),
-                    textAlign = TextAlign.Center
-                )
-                TextButton(onClick = {
-                    context.startActivity(Intent(Settings.ACTION_VPN_SETTINGS))
-                }) {
-                    Text("Always-on VPN settings")
-                }
-                Text(
-                    text = "Enable Always-on VPN for system-managed restart. Leave “Block connections without VPN” off: this app routes DNS only.",
-                    style = MaterialTheme.typography.bodySmall,
-                    textAlign = TextAlign.Center,
-                    color = Slate400
-                )
-                TextButton(
-                    enabled = !isRunning && !isStarting && !isStopping && !resetting,
-                    onClick = {
-                        resetting = true
-                        scope.launch {
-                            resetMessage = withContext(Dispatchers.IO) {
-                                try {
-                                    DeviceLearning.clear(context.applicationContext)
-                                    preferences.resetLearning()
-                                    "Local learning cleared."
-                                } catch (_: Exception) { "Could not clear learning. Please retry." }
-                            }
-                            resetting = false
-                        }
-                    }
-                ) {
-                    Text("Clear local learning (stop protection first)")
-                }
-                if (resetMessage.isNotEmpty()) {
-                    Text(resetMessage, style = MaterialTheme.typography.bodySmall, color = Slate400)
-                }
             }
         }
     }

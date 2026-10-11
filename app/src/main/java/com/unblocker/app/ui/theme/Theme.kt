@@ -11,45 +11,45 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
-// Samsung One UI 9 inspired neutral hierarchy with brand accent
+// Brand-aligned dark color scheme with teal accents and slate hierarchy
 private val OneUiDarkColorScheme = darkColorScheme(
-    primary = Color(0xFF388E3C), // Samsung One UI green accent
+    primary = TealAccent,
     onPrimary = Color.White,
-    primaryContainer = Color(0xFF1B5E20),
-    onPrimaryContainer = Color(0xFFA5D6A7),
-    secondary = Color(0xFF1976D2),
+    primaryContainer = Color(0xFF115E59),
+    onPrimaryContainer = Color(0xFFCCFBF1),
+    secondary = TealPrimary,
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFF0D47A1),
-    onSecondaryContainer = Color(0xFFBBDEFB),
-    background = Color(0xFF121212), // Deep One UI true dark
-    onBackground = Color(0xFFEEEEEE),
-    surface = Color(0xFF1E1E1E),
-    onSurface = Color(0xFFEEEEEE),
-    surfaceVariant = Color(0xFF2C2C2C),
-    onSurfaceVariant = Color(0xFFB0B0B0),
-    outline = Color(0xFF444444),
-    error = Color(0xFFCF6679),
+    secondaryContainer = Color(0xFF0F766E),
+    onSecondaryContainer = Color(0xFF99F6E4),
+    background = Color(0xFF090D16),
+    onBackground = Color(0xFFF1F5F9),
+    surface = Color(0xFF0F172A),
+    onSurface = Color(0xFFF1F5F9),
+    surfaceVariant = Color(0xFF1E293B),
+    onSurfaceVariant = Color(0xFF94A3B8),
+    outline = Color(0xFF334155),
+    error = Color(0xFFEF4444),
     onError = Color.Black,
-    errorContainer = Color(0xFF4A1520),
-    onErrorContainer = Color(0xFFFFB4AB)
+    errorContainer = Color(0xFF451A03),
+    onErrorContainer = Color(0xFFFDE68A)
 )
 
 private val OneUiLightColorScheme = lightColorScheme(
-    primary = Color(0xFF2E7D32),
+    primary = TealPrimary,
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFC8E6C9),
-    onPrimaryContainer = Color(0xFF1B5E20),
-    secondary = Color(0xFF1976D2),
+    primaryContainer = Color(0xFFCCFBF1),
+    onPrimaryContainer = Color(0xFF115E59),
+    secondary = TealAccent,
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFBBDEFB),
-    onSecondaryContainer = Color(0xFF0D47A1),
-    background = Color(0xFFF4F6F8), // Soft One UI background
-    onBackground = Color(0xFF1A1A1A),
+    secondaryContainer = Color(0xFFE6FFFA),
+    onSecondaryContainer = Color(0xFF0F766E),
+    background = Color(0xFFF8FAFC),
+    onBackground = Color(0xFF0F172A),
     surface = Color.White,
-    onSurface = Color(0xFF1A1A1A),
-    surfaceVariant = Color(0xFFE8ECEF),
-    onSurfaceVariant = Color(0xFF555555),
-    outline = Color(0xFFD0D4D8),
+    onSurface = Color(0xFF0F172A),
+    surfaceVariant = Color(0xFFF1F5F9),
+    onSurfaceVariant = Color(0xFF64748B),
+    outline = Color(0xFFCBD5E1),
     error = Color(0xFFBA1A1A),
     onError = Color.White,
     errorContainer = Color(0xFFFFDAD6),
@@ -59,7 +59,7 @@ private val OneUiLightColorScheme = lightColorScheme(
 @Composable
 fun UnblockerTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {

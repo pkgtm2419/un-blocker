@@ -82,8 +82,7 @@ object ExtensionRuleStore {
         }
 
         fun addRule(rule: DnsRule) {
-            count++
-            when (rule.action) {
+            val added = when (rule.action) {
                 RuleAction.ALLOW -> {
                     when (rule.kind) {
                         RuleKind.EXACT -> allowExact.add(rule.value)
@@ -97,6 +96,9 @@ object ExtensionRuleStore {
                         RuleKind.WILDCARD -> blockWildcard.add(rule.value)
                     }
                 }
+            }
+            if (added) {
+                count++
             }
         }
 
@@ -126,9 +128,22 @@ object ExtensionRuleStore {
         applyBuilder(builder)
     }
 
+    private val META_HOSTS = setOf(
+        "localhost", "localhost.localdomain", "local", "broadcasthost",
+        "0.0.0.0", "127.0.0.1", "::1", "ip6-localhost", "ip6-loopback",
+        "ip6-localnet", "ip6-mcastprefix", "ip6-allnodes", "ip6-allrouters", "ip6-allhosts"
+    )
+
     fun parseLine(rawLine: String, defaultCategory: BlockingCategory = BlockingCategory.AD): DnsRule? {
         var line = rawLine.trim()
         if (line.isEmpty() || line.startsWith('!') || line.startsWith('#')) return null
+
+        // Strip inline comments #
+        val hashIdx = line.indexOf('#')
+        if (hashIdx >= 0) {
+            line = line.substring(0, hashIdx).trim()
+        }
+        if (line.isEmpty()) return null
 
         // Strip options e.g. $third-party,script,important
         val dollarIdx = line.indexOf('$')
@@ -140,8 +155,14 @@ object ExtensionRuleStore {
         // Strip hosts prefix (0.0.0.0 or 127.0.0.1)
         if (line.startsWith("0.0.0.0 ") || line.startsWith("0.0.0.0\t")) {
             line = line.substring(8).trim()
+            val spaceIdx = line.indexOfAny(charArrayOf(' ', '\t'))
+            if (spaceIdx >= 0) line = line.substring(0, spaceIdx).trim()
         } else if (line.startsWith("127.0.0.1 ") || line.startsWith("127.0.0.1\t")) {
             line = line.substring(10).trim()
+            val spaceIdx = line.indexOfAny(charArrayOf(' ', '\t'))
+            if (spaceIdx >= 0) line = line.substring(0, spaceIdx).trim()
+        } else if (line.startsWith("::1") || line.startsWith("255.255.255.255")) {
+            return null
         }
 
         var action = RuleAction.BLOCK
@@ -168,6 +189,8 @@ object ExtensionRuleStore {
         }
 
         val normalized = DomainName.normalize(line) ?: return null
+        if (normalized in META_HOSTS || normalized.startsWith("ip6-")) return null
+
         return DnsRule(
             action = action,
             kind = kind,

@@ -29,9 +29,19 @@ class ExtensionRuleStoreTest {
         assertEquals(RuleKind.EXACT, hostsRule.kind)
         assertEquals("tracker.com", hostsRule.value)
 
-        val loopbackRule = ExtensionRuleStore.parseLine("127.0.0.1 analytics.io")
+        val hostsWithComment = ExtensionRuleStore.parseLine("0.0.0.0 tracker.com # inline comment")
+        assertNotNull(hostsWithComment)
+        assertEquals("tracker.com", hostsWithComment!!.value)
+
+        val loopbackRule = ExtensionRuleStore.parseLine("127.0.0.1 analytics.io # telemetry")
         assertNotNull(loopbackRule)
         assertEquals("analytics.io", loopbackRule!!.value)
+
+        val localhostRule = ExtensionRuleStore.parseLine("0.0.0.0 localhost")
+        assertNull(localhostRule)
+
+        val ipv6Loopback = ExtensionRuleStore.parseLine("::1 localhost")
+        assertNull(ipv6Loopback)
 
         val allowRule = ExtensionRuleStore.parseLine("@@||goodservice.com^")
         assertNotNull(allowRule)
@@ -122,5 +132,18 @@ class ExtensionRuleStoreTest {
         val blockedHost = ExtensionRuleStore.matchRule("tracking.miui.com")
         assertNotNull(blockedHost)
         assertEquals(RuleAction.BLOCK, blockedHost!!.action)
+    }
+
+    @Test
+    fun testBuilderDeduplicatesRuleCount() {
+        val builder = ExtensionRuleStore.Builder()
+        builder.addLine("||samsungads.com^")
+        builder.addLine("||samsungads.com^")
+        builder.addLine("0.0.0.0 tracking.miui.com")
+        builder.addLine("0.0.0.0 tracking.miui.com # comment")
+        assertEquals(2, builder.count)
+
+        ExtensionRuleStore.applyBuilder(builder)
+        assertEquals(2, ExtensionRuleStore.ruleCount)
     }
 }

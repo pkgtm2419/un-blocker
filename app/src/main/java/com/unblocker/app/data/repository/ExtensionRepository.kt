@@ -220,28 +220,37 @@ class ExtensionRepository private constructor(private val context: Context) {
             var validRulesCount = 0
             var totalBytes = 0L
 
-            conn.inputStream.use { input ->
-                targetFile.outputStream().use { output ->
-                    val reader = BufferedReader(InputStreamReader(input))
-                    val writer = output.bufferedWriter()
-                    reader.forEachLine { line ->
-                        totalBytes += line.length + 1
-                        if (ExtensionRuleStore.parseLine(line) != null) {
-                            validRulesCount++
-                            writer.write(line)
-                            writer.newLine()
+            try {
+                conn.inputStream.use { input ->
+                    targetFile.outputStream().use { output ->
+                        val reader = BufferedReader(InputStreamReader(input))
+                        val writer = output.bufferedWriter()
+                        reader.forEachLine { line ->
+                            totalBytes += line.length + 1
+                            if (ExtensionRuleStore.parseLine(line) != null) {
+                                validRulesCount++
+                                writer.write(line)
+                                writer.newLine()
+                            }
                         }
+                        writer.flush()
                     }
-                    writer.flush()
+                }
+
+                val finalFile = File(extensionsDir, "${ext.id}.rules")
+                if (targetFile.exists()) {
+                    if (finalFile.exists()) {
+                        finalFile.delete()
+                    }
+                    targetFile.renameTo(finalFile)
+                }
+
+                Pair(if (validRulesCount > 0) validRulesCount else ext.filterCount, totalBytes)
+            } finally {
+                if (targetFile.exists()) {
+                    targetFile.delete()
                 }
             }
-
-            val finalFile = File(extensionsDir, "${ext.id}.rules")
-            if (targetFile.exists()) {
-                targetFile.renameTo(finalFile)
-            }
-
-            Pair(if (validRulesCount > 0) validRulesCount else ext.filterCount, totalBytes)
         }
     }
 
@@ -355,11 +364,13 @@ class ExtensionRepository private constructor(private val context: Context) {
             savedList: List<ExtensionFilter>,
             bundledList: List<ExtensionFilter>
         ): List<ExtensionFilter> {
-            val customFilters = savedList.filter { it.isCustom }
+            val bundledIds = bundledList.map { it.id }.toSet()
+            val customFilters = savedList.filter { it.isCustom && it.id !in bundledIds }
             val savedMap = savedList.associateBy { it.id }
 
             val mergedBundled = bundledList.map { bundled ->
                 val saved = savedMap[bundled.id]
+                    ?: if (bundled.id == "oisd_small") savedMap["oisd_abp_full"] else null
                 if (saved != null) {
                     bundled.copy(
                         isEnabled = saved.isEnabled,

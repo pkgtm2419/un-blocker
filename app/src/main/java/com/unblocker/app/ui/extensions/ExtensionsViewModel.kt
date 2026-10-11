@@ -45,8 +45,7 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
             FilterCategories.ALL -> list
             FilterCategories.RECOMMENDED -> list.filter {
                 it.category.equals(FilterCategories.RECOMMENDED, ignoreCase = true) ||
-                it.id in RECOMMENDED_EXTENSIONS ||
-                (it.isEnabled && !it.isCustom)
+                it.id in RECOMMENDED_EXTENSIONS
             }
             else -> list.filter { it.category.equals(category, ignoreCase = true) }
         }
@@ -152,6 +151,7 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
             "threatfox_malware",
             "stalkerware_indicators",
             "urlhaus_agh",
+            "malicious_url_blocklist",
             "phishing_army_extended",
             "hagezi_native_samsung",
             "hagezi_native_xiaomi",

@@ -106,4 +106,87 @@ class ExtensionRepositoryTest {
         val mergedAak = merged.find { it.id == "aaklist" }
         assertNull(mergedAak)
     }
+
+    @Test
+    fun testMigrateExtensionsDoesNotDuplicateManualFilters() {
+        val manualFilter = ExtensionFilter(
+            id = "manual_filters",
+            name = "Manual filters",
+            url = "",
+            isCustom = true,
+            isEnabled = false // user turned it off
+        )
+        val userCustom = ExtensionFilter(
+            id = "custom_999",
+            name = "My Custom Filter",
+            url = "https://custom.org/rules.txt",
+            isCustom = true,
+            isEnabled = true
+        )
+        val easylist = ExtensionFilter(
+            id = "easylist",
+            name = "EasyList",
+            isCustom = false,
+            isEnabled = true
+        )
+        val savedList = listOf(manualFilter, userCustom, easylist)
+
+        val bundledManual = ExtensionFilter(
+            id = "manual_filters",
+            name = "Manual filters",
+            url = "",
+            isCustom = true,
+            isEnabled = true
+        )
+        val bundledEasylist = ExtensionFilter(
+            id = "easylist",
+            name = "EasyList",
+            isCustom = false,
+            isEnabled = true
+        )
+        val bundledList = listOf(bundledManual, bundledEasylist)
+
+        val merged = ExtensionRepository.migrateExtensions(savedList, bundledList)
+
+        // Count of manual_filters must be exactly 1, not duplicated!
+        assertEquals(1, merged.count { it.id == "manual_filters" })
+        assertEquals(1, merged.count { it.id == "custom_999" })
+        assertEquals(1, merged.count { it.id == "easylist" })
+        assertEquals(3, merged.size)
+        // User toggle state for manual_filters must be preserved
+        assertFalse(merged.first { it.id == "manual_filters" }.isEnabled)
+    }
+
+    @Test
+    fun testMigrateExtensionsPreservesLegacyOisdToggle() {
+        val legacyOisd = ExtensionFilter(
+            id = "oisd_abp_full",
+            name = "OISD Abp Full",
+            url = "https://small.oisd.nl/",
+            isEnabled = false, // user disabled it
+            isCustom = false
+        )
+        val savedList = listOf(legacyOisd)
+
+        val oisdSmall = ExtensionFilter(
+            id = "oisd_small",
+            name = "OISD Small",
+            url = "https://small.oisd.nl/",
+            isEnabled = true,
+            isCustom = false
+        )
+        val oisdBig = ExtensionFilter(
+            id = "oisd_big",
+            name = "OISD Big (Full)",
+            url = "https://big.oisd.nl/",
+            isEnabled = false,
+            isCustom = false
+        )
+        val bundledList = listOf(oisdSmall, oisdBig)
+
+        val merged = ExtensionRepository.migrateExtensions(savedList, bundledList)
+        val small = merged.find { it.id == "oisd_small" }
+        assertTrue(small != null)
+        assertFalse(small!!.isEnabled)
+    }
 }

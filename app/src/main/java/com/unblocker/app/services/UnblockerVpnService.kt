@@ -101,6 +101,9 @@ class UnblockerVpnService : VpnService() {
             refreshNetworkResolvers(net)
             connectivityManager.getLinkProperties(net)?.let(::updatePrivateDnsState)
         }
+        // SECURITY: Register passive listener for system network connectivity and LinkProperties changes.
+        // This callback is strictly read-only: it detects underlying network switches (e.g. Wi-Fi <-> Cellular)
+        // to adapt local DNS resolver pointers, and initiates ZERO outbound telemetry or network flows.
         runCatching {
             connectivityManager.registerNetworkCallback(
                 NetworkRequest.Builder()

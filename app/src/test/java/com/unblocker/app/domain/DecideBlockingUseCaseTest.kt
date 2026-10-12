@@ -116,4 +116,20 @@ class DecideBlockingUseCaseTest {
 
         assertFalse(useCase("example.org").isBlocked)
     }
+
+    @Test
+    fun testPrimaryDomainInNeverBlockCannotBeBlockedByAdRules() {
+        com.unblocker.app.logic.analysis.NeverBlockPolicy.injectForTest(
+            setOf("duckduckgo.com", "google.com")
+        )
+        // Even if an adDetector or overlay rule attempts to block duckduckgo.com
+        adEnabled = true
+        val decision = useCase("duckduckgo.com")
+        assertFalse("duckduckgo.com must never be blocked by ad rules", decision.isBlocked)
+        assertEquals(BlockingAction.ALLOW, decision.action)
+
+        val wwwDecision = useCase("www.duckduckgo.com")
+        assertFalse("www.duckduckgo.com must never be blocked by ad rules", wwwDecision.isBlocked)
+        assertEquals(BlockingAction.ALLOW, wwwDecision.action)
+    }
 }

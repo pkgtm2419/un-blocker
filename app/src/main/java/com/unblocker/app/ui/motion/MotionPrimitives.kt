@@ -83,14 +83,34 @@ fun Modifier.bounceClick(
 }
 
 /**
- * Modifier creating an infinite organic breathing pulse.
+ * Modifier creating an organic breathing pulse.
+ * If disabled or reduced motion is preferred, immediately returns 1.0f without running transitions.
  */
 @Composable
 fun rememberBreathingPulse(
+    enabled: Boolean = true,
     minScale: Float = 0.96f,
     maxScale: Float = 1.06f,
     durationMillis: Int = 2200
 ): Float {
+    if (!enabled) return 1.0f
+
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val isReducedMotion = remember(context) {
+        try {
+            android.provider.Settings.Global.getFloat(
+                context.contentResolver,
+                android.provider.Settings.Global.ANIMATOR_DURATION_SCALE,
+                1.0f
+            ) == 0f
+        } catch (_: Exception) {
+            false
+        }
+    }
+    if (isReducedMotion) {
+        return 1.0f
+    }
+
     val infiniteTransition = rememberInfiniteTransition(label = "breathingPulse")
     val scale by infiniteTransition.animateFloat(
         initialValue = minScale,
@@ -106,13 +126,33 @@ fun rememberBreathingPulse(
 
 /**
  * Shimmer effect brush primitive for active or loading states.
+ * Respects reduced motion settings and enabled flag to conserve device resources.
  */
 @Composable
 fun rememberShimmerBrush(
+    enabled: Boolean = true,
     baseColor: Color = Color.White.copy(alpha = 0.1f),
     highlightColor: Color = Color.White.copy(alpha = 0.35f),
     durationMillis: Int = 1600
 ): Brush {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val isReducedMotion = remember(context) {
+        try {
+            android.provider.Settings.Global.getFloat(
+                context.contentResolver,
+                android.provider.Settings.Global.ANIMATOR_DURATION_SCALE,
+                1.0f
+            ) == 0f
+        } catch (_: Exception) {
+            false
+        }
+    }
+    if (!enabled || isReducedMotion) {
+        return Brush.linearGradient(
+            colors = listOf(baseColor, baseColor)
+        )
+    }
+
     val transition = rememberInfiniteTransition(label = "shimmer")
     val translateAnim by transition.animateFloat(
         initialValue = 0f,

@@ -32,6 +32,9 @@ internal class DnsUpstreamClient(
         require(maxDnsMessageBytes in 12..0xffff)
     }
 
+    @Volatile
+    private var preferredResolver: InetAddress? = null
+
     fun resolve(
         run: TunnelRun,
         query: DnsQuery,
@@ -39,16 +42,38 @@ internal class DnsUpstreamClient(
         resolvers: List<InetAddress>,
         outboundGuard: ((()->Unit)->Boolean) = { action -> action();true }
     ): ValidatedDnsResponse? {
-        if (!run.running.get() || dnsPayload.isEmpty() || dnsPayload.size > 0xffff) return null
+        if (!run.running.get() || dnsPayload.isEmpty() || dnsPayload.size > 0xffff || resolvers.isEmpty()) return null
         val responseLimit = minOf(maxDnsMessageBytes, DnsPacketUtil.maxDnsPayloadLength(query))
-        for (resolver in resolvers) {
+
+        // Prioritize last known responsive resolver to eliminate redundant timeout delays
+        val orderedResolvers = preferredResolver?.let { pref ->
+            if (pref in resolvers) listOf(pref) + resolvers.filter { it != pref } else resolvers
+        } ?: resolvers
+
+        for (resolver in orderedResolvers) {
             if (!run.running.get() || Thread.currentThread().isInterrupted) return null
-            val udpResponse = resolveUdp(run, query, dnsPayload, resolver, responseLimit,outboundGuard) ?: continue
-            if (!udpResponse.metadata.truncated) return udpResponse
-            val tcpResponse = resolveTcp(run, query, dnsPayload, resolver, responseLimit,outboundGuard)
-            if (tcpResponse != null) return tcpResponse
+            val udpResponse = resolveUdp(run, query, dnsPayload, resolver, responseLimit, outboundGuard)
+            if (udpResponse != null) {
+                if (!udpResponse.metadata.truncated) {
+                    preferredResolver = resolver
+                    return udpResponse
+                }
+                val tcpResponse = resolveTcp(run, query, dnsPayload, resolver, responseLimit, outboundGuard)
+                if (tcpResponse != null) {
+                    preferredResolver = resolver
+                    return tcpResponse
+                }
+            } else if (resolver == preferredResolver) {
+                // Preferred resolver failed to respond; clear preference to prevent timeout cascades
+                preferredResolver = null
+            }
         }
+        preferredResolver = null
         return null
+    }
+
+    fun resetPreferredResolver() {
+        preferredResolver = null
     }
 
     private fun resolveUdp(

@@ -52,11 +52,16 @@ class DecideBlockingUseCase(
         }
         adaptiveBlockingEngine.networkLearner.syncFeedback(domain,UserFeedback.NONE)
 
+        // 1. NeverBlock Guard: Protect core infrastructure and primary domains from being blocked
+        if (com.unblocker.app.logic.analysis.NeverBlockPolicy.isNeverBlock(domain)) {
+            return BlockingDecision.allow("Protected infrastructure", 1.0f).copy(reasonCode = DecisionReason.ALLOWED)
+        }
+
         val isAdBlocking = isAdBlockingEnabled()
         val isAdultBlocking = isAdultBlockingEnabled()
         var shippedRuleDecision: BlockingDecision? = null
         
-        // 1. Check Ad / Tracker Detection Static Rules
+        // 2. Check Ad / Tracker Detection Static Rules
         if (isAdBlocking) {
             val (isAdSeed, seedReason) = adDetector.isAdDomain(domain)
             if (isAdSeed) {
@@ -92,11 +97,6 @@ class DecideBlockingUseCase(
         }
         
         if (shippedRuleDecision != null) return shippedRuleDecision
-        
-        // 2. NeverBlock Guard
-        if (com.unblocker.app.logic.analysis.NeverBlockPolicy.isNeverBlock(domain)) {
-            return BlockingDecision.allow("Protected infrastructure", 1.0f).copy(reasonCode = DecisionReason.ALLOWED)
-        }
         
         // 3. Adaptive learner
         if (isAdBlocking) {

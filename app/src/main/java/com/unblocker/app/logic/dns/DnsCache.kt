@@ -44,7 +44,15 @@ class DnsCache(
     private fun insert(key:CacheKey,bytes:ByteArray,ttl:Long,metadata:DnsResponseMetadata?) {
         if(ttl<=0) return
         val now=nowMillis()
-        cache.entries.removeAll {it.value.expires<=now}
+        if (cache.size >= maxEntries) {
+            val iterator = cache.entries.iterator()
+            while (iterator.hasNext()) {
+                val entry = iterator.next()
+                if (entry.value.expires <= now) {
+                    iterator.remove()
+                }
+            }
+        }
         cache[key]=Record(bytes.copyOf(),now,now+ttl.coerceAtMost(600)*1000,metadata)
         while(cache.size>maxEntries) cache.remove(cache.keys.first())
     }

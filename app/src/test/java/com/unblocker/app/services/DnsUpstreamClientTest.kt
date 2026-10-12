@@ -194,6 +194,22 @@ class DnsUpstreamClientTest {
         }
     }
 
+    @Test fun preferredResolverCanBeReset() {
+        TestDnsServer(loopback).use { server ->
+            val client = client(server)
+            client.resetPreferredResolver()
+            val run = TunnelRun(1)
+            try {
+                server.serveUdpOnce { dnsResponse("ads.example", answerTtl = 60) }
+                val resp = client.resolve(run, query, request, listOf(loopback))
+                assertTrue(resp != null)
+                client.resetPreferredResolver()
+            } finally {
+                run.close()
+            }
+        }
+    }
+
     private fun client(
         server: TestDnsServer,
         maxDnsMessageBytes: Int = 0xffff,

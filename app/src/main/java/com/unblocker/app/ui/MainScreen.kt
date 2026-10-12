@@ -47,6 +47,7 @@ fun MainScreen(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
+            preferences.setAdBlockingEnabled(true)
             quickStartManager.startBlockingServices(onPermissionRequired = {})
         } else {
             preferences.setAdBlockingEnabled(false)
@@ -58,6 +59,7 @@ fun MainScreen(
         if (vpnIntent != null) {
             vpnPermissionLauncher.launch(vpnIntent)
         } else {
+            preferences.setAdBlockingEnabled(true)
             quickStartManager.startBlockingServices(onPermissionRequired = {})
         }
     }

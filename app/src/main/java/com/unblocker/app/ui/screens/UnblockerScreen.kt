@@ -127,8 +127,9 @@ fun UnblockerScreen(
         isDarkTheme = isSystemInDarkTheme()
     )
 
-    // Breathing pulse motion primitive
+    // Breathing pulse motion primitive: active only when protection is running
     val pulseGlowScale = rememberBreathingPulse(
+        enabled = isRunning,
         minScale = 0.95f,
         maxScale = 1.08f,
         durationMillis = 1800
@@ -259,11 +260,11 @@ fun UnblockerScreen(
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
 
                                     if (isRunning) {
+                                        preferences.setProtectionEnabled(false)
                                         preferences.setAdBlockingEnabled(false)
                                         quickStartManager.stopBlockingServices()
                                     } else {
-                                        preferences.setAdBlockingEnabled(true)
-                                        quickStartManager.startBlockingServices(onPermissionRequired = onRequestVpnPermission)
+                                        onRequestVpnPermission()
                                     }
                                 }
                             )

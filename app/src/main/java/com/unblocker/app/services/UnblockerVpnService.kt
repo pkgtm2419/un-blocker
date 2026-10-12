@@ -53,7 +53,10 @@ class UnblockerVpnService : VpnService() {
     }
 
     private lateinit var connectivityManager: ConnectivityManager
-    private val networkResolvers = ResolverRegistry<Network> { dnsCache.clear() }
+    private val networkResolvers = ResolverRegistry<Network> {
+        dnsCache.clear()
+        upstreamClient.resetPreferredResolver()
+    }
     private var networkCallbackRegistered = false
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) = refreshNetworkResolvers(network)
@@ -401,7 +404,7 @@ class UnblockerVpnService : VpnService() {
 
     private fun isUsableUnderlyingNetwork(capabilities: NetworkCapabilities): Boolean {
         return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) &&
+            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED) &&
             !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
     }
 

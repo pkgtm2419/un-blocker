@@ -57,6 +57,20 @@ class QuickStartManager(context: Context) {
     }
 
     /**
+     * Checks if notification permission is granted on Android 13+ (API 33+).
+     */
+    fun hasNotificationPermission(): Boolean {
+        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                appContext,
+                android.Manifest.permission.POST_NOTIFICATIONS
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+    }
+
+    /**
      * Start all blocker services with default settings.
      */
     fun startBlockingServices(onPermissionRequired: () -> Unit) {

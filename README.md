@@ -1,9 +1,9 @@
 # Un-Blocker
 
-[![Download APK](https://img.shields.io/badge/Download-APK%20(v2.0.9)-brightgreen?style=flat&logo=android&logoColor=white)](https://github.com/pkgtm2419/un-blocker/releases/download/v2.0.9/ub-blocker-2.0.9.apk)
+[![Download APK](https://img.shields.io/badge/Download-APK%20(v2.1.0)-brightgreen?style=flat&logo=android&logoColor=white)](https://github.com/pkgtm2419/un-blocker/releases/download/v2.1.0/ub-blocker-2.1.0.apk)
 [![Release CI](https://github.com/pkgtm2419/un-blocker/actions/workflows/release.yml/badge.svg)](https://github.com/pkgtm2419/un-blocker/actions/workflows/release.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Development ](https://img.shields.io/badge/development-2.0.9-orange.svg)](app/build.gradle.kts)
+[![Development ](https://img.shields.io/badge/development-2.1.0-orange.svg)](app/build.gradle.kts)
 [![Android 8.0+](https://img.shields.io/badge/Android-8.0%2B-3DDC84?logo=android&logoColor=white)](#requirements)
 [![Privacy: local only](https://img.shields.io/badge/Privacy-local--only-success)](#privacy-by-design)
 
@@ -29,7 +29,7 @@ Implementation progress and verification: [phase tracker](docs/improvement-progr
 
 <div align="center">
 
-[![Download APK](https://img.shields.io/badge/Download_APK-ub--blocker--2.0.9.apk-brightgreen?style=for-the-badge&logo=android&logoColor=white)](https://github.com/pkgtm2419/un-blocker/releases/download/v2.0.9/ub-blocker-2.0.9.apk)
+[![Download APK](https://img.shields.io/badge/Download_APK-ub--blocker--2.1.0.apk-brightgreen?style=for-the-badge&logo=android&logoColor=white)](https://github.com/pkgtm2419/un-blocker/releases/download/v2.1.0/ub-blocker-2.1.0.apk)
 [![Releases](https://img.shields.io/badge/All_Releases-GitHub-238636?style=for-the-badge&logo=github&logoColor=white)](https://github.com/pkgtm2419/un-blocker/releases)
 
 </div>
@@ -38,8 +38,8 @@ Implementation progress and verification: [phase tracker](docs/improvement-progr
 
 | Asset | Link | Details |
 | :--- | :--- | :--- |
-| **Android APK** | [**`ub-blocker-2.0.9.apk`**](https://github.com/pkgtm2419/un-blocker/releases/download/v2.0.9/ub-blocker-2.0.9.apk) | Direct APK Download (Ready to install) |
-| **Release Page** | [**Release `v2.0.9` Notes**](https://github.com/pkgtm2419/un-blocker/releases/tag/v2.0.9) | View release details and changelog |
+| **Android APK** | [**`ub-blocker-2.1.0.apk`**](https://github.com/pkgtm2419/un-blocker/releases/download/v2.1.0/ub-blocker-2.1.0.apk) | Direct APK Download (Ready to install) |
+| **Release Page** | [**Release `v2.1.0` Notes**](https://github.com/pkgtm2419/un-blocker/releases/tag/v2.1.0) | View release details and changelog |
 | **All Releases** | [**GitHub Releases Catalog**](https://github.com/pkgtm2419/un-blocker/releases) | Browse all published version releases |
 
 > [!TIP]

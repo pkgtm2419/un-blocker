@@ -5,6 +5,7 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -130,7 +131,7 @@ fun LogViewerScreen(
                                 text = "Connection Logs",
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = Slate100,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 letterSpacing = 0.5.sp
                             )
                             Spacer(modifier = Modifier.height(6.dp))
@@ -138,7 +139,7 @@ fun LogViewerScreen(
                                 text = "$totalDomains domains • $totalCalls queries • $totalBlocked blocked",
                                 style = MaterialTheme.typography.bodySmall,
                                 fontWeight = FontWeight.Medium,
-                                color = Slate400
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
 
@@ -148,8 +149,8 @@ fun LogViewerScreen(
                         ) {
                             Surface(
                                 shape = CircleShape,
-                                color = if (isLoggingPaused) Color(0x33EF4444) else Slate800,
-                                border = BorderStroke(1.dp, if (isLoggingPaused) Color(0x66EF4444) else Slate700),
+                                color = if (isLoggingPaused) Color(0x33EF4444) else MaterialTheme.colorScheme.surfaceVariant,
+                                border = BorderStroke(1.dp, if (isLoggingPaused) Color(0x66EF4444) else MaterialTheme.colorScheme.outlineVariant),
                                 modifier = Modifier.size(42.dp)
                             ) {
                                 IconButton(
@@ -159,15 +160,15 @@ fun LogViewerScreen(
                                     Icon(
                                         imageVector = if (isLoggingPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
                                         contentDescription = if (isLoggingPaused) "Resume Logging" else "Pause Logging",
-                                        tint = if (isLoggingPaused) Color(0xFFEF4444) else TealAccent,
+                                        tint = if (isLoggingPaused) Color(0xFFEF4444) else MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(20.dp)
                                     )
                                 }
                             }
                             Surface(
                                 shape = CircleShape,
-                                color = Slate800,
-                                border = BorderStroke(1.dp, Slate700),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                 modifier = Modifier.size(42.dp)
                             ) {
                                 IconButton(
@@ -177,7 +178,7 @@ fun LogViewerScreen(
                                     Icon(
                                         imageVector = Icons.Default.DeleteSweep,
                                         contentDescription = "Clear History",
-                                        tint = Slate400,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.size(20.dp)
                                     )
                                 }
@@ -186,11 +187,12 @@ fun LogViewerScreen(
                     }
 
                     if (isLoggingPaused) {
+                        val isDark = isSystemInDarkTheme()
                         Spacer(modifier = Modifier.height(12.dp))
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = Color(0x26EF4444),
-                            border = BorderStroke(1.dp, Color(0x66EF4444))
+                            color = if (isDark) Color(0x26EF4444) else Color(0xFFFEE2E2),
+                            border = BorderStroke(1.dp, if (isDark) Color(0x66EF4444) else Color(0xFFFCA5A5))
                         ) {
                             Row(
                                 modifier = Modifier
@@ -201,14 +203,14 @@ fun LogViewerScreen(
                                 Icon(
                                     imageVector = Icons.Default.Pause,
                                     contentDescription = null,
-                                    tint = Color(0xFFF87171),
+                                    tint = if (isDark) Color(0xFFF87171) else Color(0xFFDC2626),
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = "Logging is currently paused",
                                     style = MaterialTheme.typography.labelMedium,
-                                    color = Color(0xFFFCA5A5),
+                                    color = if (isDark) Color(0xFFFCA5A5) else Color(0xFF991B1B),
                                     fontWeight = FontWeight.SemiBold
                                 )
                             }
@@ -227,12 +229,12 @@ fun LogViewerScreen(
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = { viewModel.setSearchQuery(it) },
-                        placeholder = { Text("Search domains…", color = Slate400) },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Slate400) },
+                        placeholder = { Text("Search domains…", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
                         trailingIcon = {
                             if (searchQuery.isNotEmpty()) {
                                 IconButton(onClick = { viewModel.setSearchQuery("") }) {
-                                    Icon(Icons.Default.Clear, contentDescription = "Clear search", tint = Slate400)
+                                    Icon(Icons.Default.Clear, contentDescription = "Clear search", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                         },
@@ -240,17 +242,17 @@ fun LogViewerScreen(
                         shape = CircleShape,
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Slate100,
-                            unfocusedTextColor = Slate100,
-                            focusedPlaceholderColor = Slate400,
-                            unfocusedPlaceholderColor = Slate400,
-                            focusedLeadingIconColor = TealAccent,
-                            unfocusedLeadingIconColor = Slate400,
-                            focusedTrailingIconColor = Slate100,
-                            unfocusedTrailingIconColor = Slate400,
-                            focusedBorderColor = TealAccent,
-                            unfocusedBorderColor = Slate700.copy(alpha = 0.8f),
-                            cursorColor = TealAccent
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            focusedLeadingIconColor = MaterialTheme.colorScheme.primary,
+                            unfocusedLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            focusedTrailingIconColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                            cursorColor = MaterialTheme.colorScheme.primary
                         )
                     )
 
@@ -269,15 +271,15 @@ fun LogViewerScreen(
                                 label = { Text("All") },
                                 shape = CircleShape,
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = TealAccent.copy(alpha = 0.25f),
-                                    selectedLabelColor = TealAccent,
-                                    containerColor = Slate800,
-                                    labelColor = Slate400
+                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant
                                 ),
                                 border = FilterChipDefaults.filterChipBorder(
                                     enabled = true,
                                     selected = filter == LogFilter.ALL,
-                                    borderColor = if (filter == LogFilter.ALL) TealAccent else Slate700
+                                    borderColor = if (filter == LogFilter.ALL) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
                                 )
                             )
                             FilterChip(
@@ -288,13 +290,13 @@ fun LogViewerScreen(
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = AdBlockedRed.copy(alpha = 0.25f),
                                     selectedLabelColor = AdBlockedRed,
-                                    containerColor = Slate800,
-                                    labelColor = Slate400
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant
                                 ),
                                 border = FilterChipDefaults.filterChipBorder(
                                     enabled = true,
                                     selected = filter == LogFilter.BLOCKED,
-                                    borderColor = if (filter == LogFilter.BLOCKED) AdBlockedRed else Slate700
+                                    borderColor = if (filter == LogFilter.BLOCKED) AdBlockedRed else MaterialTheme.colorScheme.outlineVariant
                                 )
                             )
                             FilterChip(
@@ -305,13 +307,13 @@ fun LogViewerScreen(
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = AllowedGreen.copy(alpha = 0.25f),
                                     selectedLabelColor = AllowedGreen,
-                                    containerColor = Slate800,
-                                    labelColor = Slate400
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant
                                 ),
                                 border = FilterChipDefaults.filterChipBorder(
                                     enabled = true,
                                     selected = filter == LogFilter.ALLOWED,
-                                    borderColor = if (filter == LogFilter.ALLOWED) AllowedGreen else Slate700
+                                    borderColor = if (filter == LogFilter.ALLOWED) AllowedGreen else MaterialTheme.colorScheme.outlineVariant
                                 )
                             )
                         }
@@ -326,7 +328,7 @@ fun LogViewerScreen(
                         ) {
                             Text(
                                 text = if (sort == LogSort.RECENT) "Sort: Recent" else "Sort: Most calls",
-                                color = TealAccent,
+                                color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 12.sp
                             )
@@ -347,7 +349,7 @@ fun LogViewerScreen(
                         Text(
                             text = if (searchQuery.isEmpty()) "No connections logged yet" else "No matching domains found",
                             style = MaterialTheme.typography.bodyLarge,
-                            color = Slate400
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -402,7 +404,7 @@ fun DomainStatCard(
                         text = stat.domain,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = Slate100,
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -410,7 +412,7 @@ fun DomainStatCard(
                     Text(
                         text = "${stat.callCount} calls • ${stat.blockedCount} blocked • $relativeTime",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Slate400
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
@@ -420,7 +422,7 @@ fun DomainStatCard(
                     Icon(
                         imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                         contentDescription = if (isExpanded) "Collapse" else "Expand",
-                        tint = Slate400
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -434,14 +436,14 @@ fun DomainStatCard(
                 ) {
                     HorizontalDivider(
                         modifier = Modifier.padding(bottom = 12.dp),
-                        color = Slate700
+                        color = MaterialTheme.colorScheme.outlineVariant
                     )
 
                     Text(
                         text = "Recent Activity (Latest 50)",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = TealAccent
+                        color = MaterialTheme.colorScheme.primary
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -450,7 +452,7 @@ fun DomainStatCard(
                         Text(
                             text = "Loading events…",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Slate400
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     } else {
                         val timeFormat = remember { SimpleDateFormat("HH:mm:ss", Locale.getDefault()) }
@@ -466,13 +468,18 @@ fun DomainStatCard(
                                     Text(
                                         text = "${dateFormat.format(Date(event.ts))} ${timeFormat.format(Date(event.ts))}",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = Slate400
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
+                                    val isDark = isSystemInDarkTheme()
                                     Text(
                                         text = if (event.decision == 1) "BLOCKED" else "ALLOWED",
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (event.decision == 1) AdBlockedRed else AllowedGreen
+                                        color = if (event.decision == 1) {
+                                            if (isDark) AdBlockedRed else Color(0xFFDC2626)
+                                        } else {
+                                            if (isDark) AllowedGreen else Color(0xFF047857)
+                                        }
                                     )
                                 }
                             }
@@ -482,6 +489,8 @@ fun DomainStatCard(
                     Spacer(modifier = Modifier.height(14.dp))
 
                     // Override Action Buttons
+                    val isDark = isSystemInDarkTheme()
+                    val allowColor = if (isDark) AllowedGreen else Color(0xFF047857)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.End
@@ -489,10 +498,10 @@ fun DomainStatCard(
                         OutlinedButton(
                             onClick = onAllow,
                             shape = CircleShape,
-                            border = BorderStroke(1.dp, AllowedGreen),
+                            border = BorderStroke(1.dp, allowColor),
                             modifier = Modifier.padding(end = 8.dp)
                         ) {
-                            Text("Always Allow", color = AllowedGreen)
+                            Text("Always Allow", color = allowColor)
                         }
                         Button(
                             onClick = onBlock,
@@ -510,28 +519,29 @@ fun DomainStatCard(
 
 @Composable
 fun StatusChip(blockedCount: Long, allowedCount: Long) {
+    val isDark = isSystemInDarkTheme()
     val (label, bg, text) = when {
         blockedCount > 0 && allowedCount > 0 -> Triple(
             "Mixed",
-            Color(0x33F59E0B),
-            Color(0xFFFBBF24)
+            if (isDark) Color(0x33F59E0B) else Color(0xFFFEF3C7),
+            if (isDark) Color(0xFFFBBF24) else Color(0xFFB45309)
         )
         blockedCount > 0 -> Triple(
             "Blocked",
-            Color(0x33EF4444),
-            Color(0xFFF87171)
+            if (isDark) Color(0x33EF4444) else Color(0xFFFEE2E2),
+            if (isDark) Color(0xFFF87171) else Color(0xFFDC2626)
         )
         else -> Triple(
             "Allowed",
-            Color(0x3310B981),
-            AllowedGreen
+            if (isDark) Color(0x3310B981) else Color(0xFFD1FAE5),
+            if (isDark) AllowedGreen else Color(0xFF047857)
         )
     }
 
     Surface(
         shape = CircleShape,
         color = bg,
-        border = BorderStroke(1.dp, text.copy(alpha = 0.4f))
+        border = BorderStroke(1.dp, if (isDark) text.copy(alpha = 0.4f) else text.copy(alpha = 0.25f))
     ) {
         Text(
             text = label,

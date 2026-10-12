@@ -2,6 +2,7 @@ package com.unblocker.app.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -38,24 +39,43 @@ fun SkeuomorphicCard(
     isInset: Boolean = false,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    val isDark = isSystemInDarkTheme()
     val stateColors = LocalVpnStateColors.current
-    val actualHighlight = highlightColor ?: stateColors.surfaceHighlight
-    val actualShadow = shadowColor ?: stateColors.surfaceShadow
+    val actualHighlight = highlightColor ?: (if (isDark) stateColors.surfaceHighlight else Color.White.copy(alpha = 0.9f))
+    val actualShadow = shadowColor ?: (if (isDark) stateColors.surfaceShadow else Color(0xFFCBD5E1).copy(alpha = 0.7f))
 
-    val surfaceGradient = if (isInset) {
-        Brush.verticalGradient(
-            colors = listOf(
-                Color(0xFF0F172A),
-                Slate900
+    val surfaceGradient = if (isDark) {
+        if (isInset) {
+            Brush.verticalGradient(
+                colors = listOf(
+                    Color(0xFF0F172A),
+                    Slate900
+                )
             )
-        )
+        } else {
+            Brush.verticalGradient(
+                colors = listOf(
+                    Slate800.copy(alpha = 0.95f),
+                    Slate900.copy(alpha = 0.98f)
+                )
+            )
+        }
     } else {
-        Brush.verticalGradient(
-            colors = listOf(
-                Slate800.copy(alpha = 0.95f),
-                Slate900.copy(alpha = 0.98f)
+        if (isInset) {
+            Brush.verticalGradient(
+                colors = listOf(
+                    Color(0xFFF1F5F9),
+                    Color(0xFFE2E8F0)
+                )
             )
-        )
+        } else {
+            Brush.verticalGradient(
+                colors = listOf(
+                    Color.White,
+                    Color(0xFFF8FAFC)
+                )
+            )
+        }
     }
 
     Box(
@@ -87,7 +107,9 @@ fun SkeuomorphicCard(
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
-            CompositionLocalProvider(LocalContentColor provides Color(0xFFF1F5F9)) {
+            CompositionLocalProvider(
+                LocalContentColor provides if (isDark) Color(0xFFF1F5F9) else MaterialTheme.colorScheme.onSurface
+            ) {
                 content()
             }
         }
@@ -105,38 +127,53 @@ fun SkeuomorphicTactileSurface(
     accentColor: Color = Color.Transparent,
     content: @Composable () -> Unit
 ) {
+    val isDark = isSystemInDarkTheme()
     val stateColors = LocalVpnStateColors.current
     val elevation = if (isPressed) 1.dp else 4.dp
+    val shadowColor = if (isDark) stateColors.surfaceShadow else Color(0xFF64748B).copy(alpha = 0.2f)
+    val highlightColor = if (isDark) stateColors.surfaceHighlight else Color.White.copy(alpha = 0.9f)
+
+    val surfaceGradient = if (isDark) {
+        if (isPressed) {
+            listOf(Slate900, Slate800)
+        } else {
+            listOf(Slate800, Slate900)
+        }
+    } else {
+        if (isPressed) {
+            listOf(Color(0xFFE2E8F0), Color(0xFFF1F5F9))
+        } else {
+            listOf(Color.White, Color(0xFFF1F5F9))
+        }
+    }
 
     Box(
         modifier = modifier
             .shadow(
                 elevation = elevation,
                 shape = shape,
-                ambientColor = stateColors.surfaceShadow,
-                spotColor = stateColors.surfaceShadow
+                ambientColor = shadowColor,
+                spotColor = shadowColor
             )
             .clip(shape)
             .background(
-                brush = Brush.verticalGradient(
-                    colors = if (isPressed) {
-                        listOf(Slate900, Slate800)
-                    } else {
-                        listOf(Slate800, Slate900)
-                    }
-                )
+                brush = Brush.verticalGradient(colors = surfaceGradient)
             )
             .border(
                 width = 1.dp,
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        if (accentColor != Color.Transparent) accentColor.copy(alpha = 0.6f) else stateColors.surfaceHighlight,
-                        stateColors.surfaceShadow
+                        if (accentColor != Color.Transparent) accentColor.copy(alpha = 0.6f) else highlightColor,
+                        shadowColor
                     )
                 ),
                 shape = shape
             )
     ) {
-        content()
+        CompositionLocalProvider(
+            LocalContentColor provides if (isDark) Color(0xFFF1F5F9) else MaterialTheme.colorScheme.onSurface
+        ) {
+            content()
+        }
     }
 }

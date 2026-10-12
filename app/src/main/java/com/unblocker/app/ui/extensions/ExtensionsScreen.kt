@@ -11,6 +11,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -128,8 +129,10 @@ fun ExtensionsScreen(
         label = "spin_angle"
     )
 
+    val isDark = isSystemInDarkTheme()
+
     Scaffold(
-        containerColor = Slate950,
+        containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
@@ -138,21 +141,21 @@ fun ExtensionsScreen(
                         OutlinedTextField(
                             value = searchQuery,
                             onValueChange = viewModel::onSearchQueryChange,
-                            placeholder = { Text("Search filters…", color = Slate400, fontSize = 14.sp) },
+                            placeholder = { Text("Search filters…", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp) },
                             singleLine = true,
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White,
-                                focusedBorderColor = TealAccent,
-                                unfocusedBorderColor = Slate700,
-                                cursorColor = TealAccent
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                                cursorColor = MaterialTheme.colorScheme.primary
                             ),
                             trailingIcon = {
                                 IconButton(onClick = {
                                     viewModel.onSearchQueryChange("")
                                     isSearchActive = false
                                 }) {
-                                    Icon(Icons.Default.Close, contentDescription = "Close search", tint = Slate400)
+                                    Icon(Icons.Default.Close, contentDescription = "Close search", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             },
                             modifier = Modifier
@@ -162,7 +165,7 @@ fun ExtensionsScreen(
                     } else {
                         Text(
                             text = "Hosts & filters",
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -173,14 +176,14 @@ fun ExtensionsScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back to home",
-                            tint = Color.White
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 },
                 actions = {
                     if (!isSearchActive) {
                         IconButton(onClick = { isSearchActive = true }) {
-                            Icon(Icons.Default.Search, contentDescription = "Search filters", tint = Color.White)
+                            Icon(Icons.Default.Search, contentDescription = "Search filters", tint = MaterialTheme.colorScheme.onSurface)
                         }
                     }
 
@@ -192,26 +195,26 @@ fun ExtensionsScreen(
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = "Update all filters from internet",
-                            tint = if (isUpdating) TealAccent else Color.White,
+                            tint = if (isUpdating) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                             modifier = if (isUpdating) Modifier.rotate(spinRotation) else Modifier
                         )
                     }
 
                     // Add Custom Filter button
                     IconButton(onClick = { showAddDialog = true }) {
-                        Icon(Icons.Default.Add, contentDescription = "Add custom filter", tint = Color.White)
+                        Icon(Icons.Default.Add, contentDescription = "Add custom filter", tint = MaterialTheme.colorScheme.onSurface)
                     }
 
                     // Overflow Menu
                     Box {
                         IconButton(onClick = { showMenu = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "More options", tint = Color.White)
+                            Icon(Icons.Default.MoreVert, contentDescription = "More options", tint = MaterialTheme.colorScheme.onSurface)
                         }
 
                         DropdownMenu(
                             expanded = showMenu,
                             onDismissRequest = { showMenu = false },
-                            modifier = Modifier.background(Slate900)
+                            modifier = Modifier.background(MaterialTheme.colorScheme.surface)
                         ) {
                             DropdownMenuItem(
                                 text = {
@@ -221,7 +224,7 @@ fun ExtensionsScreen(
                                     ) {
                                         Text(
                                             text = "Auto-update extensions",
-                                            color = Color.White,
+                                            color = MaterialTheme.colorScheme.onSurface,
                                             fontSize = 14.sp,
                                             modifier = Modifier.weight(1f)
                                         )
@@ -232,9 +235,9 @@ fun ExtensionsScreen(
                                                 viewModel.setAutoUpdateEnabled(checked)
                                             },
                                             colors = CheckboxDefaults.colors(
-                                                checkedColor = TealAccent,
-                                                checkmarkColor = Slate950,
-                                                uncheckedColor = Slate400
+                                                checkedColor = MaterialTheme.colorScheme.primary,
+                                                checkmarkColor = MaterialTheme.colorScheme.onPrimary,
+                                                uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         )
                                     }
@@ -245,7 +248,7 @@ fun ExtensionsScreen(
                             )
 
                             DropdownMenuItem(
-                                text = { Text("Update all extensions", color = Color.White, fontSize = 14.sp) },
+                                text = { Text("Update all extensions", color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp) },
                                 onClick = {
                                     showMenu = false
                                     viewModel.updateAll()
@@ -253,7 +256,7 @@ fun ExtensionsScreen(
                             )
 
                             DropdownMenuItem(
-                                text = { Text("Enable all", color = Color.White, fontSize = 14.sp) },
+                                text = { Text("Enable all", color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp) },
                                 onClick = {
                                     showMenu = false
                                     viewModel.setAllEnabled(true)
@@ -261,7 +264,7 @@ fun ExtensionsScreen(
                             )
 
                             DropdownMenuItem(
-                                text = { Text("Disable all", color = Color.White, fontSize = 14.sp) },
+                                text = { Text("Disable all", color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp) },
                                 onClick = {
                                     showMenu = false
                                     viewModel.setAllEnabled(false)
@@ -271,22 +274,22 @@ fun ExtensionsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Slate950
+                    containerColor = MaterialTheme.colorScheme.background
                 )
             )
         },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { viewModel.updateAll() },
-                containerColor = TealPrimary,
-                contentColor = Color.White,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = CircleShape,
                 modifier = Modifier.size(56.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Save,
                     contentDescription = "Save & Sync Filters",
-                    tint = Color.White
+                    tint = MaterialTheme.colorScheme.onPrimary
                 )
             }
         }
@@ -307,13 +310,13 @@ fun ExtensionsScreen(
                     val isSelected = category.equals(selectedCategory, ignoreCase = true)
                     Surface(
                         shape = RoundedCornerShape(20.dp),
-                        color = if (isSelected) TealPrimary else Slate900,
-                        border = BorderStroke(1.dp, if (isSelected) TealAccent else Slate800),
+                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                        border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
                         modifier = Modifier.clickable { viewModel.onCategorySelect(category) }
                     ) {
                         Text(
                             text = category,
-                            color = if (isSelected) Color.White else Slate300,
+                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 13.sp,
                             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
@@ -325,8 +328,8 @@ fun ExtensionsScreen(
             // Informational Note about DNS-Level Filtering vs In-Stream Video Ads
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = Slate900,
-                border = BorderStroke(1.dp, Slate800),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 14.dp, vertical = 4.dp)
@@ -338,7 +341,7 @@ fun ExtensionsScreen(
                     Icon(
                         imageVector = Icons.Default.Info,
                         contentDescription = null,
-                        tint = TealAccent,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
                             .size(18.dp)
                             .padding(top = 2.dp)
@@ -346,7 +349,7 @@ fun ExtensionsScreen(
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
                         text = "DNS filtering blocks ad servers and trackers network-wide. In-stream video ads (YouTube, Instagram) share video delivery CDNs and cannot be blocked via DNS without disrupting media playback.",
-                        color = Slate300,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 11.sp,
                         lineHeight = 15.sp
                     )
@@ -357,8 +360,8 @@ fun ExtensionsScreen(
             if (totalEnabledRulesCount > 300000) {
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFF451A03),
-                    border = BorderStroke(1.dp, Color(0xFFD97706)),
+                    color = if (isDark) Color(0xFF451A03) else Color(0xFFFFFBEB),
+                    border = BorderStroke(1.dp, if (isDark) Color(0xFFD97706) else Color(0xFFF59E0B)),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 14.dp, vertical = 4.dp)
@@ -370,13 +373,13 @@ fun ExtensionsScreen(
                         Icon(
                             imageVector = Icons.Default.Warning,
                             contentDescription = null,
-                            tint = Color(0xFFFBBF24),
+                            tint = if (isDark) Color(0xFFFBBF24) else Color(0xFFB45309),
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "High rule count (~$totalEnabledRulesCount rules). Large heap is active, but enabling too many massive lists may impact device performance.",
-                            color = Color(0xFFFEF3C7),
+                            color = if (isDark) Color(0xFFFEF3C7) else Color(0xFF92400E),
                             fontSize = 11.sp
                         )
                     }
@@ -394,14 +397,14 @@ fun ExtensionsScreen(
                 Text(
                     text = "Total active filters: $activeFilterCount",
                     fontSize = 13.sp,
-                    color = Slate400,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = FontWeight.Medium
                 )
                 if (totalEnabledRulesCount > 0) {
                     Text(
                         text = "Rules: ~$totalEnabledRulesCount",
                         fontSize = 12.sp,
-                        color = TealAccent,
+                        color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Medium
                     )
                 }
@@ -435,32 +438,32 @@ fun ExtensionsScreen(
 
         AlertDialog(
             onDismissRequest = { showAddDialog = false },
-            title = { Text("Add custom filter", color = Color.White, fontWeight = FontWeight.Bold) },
+            title = { Text("Add custom filter", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = name,
                         onValueChange = { name = it },
-                        label = { Text("Filter Name", color = Slate400) },
+                        label = { Text("Filter Name", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
-                            focusedBorderColor = TealAccent,
-                            unfocusedBorderColor = Slate700
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
                         value = url,
                         onValueChange = { url = it },
-                        label = { Text("Filter URL (optional)", color = Slate400) },
+                        label = { Text("Filter URL (optional)", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
-                            focusedBorderColor = TealAccent,
-                            unfocusedBorderColor = Slate700
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -475,15 +478,15 @@ fun ExtensionsScreen(
                         }
                     }
                 ) {
-                    Text("Add", color = TealAccent, fontWeight = FontWeight.Bold)
+                    Text("Add", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showAddDialog = false }) {
-                    Text("Cancel", color = Slate400)
+                    Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
-            containerColor = Slate900
+            containerColor = MaterialTheme.colorScheme.surface
         )
     }
 }
@@ -499,10 +502,10 @@ fun ExtensionCard(
 
     Surface(
         shape = RoundedCornerShape(14.dp),
-        color = Slate900,
+        color = MaterialTheme.colorScheme.surface,
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, Slate800, RoundedCornerShape(14.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
     ) {
         Row(
             modifier = Modifier
@@ -514,13 +517,13 @@ fun ExtensionCard(
             Box(
                 modifier = Modifier
                     .size(36.dp)
-                    .background(Slate800, CircleShape),
+                    .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = if (item.isCustom) Icons.Default.Edit else Icons.Default.Public,
                     contentDescription = null,
-                    tint = Slate300,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -535,7 +538,7 @@ fun ExtensionCard(
                 ) {
                     Text(
                         text = item.name,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.weight(1f, fill = false),
@@ -544,12 +547,12 @@ fun ExtensionCard(
                     )
                     Surface(
                         shape = RoundedCornerShape(4.dp),
-                        color = Slate800,
+                        color = MaterialTheme.colorScheme.surfaceVariant,
                         modifier = Modifier.padding(start = 2.dp)
                     ) {
                         Text(
                             text = item.category,
-                            color = TealAccent,
+                            color = MaterialTheme.colorScheme.primary,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Medium,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -561,7 +564,7 @@ fun ExtensionCard(
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = item.description,
-                        color = Slate300,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp,
                         lineHeight = 16.sp,
                         maxLines = 2,
@@ -577,7 +580,7 @@ fun ExtensionCard(
                     } else {
                         "Filters: ${item.filterCount}   Size: ${item.formattedSize()}"
                     },
-                    color = Slate400,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 12.sp
                 )
 
@@ -585,7 +588,7 @@ fun ExtensionCard(
 
                 Text(
                     text = item.formattedLastUpdated(),
-                    color = Slate400,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 11.sp
                 )
             }
@@ -597,10 +600,10 @@ fun ExtensionCard(
                 checked = item.isEnabled,
                 onCheckedChange = onToggle,
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color(0xFF2DD4BF),
-                    checkedTrackColor = Color(0xFF115E59),
-                    uncheckedThumbColor = Slate400,
-                    uncheckedTrackColor = Slate800
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = MaterialTheme.colorScheme.primary,
+                    uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
                 )
             )
 
@@ -613,7 +616,7 @@ fun ExtensionCard(
                     Icon(
                         imageVector = Icons.Default.MoreVert,
                         contentDescription = "Item actions",
-                        tint = Slate400,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -621,11 +624,11 @@ fun ExtensionCard(
                 DropdownMenu(
                     expanded = showItemMenu,
                     onDismissRequest = { showItemMenu = false },
-                    modifier = Modifier.background(Slate900)
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surface)
                 ) {
                     if (item.url.isNotBlank()) {
                         DropdownMenuItem(
-                            text = { Text("Update", color = Color.White) },
+                            text = { Text("Update", color = MaterialTheme.colorScheme.onSurface) },
                             onClick = {
                                 showItemMenu = false
                                 onUpdate()

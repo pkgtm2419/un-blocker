@@ -9,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -54,6 +55,7 @@ fun AgentStatusPanel(
     onOpenSettings: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    val isDark = isSystemInDarkTheme()
     val stateColors = LocalVpnStateColors.current
     var isExpanded by remember { mutableStateOf(false) }
     val isRunning = serviceStatus == ServiceStatus.RUNNING
@@ -99,7 +101,7 @@ fun AgentStatusPanel(
                             fontWeight = FontWeight.Bold,
                             fontFamily = FontFamily.Monospace,
                             letterSpacing = 1.sp,
-                            color = Slate400
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Surface(
@@ -147,7 +149,7 @@ fun AgentStatusPanel(
                 Icon(
                     imageVector = Icons.Default.Settings,
                     contentDescription = "Extensions & Filter Settings",
-                    tint = Slate400
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -160,7 +162,7 @@ fun AgentStatusPanel(
                     .padding(top = 16.dp)
             ) {
                 HorizontalDivider(
-                    color = Slate700.copy(alpha = 0.5f),
+                    color = MaterialTheme.colorScheme.outlineVariant,
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
 
@@ -169,7 +171,7 @@ fun AgentStatusPanel(
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Monospace,
-                    color = Slate400,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     letterSpacing = 0.8.sp
                 )
 
@@ -216,8 +218,8 @@ fun AgentStatusPanel(
                     Spacer(modifier = Modifier.height(12.dp))
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = Color(0xFF451A03),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD97706)),
+                        color = if (isDark) Color(0xFF451A03) else Color(0xFFFFFBEB),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, if (isDark) Color(0xFFD97706) else Color(0xFFF59E0B)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
@@ -227,7 +229,7 @@ fun AgentStatusPanel(
                             Icon(
                                 imageVector = Icons.Default.Warning,
                                 contentDescription = null,
-                                tint = Color(0xFFFBBF24),
+                                tint = if (isDark) Color(0xFFFBBF24) else Color(0xFFB45309),
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
@@ -236,12 +238,12 @@ fun AgentStatusPanel(
                                     text = "Private DNS mode active",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFFFDE68A)
+                                    color = if (isDark) Color(0xFFFDE68A) else Color(0xFF92400E)
                                 )
                                 Text(
                                     text = "Android may send queries over DoT bypassing local filter.",
                                     fontSize = 11.sp,
-                                    color = Color(0xFFFDE68A).copy(alpha = 0.8f)
+                                    color = if (isDark) Color(0xFFFDE68A).copy(alpha = 0.8f) else Color(0xFFB45309)
                                 )
                             }
                             TextButton(
@@ -257,7 +259,7 @@ fun AgentStatusPanel(
                                     text = "Fix",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFFFBBF24)
+                                    color = if (isDark) Color(0xFFFBBF24) else Color(0xFFB45309)
                                 )
                             }
                         }
@@ -276,6 +278,7 @@ private fun PipelineStepRow(
     isSuccess: Boolean,
     isWarning: Boolean
 ) {
+    val isDark = isSystemInDarkTheme()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -286,7 +289,7 @@ private fun PipelineStepRow(
             text = stepNumber,
             fontSize = 11.sp,
             fontFamily = FontFamily.Monospace,
-            color = Slate400,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.width(24.dp)
         )
 
@@ -296,12 +299,12 @@ private fun PipelineStepRow(
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.Monospace,
-                color = if (isWarning) Color(0xFFFBBF24) else if (isSuccess) AllowedGreen else Slate400
+                color = if (isWarning) (if (isDark) Color(0xFFFBBF24) else Color(0xFFB45309)) else if (isSuccess) (if (isDark) AllowedGreen else Color(0xFF047857)) else MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
                 text = detail,
                 fontSize = 11.sp,
-                color = Slate400
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
@@ -310,9 +313,9 @@ private fun PipelineStepRow(
                 .size(7.dp)
                 .background(
                     color = when {
-                        isWarning -> Color(0xFFFBBF24)
-                        isSuccess -> AllowedGreen
-                        else -> Slate700
+                        isWarning -> if (isDark) Color(0xFFFBBF24) else Color(0xFFB45309)
+                        isSuccess -> if (isDark) AllowedGreen else Color(0xFF047857)
+                        else -> MaterialTheme.colorScheme.outlineVariant
                     },
                     shape = CircleShape
                 )

@@ -55,45 +55,45 @@ fun rememberVpnStateColors(
             gradStart = Color(0xFF047857),
             gradEnd = Color(0xFF064E3B),
             glow = AllowedGreen.copy(alpha = 0.40f),
-            badgeBg = AllowedGreenBg,
-            badgeText = AllowedGreen,
+            badgeBg = if (isDarkTheme) AllowedGreenBg else Color(0xFFD1FAE5),
+            badgeText = if (isDarkTheme) AllowedGreen else Color(0xFF065F46),
             wave = AllowedGreen.copy(alpha = 0.10f)
         )
         ServiceStatus.STARTING -> StatePalette(
-            core = Color(0xFFF59E0B),
+            core = if (isDarkTheme) Color(0xFFF59E0B) else Color(0xFFD97706),
             gradStart = Color(0xFFB45309),
             gradEnd = Color(0xFF78350F),
             glow = Color(0xFFF59E0B).copy(alpha = 0.35f),
-            badgeBg = Color(0xFF451A03),
-            badgeText = Color(0xFFFBBF24),
+            badgeBg = if (isDarkTheme) Color(0xFF451A03) else Color(0xFFFEF3C7),
+            badgeText = if (isDarkTheme) Color(0xFFFBBF24) else Color(0xFF92400E),
             wave = Color(0xFFF59E0B).copy(alpha = 0.08f)
         )
         ServiceStatus.STOPPING -> StatePalette(
-            core = Color(0xFFF97316),
+            core = if (isDarkTheme) Color(0xFFF97316) else Color(0xFFEA580C),
             gradStart = Color(0xFFC2410C),
             gradEnd = Color(0xFF7C2D12),
             glow = Color(0xFFF97316).copy(alpha = 0.35f),
-            badgeBg = Color(0xFF431407),
-            badgeText = Color(0xFFFB923C),
+            badgeBg = if (isDarkTheme) Color(0xFF431407) else Color(0xFFFFEDD5),
+            badgeText = if (isDarkTheme) Color(0xFFFB923C) else Color(0xFF9A3412),
             wave = Color(0xFFF97316).copy(alpha = 0.08f)
         )
         ServiceStatus.ERROR -> StatePalette(
-            core = Color(0xFFEF4444),
+            core = if (isDarkTheme) Color(0xFFEF4444) else Color(0xFFDC2626),
             gradStart = Color(0xFFB91C1C),
             gradEnd = Color(0xFF7F1D1D),
             glow = Color(0xFFEF4444).copy(alpha = 0.45f),
-            badgeBg = Color(0xFF450A0A),
-            badgeText = Color(0xFFF87171),
+            badgeBg = if (isDarkTheme) Color(0xFF450A0A) else Color(0xFFFEE2E2),
+            badgeText = if (isDarkTheme) Color(0xFFF87171) else Color(0xFF991B1B),
             wave = Color(0xFFEF4444).copy(alpha = 0.12f)
         )
         ServiceStatus.STOPPED -> StatePalette(
-            core = Slate400,
-            gradStart = Slate800,
-            gradEnd = Slate900,
+            core = if (isDarkTheme) Slate400 else Slate600,
+            gradStart = if (isDarkTheme) Slate800 else Color(0xFFE2E8F0),
+            gradEnd = if (isDarkTheme) Slate900 else Color(0xFFCBD5E1),
             glow = Color.Transparent,
-            badgeBg = Slate800,
-            badgeText = Slate400,
-            wave = Slate700.copy(alpha = 0.05f)
+            badgeBg = if (isDarkTheme) Slate800 else Color(0xFFE2E8F0),
+            badgeText = if (isDarkTheme) Slate400 else Color(0xFF334155),
+            wave = if (isDarkTheme) Slate700.copy(alpha = 0.05f) else Slate400.copy(alpha = 0.08f)
         )
     }
 
@@ -111,7 +111,7 @@ fun rememberVpnStateColors(
         coreGradientEnd = animGradEnd,
         glowColor = animGlow,
         surfaceHighlight = if (isDarkTheme) Color.White.copy(alpha = 0.12f) else Color.White.copy(alpha = 0.85f),
-        surfaceShadow = if (isDarkTheme) Color.Black.copy(alpha = 0.65f) else Color(0xFF0F172A).copy(alpha = 0.10f),
+        surfaceShadow = if (isDarkTheme) Color.Black.copy(alpha = 0.65f) else Color(0xFF64748B).copy(alpha = 0.18f),
         badgeBackground = animBadgeBg,
         badgeTextColor = animBadgeText,
         waveAccent = animWave,

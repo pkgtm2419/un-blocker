@@ -195,7 +195,7 @@ fun UnblockerScreen(
                     text = "on-device network shield",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Normal,
-                    color = TealAccent
+                    color = MaterialTheme.colorScheme.primary
                 )
 
                 Spacer(modifier = Modifier.height(36.dp))
@@ -290,11 +290,17 @@ fun UnblockerScreen(
 
                 // Standalone Private DNS Warning Card if detected
                 if (UnblockerVpnService.shouldWarn(isPrivateDnsActive, privateDnsServerName)) {
+                    val isDark = isSystemInDarkTheme()
                     Spacer(modifier = Modifier.height(16.dp))
                     Card(
                         shape = RoundedCornerShape(18.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF451A03)),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD97706)),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isDark) Color(0xFF451A03) else Color(0xFFFFFBEB)
+                        ),
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            if (isDark) Color(0xFFD97706) else Color(0xFFF59E0B)
+                        ),
                         modifier = Modifier
                             .fillMaxWidth()
                             .widthIn(max = 420.dp)
@@ -306,7 +312,7 @@ fun UnblockerScreen(
                             Text(
                                 text = "Private DNS is active — encrypted queries may bypass local filtering",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color(0xFFFDE68A),
+                                color = if (isDark) Color(0xFFFDE68A) else Color(0xFF92400E),
                                 textAlign = TextAlign.Center
                             )
                             Spacer(modifier = Modifier.height(8.dp))
@@ -321,7 +327,7 @@ fun UnblockerScreen(
                             ) {
                                 Text(
                                     text = "Open Network Settings",
-                                    color = Color(0xFFFBBF24),
+                                    color = if (isDark) Color(0xFFFBBF24) else Color(0xFFB45309),
                                     fontWeight = FontWeight.Bold
                                 )
                             }
@@ -346,13 +352,13 @@ fun UnblockerScreen(
                                 text = "Block 18+ Content",
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onBackground
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = "Filter adult websites & explicit domains",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Slate400
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
 
@@ -367,8 +373,8 @@ fun UnblockerScreen(
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
                                 checkedTrackColor = AdultBlockedPurple,
-                                uncheckedThumbColor = Slate400,
-                                uncheckedTrackColor = Slate800
+                                uncheckedThumbColor = if (isSystemInDarkTheme()) Slate400 else Color(0xFF64748B),
+                                uncheckedTrackColor = if (isSystemInDarkTheme()) Slate800 else Color(0xFFE2E8F0)
                             )
                         )
                     }
@@ -377,6 +383,7 @@ fun UnblockerScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // Tactile Always-on VPN Settings Action Button (No extra text)
+                val isDarkTheme = isSystemInDarkTheme()
                 OutlinedButton(
                     onClick = {
                         runCatching {
@@ -386,24 +393,27 @@ fun UnblockerScreen(
                         }
                     },
                     shape = RoundedCornerShape(14.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Slate700.copy(alpha = 0.7f)),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        if (isDarkTheme) Slate700.copy(alpha = 0.7f) else MaterialTheme.colorScheme.outline
+                    ),
                     colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = Slate900.copy(alpha = 0.5f),
-                        contentColor = Slate300
+                        containerColor = if (isDarkTheme) Slate900.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.onSurface
                     )
                 ) {
                     Icon(
                         imageVector = Icons.Default.VpnKey,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
-                        tint = TealAccent
+                        tint = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "Always-on VPN settings",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = Slate300
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
 

@@ -33,15 +33,15 @@ updated: 2026-10-29T23:51:00+05:30
 - [x] Plan 1.3: Add unit tests for SERVFAIL and diagnostics
 
 ### Phase 2: Single TUN Response Writer
-**Status:** 🔄 In Progress
+**Status:** ✅ Complete
 **Objective:** Introduce a dedicated single-writer response queue to serialize all TUN writes without `writeLock` contention.
 **Plans:**
-- [ ] Plan 2.1: Implement `TunResponseWriter` with bounded queue and run-liveness verification
-- [ ] Plan 2.2: Migrate UDP, TCP, blocked, cached, and forwarded paths to the response writer
-- [ ] Plan 2.3: Verify concurrency and lifecycle tests
+- [x] Plan 2.1: Implement `TunResponseWriter` with bounded queue and run-liveness verification
+- [x] Plan 2.2: Migrate UDP, TCP, blocked, cached, and forwarded paths to the response writer
+- [x] Plan 2.3: Verify concurrency and lifecycle tests
 
 ### Phase 3: Hot-Path Allocation Reduction
-**Status:** ⬜ Not Started
+**Status:** 🔄 In Progress
 **Objective:** Remove unconditional `packetBuffer.copyOf(length)` in the reader loop; introduce lightweight forwarding DTO for async requests.
 **Plans:**
 - [ ] Plan 3.1: Adapt `DnsPacketUtil.parseIpPacket` and TCP responder to parse directly in the reusable buffer

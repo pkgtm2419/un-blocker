@@ -7,20 +7,20 @@ updated: 2026-10-29T23:51:30+05:30
 ## Current Position
 
 **Milestone:** Stabilization and Release v2.1.6
-**Phase:** 2 - Single TUN Response Writer
+**Phase:** 3 - Hot-Path Allocation Reduction
 **Status:** executing
-**Plan:** Plan 2.1 - 2.3: Dedicated single TUN writer queue
+**Plan:** Plan 3.1 - 3.3: In-place packet parsing and lightweight forwarding DTO
 
 ## Last Action
 
-Completed Phase 1: implemented `SERVFAIL` generation on executor rejection and upstream timeouts, introduced `VpnDiagnostics` for non-PII operational metrics, integrated structured diagnostics across all VPN error paths, and verified with 100% passing unit tests.
+Completed Phase 2: created `TunResponseWriter` single-writer queue with backpressure handling, completely eliminated global `writeLock` contention across UDP, TCP, blocked, cached, and forwarded paths, added concurrent unit tests, and verified full test suite.
 
 ## Next Steps
 
-1. Implement `TunResponseWriter` with bounded queue and run-liveness verification.
-2. Route all packet outputs (blocked, cached, forwarded, TCP) to `TunResponseWriter`.
-3. Eliminate `writeLock` contention.
-4. Verify concurrency and commit Phase 2.
+1. Eliminate `packetBuffer.copyOf(length)` in the reader hot loop by parsing directly in the reusable buffer.
+2. Introduce compact immutable `ForwardingDnsRequest` containing only required payload/metadata for async forwarding.
+3. Verify buffer isolation and regression tests.
+4. Commit Phase 3 atomically.
 
 ## Active Decisions
 

@@ -41,7 +41,6 @@ import java.util.concurrent.RejectedExecutionException
 class UnblockerVpnService : VpnService() {
 
     private var activeRun: TunnelRun? = null
-    private val writeLock = Any()
 
     private val dnsCache = com.unblocker.app.logic.dns.DnsCache()
     private val bufferPool = com.unblocker.app.logic.dns.ByteArrayPool(4096, 64)
@@ -197,22 +196,16 @@ class UnblockerVpnService : VpnService() {
                 preferences.setServiceRunning(true)
             }
 
+            val responseWriter = TunResponseWriter(run, session, outputStream)
+            run.register(responseWriter)
+
             val packetBuffer = bufferPool.acquire()
 
             val tcpResponder = com.unblocker.app.logic.dns.TcpDnsResponder(
                 executor = run.forwarding,
                 emit = { packets ->
-                    run.useWhileRunning {
-                        if (session.owns(run.owner)) synchronized(writeLock) {
-                            try {
-                                for (p in packets) outputStream?.write(p)
-                            } catch (e: Exception) {
-                                VpnDiagnostics.record(
-                                    code = VpnDiagnostics.FailureCode.TUN_WRITE_ERROR,
-                                    exceptionClass = e::class.java.name
-                                )
-                            }
-                        }
+                    for (p in packets) {
+                        responseWriter.offer(p)
                     }
                 },
                 queryResolver = { dnsWireBytes, isIpv6, clientIp ->
@@ -295,18 +288,7 @@ class UnblockerVpnService : VpnService() {
                             }
                             val errorPacket = DnsPacketUtil.buildErrorResponseIfApplicable(packetCopy, length)
                             if (errorPacket != null) {
-                                run.useWhileRunning {
-                                    if (session.owns(run.owner)) synchronized(writeLock) {
-                                        try {
-                                            outputStream?.write(errorPacket)
-                                        } catch (e: Exception) {
-                                            VpnDiagnostics.record(
-                                                code = VpnDiagnostics.FailureCode.TUN_WRITE_ERROR,
-                                                exceptionClass = e::class.java.name
-                                            )
-                                        }
-                                    }
-                                }
+                                responseWriter.offer(errorPacket)
                             }
                             continue
                         }
@@ -320,18 +302,7 @@ class UnblockerVpnService : VpnService() {
                     if (result.shouldBlock) {
                         // Local blocked response.
                         val responsePacket = DnsPacketUtil.buildBlockedDnsResponsePacket(query)
-                        run.useWhileRunning {
-                            if (session.owns(run.owner)) synchronized(writeLock) {
-                                try {
-                                    outputStream?.write(responsePacket)
-                                } catch (e: Exception) {
-                                    VpnDiagnostics.record(
-                                        code = VpnDiagnostics.FailureCode.TUN_WRITE_ERROR,
-                                        exceptionClass = e::class.java.name
-                                    )
-                                }
-                            }
-                        }
+                        responseWriter.offer(responsePacket)
                     } else {
                         // Check local high-speed DNS cache
                         val resolverSnapshot = networkResolvers.snapshot()
@@ -339,28 +310,16 @@ class UnblockerVpnService : VpnService() {
                         if (cached != null) {
                             val cachedPayload = cached.bytes
                             val metadata = cached.metadata
-                            run.useWhileRunning {
-                                if (session.owns(run.owner)) networkResolvers.useCurrent(resolverSnapshot) { synchronized(writeLock) {
-                                    val wrappedResponse = if (filterEngine.blockedAlias(query.domain, metadata.aliases) != null)
-                                        DnsPacketUtil.buildBlockedDnsResponsePacket(query)
-                                    else DnsPacketUtil.wrapClientResponse(query, cachedPayload)
-                                    try {
-                                        outputStream?.write(wrappedResponse)
-                                    } catch (e: Exception) {
-                                        VpnDiagnostics.record(
-                                            code = VpnDiagnostics.FailureCode.TUN_WRITE_ERROR,
-                                            exceptionClass = e::class.java.name
-                                        )
-                                    }
-                                } }
-                            }
+                            val wrappedResponse = if (filterEngine.blockedAlias(query.domain, metadata.aliases) != null)
+                                DnsPacketUtil.buildBlockedDnsResponsePacket(query)
+                            else DnsPacketUtil.wrapClientResponse(query, cachedPayload)
+                            responseWriter.offer(wrappedResponse)
                         } else {
                             // Bounded forwarding; blocking resolver I/O stays off the TUN loop.
-                            val currentOut = outputStream
                             try {
                                 run.forwarding.execute {
                                     try {
-                                        resolveAndForward(run, query, currentOut, filterEngine, resolverSnapshot)
+                                        resolveAndForward(run, query, responseWriter, filterEngine, resolverSnapshot)
                                     } catch (e: Exception) {
                                         VpnDiagnostics.record(
                                             code = VpnDiagnostics.FailureCode.UPSTREAM_TIMEOUT,
@@ -376,18 +335,7 @@ class UnblockerVpnService : VpnService() {
                                     resolverCount = resolverSnapshot.resolvers.size
                                 )
                                 val servfailPacket = DnsPacketUtil.buildServfailDnsResponsePacket(query)
-                                run.useWhileRunning {
-                                    if (session.owns(run.owner)) synchronized(writeLock) {
-                                        try {
-                                            currentOut?.write(servfailPacket)
-                                        } catch (we: Exception) {
-                                            VpnDiagnostics.record(
-                                                code = VpnDiagnostics.FailureCode.TUN_WRITE_ERROR,
-                                                exceptionClass = we::class.java.name
-                                            )
-                                        }
-                                    }
-                                }
+                                responseWriter.offer(servfailPacket)
                             }
                         }
                     }
@@ -417,15 +365,13 @@ class UnblockerVpnService : VpnService() {
                     stopSelf(run.startId)
                 }
             }
-            synchronized(writeLock) {
-                try { inputStream?.close() } catch (ignored: Exception) {}
-                try { outputStream?.close() } catch (ignored: Exception) {}
-                try { localInterface?.close() } catch (ignored: Exception) {}
-            }
+            try { inputStream?.close() } catch (ignored: Exception) {}
+            try { outputStream?.close() } catch (ignored: Exception) {}
+            try { localInterface?.close() } catch (ignored: Exception) {}
         }
     }
 
-    private fun resolveAndForward(run: TunnelRun, query: com.unblocker.app.logic.dns.DnsQuery, outputStream: FileOutputStream?, filterEngine: ContentFilterEngine, resolverSnapshot: ResolverRegistry.Snapshot) {
+    private fun resolveAndForward(run: TunnelRun, query: com.unblocker.app.logic.dns.DnsQuery, responseWriter: TunResponseWriter, filterEngine: ContentFilterEngine, resolverSnapshot: ResolverRegistry.Snapshot) {
         val isRunning = run.running
         val dnsPayload = ByteArray(query.dnsLength)
         System.arraycopy(query.rawPacket, query.dnsOffset, dnsPayload, 0, query.dnsLength)
@@ -438,19 +384,7 @@ class UnblockerVpnService : VpnService() {
                 exceptionClass = "NoResolversAvailable",
                 resolverCount = 0
             )
-            val servfailPacket = DnsPacketUtil.buildServfailDnsResponsePacket(query)
-            run.useWhileRunning {
-                if (session.owns(run.owner)) synchronized(writeLock) {
-                    try {
-                        outputStream?.write(servfailPacket)
-                    } catch (e: Exception) {
-                        VpnDiagnostics.record(
-                            code = VpnDiagnostics.FailureCode.TUN_WRITE_ERROR,
-                            exceptionClass = e::class.java.name
-                        )
-                    }
-                }
-            }
+            responseWriter.offer(DnsPacketUtil.buildServfailDnsResponsePacket(query))
             return
         }
         val response = upstreamClient.resolve(run, query, dnsPayload, resolvers,
@@ -465,43 +399,17 @@ class UnblockerVpnService : VpnService() {
                 exceptionClass = "UpstreamResolutionNull",
                 resolverCount = resolvers.size
             )
-            val servfailPacket = DnsPacketUtil.buildServfailDnsResponsePacket(query)
-            run.useWhileRunning {
-                if (session.owns(run.owner)) synchronized(writeLock) {
-                    try {
-                        outputStream?.write(servfailPacket)
-                    } catch (e: Exception) {
-                        VpnDiagnostics.record(
-                            code = VpnDiagnostics.FailureCode.TUN_WRITE_ERROR,
-                            exceptionClass = e::class.java.name
-                        )
-                    }
-                }
-            }
+            responseWriter.offer(DnsPacketUtil.buildServfailDnsResponsePacket(query))
             return
         }
         if (!isRunning.get() || !session.owns(run.owner)) return
 
-        run.useWhileRunning {
-            if (!session.owns(run.owner)) return@useWhileRunning
-            networkResolvers.useCurrent(resolverSnapshot) {
-            val aliasBlocked = response.metadata.rcode == 0 &&
-                filterEngine.blockedAlias(query.domain, response.metadata.aliases) != null
-            val wrappedResponse = if (aliasBlocked) DnsPacketUtil.buildBlockedDnsResponsePacket(query)
-                else DnsPacketUtil.wrapClientResponse(query,response.bytes)
-            synchronized(writeLock) {
-                try {
-                    outputStream?.write(wrappedResponse)
-                } catch (e: Exception) {
-                    VpnDiagnostics.record(
-                        code = VpnDiagnostics.FailureCode.TUN_WRITE_ERROR,
-                        exceptionClass = e::class.java.name
-                    )
-                }
-            }
-            if (!aliasBlocked) dnsCache.putValidated(query,response)
-            }
-        }
+        val aliasBlocked = response.metadata.rcode == 0 &&
+            filterEngine.blockedAlias(query.domain, response.metadata.aliases) != null
+        val wrappedResponse = if (aliasBlocked) DnsPacketUtil.buildBlockedDnsResponsePacket(query)
+            else DnsPacketUtil.wrapClientResponse(query,response.bytes)
+        responseWriter.offer(wrappedResponse)
+        if (!aliasBlocked) dnsCache.putValidated(query,response)
     }
 
     private fun refreshNetworkResolvers(network: Network) {

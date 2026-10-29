@@ -241,6 +241,59 @@ object DnsPacketUtil {
         return wrapDnsResponseInIpUdp(query, dnsResponse.array(), dnsResponseSize)
     }
 
+    /**
+     * Builds a synthetic SERVFAIL DNS response packet on local saturation or forwarding overload.
+     */
+    fun buildServfailDnsResponsePacket(query: DnsQuery): ByteArray {
+        val questionBytes = extractQuestionSection(query.rawPacket, query.dnsOffset, query.dnsLength)
+        val opt = if (query.hasEdns) minimalOpt(query) else byteArrayOf()
+        val dnsResponseSize = 12 + questionBytes.size + opt.size
+        val dnsFlags = 0x8182.toShort()
+
+        val dnsResponse = ByteBuffer.allocate(dnsResponseSize).order(ByteOrder.BIG_ENDIAN)
+        dnsResponse.putShort(query.transactionId)
+        dnsResponse.putShort(dnsFlags)
+        dnsResponse.putShort(1.toShort())
+        dnsResponse.putShort(0.toShort())
+        dnsResponse.putShort(0.toShort())
+        dnsResponse.putShort((if (query.hasEdns) 1 else 0).toShort())
+        dnsResponse.put(questionBytes)
+        dnsResponse.put(opt)
+        return wrapDnsResponseInIpUdp(query, dnsResponse.array(), dnsResponseSize)
+    }
+
+    fun buildServfailWireResponse(dnsWire: ByteArray): ByteArray? {
+        if (dnsWire.size < 12) return null
+        val txId = ((dnsWire[0].toInt() and 0xFF) shl 8 or (dnsWire[1].toInt() and 0xFF)).toShort()
+        val qdCount = ((dnsWire[4].toInt() and 0xFF) shl 8 or (dnsWire[5].toInt() and 0xFF))
+        if (qdCount != 1) return null
+
+        var pos = 12
+        while (pos < dnsWire.size) {
+            val labelLen = dnsWire[pos].toInt() and 0xFF
+            pos++
+            if (labelLen == 0) break
+            if (labelLen > 63 || pos + labelLen > dnsWire.size) return null
+            pos += labelLen
+        }
+        if (pos + 4 > dnsWire.size) return null
+        pos += 4
+        val questionBytes = dnsWire.copyOfRange(12, pos)
+
+        val dnsResponseSize = 12 + questionBytes.size
+        val dnsFlags = 0x8182.toShort()
+
+        val dnsResponse = ByteBuffer.allocate(dnsResponseSize).order(ByteOrder.BIG_ENDIAN)
+        dnsResponse.putShort(txId)
+        dnsResponse.putShort(dnsFlags)
+        dnsResponse.putShort(1.toShort())
+        dnsResponse.putShort(0.toShort())
+        dnsResponse.putShort(0.toShort())
+        dnsResponse.putShort(0.toShort())
+        dnsResponse.put(questionBytes)
+        return dnsResponse.array()
+    }
+
     fun buildBlockedWireResponse(dnsWire: ByteArray): ByteArray? {
         if (dnsWire.size < 12) return null
         val txId = ((dnsWire[0].toInt() and 0xFF) shl 8 or (dnsWire[1].toInt() and 0xFF)).toShort()

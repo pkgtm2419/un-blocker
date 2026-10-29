@@ -207,7 +207,10 @@ class UnblockerVpnService : VpnService() {
                             try {
                                 for (p in packets) outputStream?.write(p)
                             } catch (e: Exception) {
-                                // Ignore
+                                VpnDiagnostics.record(
+                                    code = VpnDiagnostics.FailureCode.TUN_WRITE_ERROR,
+                                    exceptionClass = e::class.java.name
+                                )
                             }
                         }
                     }
@@ -228,7 +231,14 @@ class UnblockerVpnService : VpnService() {
                         } else {
                             val resolverSnapshot = networkResolvers.snapshot()
                             val resolvers = resolverSnapshot.resolvers
-                            if (resolvers.isEmpty()) return@TcpDnsResponder null
+                            if (resolvers.isEmpty()) {
+                                VpnDiagnostics.record(
+                                    code = VpnDiagnostics.FailureCode.UPSTREAM_TIMEOUT,
+                                    exceptionClass = "NoResolversAvailable",
+                                    resolverCount = 0
+                                )
+                                return@TcpDnsResponder DnsPacketUtil.buildServfailWireResponse(dnsWireBytes)
+                            }
                             val response = upstreamClient.resolve(
                                 run,
                                 wireQuery,
@@ -247,7 +257,14 @@ class UnblockerVpnService : VpnService() {
                                     dnsCache.putValidated(wireQuery, response)
                                     response.bytes
                                 }
-                            } else null
+                            } else {
+                                VpnDiagnostics.record(
+                                    code = VpnDiagnostics.FailureCode.UPSTREAM_TIMEOUT,
+                                    exceptionClass = "UpstreamResolutionNull",
+                                    resolverCount = resolvers.size
+                                )
+                                DnsPacketUtil.buildServfailWireResponse(dnsWireBytes)
+                            }
                         }
                     }
                 }
@@ -258,6 +275,10 @@ class UnblockerVpnService : VpnService() {
                     val length = try {
                         inputStream!!.read(packetBuffer)
                     } catch (e: Exception) {
+                        VpnDiagnostics.record(
+                            code = VpnDiagnostics.FailureCode.TUN_READ_ERROR,
+                            exceptionClass = e::class.java.name
+                        )
                         break
                     }
 
@@ -276,7 +297,14 @@ class UnblockerVpnService : VpnService() {
                             if (errorPacket != null) {
                                 run.useWhileRunning {
                                     if (session.owns(run.owner)) synchronized(writeLock) {
-                                        outputStream?.write(errorPacket)
+                                        try {
+                                            outputStream?.write(errorPacket)
+                                        } catch (e: Exception) {
+                                            VpnDiagnostics.record(
+                                                code = VpnDiagnostics.FailureCode.TUN_WRITE_ERROR,
+                                                exceptionClass = e::class.java.name
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -294,7 +322,14 @@ class UnblockerVpnService : VpnService() {
                         val responsePacket = DnsPacketUtil.buildBlockedDnsResponsePacket(query)
                         run.useWhileRunning {
                             if (session.owns(run.owner)) synchronized(writeLock) {
-                                outputStream?.write(responsePacket)
+                                try {
+                                    outputStream?.write(responsePacket)
+                                } catch (e: Exception) {
+                                    VpnDiagnostics.record(
+                                        code = VpnDiagnostics.FailureCode.TUN_WRITE_ERROR,
+                                        exceptionClass = e::class.java.name
+                                    )
+                                }
                             }
                         }
                     } else {
@@ -309,7 +344,14 @@ class UnblockerVpnService : VpnService() {
                                     val wrappedResponse = if (filterEngine.blockedAlias(query.domain, metadata.aliases) != null)
                                         DnsPacketUtil.buildBlockedDnsResponsePacket(query)
                                     else DnsPacketUtil.wrapClientResponse(query, cachedPayload)
-                                    outputStream?.write(wrappedResponse)
+                                    try {
+                                        outputStream?.write(wrappedResponse)
+                                    } catch (e: Exception) {
+                                        VpnDiagnostics.record(
+                                            code = VpnDiagnostics.FailureCode.TUN_WRITE_ERROR,
+                                            exceptionClass = e::class.java.name
+                                        )
+                                    }
                                 } }
                             }
                         } else {
@@ -319,24 +361,52 @@ class UnblockerVpnService : VpnService() {
                                 run.forwarding.execute {
                                     try {
                                         resolveAndForward(run, query, currentOut, filterEngine, resolverSnapshot)
-                                    } catch (_: Exception) {
-                                        // Closing the run or malformed upstream data fails this query closed.
+                                    } catch (e: Exception) {
+                                        VpnDiagnostics.record(
+                                            code = VpnDiagnostics.FailureCode.UPSTREAM_TIMEOUT,
+                                            exceptionClass = e::class.java.name,
+                                            queueDepth = run.forwarding.queue.size,
+                                            resolverCount = resolverSnapshot.resolvers.size
+                                        )
                                     }
                                 }
-                            } catch (_: RejectedExecutionException) {
-                                // Saturation: drop this query; client DNS retries. Memory stays bounded.
+                            } catch (e: RejectedExecutionException) {
+                                VpnDiagnostics.forwardingRejected(
+                                    queueDepth = run.forwarding.queue.size,
+                                    resolverCount = resolverSnapshot.resolvers.size
+                                )
+                                val servfailPacket = DnsPacketUtil.buildServfailDnsResponsePacket(query)
+                                run.useWhileRunning {
+                                    if (session.owns(run.owner)) synchronized(writeLock) {
+                                        try {
+                                            currentOut?.write(servfailPacket)
+                                        } catch (we: Exception) {
+                                            VpnDiagnostics.record(
+                                                code = VpnDiagnostics.FailureCode.TUN_WRITE_ERROR,
+                                                exceptionClass = we::class.java.name
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
                     } catch (e: Exception) {
+                        VpnDiagnostics.record(
+                            code = VpnDiagnostics.FailureCode.PACKET_PROCESSING,
+                            exceptionClass = e::class.java.name
+                        )
                         continue
                     }
                 }
             } finally {
                 bufferPool.release(packetBuffer)
             }
-        } catch (_: Exception) {
-            // State below records failure; exception text can contain user domains.
+        } catch (e: Exception) {
+            VpnDiagnostics.record(
+                code = VpnDiagnostics.FailureCode.VPN_LOOP_FAILURE,
+                exceptionClass = e::class.java.name
+            )
         } finally {
             synchronized(lifecycleLock) {
                 val failed = isRunning.get()
@@ -362,13 +432,54 @@ class UnblockerVpnService : VpnService() {
 
         if (!isRunning.get()) return
         val resolvers = resolverSnapshot.resolvers
-        if (resolvers.isEmpty()) return
+        if (resolvers.isEmpty()) {
+            VpnDiagnostics.record(
+                code = VpnDiagnostics.FailureCode.UPSTREAM_TIMEOUT,
+                exceptionClass = "NoResolversAvailable",
+                resolverCount = 0
+            )
+            val servfailPacket = DnsPacketUtil.buildServfailDnsResponsePacket(query)
+            run.useWhileRunning {
+                if (session.owns(run.owner)) synchronized(writeLock) {
+                    try {
+                        outputStream?.write(servfailPacket)
+                    } catch (e: Exception) {
+                        VpnDiagnostics.record(
+                            code = VpnDiagnostics.FailureCode.TUN_WRITE_ERROR,
+                            exceptionClass = e::class.java.name
+                        )
+                    }
+                }
+            }
+            return
+        }
         val response = upstreamClient.resolve(run, query, dnsPayload, resolvers,
             outboundGuard={ action ->
                 var allowed=false
                 run.useWhileRunning { allowed=networkResolvers.useCurrent(resolverSnapshot,action) }
                 allowed
-            }) ?: return
+            })
+        if (response == null) {
+            VpnDiagnostics.record(
+                code = VpnDiagnostics.FailureCode.UPSTREAM_TIMEOUT,
+                exceptionClass = "UpstreamResolutionNull",
+                resolverCount = resolvers.size
+            )
+            val servfailPacket = DnsPacketUtil.buildServfailDnsResponsePacket(query)
+            run.useWhileRunning {
+                if (session.owns(run.owner)) synchronized(writeLock) {
+                    try {
+                        outputStream?.write(servfailPacket)
+                    } catch (e: Exception) {
+                        VpnDiagnostics.record(
+                            code = VpnDiagnostics.FailureCode.TUN_WRITE_ERROR,
+                            exceptionClass = e::class.java.name
+                        )
+                    }
+                }
+            }
+            return
+        }
         if (!isRunning.get() || !session.owns(run.owner)) return
 
         run.useWhileRunning {
@@ -379,7 +490,14 @@ class UnblockerVpnService : VpnService() {
             val wrappedResponse = if (aliasBlocked) DnsPacketUtil.buildBlockedDnsResponsePacket(query)
                 else DnsPacketUtil.wrapClientResponse(query,response.bytes)
             synchronized(writeLock) {
-                outputStream?.write(wrappedResponse)
+                try {
+                    outputStream?.write(wrappedResponse)
+                } catch (e: Exception) {
+                    VpnDiagnostics.record(
+                        code = VpnDiagnostics.FailureCode.TUN_WRITE_ERROR,
+                        exceptionClass = e::class.java.name
+                    )
+                }
             }
             if (!aliasBlocked) dnsCache.putValidated(query,response)
             }

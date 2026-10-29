@@ -7,20 +7,19 @@ updated: 2026-10-29T23:51:30+05:30
 ## Current Position
 
 **Milestone:** Stabilization and Release v2.1.6
-**Phase:** 3 - Hot-Path Allocation Reduction
+**Phase:** 4 - Memory Baseline & largeHeap Removal
 **Status:** executing
-**Plan:** Plan 3.1 - 3.3: In-place packet parsing and lightweight forwarding DTO
+**Plan:** Plan 4.1 - 4.2: Remove largeHeap="true" and verify memory baseline
 
 ## Last Action
 
-Completed Phase 2: created `TunResponseWriter` single-writer queue with backpressure handling, completely eliminated global `writeLock` contention across UDP, TCP, blocked, cached, and forwarded paths, added concurrent unit tests, and verified full test suite.
+Completed Phase 3: eliminated unconditional `packetBuffer.copyOf(length)` in the reader loop, introduced `ForwardingDnsRequest` with `toForwardingRequest()` for async cache-miss queries, eliminated redundant second allocations in `resolveAndForward`, and verified buffer isolation with unit tests.
 
 ## Next Steps
 
-1. Eliminate `packetBuffer.copyOf(length)` in the reader hot loop by parsing directly in the reusable buffer.
-2. Introduce compact immutable `ForwardingDnsRequest` containing only required payload/metadata for async forwarding.
-3. Verify buffer isolation and regression tests.
-4. Commit Phase 3 atomically.
+1. Remove `android:largeHeap="true"` from `app/src/main/AndroidManifest.xml`.
+2. Verify full build and unit test suite.
+3. Commit Phase 4 atomically.
 
 ## Active Decisions
 

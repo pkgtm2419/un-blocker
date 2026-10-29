@@ -38,6 +38,22 @@ data class DnsQuery(
     }
 }
 
+/**
+ * Compact, isolated DTO for asynchronous upstream DNS forwarding.
+ * Decouples background upstream resolution from the TUN reader's reusable packet buffer.
+ */
+data class ForwardingDnsRequest(
+    val query: DnsQuery,
+    val dnsPayload: ByteArray
+)
+
+fun DnsQuery.toForwardingRequest(): ForwardingDnsRequest {
+    val isolatedRaw = rawPacket.copyOfRange(0, dnsOffset + dnsLength)
+    val isolatedQuery = this.copy(rawPacket = isolatedRaw)
+    val payload = rawPacket.copyOfRange(dnsOffset, dnsOffset + dnsLength)
+    return ForwardingDnsRequest(isolatedQuery, payload)
+}
+
 object DnsPacketUtil {
 
     const val TYPE_A: Short = 1

@@ -41,15 +41,15 @@ updated: 2026-10-29T23:51:00+05:30
 - [x] Plan 2.3: Verify concurrency and lifecycle tests
 
 ### Phase 3: Hot-Path Allocation Reduction
-**Status:** 🔄 In Progress
+**Status:** ✅ Complete
 **Objective:** Remove unconditional `packetBuffer.copyOf(length)` in the reader loop; introduce lightweight forwarding DTO for async requests.
 **Plans:**
-- [ ] Plan 3.1: Adapt `DnsPacketUtil.parseIpPacket` and TCP responder to parse directly in the reusable buffer
-- [ ] Plan 3.2: Create compact `ForwardingDnsRequest` containing only required payload/metadata for upstream resolution
-- [ ] Plan 3.3: Verify buffer isolation and regression tests
+- [x] Plan 3.1: Adapt `DnsPacketUtil.parseIpPacket` and TCP responder to parse directly in the reusable buffer
+- [x] Plan 3.2: Create compact `ForwardingDnsRequest` containing only required payload/metadata for upstream resolution
+- [x] Plan 3.3: Verify buffer isolation and regression tests
 
 ### Phase 4: Memory Baseline & largeHeap Removal
-**Status:** ⬜ Not Started
+**Status:** 🔄 In Progress
 **Objective:** Remove `android:largeHeap="true"` from manifest and verify execution under standard memory limits.
 **Plans:**
 - [ ] Plan 4.1: Remove `android:largeHeap="true"` from `app/src/main/AndroidManifest.xml`

@@ -20,6 +20,8 @@ import com.unblocker.app.R
 import com.unblocker.app.data.preferences.FilteringPreferences
 import com.unblocker.app.logic.ContentFilterEngine
 import com.unblocker.app.logic.dns.DnsPacketUtil
+import com.unblocker.app.logic.dns.ForwardingDnsRequest
+import com.unblocker.app.logic.dns.toForwardingRequest
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -279,14 +281,13 @@ class UnblockerVpnService : VpnService() {
                     if (length == 0) continue
 
                     try {
-                        val packetCopy = packetBuffer.copyOf(length)
-                        val query = DnsPacketUtil.parseIpPacket(packetCopy, length)
+                        val query = DnsPacketUtil.parseIpPacket(packetBuffer, length)
                         if (query == null) {
-                            val consumed = try { tcpResponder.processPacket(packetCopy, length) } catch (e: Exception) { false }
+                            val consumed = try { tcpResponder.processPacket(packetBuffer, length) } catch (e: Exception) { false }
                             if (consumed) {
                                 continue
                             }
-                            val errorPacket = DnsPacketUtil.buildErrorResponseIfApplicable(packetCopy, length)
+                            val errorPacket = DnsPacketUtil.buildErrorResponseIfApplicable(packetBuffer, length)
                             if (errorPacket != null) {
                                 responseWriter.offer(errorPacket)
                             }
@@ -316,10 +317,11 @@ class UnblockerVpnService : VpnService() {
                             responseWriter.offer(wrappedResponse)
                         } else {
                             // Bounded forwarding; blocking resolver I/O stays off the TUN loop.
+                            val forwardingRequest = query.toForwardingRequest()
                             try {
                                 run.forwarding.execute {
                                     try {
-                                        resolveAndForward(run, query, responseWriter, filterEngine, resolverSnapshot)
+                                        resolveAndForward(run, forwardingRequest, responseWriter, filterEngine, resolverSnapshot)
                                     } catch (e: Exception) {
                                         VpnDiagnostics.record(
                                             code = VpnDiagnostics.FailureCode.UPSTREAM_TIMEOUT,
@@ -334,7 +336,7 @@ class UnblockerVpnService : VpnService() {
                                     queueDepth = run.forwarding.queue.size,
                                     resolverCount = resolverSnapshot.resolvers.size
                                 )
-                                val servfailPacket = DnsPacketUtil.buildServfailDnsResponsePacket(query)
+                                val servfailPacket = DnsPacketUtil.buildServfailDnsResponsePacket(forwardingRequest.query)
                                 responseWriter.offer(servfailPacket)
                             }
                         }
@@ -371,10 +373,16 @@ class UnblockerVpnService : VpnService() {
         }
     }
 
-    private fun resolveAndForward(run: TunnelRun, query: com.unblocker.app.logic.dns.DnsQuery, responseWriter: TunResponseWriter, filterEngine: ContentFilterEngine, resolverSnapshot: ResolverRegistry.Snapshot) {
+    private fun resolveAndForward(
+        run: TunnelRun,
+        request: ForwardingDnsRequest,
+        responseWriter: TunResponseWriter,
+        filterEngine: ContentFilterEngine,
+        resolverSnapshot: ResolverRegistry.Snapshot
+    ) {
+        val query = request.query
+        val dnsPayload = request.dnsPayload
         val isRunning = run.running
-        val dnsPayload = ByteArray(query.dnsLength)
-        System.arraycopy(query.rawPacket, query.dnsOffset, dnsPayload, 0, query.dnsLength)
 
         if (!isRunning.get()) return
         val resolvers = resolverSnapshot.resolvers

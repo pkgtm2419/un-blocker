@@ -7,19 +7,20 @@ updated: 2026-10-29T23:51:30+05:30
 ## Current Position
 
 **Milestone:** Stabilization and Release v2.1.6
-**Phase:** 4 - Memory Baseline & largeHeap Removal
+**Phase:** 5 - Domain and History Privacy Hardening
 **Status:** executing
-**Plan:** Plan 4.1 - 4.2: Remove largeHeap="true" and verify memory baseline
+**Plan:** Plan 5.1 - 5.3: Opt-in raw domain history, aggregate counters by default, and safe Room error handling
 
 ## Last Action
 
-Completed Phase 3: eliminated unconditional `packetBuffer.copyOf(length)` in the reader loop, introduced `ForwardingDnsRequest` with `toForwardingRequest()` for async cache-miss queries, eliminated redundant second allocations in `resolveAndForward`, and verified buffer isolation with unit tests.
+Completed Phase 4: removed `android:largeHeap="true"` from `app/src/main/AndroidManifest.xml` and verified that debug manifest merges and builds cleanly within normal memory budgets.
 
 ## Next Steps
 
-1. Remove `android:largeHeap="true"` from `app/src/main/AndroidManifest.xml`.
-2. Verify full build and unit test suite.
-3. Commit Phase 4 atomically.
+1. Update `QueryLogSink.kt` to default to aggregate counters only; make raw domain history opt-in.
+2. Add safe Room database error handling and health state updates.
+3. Add unit tests for history modes and privacy invariants.
+4. Commit Phase 5 atomically.
 
 ## Active Decisions
 

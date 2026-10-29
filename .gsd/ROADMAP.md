@@ -49,14 +49,14 @@ updated: 2026-10-29T23:51:00+05:30
 - [x] Plan 3.3: Verify buffer isolation and regression tests
 
 ### Phase 4: Memory Baseline & largeHeap Removal
-**Status:** 🔄 In Progress
+**Status:** ✅ Complete
 **Objective:** Remove `android:largeHeap="true"` from manifest and verify execution under standard memory limits.
 **Plans:**
-- [ ] Plan 4.1: Remove `android:largeHeap="true"` from `app/src/main/AndroidManifest.xml`
-- [ ] Plan 4.2: Verify build and unit test suite
+- [x] Plan 4.1: Remove `android:largeHeap="true"` from `app/src/main/AndroidManifest.xml`
+- [x] Plan 4.2: Verify build and unit test suite
 
 ### Phase 5: Domain and History Privacy Hardening
-**Status:** ⬜ Not Started
+**Status:** 🔄 In Progress
 **Objective:** Make raw domain storage opt-in; record aggregate counters by default; handle database errors cleanly.
 **Plans:**
 - [ ] Plan 5.1: Add privacy-first history mode and aggregate counters in `QueryLogSink`

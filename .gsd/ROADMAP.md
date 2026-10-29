@@ -1,24 +1,24 @@
 ---
 milestone: Stabilization and Release v2.1.6
 version: 2.1.6
-updated: 2026-10-29T23:51:00+05:30
+updated: 2026-10-30T00:29:00+05:30
 ---
 
 # Roadmap
 
-> **Current Phase:** Phase 1 - Reliability and Observability
-> **Status:** executing
+> **Current Phase:** Phase 7 - Version Bump, Release Build & Packaging
+> **Status:** complete
 
 ## Must-Haves (from SPEC)
-- [ ] Forwarding saturation generates deterministic SERVFAIL response instead of dropping queries
-- [ ] VpnDiagnostics captures failure codes, exception class, queue depth, and metrics with 0 domain/PII leakage
-- [ ] Single TUN response writer queue replaces global writeLock contention
-- [ ] Hot-path packet allocations removed for blocked and cache-hit flows
-- [ ] `android:largeHeap="true"` removed from AndroidManifest.xml
-- [ ] Local query logging defaults to privacy mode (aggregate counters only) with opt-in history
-- [ ] IDNA Punycode conversion added at rule-entry / UI manual import boundaries
-- [ ] All unit tests pass with zero regressions
-- [ ] Release APK built, verified, and committed
+- [x] Forwarding saturation generates deterministic SERVFAIL response instead of dropping queries
+- [x] VpnDiagnostics captures failure codes, exception class, queue depth, and metrics with 0 domain/PII leakage
+- [x] Single TUN response writer queue replaces global writeLock contention
+- [x] Hot-path packet allocations removed for blocked and cache-hit flows
+- [x] `android:largeHeap="true"` removed from AndroidManifest.xml
+- [x] Local query logging defaults to privacy mode (aggregate counters only) with opt-in history
+- [x] IDNA Punycode conversion added at rule-entry / UI manual import boundaries
+- [x] All unit tests pass with zero regressions
+- [x] Release APK built, verified, and committed
 
 ---
 
@@ -72,10 +72,10 @@ updated: 2026-10-29T23:51:00+05:30
 - [x] Plan 6.3: Add tests for adult content boundary cases and internationalized domains
 
 ### Phase 7: Version Bump, Release Build & Packaging
-**Status:** 🔄 In Progress
+**Status:** ✅ Complete
 **Objective:** Update version metadata to 2.1.6 (code 24), run full verification, assemble release APK, and push commits.
 **Plans:**
-- [ ] Plan 7.1: Bump version to 2.1.6 (versionCode 24) in `app/build.gradle.kts`
-- [ ] Plan 7.2: Run complete test suite (`testDebugUnitTest` and lint)
-- [ ] Plan 7.3: Assemble release APK and verify output artifacts
-- [ ] Plan 7.4: Git push and release summary
+- [x] Plan 7.1: Bump version to 2.1.6 (versionCode 24) in `app/build.gradle.kts`
+- [x] Plan 7.2: Run complete test suite (`testDebugUnitTest` and lint)
+- [x] Plan 7.3: Assemble release APK and verify output artifacts
+- [x] Plan 7.4: Git push and release summary

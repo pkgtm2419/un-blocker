@@ -56,15 +56,15 @@ updated: 2026-10-29T23:51:00+05:30
 - [x] Plan 4.2: Verify build and unit test suite
 
 ### Phase 5: Domain and History Privacy Hardening
-**Status:** 🔄 In Progress
+**Status:** ✅ Complete
 **Objective:** Make raw domain storage opt-in; record aggregate counters by default; handle database errors cleanly.
 **Plans:**
-- [ ] Plan 5.1: Add privacy-first history mode and aggregate counters in `QueryLogSink`
-- [ ] Plan 5.2: Safe error handling and health state for Room DB writes
-- [ ] Plan 5.3: Add unit tests for history modes and privacy invariants
+- [x] Plan 5.1: Add privacy-first history mode and aggregate counters in `QueryLogSink`
+- [x] Plan 5.2: Safe error handling and health state for Room DB writes
+- [x] Plan 5.3: Add unit tests for history modes and privacy invariants
 
 ### Phase 6: Rule Correctness & IDNA Canonicalization
-**Status:** ⬜ Not Started
+**Status:** 🔄 In Progress
 **Objective:** Support IDN/Punycode at manual domain entry and rule import boundaries; verify rule precedence.
 **Plans:**
 - [ ] Plan 6.1: Add `DomainName.normalizeUserEntry` with `java.net.IDN.toASCII`

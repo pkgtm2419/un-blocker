@@ -7,20 +7,20 @@ updated: 2026-10-29T23:51:30+05:30
 ## Current Position
 
 **Milestone:** Stabilization and Release v2.1.6
-**Phase:** 5 - Domain and History Privacy Hardening
+**Phase:** 6 - Rule Correctness & IDNA Canonicalization
 **Status:** executing
-**Plan:** Plan 5.1 - 5.3: Opt-in raw domain history, aggregate counters by default, and safe Room error handling
+**Plan:** Plan 6.1 - 6.3: IDNA Punycode conversion for custom rules and internationalized domains
 
 ## Last Action
 
-Completed Phase 4: removed `android:largeHeap="true"` from `app/src/main/AndroidManifest.xml` and verified that debug manifest merges and builds cleanly within normal memory budgets.
+Completed Phase 5: hardened `QueryLogSink` privacy with `HistoryMode.AGGREGATE_ONLY` by default, made raw chronological event logging strictly opt-in, tightened retention cap to 24 hours / 1,000 entries max, integrated Room write exception handling into `VpnDiagnostics`, and verified with unit tests.
 
 ## Next Steps
 
-1. Update `QueryLogSink.kt` to default to aggregate counters only; make raw domain history opt-in.
-2. Add safe Room database error handling and health state updates.
-3. Add unit tests for history modes and privacy invariants.
-4. Commit Phase 5 atomically.
+1. Add `DomainName.normalizeUserEntry` with `java.net.IDN.toASCII(..., IDN.USE_STD3_ASCII_RULES)`.
+2. Connect IDNA canonicalization to custom user rules and manual rule import boundaries.
+3. Add unit tests for IDN / Punycode domains and boundary rules.
+4. Commit Phase 6 atomically.
 
 ## Active Decisions
 

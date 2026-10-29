@@ -1,6 +1,7 @@
 package com.unblocker.app.data.logs
 
 import com.unblocker.app.logic.DomainName
+import com.unblocker.app.services.VpnDiagnostics
 import com.unblocker.data.db.dao.DomainLogDao
 import com.unblocker.data.db.entity.DomainEventEntity
 import kotlinx.coroutines.CancellationException
@@ -13,19 +14,26 @@ import kotlinx.coroutines.withContext
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Off-hot-path, lock-free log sink for intercepted DNS traffic.
  *
- * Implements WP-3:
- * - Engine calls record() on the packet loop; record() never blocks (enqueue into bounded ring, drop-oldest when full).
- * - A single writer coroutine aggregates events by domain for <= 1s (or 200 items) and flushes in a single Room transaction.
- * - Enforces bounded retention (default 7 days) and per-domain / global caps.
+ * Implements privacy hardening:
+ * - Defaults to HistoryMode.AGGREGATE_ONLY: zero raw per-query domain event rows are stored.
+ * - Raw chronological domain history is strictly opt-in (HistoryMode.RAW_HISTORY_OPT_IN).
+ * - Enforces tight bounded retention (24 hours / 1,000 entries max) when raw history is enabled.
+ * - Gracefully records database write exceptions via VpnDiagnostics instead of swallowing errors.
  */
 object QueryLogSink {
     private const val QUEUE_CAPACITY = 10_000
     private const val BATCH_FLUSH_SIZE = 200
     private const val FLUSH_INTERVAL_MS = 1000L
+
+    enum class HistoryMode {
+        AGGREGATE_ONLY,
+        RAW_HISTORY_OPT_IN
+    }
 
     data class LogItem(
         val domain: String,
@@ -37,6 +45,7 @@ object QueryLogSink {
     private val queue = ArrayBlockingQueue<LogItem>(QUEUE_CAPACITY)
     private var dao: DomainLogDao? = null
     private val isLoggingPaused = AtomicBoolean(false)
+    private val historyMode = AtomicReference(HistoryMode.AGGREGATE_ONLY)
     private var flushJob: Job? = null
 
     @Synchronized
@@ -56,6 +65,12 @@ object QueryLogSink {
 
     fun isLoggingPaused(): Boolean = isLoggingPaused.get()
 
+    fun setHistoryMode(mode: HistoryMode) {
+        historyMode.set(mode)
+    }
+
+    fun getHistoryMode(): HistoryMode = historyMode.get()
+
     /**
      * Records a DNS query decision.
      * Guarantees non-blocking execution (< 100 µs) on the packet reader loop.
@@ -71,6 +86,10 @@ object QueryLogSink {
             queue.poll()
             queue.offer(item)
         }
+    }
+
+    fun clearQueue() {
+        queue.clear()
     }
 
     suspend fun clearHistory() {
@@ -105,13 +124,17 @@ object QueryLogSink {
                 }
             } catch (e: CancellationException) {
                 break
-            } catch (_: Exception) {
-                // Protect worker loop from uncaught SQLite / IO errors
+            } catch (e: Exception) {
+                // Protect worker loop and record database diagnostics safely
+                VpnDiagnostics.record(
+                    code = VpnDiagnostics.FailureCode.DATABASE_LOG_ERROR,
+                    exceptionClass = e::class.java.name
+                )
             }
         }
     }
 
-    private suspend fun flushBatch(items: List<LogItem>) {
+    internal suspend fun flushBatch(items: List<LogItem>) {
         val currentDao = dao ?: return
 
         data class DomainAggregation(
@@ -124,7 +147,8 @@ object QueryLogSink {
         )
 
         val aggregated = HashMap<String, DomainAggregation>()
-        val events = ArrayList<DomainEventEntity>(items.size)
+        val shouldStoreEvents = historyMode.get() == HistoryMode.RAW_HISTORY_OPT_IN
+        val events = if (shouldStoreEvents) ArrayList<DomainEventEntity>(items.size) else null
 
         for (item in items) {
             val entry = aggregated.getOrPut(item.domain) { DomainAggregation() }
@@ -135,7 +159,9 @@ object QueryLogSink {
                 entry.latestDecision = item.decision
                 entry.latestReason = item.reason
             }
-            events.add(DomainEventEntity(domain = item.domain, ts = item.ts, decision = item.decision))
+            if (shouldStoreEvents) {
+                events?.add(DomainEventEntity(domain = item.domain, ts = item.ts, decision = item.decision))
+            }
         }
 
         for ((domain, agg) in aggregated) {
@@ -149,13 +175,15 @@ object QueryLogSink {
                 lastReason = agg.latestReason
             )
         }
-        currentDao.insertEvents(events)
+        if (shouldStoreEvents && !events.isNullOrEmpty()) {
+            currentDao.insertEvents(events)
+        }
     }
 
     private suspend fun pruneOldLogs() {
         val currentDao = dao ?: return
-        val sevenDaysAgo = System.currentTimeMillis() - (7L * 24 * 60 * 60 * 1000)
-        currentDao.pruneEventsOlderThan(sevenDaysAgo)
-        currentDao.pruneOldestEventsBeyondCap(100_000)
+        val oneDayAgo = System.currentTimeMillis() - (24L * 60 * 60 * 1000)
+        currentDao.pruneEventsOlderThan(oneDayAgo)
+        currentDao.pruneOldestEventsBeyondCap(1_000)
     }
 }

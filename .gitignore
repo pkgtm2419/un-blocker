@@ -18,6 +18,7 @@ __pycache__/
 .pytest_cache/
 
 # Build binaries and signing material stay outside source control.
+release/SHA256SUMS
 *.apk
 *.aab
 *.jks

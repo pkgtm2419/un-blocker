@@ -1,5 +1,6 @@
 package com.unblocker.app.logic
 
+import java.net.IDN
 import java.util.Locale
 
 /** Canonical validation boundary for DNS names accepted by the filtering engine. */
@@ -15,6 +16,21 @@ object DomainName {
             }) return null
 
         return domain
+    }
+
+    /**
+     * Canonicalizes user-entered or imported domain names into valid DNS wire ASCII.
+     * Converts internationalized domain names (IDNs) via Punycode (IDN.toASCII with STD3 rules).
+     */
+    fun normalizeUserEntry(raw: String): String? {
+        val trimmed = raw.trim().trimEnd('.')
+        if (trimmed.isEmpty() || trimmed.length > 253) return null
+        val ascii = try {
+            IDN.toASCII(trimmed, IDN.USE_STD3_ASCII_RULES)
+        } catch (_: Exception) {
+            return null
+        }
+        return normalize(ascii)
     }
 
     /** Canonicalizes one DNS wire label without trimming or changing label boundaries. */

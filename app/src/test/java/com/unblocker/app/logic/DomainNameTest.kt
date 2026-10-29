@@ -37,4 +37,26 @@ class DomainNameTest {
         assertFalse(adDetector.isAdDomain("https://doubleclick.net").first)
         assertFalse(adultDetector.isAdultContent("blocked.example:443").first)
     }
+
+    @Test fun normalizeUserEntryConvertsInternationalizedDomainsToPunycode() {
+        assertEquals("xn--mnchen-3ya.de", DomainName.normalizeUserEntry("  München.DE.  "))
+        assertEquals("xn--bcher-kva.example.com", DomainName.normalizeUserEntry("bücher.example.com"))
+        assertEquals("ads.example.com", DomainName.normalizeUserEntry("  ads.example.com.  "))
+        assertEquals("xn--mnchen-3ya.de", DomainName.normalizeUserEntry("xn--mnchen-3ya.de"))
+
+        assertNull(DomainName.normalizeUserEntry("https://münchen.de"))
+        assertNull(DomainName.normalizeUserEntry("münchen..de"))
+        assertNull(DomainName.normalizeUserEntry("-münchen.de"))
+    }
+
+    @Test fun detectorsSupportIdnaPunycodeCanonicalizationForUserAddedDomains() {
+        val adDetector = AdDetector().apply { addDomain("münchen-ads.de") }
+        val adultDetector = AdultContentDetector().apply { addDomain("schön.com") }
+
+        // Wire DNS queries come in Punycode (ASCII)
+        assertTrue(adDetector.isAdDomain("xn--mnchen-ads-9db.de").first)
+        assertTrue(adDetector.isAdDomain("sub.xn--mnchen-ads-9db.de").first)
+        assertTrue(adultDetector.isAdultContent("xn--schn-7qa.com").first)
+        assertTrue(adultDetector.isAdultContent("sub.xn--schn-7qa.com").first)
+    }
 }

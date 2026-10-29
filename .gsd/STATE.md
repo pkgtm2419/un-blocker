@@ -7,20 +7,21 @@ updated: 2026-10-29T23:51:30+05:30
 ## Current Position
 
 **Milestone:** Stabilization and Release v2.1.6
-**Phase:** 6 - Rule Correctness & IDNA Canonicalization
+**Phase:** 7 - Version Bump, Release Build & Packaging
 **Status:** executing
-**Plan:** Plan 6.1 - 6.3: IDNA Punycode conversion for custom rules and internationalized domains
+**Plan:** Plan 7.1 - 7.4: Version bump to 2.1.6 (code 24), assemble release APK, verify artifacts, push to git
 
 ## Last Action
 
-Completed Phase 5: hardened `QueryLogSink` privacy with `HistoryMode.AGGREGATE_ONLY` by default, made raw chronological event logging strictly opt-in, tightened retention cap to 24 hours / 1,000 entries max, integrated Room write exception handling into `VpnDiagnostics`, and verified with unit tests.
+Completed Phase 6: introduced `DomainName.normalizeUserEntry` with `java.net.IDN.toASCII(..., IDN.USE_STD3_ASCII_RULES)`, wired IDNA normalization into custom domain additions, and added comprehensive test cases verifying that Punycode-encoded internationalized domains match wire DNS queries.
 
 ## Next Steps
 
-1. Add `DomainName.normalizeUserEntry` with `java.net.IDN.toASCII(..., IDN.USE_STD3_ASCII_RULES)`.
-2. Connect IDNA canonicalization to custom user rules and manual rule import boundaries.
-3. Add unit tests for IDN / Punycode domains and boundary rules.
-4. Commit Phase 6 atomically.
+1. Bump `versionCode = 24` and `versionName = "2.1.6"` in `app/build.gradle.kts`.
+2. Run release build `:app:assembleRelease`.
+3. Verify release APK artifact integrity.
+4. Push all commits to `origin main`.
+5. Present final summary with artifact verification proof.
 
 ## Active Decisions
 

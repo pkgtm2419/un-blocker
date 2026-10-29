@@ -64,15 +64,15 @@ updated: 2026-10-29T23:51:00+05:30
 - [x] Plan 5.3: Add unit tests for history modes and privacy invariants
 
 ### Phase 6: Rule Correctness & IDNA Canonicalization
-**Status:** 🔄 In Progress
+**Status:** ✅ Complete
 **Objective:** Support IDN/Punycode at manual domain entry and rule import boundaries; verify rule precedence.
 **Plans:**
-- [ ] Plan 6.1: Add `DomainName.normalizeUserEntry` with `java.net.IDN.toASCII`
-- [ ] Plan 6.2: Integrate into custom rule additions and verify precedence test cases
-- [ ] Plan 6.3: Add tests for adult content boundary cases and internationalized domains
+- [x] Plan 6.1: Add `DomainName.normalizeUserEntry` with `java.net.IDN.toASCII`
+- [x] Plan 6.2: Integrate into custom rule additions and verify precedence test cases
+- [x] Plan 6.3: Add tests for adult content boundary cases and internationalized domains
 
 ### Phase 7: Version Bump, Release Build & Packaging
-**Status:** ⬜ Not Started
+**Status:** 🔄 In Progress
 **Objective:** Update version metadata to 2.1.6 (code 24), run full verification, assemble release APK, and push commits.
 **Plans:**
 - [ ] Plan 7.1: Bump version to 2.1.6 (versionCode 24) in `app/build.gradle.kts`

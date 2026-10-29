@@ -87,7 +87,7 @@ class AdultContentDetector(
     }
 
     fun addDomain(domain: String) {
-        DomainName.normalize(domain)?.let(adultDomains::add)
+        DomainName.normalizeUserEntry(domain)?.let(adultDomains::add)
     }
 
     fun isAdultContent(rawDomain: String): Pair<Boolean, String> = match(rawDomain).let { it.blocked to it.reason }

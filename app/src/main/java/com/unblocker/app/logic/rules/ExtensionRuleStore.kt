@@ -196,7 +196,7 @@ object ExtensionRuleStore {
             kind = RuleKind.EXACT
         }
 
-        val normalized = DomainName.normalize(line) ?: return null
+        val normalized = DomainName.normalizeUserEntry(line) ?: return null
         if (normalized in META_HOSTS || normalized.startsWith("ip6-")) return null
 
         return DnsRule(

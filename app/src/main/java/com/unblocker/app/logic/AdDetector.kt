@@ -15,7 +15,7 @@ class AdDetector(
     }
 
     @Synchronized fun addDomain(domain: String) {
-        DomainName.normalize(domain)?.let {
+        DomainName.normalizeUserEntry(domain)?.let {
             overlay.add(DnsRule(RuleAction.BLOCK, RuleKind.SUFFIX, it))
         }
     }

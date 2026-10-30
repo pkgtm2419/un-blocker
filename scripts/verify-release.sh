@@ -87,20 +87,12 @@ ok "required assets present, forbidden assets absent"
 debuggable=false
 grep -q "application-debuggable" <<<"${badging}" && debuggable=true
 if [ "${IS_TEST}" = false ]; then
-  if [ -n "${UB_RELEASE_SIGNER_SHA256:-}" ]; then
-    [ "${debuggable}" = false ] || fail "production APK is debuggable"
-    [ -f "${DIR}/mapping.txt" ] || fail "production release must attach mapping.txt"
-    APKSIGNER="${APKSIGNER_BIN}" bash "$(dirname "${BASH_SOURCE[0]}")/verify-apk-signature.sh" "${APK}" "${UB_RELEASE_SIGNER_SHA256}" >/dev/null \
-      || fail "production signer does not match the pinned digest"
-    ok "not debuggable, signer pinned, mapping.txt attached"
-  else
-    echo "note: UB_RELEASE_SIGNER_SHA256 not configured; verifying with test signer"
-    if [ -n "${UB_TEST_SIGNER_SHA256:-}" ]; then
-      APKSIGNER="${APKSIGNER_BIN}" bash "$(dirname "${BASH_SOURCE[0]}")/verify-apk-signature.sh" "${APK}" "${UB_TEST_SIGNER_SHA256}" >/dev/null \
-        || fail "test signer does not match the pinned digest"
-      ok "signer verified with test signer"
-    fi
-  fi
+  [ "${debuggable}" = false ] || fail "production APK is debuggable"
+  [ -n "${UB_RELEASE_SIGNER_SHA256:-}" ] || fail "UB_RELEASE_SIGNER_SHA256 is required for production tags"
+  [ -f "${DIR}/mapping.txt" ] || fail "production release must attach mapping.txt"
+  APKSIGNER="${APKSIGNER_BIN}" bash "$(dirname "${BASH_SOURCE[0]}")/verify-apk-signature.sh" "${APK}" "${UB_RELEASE_SIGNER_SHA256}" >/dev/null \
+    || fail "production signer does not match the pinned digest"
+  ok "not debuggable, signer pinned, mapping.txt attached"
 else
   [ "${debuggable}" = true ] && echo "note: test build is debuggable (expected for test-v* builds)"
   if [ -n "${UB_TEST_SIGNER_SHA256:-}" ]; then

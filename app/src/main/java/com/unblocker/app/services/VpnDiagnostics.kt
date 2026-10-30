@@ -40,6 +40,7 @@ object VpnDiagnostics {
     private val _packetProcessingErrors = AtomicLong(0)
     private val _tunReadErrors = AtomicLong(0)
     private val _tunWriteErrors = AtomicLong(0)
+    private val _coalescedQueries = AtomicLong(0)
 
     val forwardingActiveCount: Long get() = _forwardingActive.get()
     val forwardingRejectedCount: Long get() = _forwardingRejected.get()
@@ -47,6 +48,7 @@ object VpnDiagnostics {
     val packetProcessingErrorCount: Long get() = _packetProcessingErrors.get()
     val tunReadErrorCount: Long get() = _tunReadErrors.get()
     val tunWriteErrorCount: Long get() = _tunWriteErrors.get()
+    val coalescedQueryCount: Long get() = _coalescedQueries.get()
 
     private const val MAX_HISTORY_EVENTS = 200
     private val recentEvents = ConcurrentLinkedQueue<DiagnosticEvent>()
@@ -83,6 +85,7 @@ object VpnDiagnostics {
 
     fun forwardingActiveIncrement(): Long = _forwardingActive.incrementAndGet()
     fun forwardingActiveDecrement(): Long = _forwardingActive.decrementAndGet()
+    fun recordCoalesced(): Long = _coalescedQueries.incrementAndGet()
 
     fun forwardingRejected(queueDepth: Int = 0, resolverCount: Int = 0) {
         record(
@@ -102,6 +105,7 @@ object VpnDiagnostics {
         _packetProcessingErrors.set(0)
         _tunReadErrors.set(0)
         _tunWriteErrors.set(0)
+        _coalescedQueries.set(0)
         recentEvents.clear()
     }
 }

@@ -1,13 +1,13 @@
 ---
-milestone: Stabilization and Release v2.1.6
-version: 2.1.6
-updated: 2026-10-30T00:29:00+05:30
+milestone: Performance Optimization, Coalescing & Release Hardening v2.1.7
+version: 2.1.7
+updated: 2026-10-30T20:56:00+05:30
 ---
 
 # Roadmap
 
-> **Current Phase:** Phase 7 - Version Bump, Release Build & Packaging
-> **Status:** complete
+> **Current Phase:** Phase 8 - In-Flight DNS Request Coalescing
+> **Status:** ready
 
 ## Must-Haves (from SPEC)
 - [x] Forwarding saturation generates deterministic SERVFAIL response instead of dropping queries
@@ -17,65 +17,66 @@ updated: 2026-10-30T00:29:00+05:30
 - [x] `android:largeHeap="true"` removed from AndroidManifest.xml
 - [x] Local query logging defaults to privacy mode (aggregate counters only) with opt-in history
 - [x] IDNA Punycode conversion added at rule-entry / UI manual import boundaries
-- [x] All unit tests pass with zero regressions
-- [x] Release APK built, verified, and committed
+- [ ] Concurrent in-flight DNS query coalescing implemented and verified
+- [ ] DnsCache eviction and forward allocation optimized with active worker metrics
+- [ ] Fuzz tests for malformed DNS packet parsing pass with zero crashes
+- [ ] Release workflow succeeds cleanly in GitHub Actions
+- [ ] Version bumped to 2.1.7 (versionCode 25), unit tests pass, and new release APK assembled
 
 ---
 
 ## Phases
 
 ### Phase 1: Reliability and Observability
-**Status:** ✅ Complete
-**Objective:** Add `SERVFAIL` generation on executor rejection and implement `VpnDiagnostics` for privacy-safe failure tracking.
-**Plans:**
-- [x] Plan 1.1: Implement `DnsPacketUtil.buildServfailDnsResponsePacket` & `buildServfailWireResponse`
-- [x] Plan 1.2: Implement `VpnDiagnostics` and integrate with `UnblockerVpnService` rejection & exception paths
-- [x] Plan 1.3: Add unit tests for SERVFAIL and diagnostics
+**Status:** ✅ Complete (v2.1.6)
 
 ### Phase 2: Single TUN Response Writer
-**Status:** ✅ Complete
-**Objective:** Introduce a dedicated single-writer response queue to serialize all TUN writes without `writeLock` contention.
-**Plans:**
-- [x] Plan 2.1: Implement `TunResponseWriter` with bounded queue and run-liveness verification
-- [x] Plan 2.2: Migrate UDP, TCP, blocked, cached, and forwarded paths to the response writer
-- [x] Plan 2.3: Verify concurrency and lifecycle tests
+**Status:** ✅ Complete (v2.1.6)
 
 ### Phase 3: Hot-Path Allocation Reduction
-**Status:** ✅ Complete
-**Objective:** Remove unconditional `packetBuffer.copyOf(length)` in the reader loop; introduce lightweight forwarding DTO for async requests.
-**Plans:**
-- [x] Plan 3.1: Adapt `DnsPacketUtil.parseIpPacket` and TCP responder to parse directly in the reusable buffer
-- [x] Plan 3.2: Create compact `ForwardingDnsRequest` containing only required payload/metadata for upstream resolution
-- [x] Plan 3.3: Verify buffer isolation and regression tests
+**Status:** ✅ Complete (v2.1.6)
 
 ### Phase 4: Memory Baseline & largeHeap Removal
-**Status:** ✅ Complete
-**Objective:** Remove `android:largeHeap="true"` from manifest and verify execution under standard memory limits.
-**Plans:**
-- [x] Plan 4.1: Remove `android:largeHeap="true"` from `app/src/main/AndroidManifest.xml`
-- [x] Plan 4.2: Verify build and unit test suite
+**Status:** ✅ Complete (v2.1.6)
 
 ### Phase 5: Domain and History Privacy Hardening
-**Status:** ✅ Complete
-**Objective:** Make raw domain storage opt-in; record aggregate counters by default; handle database errors cleanly.
-**Plans:**
-- [x] Plan 5.1: Add privacy-first history mode and aggregate counters in `QueryLogSink`
-- [x] Plan 5.2: Safe error handling and health state for Room DB writes
-- [x] Plan 5.3: Add unit tests for history modes and privacy invariants
+**Status:** ✅ Complete (v2.1.6)
 
 ### Phase 6: Rule Correctness & IDNA Canonicalization
-**Status:** ✅ Complete
-**Objective:** Support IDN/Punycode at manual domain entry and rule import boundaries; verify rule precedence.
-**Plans:**
-- [x] Plan 6.1: Add `DomainName.normalizeUserEntry` with `java.net.IDN.toASCII`
-- [x] Plan 6.2: Integrate into custom rule additions and verify precedence test cases
-- [x] Plan 6.3: Add tests for adult content boundary cases and internationalized domains
+**Status:** ✅ Complete (v2.1.6)
 
-### Phase 7: Version Bump, Release Build & Packaging
+### Phase 7: Version Bump & Release v2.1.6
+**Status:** ✅ Complete (v2.1.6)
+
+### Phase 8: In-Flight DNS Request Coalescing
 **Status:** ✅ Complete
-**Objective:** Update version metadata to 2.1.6 (code 24), run full verification, assemble release APK, and push commits.
+**Objective:** Eliminate redundant concurrent upstream DNS queries for the same domain by coalescing in-flight cache misses.
 **Plans:**
-- [x] Plan 7.1: Bump version to 2.1.6 (versionCode 24) in `app/build.gradle.kts`
-- [x] Plan 7.2: Run complete test suite (`testDebugUnitTest` and lint)
-- [x] Plan 7.3: Assemble release APK and verify output artifacts
-- [x] Plan 7.4: Git push and release summary
+- [x] Plan 8.1: Implement `DnsRequestCoalescer` with bounded per-key listener list
+- [x] Plan 8.2: Integrate coalescing in `UnblockerVpnService.resolveAndForward` and wire `VpnDiagnostics.coalescedQuery()`
+- [x] Plan 8.3: Add unit tests for query coalescing, multi-client response fan-out, and failure propagation
+
+### Phase 9: Cache Eviction & Allocation Streamlining
+**Status:** 🔄 In Progress
+**Objective:** Optimize `DnsCache` eviction to O(1) without linear lock-held scans; streamline `toForwardingRequest` allocations; track active workers and latency.
+**Plans:**
+- [ ] Plan 9.1: Refactor `DnsCache` eviction to remove linear lock contention
+- [ ] Plan 9.2: Optimize `ForwardingDnsRequest` to avoid dual-array allocations and wire `forwardingActive` tracking
+- [ ] Plan 9.3: Add performance and latency unit tests
+
+### Phase 10: CI/CD Release Policy Hardening & Fuzz Testing
+**Status:** ⏳ Pending
+**Objective:** Add malformed packet parser fuzzing tests and ensure release action succeeds with available repository secrets.
+**Plans:**
+- [ ] Plan 10.1: Add fuzzing test suite for malformed and adversarial DNS wire packets
+- [ ] Plan 10.2: Update `release-policy.py` and `.github/workflows/release.yml` for seamless signing fallback
+- [ ] Plan 10.3: Verify release policy tests
+
+### Phase 11: Version Bump, Release Build & Packaging (v2.1.7)
+**Status:** ⏳ Pending
+**Objective:** Bump version to 2.1.7 (code 25), run full unit tests, assemble release APKs, push to git, and release.
+**Plans:**
+- [ ] Plan 11.1: Bump version to 2.1.7 (versionCode 25) in `app/build.gradle.kts` and update `README.md`
+- [ ] Plan 11.2: Run complete test suite (`testDebugUnitTest` and lint)
+- [ ] Plan 11.3: Assemble release APKs and verify output checksums
+- [ ] Plan 11.4: Push to git, publish release, and deliver summary

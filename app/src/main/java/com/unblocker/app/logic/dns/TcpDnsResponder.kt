@@ -25,6 +25,7 @@ class TcpDnsResponder(
 ) {
     private val connections = HashMap<TcpConnectionKey, TcpConnection>()
     private val lock = Any()
+    private var connectionSequence = 0L
 
     companion object {
         const val FLAG_FIN = 0x01
@@ -96,6 +97,7 @@ class TcpDnsResponder(
         var clientSeq: Long,
         var serverSeq: Long,
         var lastActivityTime: Long,
+        val creationOrder: Long = 0L,
         val buffer: ByteArrayOutputStream = ByteArrayOutputStream(),
         var queryAnswered: Boolean = false
     ) {
@@ -226,6 +228,7 @@ class TcpDnsResponder(
                     // LRU eviction: evict least-recently-active connection (prioritizing unestablished SYN_RECEIVED) (SEC-03)
                     var oldestKey: TcpConnectionKey? = null
                     var oldestTime = Long.MAX_VALUE
+                    var oldestOrder = Long.MAX_VALUE
                     var oldestIsSynReceived = false
 
                     for ((cKey, cVal) in connections) {
@@ -233,10 +236,13 @@ class TcpDnsResponder(
                         if (isSyn && !oldestIsSynReceived) {
                             oldestKey = cKey
                             oldestTime = cVal.lastActivityTime
+                            oldestOrder = cVal.creationOrder
                             oldestIsSynReceived = true
                         } else if (isSyn == oldestIsSynReceived) {
-                            if (cVal.lastActivityTime < oldestTime) {
+                            if (cVal.lastActivityTime < oldestTime ||
+                                (cVal.lastActivityTime == oldestTime && cVal.creationOrder < oldestOrder)) {
                                 oldestTime = cVal.lastActivityTime
+                                oldestOrder = cVal.creationOrder
                                 oldestKey = cKey
                             }
                         }
@@ -253,7 +259,8 @@ class TcpDnsResponder(
                     state = TcpConnection.State.SYN_RECEIVED,
                     clientSeq = (seqNum + 1) and 0xFFFFFFFFL,
                     serverSeq = (serverIsn + 1) and 0xFFFFFFFFL,
-                    lastActivityTime = now
+                    lastActivityTime = now,
+                    creationOrder = connectionSequence++
                 )
                 connections[key] = conn
                 val synAck = buildTcpPacket(

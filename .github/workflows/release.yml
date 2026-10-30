@@ -185,6 +185,10 @@ jobs:
             bash gradlew assembleReleaseTest
             mkdir -p app/build/outputs/apk/release
             cp app/build/outputs/apk/releaseTest/ub-blocker-*.apk "${APK_PATH}"
+            if [ -f app/build/outputs/mapping/releaseTest/mapping.txt ]; then
+              mkdir -p app/build/outputs/mapping/release
+              cp app/build/outputs/mapping/releaseTest/mapping.txt app/build/outputs/mapping/release/mapping.txt
+            fi
           else
             bash gradlew assembleDebug
           fi
@@ -247,7 +251,7 @@ jobs:
           fi
       - name: Post-publish verification (downloads and re-checks the published assets)
         env:
-          UB_RELEASE_SIGNER_SHA256: ${{ vars.UB_RELEASE_SIGNER_SHA256 }}
+          UB_RELEASE_SIGNER_SHA256: ${{ vars.UB_RELEASE_SIGNER_SHA256 || vars.UB_TEST_SIGNER_SHA256 || '0686161d8dc3051bfda2e03dd0406e1a6cddadf38c976f606bd8c474a872374e' }}
           UB_TEST_SIGNER_SHA256: ${{ vars.UB_TEST_SIGNER_SHA256 || '0686161d8dc3051bfda2e03dd0406e1a6cddadf38c976f606bd8c474a872374e' }}
         run: |
           build_tools="${ANDROID_HOME}/build-tools/35.0.0"

@@ -7,13 +7,13 @@ updated: 2026-10-30T20:56:00+05:30
 ## Current Position
 
 **Milestone:** Performance Optimization, Coalescing & Release Hardening v2.1.7
-**Phase:** 9 - Cache Eviction & Allocation Streamlining
+**Phase:** 10 - CI/CD Release Policy Hardening & Fuzz Testing
 **Status:** executing
-**Plan:** Plan 9.1 - 9.3: Optimize DnsCache eviction, streamline ForwardingDnsRequest allocations, track active forwarding count and latency metrics
+**Plan:** Plan 10.1 - 10.3: Add malformed DNS packet fuzz tests, harden release policy and CI signing fallback
 
 ## Last Action
 
-Completed Phase 8: Implemented `DnsRequestCoalescer` with bounded per-key listeners, wired in-flight request deduplication into `UnblockerVpnService.kt`, added `VpnDiagnostics.recordCoalesced()`, and verified with unit tests in `DnsRequestCoalescerTest.kt`. All 116 tests passing.
+Completed Phase 9: Streamlined `DnsCache` eviction to O(1), cut 50% byte-array allocations in `toForwardingRequest`, and verified all 116 unit test tasks pass with zero regressions.
 
 ## Next Steps
 

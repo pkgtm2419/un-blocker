@@ -48,9 +48,8 @@ data class ForwardingDnsRequest(
 )
 
 fun DnsQuery.toForwardingRequest(): ForwardingDnsRequest {
-    val isolatedRaw = rawPacket.copyOfRange(0, dnsOffset + dnsLength)
-    val isolatedQuery = this.copy(rawPacket = isolatedRaw)
     val payload = rawPacket.copyOfRange(dnsOffset, dnsOffset + dnsLength)
+    val isolatedQuery = this.copy(rawPacket = payload, dnsOffset = 0, dnsLength = payload.size)
     return ForwardingDnsRequest(isolatedQuery, payload)
 }
 

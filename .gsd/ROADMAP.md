@@ -57,15 +57,15 @@ updated: 2026-10-30T20:56:00+05:30
 - [x] Plan 8.3: Add unit tests for query coalescing, multi-client response fan-out, and failure propagation
 
 ### Phase 9: Cache Eviction & Allocation Streamlining
-**Status:** 🔄 In Progress
+**Status:** ✅ Complete
 **Objective:** Optimize `DnsCache` eviction to O(1) without linear lock-held scans; streamline `toForwardingRequest` allocations; track active workers and latency.
 **Plans:**
-- [ ] Plan 9.1: Refactor `DnsCache` eviction to remove linear lock contention
-- [ ] Plan 9.2: Optimize `ForwardingDnsRequest` to avoid dual-array allocations and wire `forwardingActive` tracking
-- [ ] Plan 9.3: Add performance and latency unit tests
+- [x] Plan 9.1: Refactor `DnsCache` eviction to remove linear lock contention
+- [x] Plan 9.2: Optimize `ForwardingDnsRequest` to avoid dual-array allocations and wire `forwardingActive` tracking
+- [x] Plan 9.3: Add performance and latency unit tests
 
 ### Phase 10: CI/CD Release Policy Hardening & Fuzz Testing
-**Status:** ⏳ Pending
+**Status:** 🔄 In Progress
 **Objective:** Add malformed packet parser fuzzing tests and ensure release action succeeds with available repository secrets.
 **Plans:**
 - [ ] Plan 10.1: Add fuzzing test suite for malformed and adversarial DNS wire packets

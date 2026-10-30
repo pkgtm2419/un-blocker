@@ -1,13 +1,13 @@
 ---
-milestone: Performance Optimization, Coalescing & Release Hardening v2.1.7
-version: 2.1.7
-updated: 2026-10-30T20:56:00+05:30
+milestone: Security Hardening, Direct-DNS Interception & Release v2.1.8
+version: 2.1.8
+updated: 2026-10-30T23:15:00+05:30
 ---
 
 # Roadmap
 
-> **Current Phase:** Complete (Milestone Delivered v2.1.7)
-> **Status:** finalized
+> **Current Phase:** Phase 12 - DNS Upstream TxID Randomization & Direct Public DNS Route Trapping
+> **Status:** ready
 
 ## Must-Haves (from SPEC)
 - [x] Forwarding saturation generates deterministic SERVFAIL response instead of dropping queries
@@ -21,7 +21,11 @@ updated: 2026-10-30T20:56:00+05:30
 - [x] DnsCache eviction and forward allocation optimized with active worker metrics
 - [x] Fuzz tests for malformed DNS packet parsing pass with zero crashes
 - [x] Release workflow succeeds cleanly in GitHub Actions
-- [x] Version bumped to 2.1.7 (versionCode 25), unit tests pass, and new release APK assembled
+- [ ] Upstream DNS queries randomized with cryptographically secure 16-bit TxIDs (SEC-02)
+- [ ] Direct public DNS IP destinations trapped and filtered via TUN routing (SEC-01)
+- [ ] TCP DNS connection pool implements LRU eviction without dropping new requests (SEC-03)
+- [ ] TFLite model loader closes file streams safely (SEC-05)
+- [ ] Version bumped to 2.1.8 (versionCode 26), unit tests pass, and new release APK assembled
 
 ---
 
@@ -49,34 +53,39 @@ updated: 2026-10-30T20:56:00+05:30
 **Status:** ✅ Complete (v2.1.6)
 
 ### Phase 8: In-Flight DNS Request Coalescing
-**Status:** ✅ Complete
-**Objective:** Eliminate redundant concurrent upstream DNS queries for the same domain by coalescing in-flight cache misses.
-**Plans:**
-- [x] Plan 8.1: Implement `DnsRequestCoalescer` with bounded per-key listener list
-- [x] Plan 8.2: Integrate coalescing in `UnblockerVpnService.resolveAndForward` and wire `VpnDiagnostics.coalescedQuery()`
-- [x] Plan 8.3: Add unit tests for query coalescing, multi-client response fan-out, and failure propagation
+**Status:** ✅ Complete (v2.1.7)
 
 ### Phase 9: Cache Eviction & Allocation Streamlining
-**Status:** ✅ Complete
-**Objective:** Optimize `DnsCache` eviction to O(1) without linear lock-held scans; streamline `toForwardingRequest` allocations; track active workers and latency.
-**Plans:**
-- [x] Plan 9.1: Refactor `DnsCache` eviction to remove linear lock contention
-- [x] Plan 9.2: Optimize `ForwardingDnsRequest` to avoid dual-array allocations and wire `forwardingActive` tracking
-- [x] Plan 9.3: Add performance and latency unit tests
+**Status:** ✅ Complete (v2.1.7)
 
 ### Phase 10: CI/CD Release Policy Hardening & Fuzz Testing
-**Status:** ✅ Complete
-**Objective:** Add malformed packet parser fuzzing tests and ensure release action succeeds with available repository secrets.
-**Plans:**
-- [x] Plan 10.1: Add fuzzing test suite for malformed and adversarial DNS wire packets
-- [x] Plan 10.2: Update `release-policy.py` and `.github/workflows/release.yml` for seamless signing fallback
-- [x] Plan 10.3: Verify release policy tests
+**Status:** ✅ Complete (v2.1.7)
 
 ### Phase 11: Version Bump, Release Build & Packaging (v2.1.7)
+**Status:** ✅ Complete (v2.1.7)
+
+### Phase 12: DNS Upstream TxID Randomization & Direct Public DNS Route Trapping
 **Status:** ✅ Complete
-**Objective:** Bump version to 2.1.7 (code 25), run full unit tests, assemble release APKs, push to git, and release.
+**Objective:** Decouple client transaction IDs from outbound network queries using cryptographic randomization; route major public DNS resolvers through TUN to trap evasive direct-socket traffic.
 **Plans:**
-- [x] Plan 11.1: Bump version to 2.1.7 (versionCode 25) in `app/build.gradle.kts` and update `README.md`
-- [x] Plan 11.2: Run complete test suite (`testDebugUnitTest` and lint)
-- [x] Plan 11.3: Assemble release APKs and verify output checksums
-- [x] Plan 11.4: Push to git, publish release, and deliver summary
+- [x] Plan 12.1: Implement TxID rewriting and response re-mapping in `DnsUpstreamClient`
+- [x] Plan 12.2: Expand `VpnConfiguration` routes to trap public DNS IP addresses (`8.8.8.8`, `1.1.1.1`, etc.)
+- [x] Plan 12.3: Update `UnblockerVpnService` to process DNS packets directed to public resolver IPs
+- [x] Plan 12.4: Add unit tests for TxID randomization and route trapping
+
+### Phase 13: TCP DNS Connection LRU Eviction & TFLite Stream Cleanup
+**Status:** 🔄 In Progress
+**Objective:** Replace connection-cap rejection with LRU eviction in `TcpDnsResponder` to prevent connection-exhaustion DoS; fix `FileInputStream` resource leak in `TFLiteClassifierImpl`.
+**Plans:**
+- [ ] Plan 13.1: Implement LRU connection eviction in `TcpDnsResponder`
+- [ ] Plan 13.2: Safely close `FileInputStream` in `TFLiteClassifierImpl`
+- [ ] Plan 13.3: Add unit tests for TCP connection eviction under saturation
+
+### Phase 14: Version Bump, Verification Suite & Release v2.1.8
+**Status:** ⏳ Pending
+**Objective:** Bump version to 2.1.8 (code 26), run complete test suite, assemble release APKs, push to git, and publish release.
+**Plans:**
+- [ ] Plan 14.1: Bump version to 2.1.8 (versionCode 26) in `app/build.gradle.kts` and update `README.md`
+- [ ] Plan 14.2: Execute test suite (`testDebugUnitTest` and tooling tests)
+- [ ] Plan 14.3: Assemble release APKs and verify signatures
+- [ ] Plan 14.4: Push to git, publish release, and deliver final report

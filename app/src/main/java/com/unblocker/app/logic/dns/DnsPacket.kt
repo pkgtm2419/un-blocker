@@ -422,7 +422,15 @@ object DnsPacketUtil {
     /** Re-negotiate each transaction; never send a cached oversized UDP body. */
     fun wrapClientResponse(query:DnsQuery,bytes:ByteArray):ByteArray {
         val limit=minOf(query.udpPayloadLimit.coerceAtLeast(512),maxDnsPayloadLength(query))
-        if(bytes.size<=limit) return wrapDnsResponseInIpUdp(query,bytes,bytes.size)
+        if(bytes.size<=limit) {
+            val txBytes = if (bytes.size >= 2 && (bytes[0] != (query.transactionId.toInt() ushr 8).toByte() || bytes[1] != query.transactionId.toByte())) {
+                val cloned = bytes.clone()
+                cloned[0] = (query.transactionId.toInt() ushr 8).toByte()
+                cloned[1] = query.transactionId.toByte()
+                cloned
+            } else bytes
+            return wrapDnsResponseInIpUdp(query,txBytes,txBytes.size)
+        }
         require(bytes.size>=12)
         val question=extractQuestionSection(query.rawPacket,query.dnsOffset,query.dnsLength)
         val opt=if(query.hasEdns) minimalOpt(query) else byteArrayOf()

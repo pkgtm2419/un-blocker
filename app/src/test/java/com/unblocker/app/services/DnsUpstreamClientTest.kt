@@ -213,7 +213,8 @@ class DnsUpstreamClientTest {
     private fun client(
         server: TestDnsServer,
         maxDnsMessageBytes: Int = 0xffff,
-        tcpReadTimeoutMillis: Int = 1_000
+        tcpReadTimeoutMillis: Int = 1_000,
+        txIdGenerator: () -> Short = { 0x1234.toShort() }
     ) = DnsUpstreamClient(
         protectDatagramSocket = { true },
         protectTcpSocket = { true },
@@ -221,7 +222,8 @@ class DnsUpstreamClientTest {
         udpTimeoutMillis = 500,
         tcpConnectTimeoutMillis = 500,
         tcpReadTimeoutMillis = tcpReadTimeoutMillis,
-        maxDnsMessageBytes = maxDnsMessageBytes
+        maxDnsMessageBytes = maxDnsMessageBytes,
+        txIdGenerator = txIdGenerator
     )
 
     private class TestDnsServer(address: InetAddress) : Closeable {

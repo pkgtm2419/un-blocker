@@ -328,8 +328,8 @@ class TcpDnsResponderTest {
         assertEquals(1, rstResp.size)
         assertEquals(TcpDnsResponder.FLAG_RST or TcpDnsResponder.FLAG_ACK, parseTcpPacket(rstResp[0]).flags)
 
-        // Wrong IP (not tunnel IP) is completely ignored
-        val wrongIp = buildClientTcpPacket(dstIp = byteArrayOf(8, 8, 8, 8))
+        // Wrong IP (not tunnel IP or trapped resolver) is completely ignored
+        val wrongIp = buildClientTcpPacket(dstIp = byteArrayOf(192.toByte(), 168.toByte(), 1, 1))
         assertTrue(process(responder, wrongIp).isEmpty())
 
         // Too short garbage is completely ignored
@@ -535,11 +535,23 @@ class TcpDnsResponderTest {
     fun testNonTunnelIpReturnsFalseAndEmitsNothing() {
         val responder = createResponder()
         val foreignPacket = buildClientTcpPacket(
-            dstIp = byteArrayOf(1, 1, 1, 1),
+            dstIp = byteArrayOf(192.toByte(), 168.toByte(), 1, 1),
             dstPort = 53
         )
         val handled = responder.processPacket(foreignPacket, foreignPacket.size)
         org.junit.Assert.assertFalse(handled)
         assertTrue(emittedPackets.isEmpty())
+    }
+
+    @Test
+    fun testTrappedPublicDnsIsHandled() {
+        val responder = createResponder()
+        val quadEightPacket = buildClientTcpPacket(
+            dstIp = byteArrayOf(8, 8, 8, 8),
+            dstPort = 53,
+            flags = TcpDnsResponder.FLAG_SYN
+        )
+        val handled = responder.processPacket(quadEightPacket, quadEightPacket.size)
+        assertTrue(handled)
     }
 }

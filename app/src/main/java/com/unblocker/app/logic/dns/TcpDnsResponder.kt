@@ -40,6 +40,38 @@ class TcpDnsResponder(
             0, 0, 0, 0,
             0, 0, 0, 1
         )
+
+        private val TRAPPED_IPV4_BYTES: List<ByteArray> = listOf(
+            byteArrayOf(8, 8, 8, 8),
+            byteArrayOf(8, 8, 4, 4),
+            byteArrayOf(1, 1, 1, 1),
+            byteArrayOf(1, 0, 0, 1),
+            byteArrayOf(9, 9, 9, 9),
+            byteArrayOf(9, 9, 9, 10),
+            byteArrayOf(208.toByte(), 67.toByte(), 222.toByte(), 222.toByte()),
+            byteArrayOf(208.toByte(), 67.toByte(), 220.toByte(), 220.toByte()),
+            byteArrayOf(94.toByte(), 140.toByte(), 14.toByte(), 14.toByte()),
+            byteArrayOf(94.toByte(), 140.toByte(), 15.toByte(), 15.toByte()),
+            byteArrayOf(76, 76, 2, 0),
+            byteArrayOf(76, 76, 10, 0)
+        )
+
+        private val TRAPPED_IPV6_BYTES: List<ByteArray> = listOf(
+            byteArrayOf(0x20.toByte(), 0x01.toByte(), 0x48.toByte(), 0x60.toByte(), 0x48.toByte(), 0x60.toByte(), 0, 0, 0, 0, 0, 0, 0, 0, 0x88.toByte(), 0x88.toByte()),
+            byteArrayOf(0x20.toByte(), 0x01.toByte(), 0x48.toByte(), 0x60.toByte(), 0x48.toByte(), 0x60.toByte(), 0, 0, 0, 0, 0, 0, 0, 0, 0x88.toByte(), 0x44.toByte()),
+            byteArrayOf(0x26.toByte(), 0x06.toByte(), 0x47.toByte(), 0x00.toByte(), 0x47.toByte(), 0x00.toByte(), 0, 0, 0, 0, 0, 0, 0, 0, 0x11.toByte(), 0x11.toByte()),
+            byteArrayOf(0x26.toByte(), 0x06.toByte(), 0x47.toByte(), 0x00.toByte(), 0x47.toByte(), 0x00.toByte(), 0, 0, 0, 0, 0, 0, 0, 0, 0x10.toByte(), 0x01.toByte()),
+            byteArrayOf(0x26.toByte(), 0x20.toByte(), 0x00.toByte(), 0xfe.toByte(), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x00.toByte(), 0xfe.toByte()),
+            byteArrayOf(0x26.toByte(), 0x20.toByte(), 0x00.toByte(), 0xfe.toByte(), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x00.toByte(), 0x09.toByte())
+        )
+
+        internal fun isTrappedPublicDns(dstIp: ByteArray, isIpv6: Boolean): Boolean {
+            val list = if (isIpv6) TRAPPED_IPV6_BYTES else TRAPPED_IPV4_BYTES
+            for (trapped in list) {
+                if (dstIp.contentEquals(trapped)) return true
+            }
+            return false
+        }
     }
 
     class TcpConnectionKey(val ip: ByteArray, val port: Int) {
@@ -113,9 +145,9 @@ class TcpDnsResponder(
 
         // Validate local destination address
         val isLocalTunnelIp = if (isIpv6) {
-            dstIp.contentEquals(IPV6_DNS)
+            dstIp.contentEquals(IPV6_DNS) || isTrappedPublicDns(dstIp, isIpv6 = true)
         } else {
-            dstIp.contentEquals(IPV4_DNS)
+            dstIp.contentEquals(IPV4_DNS) || isTrappedPublicDns(dstIp, isIpv6 = false)
         }
         if (!isLocalTunnelIp) return false
 

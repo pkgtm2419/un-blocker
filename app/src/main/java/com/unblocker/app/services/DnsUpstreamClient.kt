@@ -24,8 +24,13 @@ internal class DnsUpstreamClient(
     private val udpTimeoutMillis: Int = 700,
     private val tcpConnectTimeoutMillis: Int = 1_000,
     private val tcpReadTimeoutMillis: Int = 1_000,
-    private val maxDnsMessageBytes: Int = 0xffff
+    private val maxDnsMessageBytes: Int = 0xffff,
+    private val txIdGenerator: () -> Short = { secureRandom.nextInt(0x10000).toShort() }
 ) {
+    companion object {
+        private val secureRandom = java.security.SecureRandom()
+    }
+
     init {
         require(port in 1..0xffff)
         require(udpTimeoutMillis > 0 && tcpConnectTimeoutMillis > 0 && tcpReadTimeoutMillis > 0)
@@ -43,7 +48,15 @@ internal class DnsUpstreamClient(
         outboundGuard: ((()->Unit)->Boolean) = { action -> action();true }
     ): ValidatedDnsResponse? {
         if (!run.running.get() || dnsPayload.isEmpty() || dnsPayload.size > 0xffff || resolvers.isEmpty()) return null
+        if (dnsPayload.size < 12) return null
         val responseLimit = minOf(maxDnsMessageBytes, DnsPacketUtil.maxDnsPayloadLength(query))
+
+        // Cryptographically randomize outbound upstream transaction ID (SEC-02, RFC 5452 anti-spoofing)
+        val upstreamTxId = txIdGenerator()
+        val upstreamPayload = dnsPayload.clone()
+        upstreamPayload[0] = ((upstreamTxId.toInt() ushr 8) and 0xff).toByte()
+        upstreamPayload[1] = (upstreamTxId.toInt() and 0xff).toByte()
+        val upstreamQuery = query.copy(transactionId = upstreamTxId)
 
         // Prioritize last known responsive resolver to eliminate redundant timeout delays
         val orderedResolvers = preferredResolver?.let { pref ->
@@ -52,16 +65,16 @@ internal class DnsUpstreamClient(
 
         for (resolver in orderedResolvers) {
             if (!run.running.get() || Thread.currentThread().isInterrupted) return null
-            val udpResponse = resolveUdp(run, query, dnsPayload, resolver, responseLimit, outboundGuard)
+            val udpResponse = resolveUdp(run, upstreamQuery, upstreamPayload, resolver, responseLimit, outboundGuard)
             if (udpResponse != null) {
                 if (!udpResponse.metadata.truncated) {
                     preferredResolver = resolver
-                    return udpResponse
+                    return restoreClientTxId(udpResponse, query.transactionId)
                 }
-                val tcpResponse = resolveTcp(run, query, dnsPayload, resolver, responseLimit, outboundGuard)
+                val tcpResponse = resolveTcp(run, upstreamQuery, upstreamPayload, resolver, responseLimit, outboundGuard)
                 if (tcpResponse != null) {
                     preferredResolver = resolver
-                    return tcpResponse
+                    return restoreClientTxId(tcpResponse, query.transactionId)
                 }
             } else if (resolver == preferredResolver) {
                 // Preferred resolver failed to respond; clear preference to prevent timeout cascades
@@ -70,6 +83,17 @@ internal class DnsUpstreamClient(
         }
         preferredResolver = null
         return null
+    }
+
+    private fun restoreClientTxId(response: ValidatedDnsResponse, clientTxId: Short): ValidatedDnsResponse {
+        val clientTxIdInt = clientTxId.toInt() and 0xffff
+        val restoredBytes = response.bytes.clone()
+        if (restoredBytes.size >= 2) {
+            restoredBytes[0] = ((clientTxIdInt ushr 8) and 0xff).toByte()
+            restoredBytes[1] = (clientTxIdInt and 0xff).toByte()
+        }
+        val restoredMetadata = response.metadata.copy(transactionId = clientTxIdInt)
+        return ValidatedDnsResponse(restoredBytes, restoredMetadata)
     }
 
     fun resetPreferredResolver() {

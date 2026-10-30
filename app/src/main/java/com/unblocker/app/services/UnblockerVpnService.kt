@@ -22,6 +22,7 @@ import com.unblocker.app.logic.ContentFilterEngine
 import com.unblocker.app.logic.dns.DnsPacketUtil
 import com.unblocker.app.logic.dns.ForwardingDnsRequest
 import com.unblocker.app.logic.dns.toForwardingRequest
+import com.unblocker.vpn.builder.TrappedDnsServers
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -176,11 +177,23 @@ class UnblockerVpnService : VpnService() {
                 .setMtu(1500)
                 .setBlocking(true)
 
+            // Trap well-known public DNS resolvers to intercept evasive direct-socket traffic (SEC-01)
+            for (ip in TrappedDnsServers.IPV4_TRAPPED) {
+                try {
+                    builder.addRoute(ip, 32)
+                } catch (_: Exception) {}
+            }
+
             // Intercept IPv6 DNS to eliminate cellular and Wi-Fi dual-stack bypass
             try {
                 builder.addAddress("fd00:1::2", 128)
                 builder.addDnsServer("fd00:1::1")
                 builder.addRoute("fd00:1::1", 128)
+                for (ip in TrappedDnsServers.IPV6_TRAPPED) {
+                    try {
+                        builder.addRoute(ip, 128)
+                    } catch (_: Exception) {}
+                }
             } catch (_: Exception) {
                 // Graceful fallback on devices with no IPv6 support
             }

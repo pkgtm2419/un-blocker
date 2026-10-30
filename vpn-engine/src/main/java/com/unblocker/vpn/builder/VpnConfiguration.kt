@@ -30,7 +30,24 @@ class VpnConfiguration(
             .addAddress("fd00:1::2", 128)
             .addRoute("10.10.0.1", 32)
             .addRoute("fd00:1::1", 128)
-            .setMtu(1500)
+
+        // Trap well-known public DNS resolvers to intercept evasive direct-socket traffic (SEC-01)
+        for (ip in TrappedDnsServers.IPV4_TRAPPED) {
+            try {
+                builder.addRoute(ip, 32)
+            } catch (_: Exception) {
+                // Ignore platform route addition failures
+            }
+        }
+        for (ip in TrappedDnsServers.IPV6_TRAPPED) {
+            try {
+                builder.addRoute(ip, 128)
+            } catch (_: Exception) {
+                // Ignore platform route addition failures
+            }
+        }
+
+        builder.setMtu(1500)
             .setBlocking(true)
 
         // Set the tunnel's DNS servers so Android sends DNS requests here

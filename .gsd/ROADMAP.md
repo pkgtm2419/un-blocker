@@ -6,8 +6,8 @@ updated: 2026-10-30T23:15:00+05:30
 
 # Roadmap
 
-> **Current Phase:** Phase 12 - DNS Upstream TxID Randomization & Direct Public DNS Route Trapping
-> **Status:** ready
+> **Current Phase:** Complete (Milestone Delivered v2.1.8)
+> **Status:** finalized
 
 ## Must-Haves (from SPEC)
 - [x] Forwarding saturation generates deterministic SERVFAIL response instead of dropping queries
@@ -21,11 +21,11 @@ updated: 2026-10-30T23:15:00+05:30
 - [x] DnsCache eviction and forward allocation optimized with active worker metrics
 - [x] Fuzz tests for malformed DNS packet parsing pass with zero crashes
 - [x] Release workflow succeeds cleanly in GitHub Actions
-- [ ] Upstream DNS queries randomized with cryptographically secure 16-bit TxIDs (SEC-02)
-- [ ] Direct public DNS IP destinations trapped and filtered via TUN routing (SEC-01)
-- [ ] TCP DNS connection pool implements LRU eviction without dropping new requests (SEC-03)
-- [ ] TFLite model loader closes file streams safely (SEC-05)
-- [ ] Version bumped to 2.1.8 (versionCode 26), unit tests pass, and new release APK assembled
+- [x] Upstream DNS queries randomized with cryptographically secure 16-bit TxIDs (SEC-02)
+- [x] Direct public DNS IP destinations trapped and filtered via TUN routing (SEC-01)
+- [x] TCP DNS connection pool implements LRU eviction without dropping new requests (SEC-03)
+- [x] TFLite model loader closes file streams safely (SEC-05)
+- [x] Version bumped to 2.1.8 (versionCode 26), unit tests pass, and new release APK assembled
 
 ---
 
@@ -82,10 +82,10 @@ updated: 2026-10-30T23:15:00+05:30
 - [x] Plan 13.3: Add unit tests for TCP connection eviction under saturation
 
 ### Phase 14: Version Bump, Verification Suite & Release v2.1.8
-**Status:** 🔄 In Progress
+**Status:** ✅ Complete
 **Objective:** Bump version to 2.1.8 (code 26), run complete test suite, assemble release APKs, push to git, and publish release.
 **Plans:**
-- [ ] Plan 14.1: Bump version to 2.1.8 (versionCode 26) in `app/build.gradle.kts` and update `README.md`
-- [ ] Plan 14.2: Execute test suite (`testDebugUnitTest` and tooling tests)
-- [ ] Plan 14.3: Assemble release APKs and verify signatures
-- [ ] Plan 14.4: Push to git, publish release, and deliver final report
+- [x] Plan 14.1: Bump version to 2.1.8 (versionCode 26) in `app/build.gradle.kts` and update `README.md`
+- [x] Plan 14.2: Execute test suite (`testDebugUnitTest` and tooling tests)
+- [x] Plan 14.3: Assemble release APKs and verify signatures
+- [x] Plan 14.4: Push to git, publish release, and deliver final report

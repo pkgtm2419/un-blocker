@@ -8,20 +8,19 @@ updated: 2026-10-30T23:15:00+05:30
 
 **Milestone:** Security Hardening, Direct-DNS Interception & Release v2.1.8
 **Phase:** 14 - Version Bump, Verification Suite & Release v2.1.8
-**Status:** executing
-**Plan:** Plan 14.1 - 14.4: Bump version to 2.1.8, run verification suite, assemble release APKs, push and publish release
+**Status:** complete
+**Plan:** All plans complete (14.1 - 14.4)
 
 ## Last Action
 
-Completed Phase 13: Implemented least-recently-active (LRU) connection eviction in `TcpDnsResponder` with prioritization of unestablished `SYN_RECEIVED` connections when maximum connections (32) is reached (SEC-03), safely wrapped `FileInputStream` and asset file descriptor in `.use { ... }` in `TFLiteClassifierImpl.setupInterpreter` (SEC-05), and verified test suites with 100% green status.
+Completed Phase 14: Bumped version to 2.1.8 (`versionCode = 26`), updated README.md badges and direct download links, verified 100% green test suite (Android unit tests, Python tooling tests, shell script tests), assembled release APKs (`ub-blocker-2.1.8.apk` and `ub-blocker-2.1.8-signed.apk`), and updated SHA256 checksums.
 
 ## Next Steps
 
-1. Bump `versionCode = 26` and `versionName = "2.1.8"` in `app/build.gradle.kts`.
-2. Update `README.md` download links and version badges to 2.1.8.
-3. Run complete verification suites (Android unit tests, Python tooling tests, shell script tests).
-4. Assemble release APKs (`ub-blocker-2.1.8.apk` and `ub-blocker-2.1.8-signed.apk`), compute SHA256 checksums.
-5. Commit Phase 14, push to git, create tag `v2.1.8`, push tag, and publish release on GitHub.
+1. Commit Phase 14.
+2. Push commits to `origin main`.
+3. Create annotated tag `v2.1.8` and push to origin.
+4. Publish GitHub Release v2.1.8 with release assets.
 
 ## Active Decisions
 

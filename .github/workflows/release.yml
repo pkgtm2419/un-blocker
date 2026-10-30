@@ -179,7 +179,7 @@ jobs:
           UB_RELEASE_KEY_PASSWORD: ${{ secrets.UB_RELEASE_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          if [ "${BUILD_TYPE}" = "release" ] && [ -n "${steps.keys.outputs.release_keystore:-}" ]; then
+          if [ "${BUILD_TYPE}" = "release" ] && [ -n "${UB_RELEASE_KEYSTORE_FILE:-}" ]; then
             bash gradlew assembleRelease
           elif [ "${BUILD_TYPE}" = "release" ]; then
             bash gradlew assembleReleaseTest
@@ -193,6 +193,7 @@ jobs:
         run: rm -f "${RUNNER_TEMP}/ub-blocker-signing.keystore"
       - name: Verify APK before publishing
         env:
+          UB_RELEASE_KEYSTORE_FILE: ${{ steps.keys.outputs.release_keystore }}
           UB_RELEASE_SIGNER_SHA256: ${{ vars.UB_RELEASE_SIGNER_SHA256 }}
           UB_TEST_SIGNER_SHA256: ${{ vars.UB_TEST_SIGNER_SHA256 || '0686161d8dc3051bfda2e03dd0406e1a6cddadf38c976f606bd8c474a872374e' }}
         run: |
@@ -202,7 +203,7 @@ jobs:
           if [ ! -d "${build_tools}" ]; then
             build_tools="$(find "${ANDROID_HOME}/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
           fi
-          if [ "${BUILD_TYPE}" = "release" ] && [ -n "${UB_RELEASE_SIGNER_SHA256:-}" ]; then
+          if [ "${BUILD_TYPE}" = "release" ] && [ -n "${UB_RELEASE_KEYSTORE_FILE:-}" ] && [ -n "${UB_RELEASE_SIGNER_SHA256:-}" ]; then
             if "${build_tools}/aapt2" dump badging "${APK_PATH}" | grep -q application-debuggable; then
               echo "Release APK must not be debuggable" >&2; exit 1
             fi

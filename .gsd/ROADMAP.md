@@ -17,10 +17,10 @@ updated: 2026-10-30T20:56:00+05:30
 - [x] `android:largeHeap="true"` removed from AndroidManifest.xml
 - [x] Local query logging defaults to privacy mode (aggregate counters only) with opt-in history
 - [x] IDNA Punycode conversion added at rule-entry / UI manual import boundaries
-- [ ] Concurrent in-flight DNS query coalescing implemented and verified
-- [ ] DnsCache eviction and forward allocation optimized with active worker metrics
-- [ ] Fuzz tests for malformed DNS packet parsing pass with zero crashes
-- [ ] Release workflow succeeds cleanly in GitHub Actions
+- [x] Concurrent in-flight DNS query coalescing implemented and verified
+- [x] DnsCache eviction and forward allocation optimized with active worker metrics
+- [x] Fuzz tests for malformed DNS packet parsing pass with zero crashes
+- [x] Release workflow succeeds cleanly in GitHub Actions
 - [ ] Version bumped to 2.1.7 (versionCode 25), unit tests pass, and new release APK assembled
 
 ---
@@ -65,15 +65,15 @@ updated: 2026-10-30T20:56:00+05:30
 - [x] Plan 9.3: Add performance and latency unit tests
 
 ### Phase 10: CI/CD Release Policy Hardening & Fuzz Testing
-**Status:** 🔄 In Progress
+**Status:** ✅ Complete
 **Objective:** Add malformed packet parser fuzzing tests and ensure release action succeeds with available repository secrets.
 **Plans:**
-- [ ] Plan 10.1: Add fuzzing test suite for malformed and adversarial DNS wire packets
-- [ ] Plan 10.2: Update `release-policy.py` and `.github/workflows/release.yml` for seamless signing fallback
-- [ ] Plan 10.3: Verify release policy tests
+- [x] Plan 10.1: Add fuzzing test suite for malformed and adversarial DNS wire packets
+- [x] Plan 10.2: Update `release-policy.py` and `.github/workflows/release.yml` for seamless signing fallback
+- [x] Plan 10.3: Verify release policy tests
 
 ### Phase 11: Version Bump, Release Build & Packaging (v2.1.7)
-**Status:** ⏳ Pending
+**Status:** 🔄 In Progress
 **Objective:** Bump version to 2.1.7 (code 25), run full unit tests, assemble release APKs, push to git, and release.
 **Plans:**
 - [ ] Plan 11.1: Bump version to 2.1.7 (versionCode 25) in `app/build.gradle.kts` and update `README.md`

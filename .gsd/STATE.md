@@ -7,21 +7,21 @@ updated: 2026-10-30T20:56:00+05:30
 ## Current Position
 
 **Milestone:** Performance Optimization, Coalescing & Release Hardening v2.1.7
-**Phase:** 10 - CI/CD Release Policy Hardening & Fuzz Testing
+**Phase:** 11 - Version Bump, Release Build & Packaging (v2.1.7)
 **Status:** executing
-**Plan:** Plan 10.1 - 10.3: Add malformed DNS packet fuzz tests, harden release policy and CI signing fallback
+**Plan:** Plan 11.1 - 11.4: Version bump, assemble release APKs, verify, and release
 
 ## Last Action
 
-Completed Phase 9: Streamlined `DnsCache` eviction to O(1), cut 50% byte-array allocations in `toForwardingRequest`, and verified all 116 unit test tasks pass with zero regressions.
+Completed Phase 10: Implemented DNS fuzz mutation tests covering cyclic compression pointers, corrupt IHL, oversized labels, and random fuzzing; hardened release CI signing fallback.
 
 ## Next Steps
 
-1. Create `DnsRequestCoalescer.kt` in `com.unblocker.app.services`.
-2. Integrate coalescer into `UnblockerVpnService.kt` during cache-miss handling.
-3. Wire `VpnDiagnostics.coalescedQuery()`.
-4. Create comprehensive tests in `DnsRequestCoalescerTest.kt`.
-5. Run unit tests and commit Phase 8.
+1. Bump version to 2.1.7 (`versionCode = 25`) in `app/build.gradle.kts`.
+2. Update `README.md` download badges and links to v2.1.7.
+3. Run test suite and assemble release APKs.
+4. Update checksums and create commit.
+5. Push to git and create release.
 
 ## Active Decisions
 

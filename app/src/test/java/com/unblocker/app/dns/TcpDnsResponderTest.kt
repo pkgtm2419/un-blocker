@@ -407,13 +407,19 @@ class TcpDnsResponderTest {
         }
         assertEquals(32, responder.activeConnectionCount())
 
-        // 33rd connection SYN should be rejected with RST
+        // 33rd connection SYN evicts the oldest idle connection (LRU eviction, SEC-03) and responds with SYN|ACK
         val syn33 = buildClientTcpPacket(srcPort = 10033, seqNum = 10033L, flags = TcpDnsResponder.FLAG_SYN)
         val resp33 = process(responder, syn33)
         assertEquals(1, resp33.size)
-        val parsedRst = parseTcpPacket(resp33[0])
-        assertEquals(TcpDnsResponder.FLAG_RST or TcpDnsResponder.FLAG_ACK, parsedRst.flags)
+        val parsedSynAck = parseTcpPacket(resp33[0])
+        assertEquals(TcpDnsResponder.FLAG_SYN or TcpDnsResponder.FLAG_ACK, parsedSynAck.flags)
         assertEquals(32, responder.activeConnectionCount())
+
+        // The evicted connection (port 10001) is no longer active; subsequent data on it receives RST
+        val evictedData = buildClientTcpPacket(srcPort = 10001, seqNum = 10002L, ackNum = 1L, flags = TcpDnsResponder.FLAG_ACK)
+        val evictedResp = process(responder, evictedData)
+        assertEquals(1, evictedResp.size)
+        assertEquals(TcpDnsResponder.FLAG_RST, parseTcpPacket(evictedResp[0]).flags)
     }
 
     @Test

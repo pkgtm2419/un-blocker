@@ -74,15 +74,15 @@ updated: 2026-10-30T23:15:00+05:30
 - [x] Plan 12.4: Add unit tests for TxID randomization and route trapping
 
 ### Phase 13: TCP DNS Connection LRU Eviction & TFLite Stream Cleanup
-**Status:** 🔄 In Progress
+**Status:** ✅ Complete
 **Objective:** Replace connection-cap rejection with LRU eviction in `TcpDnsResponder` to prevent connection-exhaustion DoS; fix `FileInputStream` resource leak in `TFLiteClassifierImpl`.
 **Plans:**
-- [ ] Plan 13.1: Implement LRU connection eviction in `TcpDnsResponder`
-- [ ] Plan 13.2: Safely close `FileInputStream` in `TFLiteClassifierImpl`
-- [ ] Plan 13.3: Add unit tests for TCP connection eviction under saturation
+- [x] Plan 13.1: Implement LRU connection eviction in `TcpDnsResponder`
+- [x] Plan 13.2: Safely close `FileInputStream` in `TFLiteClassifierImpl`
+- [x] Plan 13.3: Add unit tests for TCP connection eviction under saturation
 
 ### Phase 14: Version Bump, Verification Suite & Release v2.1.8
-**Status:** ⏳ Pending
+**Status:** 🔄 In Progress
 **Objective:** Bump version to 2.1.8 (code 26), run complete test suite, assemble release APKs, push to git, and publish release.
 **Plans:**
 - [ ] Plan 14.1: Bump version to 2.1.8 (versionCode 26) in `app/build.gradle.kts` and update `README.md`

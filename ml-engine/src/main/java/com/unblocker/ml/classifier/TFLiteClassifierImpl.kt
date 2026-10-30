@@ -48,14 +48,15 @@ class TFLiteClassifierImpl @Inject constructor(
 
     private fun setupInterpreter() {
         runCatching {
-            val afd = context.assets.openFd(MODEL_ASSET)
-            val fis = FileInputStream(afd.fileDescriptor)
-            val channel = fis.channel
-            val modelBuffer: ByteBuffer = channel.map(
-                FileChannel.MapMode.READ_ONLY,
-                afd.startOffset,
-                afd.declaredLength
-            )
+            val modelBuffer: ByteBuffer = context.assets.openFd(MODEL_ASSET).use { afd ->
+                FileInputStream(afd.fileDescriptor).use { fis ->
+                    fis.channel.map(
+                        FileChannel.MapMode.READ_ONLY,
+                        afd.startOffset,
+                        afd.declaredLength
+                    )
+                }
+            }
             val options = Interpreter.Options().apply {
                 numThreads = NUM_THREADS
                 useNNAPI = false          // NNAPI adds latency variance — keep deterministic

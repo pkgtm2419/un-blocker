@@ -223,9 +223,27 @@ class TcpDnsResponder(
                     }
                 }
                 if (connections.size >= maxConnections && !connections.containsKey(key)) {
-                    // SYN flood or max connections exceeded: send RST
-                    emit(listOf(buildTcpPacket(isIpv6, dstIp, srcIp, 53, srcPort, 0, (seqNum + 1) and 0xFFFFFFFFL, FLAG_RST or FLAG_ACK, null)))
-                    return true
+                    // LRU eviction: evict least-recently-active connection (prioritizing unestablished SYN_RECEIVED) (SEC-03)
+                    var oldestKey: TcpConnectionKey? = null
+                    var oldestTime = Long.MAX_VALUE
+                    var oldestIsSynReceived = false
+
+                    for ((cKey, cVal) in connections) {
+                        val isSyn = cVal.state == TcpConnection.State.SYN_RECEIVED
+                        if (isSyn && !oldestIsSynReceived) {
+                            oldestKey = cKey
+                            oldestTime = cVal.lastActivityTime
+                            oldestIsSynReceived = true
+                        } else if (isSyn == oldestIsSynReceived) {
+                            if (cVal.lastActivityTime < oldestTime) {
+                                oldestTime = cVal.lastActivityTime
+                                oldestKey = cKey
+                            }
+                        }
+                    }
+                    if (oldestKey != null) {
+                        connections.remove(oldestKey)
+                    }
                 }
                 val serverIsn = Random.nextLong(0, 0xFFFFFFFFL)
                 val conn = TcpConnection(

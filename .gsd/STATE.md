@@ -7,20 +7,21 @@ updated: 2026-10-30T23:15:00+05:30
 ## Current Position
 
 **Milestone:** Security Hardening, Direct-DNS Interception & Release v2.1.8
-**Phase:** 13 - TCP DNS Connection LRU Eviction & TFLite Stream Cleanup
+**Phase:** 14 - Version Bump, Verification Suite & Release v2.1.8
 **Status:** executing
-**Plan:** Plan 13.1 - 13.3: Implement LRU connection eviction, safe stream cleanup, and unit tests
+**Plan:** Plan 14.1 - 14.4: Bump version to 2.1.8, run verification suite, assemble release APKs, push and publish release
 
 ## Last Action
 
-Completed Phase 12: Implemented cryptographically secure upstream DNS transaction ID randomization (RFC 5452 anti-spoofing) with client TxID restoration in `DnsUpstreamClient`, trapped public DNS IP routes (`8.8.8.8`, `1.1.1.1`, `9.9.9.9`, etc.) into TUN routing in `VpnConfiguration` and `UnblockerVpnService`, updated `TcpDnsResponder` to accept trapped destinations, verified client response wrapping in `DnsPacketUtil`, and added tests in `DnsUpstreamClientSecurityTest` (116/116 test tasks passed).
+Completed Phase 13: Implemented least-recently-active (LRU) connection eviction in `TcpDnsResponder` with prioritization of unestablished `SYN_RECEIVED` connections when maximum connections (32) is reached (SEC-03), safely wrapped `FileInputStream` and asset file descriptor in `.use { ... }` in `TFLiteClassifierImpl.setupInterpreter` (SEC-05), and verified test suites with 100% green status.
 
 ## Next Steps
 
-1. Implement LRU connection eviction in `TcpDnsResponder` when connection limit (32) is reached.
-2. Safely close `FileInputStream` and asset file descriptor in `TFLiteClassifierImpl.setupInterpreter`.
-3. Add unit test for LRU connection eviction under saturation in `TcpDnsResponderTest`.
-4. Commit Phase 13.
+1. Bump `versionCode = 26` and `versionName = "2.1.8"` in `app/build.gradle.kts`.
+2. Update `README.md` download links and version badges to 2.1.8.
+3. Run complete verification suites (Android unit tests, Python tooling tests, shell script tests).
+4. Assemble release APKs (`ub-blocker-2.1.8.apk` and `ub-blocker-2.1.8-signed.apk`), compute SHA256 checksums.
+5. Commit Phase 14, push to git, create tag `v2.1.8`, push tag, and publish release on GitHub.
 
 ## Active Decisions
 

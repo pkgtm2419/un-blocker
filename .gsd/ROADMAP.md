@@ -6,8 +6,8 @@ updated: 2026-10-30T20:56:00+05:30
 
 # Roadmap
 
-> **Current Phase:** Phase 8 - In-Flight DNS Request Coalescing
-> **Status:** ready
+> **Current Phase:** Complete (Milestone Delivered v2.1.7)
+> **Status:** finalized
 
 ## Must-Haves (from SPEC)
 - [x] Forwarding saturation generates deterministic SERVFAIL response instead of dropping queries
@@ -21,7 +21,7 @@ updated: 2026-10-30T20:56:00+05:30
 - [x] DnsCache eviction and forward allocation optimized with active worker metrics
 - [x] Fuzz tests for malformed DNS packet parsing pass with zero crashes
 - [x] Release workflow succeeds cleanly in GitHub Actions
-- [ ] Version bumped to 2.1.7 (versionCode 25), unit tests pass, and new release APK assembled
+- [x] Version bumped to 2.1.7 (versionCode 25), unit tests pass, and new release APK assembled
 
 ---
 
@@ -73,10 +73,10 @@ updated: 2026-10-30T20:56:00+05:30
 - [x] Plan 10.3: Verify release policy tests
 
 ### Phase 11: Version Bump, Release Build & Packaging (v2.1.7)
-**Status:** 🔄 In Progress
+**Status:** ✅ Complete
 **Objective:** Bump version to 2.1.7 (code 25), run full unit tests, assemble release APKs, push to git, and release.
 **Plans:**
-- [ ] Plan 11.1: Bump version to 2.1.7 (versionCode 25) in `app/build.gradle.kts` and update `README.md`
-- [ ] Plan 11.2: Run complete test suite (`testDebugUnitTest` and lint)
-- [ ] Plan 11.3: Assemble release APKs and verify output checksums
-- [ ] Plan 11.4: Push to git, publish release, and deliver summary
+- [x] Plan 11.1: Bump version to 2.1.7 (versionCode 25) in `app/build.gradle.kts` and update `README.md`
+- [x] Plan 11.2: Run complete test suite (`testDebugUnitTest` and lint)
+- [x] Plan 11.3: Assemble release APKs and verify output checksums
+- [x] Plan 11.4: Push to git, publish release, and deliver summary

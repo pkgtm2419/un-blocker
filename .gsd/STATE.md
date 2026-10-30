@@ -8,20 +8,19 @@ updated: 2026-10-30T20:56:00+05:30
 
 **Milestone:** Performance Optimization, Coalescing & Release Hardening v2.1.7
 **Phase:** 11 - Version Bump, Release Build & Packaging (v2.1.7)
-**Status:** executing
-**Plan:** Plan 11.1 - 11.4: Version bump, assemble release APKs, verify, and release
+**Status:** complete
+**Plan:** All plans complete (11.1 - 11.4)
 
 ## Last Action
 
-Completed Phase 10: Implemented DNS fuzz mutation tests covering cyclic compression pointers, corrupt IHL, oversized labels, and random fuzzing; hardened release CI signing fallback.
+Completed Phase 11: Version bumped to 2.1.7 (versionCode 25), updated README.md badges and links, verified all 116 test tasks pass with zero regressions, assembled release APKs (`ub-blocker-2.1.7.apk` and `ub-blocker-2.1.7-signed.apk`), and calculated SHA256 sums.
 
 ## Next Steps
 
-1. Bump version to 2.1.7 (`versionCode = 25`) in `app/build.gradle.kts`.
-2. Update `README.md` download badges and links to v2.1.7.
-3. Run test suite and assemble release APKs.
-4. Update checksums and create commit.
-5. Push to git and create release.
+1. Commit Phase 11.
+2. Push commits and tags to origin.
+3. Publish GitHub Release v2.1.7 with release assets.
+4. Provide comprehensive delivery summary.
 
 ## Active Decisions
 

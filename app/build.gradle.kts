@@ -52,8 +52,8 @@ android {
         applicationId = "com.unblocker.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 24
-        versionName = "2.1.6"
+        versionCode = 25
+        versionName = "2.1.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

@@ -7,7 +7,7 @@ updated: 2026-11-02T00:30:00+05:30
 # Roadmap
 
 > **Current Phase:** Phase 5 - Repository Hygiene, Commit, Tag & Push Release v2.2.0
-> **Status:** ready
+> **Status:** complete
 
 ## Must-Haves (from SPEC)
 - [x] 64-bit FNV-1a binary index (`rules.bin`) mapped off-heap with $O(\log_2 N)$ binary search (Phase 1)
@@ -18,7 +18,7 @@ updated: 2026-11-02T00:30:00+05:30
 - [x] Deferred on-device ML rule compilation and removal of high-memory bottleneck warnings (Phase 3)
 - [x] Proguard keep rules for Room/JNI/TFLite and lint configuration (Phase 4)
 - [x] GitHub Actions workflow repairs (`android-checks.yml`, `codeql.yml`, `release.yml`) (Phase 4)
-- [ ] Version bumped to 2.2.0 (versionCode 27), test verification gates, and release packaging (Phase 5)
+- [x] Version bumped to 2.2.0 (versionCode 27), test verification gates, and release packaging (Phase 5)
 
 ---
 
@@ -58,9 +58,9 @@ updated: 2026-11-02T00:30:00+05:30
 - [x] Plan 4.4: Run Phase 4 verification gate (`./gradlew testDebugUnitTest lintDebug assembleRelease`)
 
 ### Phase 5: Repository Hygiene, Commit, Tag & Push Release v2.2.0
-**Status:** ⏳ Pending
+**Status:** ✅ Completed
 **Objective:** Verify working tree cleanliness, commit with atomic commits, tag `v2.2.0`, push to GitHub, and verify automated release publishing.
 **Plans:**
-- [ ] Plan 5.1: Pre-push hygiene and verification gate
-- [ ] Plan 5.2: Git commit, tag, and push release `v2.2.0`
-- [ ] Plan 5.3: Verify GitHub Actions run and release assets
+- [x] Plan 5.1: Pre-push hygiene and verification gate
+- [x] Plan 5.2: Git commit, tag, and push release `v2.2.0`
+- [x] Plan 5.3: Verify GitHub Actions run and release assets

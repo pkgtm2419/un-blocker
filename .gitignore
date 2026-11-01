@@ -28,6 +28,7 @@ release/SHA256SUMS
 *.so
 *.dex
 *.class
+*.bin
 jdk*/
 *.tar.gz
 *.zip

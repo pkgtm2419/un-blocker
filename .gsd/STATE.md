@@ -8,20 +8,20 @@ updated: 2026-11-02T00:30:00+05:30
 
 **Milestone:** Off-Heap Binary Rule Engine, Dual-Stack Sinkhole & Release v2.2.0
 **Phase:** Phase 5 - Repository Hygiene, Commit, Tag & Push Release v2.2.0
-**Status:** ready
-**Plan:** Plan 5.1 - 5.2: Working tree verification, git tag v2.2.0, push main and tag to GitHub
+**Status:** complete
+**Plan:** Plan 5.1 - 5.3: Completed repository hygiene, README download links and version updates, and ready for tag v2.2.0 and push
 
 ## Last Action
 
-Completed Phase 4: Appended Proguard keep rules for Room, JNI, TFLite, and Coroutines in `app/proguard-rules.pro`; configured `app/build.gradle.kts` with `versionCode = 27`, `versionName = "2.2.0"`, and lint options; updated `.github/workflows/codeql.yml` and `.github/workflows/release.yml`. Verified with `./gradlew testDebugUnitTest lintDebug assembleRelease` (All 419 tasks succeeded, release APK produced).
+Completed Phase 5: Updated `.gitignore` (ignoring `*.bin`), updated `README.md` with download badges, release URLs, and release APK file paths for v2.2.0 (`versionCode` 27), and verified build and release policy compliance.
 
 ## Next Steps
 
-1. Verify git working tree cleanliness and `.gitignore`.
-2. Commit Phase 4 changes: `git commit -m "chore(phase-4): r8 keep rules, lint stabilization, and github actions repair"`.
-3. Create git tag `v2.2.0`.
-4. Push `main` and tag `v2.2.0` to `origin`.
-5. Verify GitHub Actions release workflow execution.
+1. Commit Phase 5 changes.
+2. Push `main` to `origin`.
+3. Create annotated tag `v2.2.0` on `main`.
+4. Push tag `v2.2.0` to `origin`.
+5. Monitor and confirm GitHub Actions release workflow publishes `ub-blocker-2.2.0.apk`.
 
 ## Active Decisions
 

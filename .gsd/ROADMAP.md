@@ -6,14 +6,14 @@ updated: 2026-11-02T00:30:00+05:30
 
 # Roadmap
 
-> **Current Phase:** Phase 2 - Dual-Stack Split-Tunnel VPN & Checksum-Verified NXDOMAIN Engine
+> **Current Phase:** Phase 3 - Batched Database Logging & Deferred On-Device Learning
 > **Status:** ready
 
 ## Must-Haves (from SPEC)
 - [x] 64-bit FNV-1a binary index (`rules.bin`) mapped off-heap with $O(\log_2 N)$ binary search (Phase 1)
 - [x] Multi-syntax rule compiler normalizing Hosts, Adblock/uBlock, and plain domains (Phase 1)
-- [ ] Dual-stack IPv4/IPv6 DNS parsing and checksum-verified NXDOMAIN synthesis in VPN engine (Phase 2)
-- [ ] Split-tunnel routing for DNS addresses with underlying physical network auto-tracking (Phase 2)
+- [x] Dual-stack IPv4/IPv6 DNS parsing and checksum-verified NXDOMAIN synthesis in VPN engine (Phase 2)
+- [x] Split-tunnel routing for DNS addresses with underlying physical network auto-tracking (Phase 2)
 - [ ] Non-blocking buffered log channel (`Channel<DnsLogEntity>`) with batched DB insertion (Phase 3)
 - [ ] Deferred on-device ML rule compilation and removal of high-memory bottleneck warnings (Phase 3)
 - [ ] Proguard keep rules for Room/JNI/TFLite and lint configuration (Phase 4)
@@ -33,12 +33,12 @@ updated: 2026-11-02T00:30:00+05:30
 - [x] Plan 1.3: Add unit tests in `RuleCompilerTest.kt` and run Phase 1 verification gate (`./gradlew testDebugUnitTest`)
 
 ### Phase 2: Dual-Stack Split-Tunnel VPN & Checksum-Verified NXDOMAIN Engine
-**Status:** ⏳ Pending
+**Status:** ✅ Completed
 **Objective:** Fix dual-stack ad-blocking across Wi-Fi, 5G, and LTE via split-tunnel routing, valid IPv4 header checksums, RFC 2460 IPv6 UDP checksums, and transparent NXDOMAIN synthesis.
 **Plans:**
-- [ ] Plan 2.1: Refactor `DnsPacketEngine.kt` with IPv4/IPv6 parsing, checksum validation, and NXDOMAIN synthesis
-- [ ] Plan 2.2: Refactor `UnblockerVpnService.kt` with dual-stack virtual sinkhole, DNS-only split-tunnel routes, and underlying network tracking
-- [ ] Plan 2.3: Run Phase 2 verification gate (`./gradlew :vpn-engine:assembleDebug :vpn-engine:testDebugUnitTest`)
+- [x] Plan 2.1: Refactor `DnsPacketEngine.kt` with IPv4/IPv6 parsing, checksum validation, and NXDOMAIN synthesis
+- [x] Plan 2.2: Refactor `UnblockerVpnService.kt` with dual-stack virtual sinkhole, DNS-only split-tunnel routes, and underlying network tracking
+- [x] Plan 2.3: Run Phase 2 verification gate (`./gradlew :vpn-engine:assembleDebug :vpn-engine:testDebugUnitTest`)
 
 ### Phase 3: Batched Database Logging & Deferred On-Device Learning
 **Status:** ⏳ Pending

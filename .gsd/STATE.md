@@ -7,20 +7,20 @@ updated: 2026-11-02T00:30:00+05:30
 ## Current Position
 
 **Milestone:** Off-Heap Binary Rule Engine, Dual-Stack Sinkhole & Release v2.2.0
-**Phase:** Phase 2 - Dual-Stack Split-Tunnel VPN & Checksum-Verified NXDOMAIN Engine
+**Phase:** Phase 3 - Batched Database Logging & Deferred On-Device Learning
 **Status:** ready
-**Plan:** Plan 2.1 - 2.3: Refactor DnsPacketEngine.kt and UnblockerVpnService.kt
+**Plan:** Plan 3.1 - 3.3: Implement buffered log channel and update BatchDomainAnalysisWorker
 
 ## Last Action
 
-Completed Phase 1: Implemented `RuleCompiler.kt`, `OffHeapRuleEngine.kt`, and `RuleCompilerTest.kt`. Verified with `./gradlew testDebugUnitTest` (All 120 tasks succeeded).
+Completed Phase 2: Implemented `DnsPacketEngine.kt`, updated `VpnConfiguration.kt` & `UnblockerVpnService.kt`, and wrote unit tests in `DnsPacketEngineTest.kt`. Verified with `./gradlew :vpn-engine:assembleDebug :vpn-engine:testDebugUnitTest` (BUILD SUCCESSFUL).
 
 ## Next Steps
 
-1. Refactor `vpn-engine/src/main/java/com/unblocker/vpn/parser/DnsPacketEngine.kt` to support IPv4 & IPv6 parsing and checksum-verified NXDOMAIN synthesis.
-2. Refactor `vpn-engine/src/main/java/com/unblocker/vpn/service/UnblockerVpnService.kt` for dual-stack virtual sinkhole, split-tunnel routes, and underlying network tracking.
-3. Run Phase 2 verification gate: `./gradlew :vpn-engine:assembleDebug :vpn-engine:testDebugUnitTest`.
-4. Commit Phase 2.
+1. Implement non-blocking `Channel<DnsLogEntity>` in `LogRepository.kt` with batch insertion worker.
+2. Update `BatchDomainAnalysisWorker.kt` to trigger off-heap rule recompilation and clean up manifest memory flags.
+3. Run Phase 3 verification gate: `./gradlew assembleDebug testDebugUnitTest`.
+4. Commit Phase 3.
 
 ## Active Decisions
 

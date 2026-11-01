@@ -1,91 +1,66 @@
 ---
-milestone: Security Hardening, Direct-DNS Interception & Release v2.1.8
-version: 2.1.8
-updated: 2026-10-30T23:15:00+05:30
+milestone: Off-Heap Binary Rule Engine, Dual-Stack Sinkhole & Release v2.2.0
+version: 2.2.0
+updated: 2026-11-02T00:30:00+05:30
 ---
 
 # Roadmap
 
-> **Current Phase:** Complete (Milestone Delivered v2.1.8)
-> **Status:** finalized
+> **Current Phase:** Phase 2 - Dual-Stack Split-Tunnel VPN & Checksum-Verified NXDOMAIN Engine
+> **Status:** ready
 
 ## Must-Haves (from SPEC)
-- [x] Forwarding saturation generates deterministic SERVFAIL response instead of dropping queries
-- [x] VpnDiagnostics captures failure codes, exception class, queue depth, and metrics with 0 domain/PII leakage
-- [x] Single TUN response writer queue replaces global writeLock contention
-- [x] Hot-path packet allocations removed for blocked and cache-hit flows
-- [x] `android:largeHeap="true"` removed from AndroidManifest.xml
-- [x] Local query logging defaults to privacy mode (aggregate counters only) with opt-in history
-- [x] IDNA Punycode conversion added at rule-entry / UI manual import boundaries
-- [x] Concurrent in-flight DNS query coalescing implemented and verified
-- [x] DnsCache eviction and forward allocation optimized with active worker metrics
-- [x] Fuzz tests for malformed DNS packet parsing pass with zero crashes
-- [x] Release workflow succeeds cleanly in GitHub Actions
-- [x] Upstream DNS queries randomized with cryptographically secure 16-bit TxIDs (SEC-02)
-- [x] Direct public DNS IP destinations trapped and filtered via TUN routing (SEC-01)
-- [x] TCP DNS connection pool implements LRU eviction without dropping new requests (SEC-03)
-- [x] TFLite model loader closes file streams safely (SEC-05)
-- [x] Version bumped to 2.1.8 (versionCode 26), unit tests pass, and new release APK assembled
+- [x] 64-bit FNV-1a binary index (`rules.bin`) mapped off-heap with $O(\log_2 N)$ binary search (Phase 1)
+- [x] Multi-syntax rule compiler normalizing Hosts, Adblock/uBlock, and plain domains (Phase 1)
+- [ ] Dual-stack IPv4/IPv6 DNS parsing and checksum-verified NXDOMAIN synthesis in VPN engine (Phase 2)
+- [ ] Split-tunnel routing for DNS addresses with underlying physical network auto-tracking (Phase 2)
+- [ ] Non-blocking buffered log channel (`Channel<DnsLogEntity>`) with batched DB insertion (Phase 3)
+- [ ] Deferred on-device ML rule compilation and removal of high-memory bottleneck warnings (Phase 3)
+- [ ] Proguard keep rules for Room/JNI/TFLite and lint configuration (Phase 4)
+- [ ] GitHub Actions workflow repairs (`android-checks.yml`, `codeql.yml`, `release.yml`) (Phase 4)
+- [ ] Version bumped to 2.2.0 (versionCode 27), test verification gates, and release packaging (Phase 5)
 
 ---
 
 ## Phases
 
-### Phase 1: Reliability and Observability
-**Status:** ✅ Complete (v2.1.6)
-
-### Phase 2: Single TUN Response Writer
-**Status:** ✅ Complete (v2.1.6)
-
-### Phase 3: Hot-Path Allocation Reduction
-**Status:** ✅ Complete (v2.1.6)
-
-### Phase 4: Memory Baseline & largeHeap Removal
-**Status:** ✅ Complete (v2.1.6)
-
-### Phase 5: Domain and History Privacy Hardening
-**Status:** ✅ Complete (v2.1.6)
-
-### Phase 6: Rule Correctness & IDNA Canonicalization
-**Status:** ✅ Complete (v2.1.6)
-
-### Phase 7: Version Bump & Release v2.1.6
-**Status:** ✅ Complete (v2.1.6)
-
-### Phase 8: In-Flight DNS Request Coalescing
-**Status:** ✅ Complete (v2.1.7)
-
-### Phase 9: Cache Eviction & Allocation Streamlining
-**Status:** ✅ Complete (v2.1.7)
-
-### Phase 10: CI/CD Release Policy Hardening & Fuzz Testing
-**Status:** ✅ Complete (v2.1.7)
-
-### Phase 11: Version Bump, Release Build & Packaging (v2.1.7)
-**Status:** ✅ Complete (v2.1.7)
-
-### Phase 12: DNS Upstream TxID Randomization & Direct Public DNS Route Trapping
-**Status:** ✅ Complete
-**Objective:** Decouple client transaction IDs from outbound network queries using cryptographic randomization; route major public DNS resolvers through TUN to trap evasive direct-socket traffic.
+### Phase 1: Off-Heap Binary Rule Engine & Multi-Syntax Compiler
+**Status:** ✅ Completed
+**Objective:** Eliminate the ~280 MB JVM heap spike and GC freezes caused by holding ~686,200 domain strings in memory. Normalize Hosts (`0.0.0.0`), Adblock/uBlock (`||domain^$third-party`), and plain-domain syntaxes into a sorted, deduplicated 64-bit FNV-1a binary index (`rules.bin`) mapped off-heap via `MappedByteBuffer`.
 **Plans:**
-- [x] Plan 12.1: Implement TxID rewriting and response re-mapping in `DnsUpstreamClient`
-- [x] Plan 12.2: Expand `VpnConfiguration` routes to trap public DNS IP addresses (`8.8.8.8`, `1.1.1.1`, etc.)
-- [x] Plan 12.3: Update `UnblockerVpnService` to process DNS packets directed to public resolver IPs
-- [x] Plan 12.4: Add unit tests for TxID randomization and route trapping
+- [x] Plan 1.1: Implement `RuleCompiler.kt` in `data-store` with multi-syntax parser, FNV-1a 64-bit hash, and binary file compiler
+- [x] Plan 1.2: Implement `OffHeapRuleEngine.kt` in `data-store` with off-heap MappedByteBuffer, atomic hot-reload, and zero-allocation binary search
+- [x] Plan 1.3: Add unit tests in `RuleCompilerTest.kt` and run Phase 1 verification gate (`./gradlew testDebugUnitTest`)
 
-### Phase 13: TCP DNS Connection LRU Eviction & TFLite Stream Cleanup
-**Status:** ✅ Complete
-**Objective:** Replace connection-cap rejection with LRU eviction in `TcpDnsResponder` to prevent connection-exhaustion DoS; fix `FileInputStream` resource leak in `TFLiteClassifierImpl`.
+### Phase 2: Dual-Stack Split-Tunnel VPN & Checksum-Verified NXDOMAIN Engine
+**Status:** ⏳ Pending
+**Objective:** Fix dual-stack ad-blocking across Wi-Fi, 5G, and LTE via split-tunnel routing, valid IPv4 header checksums, RFC 2460 IPv6 UDP checksums, and transparent NXDOMAIN synthesis.
 **Plans:**
-- [x] Plan 13.1: Implement LRU connection eviction in `TcpDnsResponder`
-- [x] Plan 13.2: Safely close `FileInputStream` in `TFLiteClassifierImpl`
-- [x] Plan 13.3: Add unit tests for TCP connection eviction under saturation
+- [ ] Plan 2.1: Refactor `DnsPacketEngine.kt` with IPv4/IPv6 parsing, checksum validation, and NXDOMAIN synthesis
+- [ ] Plan 2.2: Refactor `UnblockerVpnService.kt` with dual-stack virtual sinkhole, DNS-only split-tunnel routes, and underlying network tracking
+- [ ] Plan 2.3: Run Phase 2 verification gate (`./gradlew :vpn-engine:assembleDebug :vpn-engine:testDebugUnitTest`)
 
-### Phase 14: Version Bump, Verification Suite & Release v2.1.8
-**Status:** ✅ Complete
-**Objective:** Bump version to 2.1.8 (code 26), run complete test suite, assemble release APKs, push to git, and publish release.
+### Phase 3: Batched Database Logging & Deferred On-Device Learning
+**Status:** ⏳ Pending
+**Objective:** Prevent SQLite lock contention and UI frame drops during heavy network bursts while maintaining the on-device learning pipeline.
 **Plans:**
-- [x] Plan 14.1: Bump version to 2.1.8 (versionCode 26) in `app/build.gradle.kts` and update `README.md`
-- [x] Plan 14.2: Execute test suite (`testDebugUnitTest` and tooling tests)
-- [x] Plan 14.3: Assemble release APKs and verify signatures
-- [x] Plan 14.4: Push to git, publish release, and deliver final report
+- [ ] Plan 3.1: Implement buffered log channel in `LogRepository.kt` with batch insertion
+- [ ] Plan 3.2: Update `BatchDomainAnalysisWorker.kt` to trigger off-heap rule recompilation and clean up manifest memory flags
+- [ ] Plan 3.3: Run Phase 3 verification gate (`./gradlew assembleDebug testDebugUnitTest`)
+
+### Phase 4: R8 Keep Rules, Lint Stabilization & GitHub Actions CI/CD Repair
+**Status:** ⏳ Pending
+**Objective:** Fix all failures in CI workflows, add explicit keep rules for Room/JNI/TFLite, configure lint warnings, and bump version to 2.2.0.
+**Plans:**
+- [ ] Plan 4.1: Update `app/proguard-rules.pro` with Room, JNI, TFLite, and Coroutines keep rules
+- [ ] Plan 4.2: Update `app/build.gradle.kts` with `versionCode = 27`, `versionName = "2.2.0"`, and lint options
+- [ ] Plan 4.3: Repair GitHub Actions workflows (`.github/workflows/*.yml`) for Java 17, permissions, and robust release publishing
+- [ ] Plan 4.4: Run Phase 4 verification gate (`./gradlew testDebugUnitTest lintDebug assembleRelease`)
+
+### Phase 5: Repository Hygiene, Commit, Tag & Push Release v2.2.0
+**Status:** ⏳ Pending
+**Objective:** Verify working tree cleanliness, commit with atomic commits, tag `v2.2.0`, push to GitHub, and verify automated release publishing.
+**Plans:**
+- [ ] Plan 5.1: Pre-push hygiene and verification gate
+- [ ] Plan 5.2: Git commit, tag, and push release `v2.2.0`
+- [ ] Plan 5.3: Verify GitHub Actions run and release assets

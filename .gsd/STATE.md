@@ -1,56 +1,31 @@
 ---
-updated: 2026-10-30T23:15:00+05:30
+updated: 2026-11-02T00:30:00+05:30
 ---
 
 # Project State
 
 ## Current Position
 
-**Milestone:** Security Hardening, Direct-DNS Interception & Release v2.1.8
-**Phase:** 14 - Version Bump, Verification Suite & Release v2.1.8
-**Status:** complete
-**Plan:** All plans complete (14.1 - 14.4)
+**Milestone:** Off-Heap Binary Rule Engine, Dual-Stack Sinkhole & Release v2.2.0
+**Phase:** Phase 2 - Dual-Stack Split-Tunnel VPN & Checksum-Verified NXDOMAIN Engine
+**Status:** ready
+**Plan:** Plan 2.1 - 2.3: Refactor DnsPacketEngine.kt and UnblockerVpnService.kt
 
 ## Last Action
 
-Completed Phase 14: Bumped version to 2.1.8 (`versionCode = 26`), updated README.md badges and direct download links, verified 100% green test suite (Android unit tests, Python tooling tests, shell script tests), assembled release APKs (`ub-blocker-2.1.8.apk` and `ub-blocker-2.1.8-signed.apk`), and updated SHA256 checksums.
+Completed Phase 1: Implemented `RuleCompiler.kt`, `OffHeapRuleEngine.kt`, and `RuleCompilerTest.kt`. Verified with `./gradlew testDebugUnitTest` (All 120 tasks succeeded).
 
 ## Next Steps
 
-1. Commit Phase 14.
-2. Push commits to `origin main`.
-3. Create annotated tag `v2.1.8` and push to origin.
-4. Publish GitHub Release v2.1.8 with release assets.
+1. Refactor `vpn-engine/src/main/java/com/unblocker/vpn/parser/DnsPacketEngine.kt` to support IPv4 & IPv6 parsing and checksum-verified NXDOMAIN synthesis.
+2. Refactor `vpn-engine/src/main/java/com/unblocker/vpn/service/UnblockerVpnService.kt` for dual-stack virtual sinkhole, split-tunnel routes, and underlying network tracking.
+3. Run Phase 2 verification gate: `./gradlew :vpn-engine:assembleDebug :vpn-engine:testDebugUnitTest`.
+4. Commit Phase 2.
 
 ## Active Decisions
 
 | Decision | Choice | Made | Affects |
 |----------|--------|------|---------|
-| Upstream TxID Randomization | Generate independent `SecureRandom` 16-bit TxID per upstream query, rewrite response back to client's TxID | 2026-10-30 | Anti-spoofing / Kaminsky protection (RFC 5452) |
-| Public DNS Trapping | Route top public DNS IPs (`8.8.8.8`, `1.1.1.1`, `9.9.9.9`, `208.67.222.222`, etc.) through TUN | 2026-10-30 | Prevents evasive ad/tracking direct-IP bypass |
-| TCP Connection LRU | Evict least-recently-active connection when connection pool hits 32 | 2026-10-30 | Prevents TCP connection exhaustion DoS |
-| Safe Stream Cleanup | `FileInputStream.use` in `TFLiteClassifierImpl.setupInterpreter` | 2026-10-30 | Prevents file descriptor resource leaks |
-
-## Blockers
-
-None.
-
-## Concerns
-
-None.
-
-## Active Decisions
-
-| Decision | Choice | Made | Affects |
-|----------|--------|------|---------|
-| Query Coalescing Key | `CoalesceKey(domain, queryType, queryClass, isIpv6, epoch)` | 2026-10-30 | Deduplication correctness across resolver network switches |
-| Waiter Fan-Out | Each attached query receives custom-wrapped response with its own txId and IP/UDP headers | 2026-10-30 | RFC DNS transaction integrity |
-| Bounded Waiters | 32 max waiters per key to prevent unbounded memory on adversarial query loops | 2026-10-30 | Memory bounding |
-
-## Blockers
-
-None.
-
-## Concerns
-
-None.
+| Off-Heap 64-bit Index | 64-bit FNV-1a hashes sorted and deduplicated in `rules.bin`, mapped via MappedByteBuffer | 2026-11-02 | Memory footprint dropped from ~280 MB to ~5.5 MB for 686k rules |
+| Multi-Syntax Normalization | Support Hosts, Adblock/uBlock (`||domain^$third-party`), and plain domains | 2026-11-02 | Compatibility across 42 active filter lists |
+| Zero-Allocation Walk | Compute FNV-1a on label offsets directly without string slicing | 2026-11-02 | Subdomain blocking with 0 GC overhead |

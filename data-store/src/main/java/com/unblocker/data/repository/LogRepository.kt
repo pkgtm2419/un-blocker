@@ -2,42 +2,101 @@ package com.unblocker.data.repository
 
 import com.unblocker.data.db.dao.DnsLogDao
 import com.unblocker.data.db.entity.DnsLogEntity
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Repository for DNS log entries.
+ * Repository for DNS log entries with non-blocking buffered batch ingestion.
  *
- * Abstracts Room DAO calls behind a clean API consumed by:
- *  - The VPN service (async [recordDnsRequest] fire-and-forget writes)
- *  - The LogViewer screen (reactive [recentLogsFlow])
- *  - The ML batch worker ([getUnanalyzedLogs], [markLogsAsAnalyzed], [pruneOldLogs])
- *  - The backlog watchdog ([countUnanalyzedLogs])
+ * Implements a non-blocking `Channel<DnsLogEntity>` with capacity 512 and `DROP_OLDEST`
+ * overflow behavior, ensuring the high-speed VPN packet loop never blocks or suspends
+ * on SQLite disk I/O.
+ *
+ * A single background collector on `Dispatchers.IO` batches up to 100 entries or flushes
+ * every 2000ms.
  */
 @Singleton
 class LogRepository @Inject constructor(
     private val dnsLogDao: DnsLogDao
 ) {
 
-    /**
-     * Asynchronously records a single DNS request intercepted by the VPN tunnel.
-     *
-     * This is called from the VPN packet loop inside a fire-and-forget coroutine —
-     * it MUST complete quickly and MUST NOT throw.
-     *
-     * @param domain    The queried domain name.
-     * @param isBlocked Whether the Bloom Filter blocked this request.
-     */
-    suspend fun recordDnsRequest(domain: String, isBlocked: Boolean) {
-        dnsLogDao.insertLog(
-            DnsLogEntity(domain = domain, isBlocked = isBlocked)
-        )
+    private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    // Non-blocking channel for fire-and-forget log enqueueing
+    private val logChannel = Channel<DnsLogEntity>(
+        capacity = 512,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+
+    init {
+        startBatchCollector()
+    }
+
+    private fun startBatchCollector() {
+        repositoryScope.launch {
+            val batch = ArrayList<DnsLogEntity>(100)
+            while (isActive) {
+                try {
+                    // Suspend waiting for the first log entry
+                    val first = logChannel.receive()
+                    batch.add(first)
+                } catch (e: Exception) {
+                    break
+                }
+
+                // Batch window: accumulate up to 100 entries within 2000ms
+                val deadline = System.currentTimeMillis() + 2000L
+                while (batch.size < 100) {
+                    val remaining = deadline - System.currentTimeMillis()
+                    if (remaining <= 0L) break
+                    val item = withTimeoutOrNull(remaining) {
+                        try {
+                            logChannel.receive()
+                        } catch (e: Exception) {
+                            null
+                        }
+                    } ?: break
+                    batch.add(item)
+                }
+
+                if (batch.isNotEmpty()) {
+                    runCatching {
+                        dnsLogDao.insertLogs(batch)
+                    }
+                    batch.clear()
+                }
+            }
+        }
     }
 
     /**
-     * Batch-records multiple DNS requests (used when the VPN engine buffers writes
-     * before flushing to reduce SQLite transaction overhead).
+     * Non-blocking enqueue of a DNS log entry from the VPN packet thread.
+     * Uses `trySend` to guarantee zero lock contention and zero suspension.
+     */
+    fun enqueueDnsLog(domain: String, isBlocked: Boolean): Boolean {
+        val entity = DnsLogEntity(domain = domain, isBlocked = isBlocked)
+        return logChannel.trySend(entity).isSuccess
+    }
+
+    /**
+     * Records a single DNS request asynchronously via the non-blocking channel.
+     * Preserves backward compatibility with existing callers.
+     */
+    suspend fun recordDnsRequest(domain: String, isBlocked: Boolean) {
+        enqueueDnsLog(domain, isBlocked)
+    }
+
+    /**
+     * Batch-records multiple DNS requests directly.
      */
     suspend fun recordDnsRequests(entries: List<Pair<String, Boolean>>) {
         val entities = entries.map { (domain, blocked) ->

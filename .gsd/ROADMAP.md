@@ -6,7 +6,7 @@ updated: 2026-11-02T00:30:00+05:30
 
 # Roadmap
 
-> **Current Phase:** Phase 3 - Batched Database Logging & Deferred On-Device Learning
+> **Current Phase:** Phase 4 - R8 Keep Rules, Lint Stabilization & GitHub Actions CI/CD Repair
 > **Status:** ready
 
 ## Must-Haves (from SPEC)
@@ -14,8 +14,8 @@ updated: 2026-11-02T00:30:00+05:30
 - [x] Multi-syntax rule compiler normalizing Hosts, Adblock/uBlock, and plain domains (Phase 1)
 - [x] Dual-stack IPv4/IPv6 DNS parsing and checksum-verified NXDOMAIN synthesis in VPN engine (Phase 2)
 - [x] Split-tunnel routing for DNS addresses with underlying physical network auto-tracking (Phase 2)
-- [ ] Non-blocking buffered log channel (`Channel<DnsLogEntity>`) with batched DB insertion (Phase 3)
-- [ ] Deferred on-device ML rule compilation and removal of high-memory bottleneck warnings (Phase 3)
+- [x] Non-blocking buffered log channel (`Channel<DnsLogEntity>`) with batched DB insertion (Phase 3)
+- [x] Deferred on-device ML rule compilation and removal of high-memory bottleneck warnings (Phase 3)
 - [ ] Proguard keep rules for Room/JNI/TFLite and lint configuration (Phase 4)
 - [ ] GitHub Actions workflow repairs (`android-checks.yml`, `codeql.yml`, `release.yml`) (Phase 4)
 - [ ] Version bumped to 2.2.0 (versionCode 27), test verification gates, and release packaging (Phase 5)
@@ -41,12 +41,12 @@ updated: 2026-11-02T00:30:00+05:30
 - [x] Plan 2.3: Run Phase 2 verification gate (`./gradlew :vpn-engine:assembleDebug :vpn-engine:testDebugUnitTest`)
 
 ### Phase 3: Batched Database Logging & Deferred On-Device Learning
-**Status:** ⏳ Pending
+**Status:** ✅ Completed
 **Objective:** Prevent SQLite lock contention and UI frame drops during heavy network bursts while maintaining the on-device learning pipeline.
 **Plans:**
-- [ ] Plan 3.1: Implement buffered log channel in `LogRepository.kt` with batch insertion
-- [ ] Plan 3.2: Update `BatchDomainAnalysisWorker.kt` to trigger off-heap rule recompilation and clean up manifest memory flags
-- [ ] Plan 3.3: Run Phase 3 verification gate (`./gradlew assembleDebug testDebugUnitTest`)
+- [x] Plan 3.1: Implement buffered log channel in `LogRepository.kt` with batch insertion
+- [x] Plan 3.2: Update `BatchDomainAnalysisWorker.kt` to trigger off-heap rule recompilation and clean up manifest memory flags
+- [x] Plan 3.3: Run Phase 3 verification gate (`./gradlew assembleDebug testDebugUnitTest`)
 
 ### Phase 4: R8 Keep Rules, Lint Stabilization & GitHub Actions CI/CD Repair
 **Status:** ⏳ Pending

@@ -7,20 +7,21 @@ updated: 2026-11-02T00:30:00+05:30
 ## Current Position
 
 **Milestone:** Off-Heap Binary Rule Engine, Dual-Stack Sinkhole & Release v2.2.0
-**Phase:** Phase 3 - Batched Database Logging & Deferred On-Device Learning
+**Phase:** Phase 4 - R8 Keep Rules, Lint Stabilization & GitHub Actions CI/CD Repair
 **Status:** ready
-**Plan:** Plan 3.1 - 3.3: Implement buffered log channel and update BatchDomainAnalysisWorker
+**Plan:** Plan 4.1 - 4.4: Proguard keep rules, lint options, CI repair, and version bump
 
 ## Last Action
 
-Completed Phase 2: Implemented `DnsPacketEngine.kt`, updated `VpnConfiguration.kt` & `UnblockerVpnService.kt`, and wrote unit tests in `DnsPacketEngineTest.kt`. Verified with `./gradlew :vpn-engine:assembleDebug :vpn-engine:testDebugUnitTest` (BUILD SUCCESSFUL).
+Completed Phase 3: Implemented non-blocking buffered `Channel<DnsLogEntity>` in `LogRepository.kt`, integrated `OffHeapRuleEngine` and `RuleCompiler` in `FilterRepository.kt` and `BatchDomainAnalysisWorker.kt`. Verified with `./gradlew assembleDebug testDebugUnitTest` (All 203 tasks succeeded).
 
 ## Next Steps
 
-1. Implement non-blocking `Channel<DnsLogEntity>` in `LogRepository.kt` with batch insertion worker.
-2. Update `BatchDomainAnalysisWorker.kt` to trigger off-heap rule recompilation and clean up manifest memory flags.
-3. Run Phase 3 verification gate: `./gradlew assembleDebug testDebugUnitTest`.
-4. Commit Phase 3.
+1. Update `app/proguard-rules.pro` with explicit keep rules for Room, JNI, TFLite, and Coroutines.
+2. Update `app/build.gradle.kts` with `versionCode = 27`, `versionName = "2.2.0"`, and lint configuration.
+3. Fix GitHub Actions workflows (`.github/workflows/*.yml`) with `checkout@v4`, `setup-java@v4` with Temurin JDK 17, and write permissions for release.
+4. Run Phase 4 verification gate: `./gradlew testDebugUnitTest lintDebug assembleRelease`.
+5. Commit Phase 4.
 
 ## Active Decisions
 

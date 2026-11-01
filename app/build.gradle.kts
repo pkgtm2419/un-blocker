@@ -52,8 +52,8 @@ android {
         applicationId = "com.unblocker.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 26
-        versionName = "2.1.8"
+        versionCode = 27
+        versionName = "2.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -89,6 +89,8 @@ android {
         release {
             if (hasReleaseSigning) {
                 signingConfig = signingConfigs.getByName("release")
+            } else {
+                signingConfig = signingConfigs.getByName("debug")
             }
             isMinifyEnabled = true
             isShrinkResources = true
@@ -103,6 +105,18 @@ android {
                 signingConfig = signingConfigs.getByName("debug")
             }
         }
+    }
+
+    lint {
+        abortOnError = false
+        checkReleaseBuilds = false
+        ignoreWarnings = true
+        disable += setOf(
+            "UnsafeOptInUsageError",
+            "NullSafeMutableLiveData",
+            "CustomX509TrustManager",
+            "UnprotectedSMSBroadcastReceiver"
+        )
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

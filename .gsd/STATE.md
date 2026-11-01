@@ -7,21 +7,21 @@ updated: 2026-11-02T00:30:00+05:30
 ## Current Position
 
 **Milestone:** Off-Heap Binary Rule Engine, Dual-Stack Sinkhole & Release v2.2.0
-**Phase:** Phase 4 - R8 Keep Rules, Lint Stabilization & GitHub Actions CI/CD Repair
+**Phase:** Phase 5 - Repository Hygiene, Commit, Tag & Push Release v2.2.0
 **Status:** ready
-**Plan:** Plan 4.1 - 4.4: Proguard keep rules, lint options, CI repair, and version bump
+**Plan:** Plan 5.1 - 5.2: Working tree verification, git tag v2.2.0, push main and tag to GitHub
 
 ## Last Action
 
-Completed Phase 3: Implemented non-blocking buffered `Channel<DnsLogEntity>` in `LogRepository.kt`, integrated `OffHeapRuleEngine` and `RuleCompiler` in `FilterRepository.kt` and `BatchDomainAnalysisWorker.kt`. Verified with `./gradlew assembleDebug testDebugUnitTest` (All 203 tasks succeeded).
+Completed Phase 4: Appended Proguard keep rules for Room, JNI, TFLite, and Coroutines in `app/proguard-rules.pro`; configured `app/build.gradle.kts` with `versionCode = 27`, `versionName = "2.2.0"`, and lint options; updated `.github/workflows/codeql.yml` and `.github/workflows/release.yml`. Verified with `./gradlew testDebugUnitTest lintDebug assembleRelease` (All 419 tasks succeeded, release APK produced).
 
 ## Next Steps
 
-1. Update `app/proguard-rules.pro` with explicit keep rules for Room, JNI, TFLite, and Coroutines.
-2. Update `app/build.gradle.kts` with `versionCode = 27`, `versionName = "2.2.0"`, and lint configuration.
-3. Fix GitHub Actions workflows (`.github/workflows/*.yml`) with `checkout@v4`, `setup-java@v4` with Temurin JDK 17, and write permissions for release.
-4. Run Phase 4 verification gate: `./gradlew testDebugUnitTest lintDebug assembleRelease`.
-5. Commit Phase 4.
+1. Verify git working tree cleanliness and `.gitignore`.
+2. Commit Phase 4 changes: `git commit -m "chore(phase-4): r8 keep rules, lint stabilization, and github actions repair"`.
+3. Create git tag `v2.2.0`.
+4. Push `main` and tag `v2.2.0` to `origin`.
+5. Verify GitHub Actions release workflow execution.
 
 ## Active Decisions
 

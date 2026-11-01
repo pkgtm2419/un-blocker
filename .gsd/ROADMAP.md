@@ -6,7 +6,7 @@ updated: 2026-11-02T00:30:00+05:30
 
 # Roadmap
 
-> **Current Phase:** Phase 4 - R8 Keep Rules, Lint Stabilization & GitHub Actions CI/CD Repair
+> **Current Phase:** Phase 5 - Repository Hygiene, Commit, Tag & Push Release v2.2.0
 > **Status:** ready
 
 ## Must-Haves (from SPEC)
@@ -16,8 +16,8 @@ updated: 2026-11-02T00:30:00+05:30
 - [x] Split-tunnel routing for DNS addresses with underlying physical network auto-tracking (Phase 2)
 - [x] Non-blocking buffered log channel (`Channel<DnsLogEntity>`) with batched DB insertion (Phase 3)
 - [x] Deferred on-device ML rule compilation and removal of high-memory bottleneck warnings (Phase 3)
-- [ ] Proguard keep rules for Room/JNI/TFLite and lint configuration (Phase 4)
-- [ ] GitHub Actions workflow repairs (`android-checks.yml`, `codeql.yml`, `release.yml`) (Phase 4)
+- [x] Proguard keep rules for Room/JNI/TFLite and lint configuration (Phase 4)
+- [x] GitHub Actions workflow repairs (`android-checks.yml`, `codeql.yml`, `release.yml`) (Phase 4)
 - [ ] Version bumped to 2.2.0 (versionCode 27), test verification gates, and release packaging (Phase 5)
 
 ---
@@ -49,13 +49,13 @@ updated: 2026-11-02T00:30:00+05:30
 - [x] Plan 3.3: Run Phase 3 verification gate (`./gradlew assembleDebug testDebugUnitTest`)
 
 ### Phase 4: R8 Keep Rules, Lint Stabilization & GitHub Actions CI/CD Repair
-**Status:** ⏳ Pending
+**Status:** ✅ Completed
 **Objective:** Fix all failures in CI workflows, add explicit keep rules for Room/JNI/TFLite, configure lint warnings, and bump version to 2.2.0.
 **Plans:**
-- [ ] Plan 4.1: Update `app/proguard-rules.pro` with Room, JNI, TFLite, and Coroutines keep rules
-- [ ] Plan 4.2: Update `app/build.gradle.kts` with `versionCode = 27`, `versionName = "2.2.0"`, and lint options
-- [ ] Plan 4.3: Repair GitHub Actions workflows (`.github/workflows/*.yml`) for Java 17, permissions, and robust release publishing
-- [ ] Plan 4.4: Run Phase 4 verification gate (`./gradlew testDebugUnitTest lintDebug assembleRelease`)
+- [x] Plan 4.1: Update `app/proguard-rules.pro` with Room, JNI, TFLite, and Coroutines keep rules
+- [x] Plan 4.2: Update `app/build.gradle.kts` with `versionCode = 27`, `versionName = "2.2.0"`, and lint options
+- [x] Plan 4.3: Repair GitHub Actions workflows (`.github/workflows/*.yml`) for Java 17, permissions, and robust release publishing
+- [x] Plan 4.4: Run Phase 4 verification gate (`./gradlew testDebugUnitTest lintDebug assembleRelease`)
 
 ### Phase 5: Repository Hygiene, Commit, Tag & Push Release v2.2.0
 **Status:** ⏳ Pending

@@ -17,7 +17,8 @@ on:
         type: boolean
         default: true
 
-permissions: {}
+permissions:
+  contents: write
 
 concurrency:
   group: release-${{ inputs.tag_name || github.ref_name }}

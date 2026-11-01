@@ -21,3 +21,26 @@
     java.lang.Object writeReplace();
     java.lang.Object readResolve();
 }
+
+# Keep Room Database & Entities
+-keep class * extends androidx.room.RoomDatabase { *; }
+-keep @androidx.room.Entity class * { *; }
+-keep class * extends androidx.room.RoomDatabase$Callback { *; }
+-keepclassmembers class * {
+    @androidx.room.Dao *;
+    @androidx.room.Insert *;
+    @androidx.room.Query *;
+    @androidx.room.Update *;
+    @androidx.room.Delete *;
+}
+
+# Keep TensorFlow Lite & FlatBuffers
+-keep class org.tensorflow.lite.** { *; }
+-keep class com.google.flatbuffers.** { *; }
+-keepclassmembers class * {
+    native <methods>;
+}
+
+# Keep Kotlinx Serialization & Coroutines
+-keepattributes *Annotation*,InnerClasses,EnclosingMethod,Signature
+-dontwarn kotlinx.coroutines.**

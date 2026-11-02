@@ -33,8 +33,6 @@ dependencies {
     implementation(libs.androidx.hilt.work)
     ksp(libs.androidx.hilt.compiler)
 
-    implementation(libs.tflite)
-
     implementation(libs.hilt.android)
     ksp(libs.hilt.android.compiler)
 }

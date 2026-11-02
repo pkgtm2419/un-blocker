@@ -29,49 +29,68 @@ class RuleSet private constructor(
         val domain = DomainName.normalize(raw) ?: return null
         if (ruleCount == 0) return null
 
-        val labels = domain.split('.')
-        val labelCount = labels.size
-        val reversedLabels = labels.asReversed()
-        val prefixes = Array(labelCount) { i ->
-            reversedLabels.subList(0, i + 1).joinToString(".")
+        val len = domain.length
+        val reversed = StringBuilder(len)
+        var end = len
+        var labelCount = 0
+        for (i in len - 1 downTo 0) {
+            if (domain[i] == '.') {
+                if (reversed.isNotEmpty()) reversed.append('.')
+                reversed.append(domain, i + 1, end)
+                end = i
+                labelCount++
+            }
         }
-        val fullDomainReversed = prefixes[labelCount - 1]
+        if (reversed.isNotEmpty()) reversed.append('.')
+        reversed.append(domain, 0, end)
+        labelCount++
+
+        val fullDomainReversed = reversed.toString()
+        val prefixLengths = IntArray(labelCount)
+        var pIdx = 0
+        for (i in 0 until fullDomainReversed.length) {
+            if (fullDomainReversed[i] == '.') {
+                prefixLengths[pIdx++] = i
+            }
+        }
+        prefixLengths[pIdx] = fullDomainReversed.length
 
         // 1. Check ALLOW rules first
-        matchAction(RuleAction.ALLOW, fullDomainReversed, prefixes, labelCount)?.let { return it }
+        matchAction(RuleAction.ALLOW, fullDomainReversed, prefixLengths, labelCount)?.let { return it }
 
         // 2. Check BLOCK rules
-        return matchAction(RuleAction.BLOCK, fullDomainReversed, prefixes, labelCount)
+        return matchAction(RuleAction.BLOCK, fullDomainReversed, prefixLengths, labelCount)
     }
 
     private fun matchAction(
         action: RuleAction,
         fullDomainReversed: String,
-        prefixes: Array<String>,
+        prefixLengths: IntArray,
         labelCount: Int
     ): DnsRule? {
+        val fullLen = prefixLengths[labelCount - 1]
         // Step 1: Check EXACT on full domain
-        findRule(fullDomainReversed, action, RuleKind.EXACT)?.let { return it }
+        findRule(fullDomainReversed, fullLen, action, RuleKind.EXACT)?.let { return it }
 
         // Step 2: Check SUFFIX on full domain
-        findRule(fullDomainReversed, action, RuleKind.SUFFIX)?.let { return it }
+        findRule(fullDomainReversed, fullLen, action, RuleKind.SUFFIX)?.let { return it }
 
         // Step 3: Check SUFFIX then WILDCARD on parent domains (strict parents)
         for (i in labelCount - 2 downTo 0) {
-            val parentKey = prefixes[i]
-            findRule(parentKey, action, RuleKind.SUFFIX)?.let { return it }
-            findRule(parentKey, action, RuleKind.WILDCARD)?.let { return it }
+            val parentLen = prefixLengths[i]
+            findRule(fullDomainReversed, parentLen, action, RuleKind.SUFFIX)?.let { return it }
+            findRule(fullDomainReversed, parentLen, action, RuleKind.WILDCARD)?.let { return it }
         }
 
         return null
     }
 
-    private fun findRule(key: String, targetAction: RuleAction, targetKind: RuleKind): DnsRule? {
+    private fun findRule(fullKey: CharSequence, targetLen: Int, targetAction: RuleAction, targetKind: RuleKind): DnsRule? {
         var low = 0
         var high = ruleCount
         while (low < high) {
             val mid = (low + high) ushr 1
-            val cmp = compareKeyAt(mid, key)
+            val cmp = compareKeyAt(mid, fullKey, targetLen)
             if (cmp < 0) {
                 low = mid + 1
             } else {
@@ -79,7 +98,7 @@ class RuleSet private constructor(
             }
         }
 
-        while (low < ruleCount && compareKeyAt(low, key) == 0) {
+        while (low < ruleCount && compareKeyAt(low, fullKey, targetLen) == 0) {
             val entryPos = getEntryPosition(low)
             val keyLen = buffer.get(entryPos).toInt() and 0xFF
             val flags = buffer.get(entryPos + 1 + keyLen).toInt() and 0xFF
@@ -93,7 +112,18 @@ class RuleSet private constructor(
             if (action == targetAction && kind == targetKind) {
                 val category = if (((flags shr 3) and 3) == 0) BlockingCategory.AD else BlockingCategory.ADULT_CONTENT
                 val sourceId = buffer.getShort(entryPos + 2 + keyLen).toInt() and 0xFFFF
-                val originalDomain = key.split('.').asReversed().joinToString(".")
+                val originalDomain = StringBuilder(targetLen).apply {
+                    var end = targetLen
+                    for (i in targetLen - 1 downTo 0) {
+                        if (fullKey[i] == '.') {
+                            if (isNotEmpty()) append('.')
+                            append(fullKey, i + 1, end)
+                            end = i
+                        }
+                    }
+                    if (isNotEmpty()) append('.')
+                    append(fullKey, 0, end)
+                }.toString()
                 return DnsRule(
                     action = action,
                     kind = kind,
@@ -112,10 +142,9 @@ class RuleSet private constructor(
         return blobOffset + relOffset
     }
 
-    private fun compareKeyAt(index: Int, target: String): Int {
+    private fun compareKeyAt(index: Int, target: CharSequence, targetLen: Int): Int {
         val entryPos = getEntryPosition(index)
         val keyLen = buffer.get(entryPos).toInt() and 0xFF
-        val targetLen = target.length
         val minLen = minOf(keyLen, targetLen)
 
         for (i in 0 until minLen) {

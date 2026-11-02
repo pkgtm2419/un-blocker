@@ -53,8 +53,7 @@ class WorkScheduler @Inject constructor(
         val initialDelay = Duration.between(now, nextRun).toMillis()
 
         val constraints = Constraints.Builder()
-            .setRequiresCharging(true)
-            .setRequiresDeviceIdle(true)
+            .setRequiresBatteryNotLow(true)
             .setRequiredNetworkType(NetworkType.NOT_REQUIRED)
             .build()
 

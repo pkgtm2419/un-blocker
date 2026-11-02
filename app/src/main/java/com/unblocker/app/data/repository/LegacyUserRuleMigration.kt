@@ -36,34 +36,44 @@ class LegacyUserRuleMigration @Inject constructor(
 
         try {
             var migratedCount = 0
+            var anyFailed = false
+            var failureReason: String? = null
 
             // 1. Migrate Room Whitelist entries to private user allow rules
             val whitelisted = whitelistDao.getAllWhitelistedDomains()
             for (domain in whitelisted) {
-                val res = userRuleGateway.set(domain, UserFeedback.ALLOW)
-                if (res is RuleUpdateResult.Applied) {
-                    migratedCount++
+                when (val res = userRuleGateway.set(domain, UserFeedback.ALLOW)) {
+                    is RuleUpdateResult.Applied -> {
+                        whitelistDao.removeEntry(domain)
+                        migratedCount++
+                    }
+                    is RuleUpdateResult.Failed -> {
+                        anyFailed = true
+                        failureReason = res.reason
+                    }
                 }
             }
 
             // 2. Migrate Room USER block rules to private user block rules
             val userBlockRules = blockRuleDao.getRulesBySource("USER")
             for (rule in userBlockRules) {
-                val res = userRuleGateway.set(rule.domain, UserFeedback.BLOCK)
-                if (res is RuleUpdateResult.Applied) {
-                    migratedCount++
+                when (val res = userRuleGateway.set(rule.domain, UserFeedback.BLOCK)) {
+                    is RuleUpdateResult.Applied -> {
+                        blockRuleDao.deleteRule(rule.domain)
+                        migratedCount++
+                    }
+                    is RuleUpdateResult.Failed -> {
+                        anyFailed = true
+                        failureReason = res.reason
+                    }
                 }
             }
 
-            // 3. Clear plaintext legacy rows now that private writes are durable
-            if (whitelisted.isNotEmpty()) {
-                whitelistDao.clearAll()
-            }
-            if (userBlockRules.isNotEmpty()) {
-                blockRuleDao.deleteRulesBySource("USER")
+            if (anyFailed) {
+                return@withContext MigrationResult.Failed(failureReason ?: "Some rules failed to migrate")
             }
 
-            // 4. Mark migration complete
+            // 3. Mark migration complete only after all private writes were confirmed
             prefs.edit().putBoolean(KEY_MIGRATED, true).commit()
 
             MigrationResult.Success(migratedCount)

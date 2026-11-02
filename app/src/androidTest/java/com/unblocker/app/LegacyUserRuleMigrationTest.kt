@@ -90,4 +90,41 @@ class LegacyUserRuleMigrationTest {
         val secondResult = migration.migrateIfRequired()
         assertEquals(MigrationResult.NotRequired, secondResult)
     }
+
+    @Test
+    fun testPartialFailureLeavesUnmigratedRowsAndDoesNotMarkComplete() = runBlocking {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val prefs = context.getSharedPreferences("unblocker_migration_state", Context.MODE_PRIVATE)
+        prefs.edit().clear().commit()
+
+        val whitelistDao = FakeWhitelistDao()
+        whitelistDao.insertEntry(WhitelistEntity("success-allow.com"))
+        whitelistDao.insertEntry(WhitelistEntity("fail-allow.com"))
+
+        val blockRuleDao = FakeBlockRuleDao()
+        blockRuleDao.insertRule(BlockRuleEntity(domain = "success-block.com", source = "USER"))
+
+        val gateway = object : UserRuleGateway {
+            val applied = mutableMapOf<String, UserFeedback>()
+            override suspend fun set(domain: String, feedback: UserFeedback): RuleUpdateResult {
+                if (domain == "fail-allow.com") return RuleUpdateResult.Failed("Storage full")
+                applied[domain] = feedback
+                return RuleUpdateResult.Applied
+            }
+        }
+
+        val migration = LegacyUserRuleMigration(context, whitelistDao, blockRuleDao, gateway)
+        val result = migration.migrateIfRequired()
+
+        assertTrue("Expected failure on partial migration", result is MigrationResult.Failed)
+        assertEquals("Storage full", (result as MigrationResult.Failed).error)
+
+        // Succeeded entries removed, failed entry remains
+        assertEquals(listOf("fail-allow.com"), whitelistDao.getAllWhitelistedDomains())
+        assertEquals(0, blockRuleDao.getRulesBySource("USER").size)
+
+        // Migration flag was NOT set
+        val isMigrated = prefs.getBoolean("legacy_user_rules_migrated_v1", false)
+        assertEquals(false, isMigrated)
+    }
 }

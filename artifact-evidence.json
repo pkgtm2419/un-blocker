@@ -1,0 +1,49 @@
+{
+  "evidence": "GitHub Actions CI artifacts from run 41342081066, commit 6fd537e34773e3f799e3685f68a0fbef761eb71c",
+  "timestamp_utc": "2026-11-02T11:35:13+00:00",
+  "release_test_apk_bytes": 19797964,
+  "native_so_count": 8,
+  "native_so_uncompressed_bytes": 14693752,
+  "native_share_percent": 74.22,
+  "model_files": [],
+  "arm64_tflite_jni_load_alignment_bytes": [
+    4096,
+    4096,
+    4096
+  ],
+  "total_junit_test_suites": 62,
+  "junit": {
+    "tests": 260,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "lint_release": {
+    "app/build/reports/lint-results-release.html": {
+      "warning_count": null,
+      "has_16kb_warning": false,
+      "has_idle_charging_warning": false
+    },
+    "common/build/reports/lint-results-release.html": {
+      "warning_count": null,
+      "has_16kb_warning": false,
+      "has_idle_charging_warning": false
+    },
+    "data-store/build/reports/lint-results-release.html": {
+      "warning_count": null,
+      "has_16kb_warning": false,
+      "has_idle_charging_warning": false
+    },
+    "ml-engine/build/reports/lint-results-release.html": {
+      "warning_count": 3,
+      "has_16kb_warning": true,
+      "has_idle_charging_warning": true
+    },
+    "vpn-engine/build/reports/lint-results-release.html": {
+      "warning_count": null,
+      "has_16kb_warning": false,
+      "has_idle_charging_warning": false
+    }
+  },
+  "interpretation": "Static artifact verification; not a physical device performance benchmark or an installed-APK runtime test."
+}

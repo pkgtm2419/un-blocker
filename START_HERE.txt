@@ -1,0 +1,10 @@
+UN-BLOCKER ANDROID APP - COMPLETE IMPROVEMENT AND QA PLANS
+
+1. Open README.md for the overview.
+2. Open docs/superpowers/specs/ for the architecture design.
+3. Open docs/superpowers/plans/ for the 6 detailed improvement plans.
+4. Open docs/qa/ for current and earlier QA audits and the earlier test execution plan.
+5. validate_plans.py verifies documentation structure.
+6. verify_artifacts.py is provided for artifact verification when CI archives are available.
+
+This archive contains plans and supporting QA evidence, not compiled APKs or implemented fixes.

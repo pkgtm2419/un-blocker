@@ -71,6 +71,20 @@ class LogViewModel @Inject constructor(
     val totalBlocked: StateFlow<Long> = domainLogDao.getTotalBlockedCountFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
 
+    val protectionSummary: StateFlow<com.unblocker.app.ui.model.LocalProtectionSummary> = combine(
+        totalCalls,
+        totalBlocked,
+        domainLogDao.getFirstObservedTimeFlow(),
+        domainLogDao.getLastObservedTimeFlow()
+    ) { calls, blocked, first, last ->
+        com.unblocker.app.ui.model.LocalProtectionSummary(
+            dnsQueries = calls,
+            blockedDnsQueries = blocked,
+            firstObservedMs = first,
+            lastObservedMs = last
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.unblocker.app.ui.model.LocalProtectionSummary(0L, 0L, null, null))
+
     @OptIn(ExperimentalCoroutinesApi::class)
     val domainStats: StateFlow<List<DomainStatEntity>> = combine(
         _filter,
@@ -145,6 +159,15 @@ class LogViewModel @Inject constructor(
         viewModelScope.launch {
             when (val result = userRuleGateway.set(domain, UserFeedback.BLOCK)) {
                 is RuleUpdateResult.Applied -> _userMessage.value = "Blocked: $domain"
+                is RuleUpdateResult.Failed -> _userMessage.value = "Failed: ${result.reason}"
+            }
+        }
+    }
+
+    fun resetDomain(domain: String) {
+        viewModelScope.launch {
+            when (val result = userRuleGateway.set(domain, UserFeedback.NONE)) {
+                is RuleUpdateResult.Applied -> _userMessage.value = "Reset rule: $domain"
                 is RuleUpdateResult.Failed -> _userMessage.value = "Failed: ${result.reason}"
             }
         }

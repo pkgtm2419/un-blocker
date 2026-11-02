@@ -107,7 +107,8 @@ fun MainScreen(
                         quickStartManager = quickStartManager,
                         onRequestVpnPermission = requestPermissionsAndStart,
                         contentPadding = contentPadding,
-                        onOpenSettings = { isExtensionsOpen = true }
+                        onOpenSettings = { isExtensionsOpen = true },
+                        onNavigateToLogs = { selectedTab = 1 }
                     )
                 } else {
                     LogViewerScreen(

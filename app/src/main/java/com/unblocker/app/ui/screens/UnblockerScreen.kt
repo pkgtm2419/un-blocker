@@ -33,6 +33,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material3.ButtonDefaults
@@ -102,7 +103,8 @@ fun UnblockerScreen(
     quickStartManager: QuickStartManager,
     onRequestVpnPermission: () -> Unit,
     contentPadding: PaddingValues = PaddingValues(0.dp),
-    onOpenSettings: () -> Unit = {}
+    onOpenSettings: () -> Unit = {},
+    onNavigateToLogs: () -> Unit = {}
 ) {
     val dimensions = LocalWindowDimensions.current
     val haptic = LocalHapticFeedback.current
@@ -377,6 +379,52 @@ fun UnblockerScreen(
                                 uncheckedTrackColor = if (isSystemInDarkTheme()) Slate800 else Color(0xFFE2E8F0)
                             )
                         )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // 4. DNS Logs & Blocked Sites Recovery Link
+                SkeuomorphicCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .widthIn(max = 420.dp)
+                        .clickable { onNavigateToLogs() },
+                    shape = RoundedCornerShape(20.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.List,
+                                contentDescription = "Logs",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "DNS Logs & Blocked Sites",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "Review queries and manage site overrides",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
                 }
 

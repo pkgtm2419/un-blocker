@@ -57,6 +57,8 @@ class RuleRecoveryFlowTest {
         override fun getTotalDomainsCountFlow(): Flow<Long> = emptyFlow()
         override fun getTotalCallsCountFlow(): Flow<Long> = emptyFlow()
         override fun getTotalBlockedCountFlow(): Flow<Long> = emptyFlow()
+        override fun getFirstObservedTimeFlow(): Flow<Long?> = emptyFlow()
+        override fun getLastObservedTimeFlow(): Flow<Long?> = emptyFlow()
         override suspend fun pruneEventsOlderThan(cutoffTimestamp: Long) {}
         override suspend fun pruneOldestEventsBeyondCap(globalCap: Int) {}
         override suspend fun pruneStatsOlderThan(cutoffTimestamp: Long) {}

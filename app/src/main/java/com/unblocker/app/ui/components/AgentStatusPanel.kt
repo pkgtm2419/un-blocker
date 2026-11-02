@@ -61,6 +61,13 @@ fun AgentStatusPanel(
     var isExpanded by remember { mutableStateOf(false) }
     val isRunning = serviceStatus == ServiceStatus.RUNNING
     val pulseScale = rememberBreathingPulse(minScale = 0.90f, maxScale = 1.15f, durationMillis = 1500)
+    val protectionState = remember(serviceStatus, isPrivateDnsActive) {
+        com.unblocker.app.ui.model.ProtectionUiStateMapper.from(
+            status = serviceStatus,
+            privateDnsActive = isPrivateDnsActive,
+            resolverAvailable = true
+        )
+    }
 
     SkeuomorphicCard(
         modifier = modifier
@@ -129,12 +136,12 @@ fun AgentStatusPanel(
                     Spacer(modifier = Modifier.height(2.dp))
 
                     Text(
-                        text = when (serviceStatus) {
-                            ServiceStatus.RUNNING -> if (isPrivateDnsActive) "Limited coverage • Private DNS bypasses tunnel" else "Local DNS Tunnel • Standard DNS Protected"
-                            ServiceStatus.STARTING -> "Configuring local tunnel interface…"
-                            ServiceStatus.STOPPING -> "Gracefully tearing down tunnel…"
-                            ServiceStatus.ERROR -> "Tunnel fault • Tap to inspect"
-                            ServiceStatus.STOPPED -> "Protection off • Tap shield to start"
+                        text = when (protectionState.status) {
+                            ServiceStatus.RUNNING -> if (isPrivateDnsActive) protectionState.label else "Protected (standard DNS)"
+                            ServiceStatus.STARTING -> protectionState.label
+                            ServiceStatus.STOPPING -> "Stopping"
+                            ServiceStatus.ERROR -> protectionState.label
+                            ServiceStatus.STOPPED -> protectionState.label
                         },
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,

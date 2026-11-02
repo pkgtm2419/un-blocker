@@ -72,6 +72,7 @@ fun LogViewerScreen(
     val totalDomains by viewModel.totalDomains.collectAsState()
     val totalCalls by viewModel.totalCalls.collectAsState()
     val totalBlocked by viewModel.totalBlocked.collectAsState()
+    val summary by viewModel.protectionSummary.collectAsState()
     val userMessage by viewModel.userMessage.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -194,6 +195,19 @@ fun LogViewerScreen(
                                 }
                             }
                         }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    ) {
+                        Text(
+                            text = "Local Protection Summary: ${summary.dnsQueries} total queries (${summary.blockedDnsQueries} blocked). Counts reflect local DNS name resolution requests, not advertisements removed or network bytes saved.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(10.dp)
+                        )
                     }
 
                     if (isLoggingPaused) {
@@ -371,7 +385,8 @@ fun LogViewerScreen(
                         events = if (expandedDomain == stat.domain) domainEvents else emptyList(),
                         onToggleExpand = { viewModel.toggleExpandDomain(stat.domain) },
                         onAllow = { viewModel.allowDomain(stat.domain) },
-                        onBlock = { viewModel.blockDomain(stat.domain) }
+                        onBlock = { viewModel.blockDomain(stat.domain) },
+                        onReset = { viewModel.resetDomain(stat.domain) }
                     )
                 }
             }
@@ -393,7 +408,8 @@ fun DomainStatCard(
     events: List<DomainEventEntity>,
     onToggleExpand: () -> Unit,
     onAllow: () -> Unit,
-    onBlock: () -> Unit
+    onBlock: () -> Unit,
+    onReset: () -> Unit = {}
 ) {
     val relativeTime = remember(stat.lastSeen) {
         formatRelativeTime(stat.lastSeen)
@@ -512,6 +528,12 @@ fun DomainStatCard(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.End
                     ) {
+                        TextButton(
+                            onClick = onReset,
+                            modifier = Modifier.padding(end = 6.dp)
+                        ) {
+                            Text("Reset", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                         OutlinedButton(
                             onClick = onAllow,
                             shape = CircleShape,

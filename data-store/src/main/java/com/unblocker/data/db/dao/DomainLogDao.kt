@@ -92,6 +92,12 @@ interface DomainLogDao {
     @Query("SELECT COALESCE(SUM(blocked_count), 0) FROM domain_stats")
     fun getTotalBlockedCountFlow(): Flow<Long>
 
+    @Query("SELECT MIN(first_seen) FROM domain_stats")
+    fun getFirstObservedTimeFlow(): Flow<Long?>
+
+    @Query("SELECT MAX(last_seen) FROM domain_stats")
+    fun getLastObservedTimeFlow(): Flow<Long?>
+
     @Query("DELETE FROM domain_events WHERE ts < :cutoffTimestamp")
     suspend fun pruneEventsOlderThan(cutoffTimestamp: Long)
 

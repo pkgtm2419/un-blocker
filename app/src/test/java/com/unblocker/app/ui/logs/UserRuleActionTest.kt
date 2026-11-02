@@ -47,5 +47,11 @@ class UserRuleActionTest {
 
         // Ensure no malformed rules mutated the map
         assertEquals(2, gateway.rules.size)
+
+        // Reset domain (removal)
+        val resetResult = gateway.set("doubleclick.net", UserFeedback.NONE)
+        assertTrue(resetResult is RuleUpdateResult.Applied)
+        assertEquals(1, gateway.rules.size)
+        assertEquals(null, gateway.rules["doubleclick.net"])
     }
 }

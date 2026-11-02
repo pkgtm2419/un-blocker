@@ -9,7 +9,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONObject
 
-class FilteringPreferences(context: Context) {
+interface FilteringPreferenceStore {
+    val isQueryLoggingPaused: StateFlow<Boolean>
+    fun setQueryLoggingPaused(paused: Boolean)
+}
+
+class FilteringPreferences(context: Context) : FilteringPreferenceStore {
 
     private val prefs: SharedPreferences =
         context.getSharedPreferences("unblocker_preferences", Context.MODE_PRIVATE)
@@ -138,9 +143,9 @@ class FilteringPreferences(context: Context) {
     }
 
     private val _isQueryLoggingPaused = MutableStateFlow(prefs.getBoolean(KEY_QUERY_LOGGING_PAUSED, false))
-    val isQueryLoggingPaused: StateFlow<Boolean> = _isQueryLoggingPaused.asStateFlow()
+    override val isQueryLoggingPaused: StateFlow<Boolean> = _isQueryLoggingPaused.asStateFlow()
 
-    fun setQueryLoggingPaused(paused: Boolean) {
+    override fun setQueryLoggingPaused(paused: Boolean) {
         prefs.edit().putBoolean(KEY_QUERY_LOGGING_PAUSED, paused).apply()
         _isQueryLoggingPaused.value = paused
     }

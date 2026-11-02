@@ -41,7 +41,7 @@ enum class LogSort(val value: Int) {
 class LogViewModel @Inject constructor(
     private val domainLogDao: DomainLogDao,
     private val userRuleGateway: UserRuleGateway,
-    private val preferences: FilteringPreferences
+    private val preferences: com.unblocker.app.data.preferences.FilteringPreferenceStore
 ) : ViewModel() {
 
     private val _filter = MutableStateFlow(LogFilter.ALL)

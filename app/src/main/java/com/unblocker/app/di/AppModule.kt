@@ -27,5 +27,10 @@ abstract class AppModule {
         @Singleton
         fun provideFilteringPreferences(@ApplicationContext context: Context): FilteringPreferences =
             FilteringPreferences.getInstance(context)
+
+        @Provides
+        @Singleton
+        fun provideFilteringPreferenceStore(prefs: FilteringPreferences): com.unblocker.app.data.preferences.FilteringPreferenceStore =
+            prefs
     }
 }

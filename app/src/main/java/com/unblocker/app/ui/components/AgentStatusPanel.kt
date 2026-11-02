@@ -111,7 +111,7 @@ fun AgentStatusPanel(
                         ) {
                             Text(
                                 text = when (serviceStatus) {
-                                    ServiceStatus.RUNNING -> "ACTIVE"
+                                    ServiceStatus.RUNNING -> if (isPrivateDnsActive) "LIMITED" else "ACTIVE"
                                     ServiceStatus.STARTING -> "STARTING"
                                     ServiceStatus.STOPPING -> "STOPPING"
                                     ServiceStatus.ERROR -> "FAULT"
@@ -130,11 +130,11 @@ fun AgentStatusPanel(
 
                     Text(
                         text = when (serviceStatus) {
-                            ServiceStatus.RUNNING -> "Local DNS Tunnel • 100% On-Device"
+                            ServiceStatus.RUNNING -> if (isPrivateDnsActive) "Limited coverage • Private DNS bypasses tunnel" else "Local DNS Tunnel • Standard DNS Protected"
                             ServiceStatus.STARTING -> "Configuring local tunnel interface…"
                             ServiceStatus.STOPPING -> "Gracefully tearing down tunnel…"
                             ServiceStatus.ERROR -> "Tunnel fault • Tap to inspect"
-                            ServiceStatus.STOPPED -> "Protection idle • Tap shield to start"
+                            ServiceStatus.STOPPED -> "Protection off • Tap shield to start"
                         },
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,

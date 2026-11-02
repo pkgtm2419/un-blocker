@@ -1,13 +1,13 @@
 ---
-milestone: Off-Heap Binary Rule Engine, Dual-Stack Sinkhole & Release v2.2.0
-version: 2.2.0
-updated: 2026-11-02T00:30:00+05:30
+milestone: Superpowers Improvement Plans & Release v2.3.0
+version: 2.3.0
+updated: 2026-11-02T23:45:00+05:30
 ---
 
 # Roadmap
 
-> **Current Phase:** Phase 5 - Repository Hygiene, Commit, Tag & Push Release v2.2.0
-> **Status:** complete
+> **Current Phase:** Phase 6 - Superpowers Improvement Plans & Release v2.3.0
+> **Status:** ready
 
 ## Must-Haves (from SPEC)
 - [x] 64-bit FNV-1a binary index (`rules.bin`) mapped off-heap with $O(\log_2 N)$ binary search (Phase 1)
@@ -64,3 +64,11 @@ updated: 2026-11-02T00:30:00+05:30
 - [x] Plan 5.1: Pre-push hygiene and verification gate
 - [x] Plan 5.2: Git commit, tag, and push release `v2.2.0`
 - [x] Plan 5.3: Verify GitHub Actions run and release assets
+
+### Phase 6: Superpowers Improvement Plans & Release v2.3.0
+**Status:** ✅ Completed
+**Objective:** Execute 6 architectural improvement plans (VPN TCP routing, non-destructive migration, APK optimization, bounded filter downloads, protection UI, release CI gates) and publish release v2.3.0.
+**Plans:**
+- [x] Plan 6.1: Implement 6 architectural improvement plans from START_HERE.txt
+- [x] Plan 6.2: Bump app version to 2.3.0 (versionCode 28) and update README download links
+- [x] Plan 6.3: Pass verification gates, tag v2.3.0, and publish release APK via GitHub Actions

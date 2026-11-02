@@ -1,0 +1,73 @@
+name: Android Device Matrix Tests
+
+on:
+  schedule:
+    - cron: '0 3 * * *' # Nightly at 03:00 UTC
+  workflow_dispatch:
+    inputs:
+      target_api:
+        description: 'Target API level to test (26, 30, 35, or all)'
+        required: true
+        default: '35'
+        type: choice
+        options:
+          - '35'
+          - '30'
+          - '26'
+          - 'all'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-matrix-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  device-test:
+    name: Instrumentation (API ${{ matrix.api-level }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        api-level: [26, 30, 35]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@0bdd871935719febd78681f197cd39af5b6e16a6 # v4.2.2
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@3a4f6e1af504cf6a31855fa899c6aa5355ba6c12 # v4.7.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+        with:
+          packages: 'platforms;android-35 build-tools;35.0.0'
+
+      - name: Run connected Android tests
+        uses: reactivecircus/android-emulator-runner@6b026e4a3fa0b6b2ecfa00ad99b360a0ce9bf3d7 # v2.33.0
+        with:
+          api-level: ${{ matrix.api-level }}
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          script: ./gradlew :app:connectedDebugAndroidTest :data-store:connectedDebugAndroidTest
+
+      - name: Upload test results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        with:
+          name: instrumentation-results-api-${{ matrix.api-level }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            **/build/reports/androidTests/
+            **/build/outputs/androidTest-results/

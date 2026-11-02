@@ -26,7 +26,7 @@ upload browsing history, or require an account.
 
 Implementation progress and verification: [phase tracker](docs/improvement-progress.md),
 [coverage baseline](docs/coverage-baseline.md), [Private DNS bypass matrix](docs/dns-bypass-matrix.md),
-[measured matcher results](docs/performance.md), [DNS coverage and limitations](docs/dns-scope.md).
+[performance baseline](docs/qa/performance-baseline-v2.2.0.md), [DNS coverage baseline](docs/coverage-baseline.md).
 
 <div align="center">
 
@@ -315,7 +315,7 @@ The current project suite includes:
 See [the local privacy and reliability update](docs/local-privacy-update.md) for
 the exact verification record and remaining production acceptance work.
 
-The [Phase 5 quality record](docs/phase5-verification.md) covers the small labeled
+The [Phase 5 quality record](docs/improvement-progress.md) covers the small labeled
 corpus, seeded malformed packets and resolver transitions. CI exports confusion
 metrics and the compiler's rule count/SHA-256 manifest. Stable check names are
 `build` and `instrumentation`; both run for every pull request to `main`.

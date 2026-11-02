@@ -76,6 +76,11 @@ jobs:
           develocity-injection-enabled: false
       - name: Unit tests, lint and builds (dependency verification stays ON)
         run: bash gradlew testDebugUnitTest lintDebug lintRelease assembleDebug assembleReleaseTest
+      - name: Verify releaseTest APK native libraries and models
+        run: |
+          set -euo pipefail
+          apk_file="$(ls app/build/outputs/apk/releaseTest/ub-blocker-*.apk | head -n 1)"
+          python3 scripts/check-release-native-libs.py "${apk_file}"
       - name: Upload reports (also on failure)
         if: ${{ always() }}
         uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1

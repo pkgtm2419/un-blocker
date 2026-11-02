@@ -46,6 +46,12 @@ interface BlockRuleDao {
     @Query("SELECT * FROM block_rules WHERE rule_source = :source ORDER BY confidence_score DESC")
     fun getRulesBySourceFlow(source: String): Flow<List<BlockRuleEntity>>
 
+    @Query("SELECT * FROM block_rules WHERE rule_source = :source")
+    suspend fun getRulesBySource(source: String): List<BlockRuleEntity>
+
+    @Query("DELETE FROM block_rules WHERE rule_source = :source")
+    suspend fun deleteRulesBySource(source: String)
+
     /** Deletes the block rule for [domain] — used when the user whitelists a domain. */
     @Query("DELETE FROM block_rules WHERE domain = :domain")
     suspend fun deleteRule(domain: String)

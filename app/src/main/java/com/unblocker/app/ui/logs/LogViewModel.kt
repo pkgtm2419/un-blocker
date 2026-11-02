@@ -3,10 +3,12 @@ package com.unblocker.app.ui.logs
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.unblocker.app.data.logs.QueryLogSink
+import com.unblocker.app.data.repository.RuleUpdateResult
+import com.unblocker.app.data.repository.UserRuleGateway
+import com.unblocker.app.logic.analysis.UserFeedback
 import com.unblocker.data.db.dao.DomainLogDao
 import com.unblocker.data.db.entity.DomainEventEntity
 import com.unblocker.data.db.entity.DomainStatEntity
-import com.unblocker.data.repository.FilterRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
@@ -37,7 +39,7 @@ enum class LogSort(val value: Int) {
 @HiltViewModel
 class LogViewModel @Inject constructor(
     private val domainLogDao: DomainLogDao,
-    private val filterRepository: FilterRepository
+    private val userRuleGateway: UserRuleGateway
 ) : ViewModel() {
 
     private val _filter = MutableStateFlow(LogFilter.ALL)
@@ -120,15 +122,28 @@ class LogViewModel @Inject constructor(
         }
     }
 
+    private val _userMessage = MutableStateFlow<String?>(null)
+    val userMessage: StateFlow<String?> = _userMessage.asStateFlow()
+
+    fun clearUserMessage() {
+        _userMessage.value = null
+    }
+
     fun allowDomain(domain: String) {
         viewModelScope.launch {
-            filterRepository.whitelistDomain(domain)
+            when (val result = userRuleGateway.set(domain, UserFeedback.ALLOW)) {
+                is RuleUpdateResult.Applied -> _userMessage.value = "Allowed: $domain"
+                is RuleUpdateResult.Failed -> _userMessage.value = "Failed: ${result.reason}"
+            }
         }
     }
 
     fun blockDomain(domain: String) {
         viewModelScope.launch {
-            filterRepository.blacklistDomain(domain)
+            when (val result = userRuleGateway.set(domain, UserFeedback.BLOCK)) {
+                is RuleUpdateResult.Applied -> _userMessage.value = "Blocked: $domain"
+                is RuleUpdateResult.Failed -> _userMessage.value = "Failed: ${result.reason}"
+            }
         }
     }
 }

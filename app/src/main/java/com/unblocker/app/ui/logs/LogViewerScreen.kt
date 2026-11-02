@@ -72,6 +72,15 @@ fun LogViewerScreen(
     val totalDomains by viewModel.totalDomains.collectAsState()
     val totalCalls by viewModel.totalCalls.collectAsState()
     val totalBlocked by viewModel.totalBlocked.collectAsState()
+    val userMessage by viewModel.userMessage.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(userMessage) {
+        userMessage?.let { msg ->
+            snackbarHostState.showSnackbar(msg)
+            viewModel.clearUserMessage()
+        }
+    }
 
     var showClearConfirmDialog by remember { mutableStateOf(false) }
 
@@ -101,7 +110,8 @@ fun LogViewerScreen(
     val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
     HaikeiAtmosphericBackground {
-        LazyColumn(
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
                 start = 16.dp,
@@ -366,7 +376,14 @@ fun LogViewerScreen(
                 }
             }
         }
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = contentPadding.calculateBottomPadding() + 16.dp)
+        )
     }
+}
 }
 
 @Composable

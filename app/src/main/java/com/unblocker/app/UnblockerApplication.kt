@@ -6,6 +6,7 @@ import androidx.work.Configuration
 import com.unblocker.app.data.preferences.FilteringPreferences
 import com.unblocker.app.services.QuickStartManager
 import dagger.hilt.android.HiltAndroidApp
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltAndroidApp
@@ -16,6 +17,9 @@ class UnblockerApplication : Application(), Configuration.Provider {
 
     @Inject
     lateinit var domainLogDao: com.unblocker.data.db.dao.DomainLogDao
+
+    @Inject
+    lateinit var legacyUserRuleMigration: com.unblocker.app.data.repository.LegacyUserRuleMigration
 
     lateinit var preferences: FilteringPreferences
         private set
@@ -36,5 +40,9 @@ class UnblockerApplication : Application(), Configuration.Provider {
         preferences = FilteringPreferences.getInstance(this)
         quickStartManager = QuickStartManager.getInstance(this)
         quickStartManager.loadDefaultConfiguration()
+
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            legacyUserRuleMigration.migrateIfRequired()
+        }
     }
 }

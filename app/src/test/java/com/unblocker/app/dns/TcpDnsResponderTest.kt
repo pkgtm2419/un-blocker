@@ -38,20 +38,10 @@ class TcpDnsResponderTest {
     }
 
 
-    private val ipv4Dns = byteArrayOf(10, 10, 0, 1)
-    private val ipv4Client = byteArrayOf(10, 10, 0, 2)
-    private val ipv6Dns = byteArrayOf(
-        0xfd.toByte(), 0x00, 0x00, 0x01,
-        0, 0, 0, 0,
-        0, 0, 0, 0,
-        0, 0, 0, 1
-    )
-    private val ipv6Client = byteArrayOf(
-        0xfd.toByte(), 0x00, 0x00, 0x01,
-        0, 0, 0, 0,
-        0, 0, 0, 0,
-        0, 0, 0, 2
-    )
+    private val ipv4Dns = java.net.InetAddress.getByName(com.unblocker.app.services.TunnelDnsConfig.IPV4_DNS).address
+    private val ipv4Client = java.net.InetAddress.getByName(com.unblocker.app.services.TunnelDnsConfig.IPV4_CLIENT).address
+    private val ipv6Dns = java.net.InetAddress.getByName(com.unblocker.app.services.TunnelDnsConfig.IPV6_DNS).address
+    private val ipv6Client = java.net.InetAddress.getByName(com.unblocker.app.services.TunnelDnsConfig.IPV6_CLIENT).address
 
     private fun buildClientTcpPacket(
         isIpv6: Boolean = false,

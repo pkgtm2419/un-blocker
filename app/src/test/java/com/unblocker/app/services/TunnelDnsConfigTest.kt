@@ -26,8 +26,6 @@ class TunnelDnsConfigTest {
         val inputs = listOf(
             InetAddress.getByName(TunnelDnsConfig.IPV4_DNS),
             InetAddress.getByName(TunnelDnsConfig.IPV6_DNS),
-            InetAddress.getByName("10.10.0.1"),
-            InetAddress.getByName("fd00:1::1"),
             InetAddress.getByName("127.0.0.1"),
             InetAddress.getByName("0.0.0.0"),
             InetAddress.getByName("::"),

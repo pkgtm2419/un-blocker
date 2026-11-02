@@ -1,12 +1,14 @@
 package com.unblocker.app.logic.dns
 
+import com.unblocker.app.services.TunnelDnsConfig
 import java.io.ByteArrayOutputStream
+import java.net.InetAddress
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.random.Random
 
 /**
- * Minimal user-space TCP DNS responder serving on 10.10.0.1:53 and [fd00:1::1]:53.
+ * Minimal user-space TCP DNS responder serving on the configured local tunnel DNS endpoints.
  *
  * Enforces hard bounds:
  * - <= 32 concurrent connections
@@ -21,7 +23,9 @@ class TcpDnsResponder(
     private val queryResolver: (dnsWireBytes: ByteArray, isIpv6: Boolean, clientIp: ByteArray) -> ByteArray?,
     private val maxConnections: Int = 32,
     private val maxBufferSize: Int = 65536,
-    private val idleTimeoutMillis: Long = 5000L
+    private val idleTimeoutMillis: Long = 5000L,
+    private val localIpv4Dns: ByteArray = IPV4_DNS,
+    private val localIpv6Dns: ByteArray = IPV6_DNS
 ) {
     private val connections = HashMap<TcpConnectionKey, TcpConnection>()
     private val lock = Any()
@@ -34,13 +38,8 @@ class TcpDnsResponder(
         const val FLAG_PSH = 0x08
         const val FLAG_ACK = 0x10
 
-        private val IPV4_DNS = byteArrayOf(10, 10, 0, 1)
-        private val IPV6_DNS = byteArrayOf(
-            0xfd.toByte(), 0x00, 0x00, 0x01,
-            0, 0, 0, 0,
-            0, 0, 0, 0,
-            0, 0, 0, 1
-        )
+        val IPV4_DNS: ByteArray by lazy { InetAddress.getByName(TunnelDnsConfig.IPV4_DNS).address }
+        val IPV6_DNS: ByteArray by lazy { InetAddress.getByName(TunnelDnsConfig.IPV6_DNS).address }
 
         private val TRAPPED_IPV4_BYTES: List<ByteArray> = listOf(
             byteArrayOf(8, 8, 8, 8),
@@ -147,9 +146,9 @@ class TcpDnsResponder(
 
         // Validate local destination address
         val isLocalTunnelIp = if (isIpv6) {
-            dstIp.contentEquals(IPV6_DNS) || isTrappedPublicDns(dstIp, isIpv6 = true)
+            dstIp.contentEquals(localIpv6Dns) || isTrappedPublicDns(dstIp, isIpv6 = true)
         } else {
-            dstIp.contentEquals(IPV4_DNS) || isTrappedPublicDns(dstIp, isIpv6 = false)
+            dstIp.contentEquals(localIpv4Dns) || isTrappedPublicDns(dstIp, isIpv6 = false)
         }
         if (!isLocalTunnelIp) return false
 

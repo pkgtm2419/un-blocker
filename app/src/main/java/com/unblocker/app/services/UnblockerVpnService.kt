@@ -173,33 +173,22 @@ class UnblockerVpnService : VpnService() {
                 .setSession("Un-Blocker DNS Shield")
                 .setMtu(1500)
                 .setBlocking(true)
-                .addAddress("10.111.222.1", 24)
-                .addDnsServer("10.111.222.2")
-                .addRoute("10.111.222.2", 32)
+                .addAddress(TunnelDnsConfig.IPV4_CLIENT, 24)
+                .addDnsServer(TunnelDnsConfig.IPV4_DNS)
 
-            // Trap well-known public DNS resolvers to intercept evasive direct-socket traffic (SEC-01)
-            val ipv4DnsRoutes = listOf(
-                "10.111.222.2", "8.8.8.8", "8.8.4.4", "1.1.1.1", "1.0.0.1", "9.9.9.9"
-            ) + TrappedDnsServers.IPV4_TRAPPED
-            for (ip in ipv4DnsRoutes.distinct()) {
+            for ((host, prefix) in VpnRoutePolicy.hostRoutes().filter { it.second == 32 }) {
                 try {
-                    builder.addRoute(ip, 32)
+                    builder.addRoute(host, prefix)
                 } catch (_: Exception) {}
             }
 
             // Intercept IPv6 DNS to eliminate cellular and Wi-Fi dual-stack bypass
             try {
-                builder.addAddress("fd00:1:fd00:1:fd00:1:fd00:1", 128)
-                builder.addDnsServer("fd00:1:fd00:1:fd00:1:fd00:2")
-                builder.addRoute("fd00:1:fd00:1:fd00:1:fd00:2", 128)
-                val ipv6DnsRoutes = listOf(
-                    "fd00:1:fd00:1:fd00:1:fd00:2",
-                    "2001:4860:4860::8888", "2001:4860:4860::8844",
-                    "2606:4700:4700::1111", "2606:4700:4700::1001"
-                ) + TrappedDnsServers.IPV6_TRAPPED
-                for (ip in ipv6DnsRoutes.distinct()) {
+                builder.addAddress(TunnelDnsConfig.IPV6_CLIENT, 128)
+                builder.addDnsServer(TunnelDnsConfig.IPV6_DNS)
+                for ((host, prefix) in VpnRoutePolicy.hostRoutes().filter { it.second == 128 }) {
                     try {
-                        builder.addRoute(ip, 128)
+                        builder.addRoute(host, prefix)
                     } catch (_: Exception) {}
                 }
             } catch (_: Exception) {
@@ -623,7 +612,7 @@ class UnblockerVpnService : VpnService() {
 
         // Shared lock serializes establish/teardown even across successive Service instances.
         private val lifecycleLock = Any()
-        val session = VpnSessionState()
+        val session = VpnSessionState { updateCoverage() }
         val isServiceActive: StateFlow<Boolean> = session.active
 
         private val _isPrivateDnsActive = MutableStateFlow(false)
@@ -632,6 +621,17 @@ class UnblockerVpnService : VpnService() {
         private val _privateDnsServerName = MutableStateFlow<String?>(null)
         val privateDnsServerName: StateFlow<String?> = _privateDnsServerName.asStateFlow()
 
+        private val _coverage = MutableStateFlow(ProtectionCoverage.OFF)
+        val coverage: StateFlow<ProtectionCoverage> = _coverage.asStateFlow()
+
+        fun updateCoverage(hasUsableResolvers: Boolean = true) {
+            _coverage.value = ProtectionCoverage.compute(
+                status = session.status.value,
+                isPrivateDnsActive = _isPrivateDnsActive.value,
+                hasUsableResolvers = hasUsableResolvers
+            )
+        }
+
         fun shouldWarn(active: Boolean, serverName: String?): Boolean {
             return serverName != null
         }
@@ -639,6 +639,7 @@ class UnblockerVpnService : VpnService() {
         fun updatePrivateDnsState(active: Boolean, serverName: String?) {
             _isPrivateDnsActive.value = active
             _privateDnsServerName.value = if (active) serverName else null
+            updateCoverage()
         }
 
         fun updatePrivateDnsState(linkProperties: LinkProperties?) {

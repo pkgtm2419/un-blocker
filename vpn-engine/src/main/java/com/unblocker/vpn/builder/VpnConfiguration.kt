@@ -33,34 +33,11 @@ class VpnConfiguration(
             .addDnsServer("10.111.222.2")
             .addRoute("10.111.222.2", 32)
 
-        // Route well-known public DNS resolvers into tun0 (/32)
-        val ipv4DnsRoutes = listOf(
-            "10.111.222.2", "8.8.8.8", "8.8.4.4", "1.1.1.1", "1.0.0.1", "9.9.9.9"
-        ) + TrappedDnsServers.IPV4_TRAPPED
-
-        for (ip in ipv4DnsRoutes.distinct()) {
-            try {
-                builder.addRoute(ip, 32)
-            } catch (_: Exception) {}
-        }
-
         // Dual-stack IPv6 DNS intercept (/128)
         try {
             builder.addAddress("fd00:1:fd00:1:fd00:1:fd00:1", 128)
             builder.addDnsServer("fd00:1:fd00:1:fd00:1:fd00:2")
             builder.addRoute("fd00:1:fd00:1:fd00:1:fd00:2", 128)
-
-            val ipv6DnsRoutes = listOf(
-                "fd00:1:fd00:1:fd00:1:fd00:2",
-                "2001:4860:4860::8888", "2001:4860:4860::8844",
-                "2606:4700:4700::1111", "2606:4700:4700::1001"
-            ) + TrappedDnsServers.IPV6_TRAPPED
-
-            for (ip in ipv6DnsRoutes.distinct()) {
-                try {
-                    builder.addRoute(ip, 128)
-                } catch (_: Exception) {}
-            }
         } catch (_: Exception) {
             // Graceful fallback on devices without IPv6 support
         }

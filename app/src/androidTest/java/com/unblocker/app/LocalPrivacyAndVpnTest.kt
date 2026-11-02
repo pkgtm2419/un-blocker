@@ -16,6 +16,7 @@ import com.unblocker.app.logic.analysis.DeviceLearning
 import com.unblocker.app.logic.analysis.PrivateReputationStore
 import com.unblocker.app.receivers.BootReceiver
 import com.unblocker.app.services.ServiceStatus
+import com.unblocker.app.services.TunnelDnsConfig
 import com.unblocker.app.services.UnblockerVpnService
 import java.io.File
 import java.net.DatagramPacket
@@ -105,7 +106,7 @@ class LocalPrivacyAndVpnTest {
             val network = connectivity.activeNetwork
             val linkProperties = connectivity.getLinkProperties(network)
             if (connectivity.getNetworkCapabilities(network)?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true &&
-                linkProperties?.dnsServers?.any { it.hostAddress == "10.10.0.1" } == true) return linkProperties
+                linkProperties?.dnsServers?.any { it.hostAddress == TunnelDnsConfig.IPV4_DNS } == true) return linkProperties
             Thread.sleep(50)
         }
         fail("Android did not publish the VPN as the app's default DNS network")
@@ -230,7 +231,7 @@ class LocalPrivacyAndVpnTest {
             byteArrayOf(3) + "net".toByteArray() + byteArrayOf(0, 0, 1, 0, 1)
         DatagramSocket().use { socket ->
             socket.soTimeout = 5000
-            socket.send(DatagramPacket(question, question.size, InetAddress.getByName("10.10.0.1"), 53))
+            socket.send(DatagramPacket(question, question.size, InetAddress.getByName(TunnelDnsConfig.IPV4_DNS), 53))
             val response = DatagramPacket(ByteArray(1024), 1024)
             socket.receive(response)
             assertEquals(0x12, response.data[0].toInt())

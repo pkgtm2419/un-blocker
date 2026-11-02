@@ -5,7 +5,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 enum class ServiceStatus { STOPPED, STARTING, RUNNING, STOPPING, ERROR }
 
-class VpnSessionState {
+class VpnSessionState(private val onStatusChanged: ((ServiceStatus) -> Unit)? = null) {
     private val mutableStatus = MutableStateFlow(ServiceStatus.STOPPED)
     val status = mutableStatus.asStateFlow()
     private val mutableActive = MutableStateFlow(false)
@@ -14,8 +14,7 @@ class VpnSessionState {
 
     @Synchronized fun begin(): Long {
         generation++
-        mutableStatus.value = ServiceStatus.STARTING
-        mutableActive.value = false
+        setStatus(ServiceStatus.STARTING, false)
         return generation
     }
     @Synchronized fun owns(owner: Long) = owner == generation
@@ -26,21 +25,23 @@ class VpnSessionState {
 
     @Synchronized private fun established(): Boolean {
         if (mutableStatus.value != ServiceStatus.STARTING) return false
-        mutableActive.value = true
-        mutableStatus.value = ServiceStatus.RUNNING
+        setStatus(ServiceStatus.RUNNING, true)
         return true
     }
     @Synchronized fun failed() {
-        mutableActive.value = false
-        mutableStatus.value = ServiceStatus.ERROR
+        setStatus(ServiceStatus.ERROR, false)
     }
     @Synchronized fun stopping() {
-        mutableActive.value = false
-        mutableStatus.value = ServiceStatus.STOPPING
+        setStatus(ServiceStatus.STOPPING, false)
     }
     @Synchronized fun stop() {
-        mutableActive.value = false
-        mutableStatus.value = ServiceStatus.STOPPED
+        setStatus(ServiceStatus.STOPPED, false)
+    }
+
+    private fun setStatus(status: ServiceStatus, active: Boolean) {
+        mutableActive.value = active
+        mutableStatus.value = status
+        onStatusChanged?.invoke(status)
     }
 }
 

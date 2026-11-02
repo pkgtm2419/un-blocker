@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.unblocker.app.services.ServiceStatus
+import com.unblocker.app.services.TunnelDnsConfig
 import com.unblocker.app.ui.motion.FluidVisibility
 import com.unblocker.app.ui.motion.rememberBreathingPulse
 import com.unblocker.app.ui.theme.AllowedGreen
@@ -181,7 +182,7 @@ fun AgentStatusPanel(
                 PipelineStepRow(
                     stepNumber = "01",
                     title = "VPN TUNNEL INTERFACE",
-                    detail = if (isRunning) "Bound to 10.10.0.1:53 & fd00:1::1:53" else "Offline (0 packet flows)",
+                    detail = if (isRunning) "Bound to ${TunnelDnsConfig.IPV4_DNS}:53 & ${TunnelDnsConfig.IPV6_DNS}:53" else "Offline (0 packet flows)",
                     isSuccess = isRunning,
                     isWarning = false
                 )

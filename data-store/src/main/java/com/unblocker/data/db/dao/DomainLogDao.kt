@@ -9,6 +9,16 @@ import com.unblocker.data.db.entity.DomainEventEntity
 import com.unblocker.data.db.entity.DomainStatEntity
 import kotlinx.coroutines.flow.Flow
 
+data class DomainStatUpsert(
+    val domain: String,
+    val callDelta: Long,
+    val blockedDelta: Long,
+    val allowedDelta: Long,
+    val ts: Long,
+    val lastDecision: Int,
+    val lastReason: Int
+)
+
 /**
  * DAO for domain aggregated statistics and bounded event history.
  */
@@ -35,6 +45,21 @@ interface DomainLogDao {
         lastDecision: Int,
         lastReason: Int
     )
+
+    @Transaction
+    suspend fun upsertStatsBatch(stats: List<DomainStatUpsert>) {
+        for (stat in stats) {
+            upsertStat(
+                domain = stat.domain,
+                callDelta = stat.callDelta,
+                blockedDelta = stat.blockedDelta,
+                allowedDelta = stat.allowedDelta,
+                ts = stat.ts,
+                lastDecision = stat.lastDecision,
+                lastReason = stat.lastReason
+            )
+        }
+    }
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEvents(events: List<DomainEventEntity>)
@@ -72,6 +97,12 @@ interface DomainLogDao {
 
     @Query("DELETE FROM domain_events WHERE id NOT IN (SELECT id FROM domain_events ORDER BY ts DESC LIMIT :globalCap)")
     suspend fun pruneOldestEventsBeyondCap(globalCap: Int = 100_000)
+
+    @Query("DELETE FROM domain_stats WHERE last_seen < :cutoffTimestamp")
+    suspend fun pruneStatsOlderThan(cutoffTimestamp: Long)
+
+    @Query("DELETE FROM domain_stats WHERE domain NOT IN (SELECT domain FROM domain_stats ORDER BY last_seen DESC LIMIT :globalCap)")
+    suspend fun pruneOldestStatsBeyondCap(globalCap: Int = 10_000)
 
     @Query("DELETE FROM domain_events")
     suspend fun clearEvents()

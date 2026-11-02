@@ -40,7 +40,7 @@ object DataStoreModule {
             UnblockerDatabase.DATABASE_NAME
         )
             .setJournalMode(androidx.room.RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
-            .fallbackToDestructiveMigration() // Replace with proper migrations before production
+            .addMigrations(*com.unblocker.data.db.migration.UnblockerMigrations.ALL)
             .build()
 
     @Provides

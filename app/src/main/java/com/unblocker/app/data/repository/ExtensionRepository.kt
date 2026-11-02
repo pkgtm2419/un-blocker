@@ -18,6 +18,11 @@ import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
 
+sealed interface RuleUpdateState {
+    data object Ready : RuleUpdateState
+    data class Failed(val reason: String) : RuleUpdateState
+}
+
 class ExtensionRepository private constructor(private val context: Context) {
 
     private val prefs: SharedPreferences =
@@ -33,6 +38,9 @@ class ExtensionRepository private constructor(private val context: Context) {
 
     private val _isUpdating = MutableStateFlow(false)
     val isUpdating: StateFlow<Boolean> = _isUpdating.asStateFlow()
+
+    private val _ruleUpdateState = MutableStateFlow<RuleUpdateState>(RuleUpdateState.Ready)
+    val ruleUpdateState: StateFlow<RuleUpdateState> = _ruleUpdateState.asStateFlow()
 
     init {
         loadExtensions()
@@ -189,67 +197,38 @@ class ExtensionRepository private constructor(private val context: Context) {
         }
     }
 
-    private fun downloadAndSaveFilter(ext: ExtensionFilter): Result<Pair<Int, Long>> {
-        return runCatching {
-            var urlString = ext.url
-            var connection: HttpURLConnection? = null
-            var redirectCount = 0
+    private suspend fun downloadAndSaveFilter(ext: ExtensionFilter): Result<Pair<Int, Long>> {
+        val targetFile = File(extensionsDir, "${ext.id}.rules")
+        val url = runCatching { URL(ext.url) }.getOrElse {
+            val msg = "Invalid URL: ${ext.url}"
+            _ruleUpdateState.value = RuleUpdateState.Failed(msg)
+            return Result.failure(IllegalArgumentException(msg))
+        }
 
-            while (redirectCount < 5) {
-                val url = URL(urlString)
-                connection = (url.openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 10000
-                    readTimeout = 15000
-                    instanceFollowRedirects = false
-                    setRequestProperty("User-Agent", "Mozilla/5.0 unblocker/2.0")
-                }
-
-                val status = connection.responseCode
-                if (status in 300..399) {
-                    val location = connection.getHeaderField("Location") ?: break
-                    urlString = location
-                    connection.disconnect()
-                    redirectCount++
-                } else {
-                    break
-                }
+        return when (val downloadResult = BoundedFilterDownloader.DEFAULT.download(url, targetFile)) {
+            is DownloadResult.Success -> {
+                _ruleUpdateState.value = RuleUpdateState.Ready
+                Result.success(Pair(downloadResult.validRuleCount, downloadResult.bytesRead))
             }
-
-            val conn = connection ?: error("Unable to establish connection")
-            val targetFile = File(extensionsDir, "${ext.id}.rules.tmp")
-            var validRulesCount = 0
-            var totalBytes = 0L
-
-            try {
-                conn.inputStream.use { input ->
-                    targetFile.outputStream().use { output ->
-                        val reader = BufferedReader(InputStreamReader(input))
-                        val writer = output.bufferedWriter()
-                        reader.forEachLine { line ->
-                            totalBytes += line.length + 1
-                            if (ExtensionRuleStore.parseLine(line) != null) {
-                                validRulesCount++
-                                writer.write(line)
-                                writer.newLine()
-                            }
-                        }
-                        writer.flush()
-                    }
-                }
-
-                val finalFile = File(extensionsDir, "${ext.id}.rules")
-                if (targetFile.exists()) {
-                    if (finalFile.exists()) {
-                        finalFile.delete()
-                    }
-                    targetFile.renameTo(finalFile)
-                }
-
-                Pair(if (validRulesCount > 0) validRulesCount else ext.filterCount, totalBytes)
-            } finally {
-                if (targetFile.exists()) {
-                    targetFile.delete()
-                }
+            is DownloadResult.TooLarge -> {
+                _ruleUpdateState.value = RuleUpdateState.Failed(downloadResult.message)
+                Result.failure(IllegalStateException(downloadResult.message))
+            }
+            is DownloadResult.InvalidSource -> {
+                _ruleUpdateState.value = RuleUpdateState.Failed(downloadResult.message)
+                Result.failure(IllegalArgumentException(downloadResult.message))
+            }
+            is DownloadResult.HttpFailure -> {
+                _ruleUpdateState.value = RuleUpdateState.Failed(downloadResult.message)
+                Result.failure(java.io.IOException(downloadResult.message))
+            }
+            is DownloadResult.InvalidRules -> {
+                _ruleUpdateState.value = RuleUpdateState.Failed(downloadResult.message)
+                Result.failure(IllegalStateException(downloadResult.message))
+            }
+            is DownloadResult.NetworkFailure -> {
+                _ruleUpdateState.value = RuleUpdateState.Failed(downloadResult.message)
+                Result.failure(java.io.IOException(downloadResult.message))
             }
         }
     }

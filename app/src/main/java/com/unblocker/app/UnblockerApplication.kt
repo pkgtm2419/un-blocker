@@ -38,6 +38,7 @@ class UnblockerApplication : Application(), Configuration.Provider {
         com.unblocker.app.data.logs.QueryLogSink.init(domainLogDao)
 
         preferences = FilteringPreferences.getInstance(this)
+        com.unblocker.app.data.logs.QueryLogSink.setLoggingPaused(preferences.isQueryLoggingPaused.value)
         quickStartManager = QuickStartManager.getInstance(this)
         quickStartManager.loadDefaultConfiguration()
 

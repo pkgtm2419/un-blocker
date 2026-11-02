@@ -3,6 +3,7 @@ package com.unblocker.app.ui.logs
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.unblocker.app.data.logs.QueryLogSink
+import com.unblocker.app.data.preferences.FilteringPreferences
 import com.unblocker.app.data.repository.RuleUpdateResult
 import com.unblocker.app.data.repository.UserRuleGateway
 import com.unblocker.app.logic.analysis.UserFeedback
@@ -34,12 +35,13 @@ enum class LogSort(val value: Int) {
  * - Supports expanding domain for timestamp history.
  * - Filter chips (All / Blocked / Allowed) and sort options (Recent / Most calls).
  * - Total domain, call, and blocked statistics.
- * - History clearing and logging pause.
+ * - History clearing and logging pause with barrier guarantees.
  */
 @HiltViewModel
 class LogViewModel @Inject constructor(
     private val domainLogDao: DomainLogDao,
-    private val userRuleGateway: UserRuleGateway
+    private val userRuleGateway: UserRuleGateway,
+    private val preferences: FilteringPreferences
 ) : ViewModel() {
 
     private val _filter = MutableStateFlow(LogFilter.ALL)
@@ -57,7 +59,7 @@ class LogViewModel @Inject constructor(
     private val _domainEvents = MutableStateFlow<List<DomainEventEntity>>(emptyList())
     val domainEvents: StateFlow<List<DomainEventEntity>> = _domainEvents.asStateFlow()
 
-    private val _isLoggingPaused = MutableStateFlow(QueryLogSink.isLoggingPaused())
+    private val _isLoggingPaused = MutableStateFlow(preferences.isQueryLoggingPaused.value)
     val isLoggingPaused: StateFlow<Boolean> = _isLoggingPaused.asStateFlow()
 
     val totalDomains: StateFlow<Long> = domainLogDao.getTotalDomainsCountFlow()
@@ -111,12 +113,13 @@ class LogViewModel @Inject constructor(
     fun toggleLoggingPaused() {
         val newState = !_isLoggingPaused.value
         _isLoggingPaused.value = newState
+        preferences.setQueryLoggingPaused(newState)
         QueryLogSink.setLoggingPaused(newState)
     }
 
     fun clearAllLogs() {
         viewModelScope.launch {
-            QueryLogSink.clearHistory()
+            QueryLogSink.clearHistoryAndBarrier()
             _expandedDomain.value = null
             _domainEvents.value = emptyList()
         }

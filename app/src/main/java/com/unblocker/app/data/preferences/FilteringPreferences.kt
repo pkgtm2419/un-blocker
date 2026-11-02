@@ -137,6 +137,14 @@ class FilteringPreferences(context: Context) {
         }
     }
 
+    private val _isQueryLoggingPaused = MutableStateFlow(prefs.getBoolean(KEY_QUERY_LOGGING_PAUSED, false))
+    val isQueryLoggingPaused: StateFlow<Boolean> = _isQueryLoggingPaused.asStateFlow()
+
+    fun setQueryLoggingPaused(paused: Boolean) {
+        prefs.edit().putBoolean(KEY_QUERY_LOGGING_PAUSED, paused).apply()
+        _isQueryLoggingPaused.value = paused
+    }
+
     companion object {
         private const val KEY_INITIALIZED = "initialized"
         private const val KEY_AD_BLOCKING = "ad_blocking_enabled"
@@ -147,6 +155,7 @@ class FilteringPreferences(context: Context) {
         private const val KEY_HEALTH_CHECK_INTERVAL = "health_check_interval"
         private const val KEY_LAST_HEALTH_CHECK = "last_health_check"
         private const val KEY_LEARNING_START_TIME = "learning_start_time"
+        private const val KEY_QUERY_LOGGING_PAUSED = "query_logging_paused"
 
         @Volatile
         private var INSTANCE: FilteringPreferences? = null

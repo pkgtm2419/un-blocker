@@ -2,6 +2,7 @@ package com.unblocker.app.data.logs
 
 import com.unblocker.app.services.VpnDiagnostics
 import com.unblocker.data.db.dao.DomainLogDao
+import com.unblocker.data.db.dao.DomainStatUpsert
 import com.unblocker.data.db.entity.DomainEventEntity
 import com.unblocker.data.db.entity.DomainStatEntity
 import kotlinx.coroutines.flow.Flow
@@ -21,6 +22,7 @@ class QueryLogSinkTest {
     ) : DomainLogDao {
         val upsertedStats = mutableListOf<String>()
         val insertedEvents = mutableListOf<DomainEventEntity>()
+        var cleared = false
 
         override suspend fun upsertStat(
             domain: String,
@@ -47,15 +49,24 @@ class QueryLogSinkTest {
         override fun getTotalBlockedCountFlow(): Flow<Long> = emptyFlow()
         override suspend fun pruneEventsOlderThan(cutoffTimestamp: Long) {}
         override suspend fun pruneOldestEventsBeyondCap(globalCap: Int) {}
-        override suspend fun clearEvents() {}
-        override suspend fun clearStats() {}
+        override suspend fun pruneStatsOlderThan(cutoffTimestamp: Long) {}
+        override suspend fun pruneOldestStatsBeyondCap(globalCap: Int) {}
+        override suspend fun clearEvents() {
+            insertedEvents.clear()
+        }
+        override suspend fun clearStats() {
+            upsertedStats.clear()
+        }
+        override suspend fun clearAll() {
+            cleared = true
+            clearEvents()
+            clearStats()
+        }
     }
 
     @Before
     fun setup() {
-        QueryLogSink.clearQueue()
-        QueryLogSink.setLoggingPaused(false)
-        QueryLogSink.setHistoryMode(QueryLogSink.HistoryMode.AGGREGATE_ONLY)
+        QueryLogSink.resetForTesting()
         VpnDiagnostics.resetForTesting()
     }
 
@@ -71,8 +82,8 @@ class QueryLogSinkTest {
         QueryLogSink.setHistoryMode(QueryLogSink.HistoryMode.AGGREGATE_ONLY)
 
         val items = listOf(
-            QueryLogSink.LogItem("example.com", decision = 0, reason = 0, ts = 1000L),
-            QueryLogSink.LogItem("blocked-tracker.com", decision = 1, reason = 1, ts = 2000L)
+            QueryLogSink.LogItem("example.com", decision = 0, reason = 0, ts = 1000L, generation = 1L),
+            QueryLogSink.LogItem("blocked-tracker.com", decision = 1, reason = 1, ts = 2000L, generation = 1L)
         )
 
         QueryLogSink.flushBatch(items)
@@ -93,7 +104,7 @@ class QueryLogSinkTest {
         QueryLogSink.setHistoryMode(QueryLogSink.HistoryMode.RAW_HISTORY_OPT_IN)
 
         val items = listOf(
-            QueryLogSink.LogItem("opt-in.com", decision = 0, reason = 0, ts = 3000L)
+            QueryLogSink.LogItem("opt-in.com", decision = 0, reason = 0, ts = 3000L, generation = 1L)
         )
 
         QueryLogSink.flushBatch(items)
@@ -129,5 +140,28 @@ class QueryLogSinkTest {
         QueryLogSink.record("", 0, 0)
         QueryLogSink.record("   ", 0, 0)
         QueryLogSink.record("a".repeat(300) + ".com", 0, 0)
+    }
+
+    @Test
+    fun testClearHistoryAndBarrierPreventsPreClearItemsFromFlushing() = runBlocking {
+        val fakeDao = FakeDomainLogDao()
+        QueryLogSink.init(fakeDao)
+
+        // Queue pre-clear item
+        QueryLogSink.record("pre-clear-tracker.com", 1, 1)
+
+        // Invoke clearHistoryAndBarrier
+        val clearResult = QueryLogSink.clearHistoryAndBarrier()
+        assertTrue(clearResult is QueryLogSink.ClearResult.Success)
+        assertTrue(fakeDao.cleared)
+
+        // Simulate an in-flight batch that had pre-clear generation items
+        val preClearBatch = listOf(
+            QueryLogSink.LogItem("pre-clear-tracker.com", 1, 1, 1000L, generation = 1L)
+        )
+        QueryLogSink.flushBatch(preClearBatch)
+
+        // Pre-clear item must NOT be written to the database
+        assertFalse(fakeDao.upsertedStats.contains("pre-clear-tracker.com"))
     }
 }

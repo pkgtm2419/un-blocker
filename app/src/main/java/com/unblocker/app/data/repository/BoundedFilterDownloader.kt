@@ -183,17 +183,31 @@ class BoundedFilterDownloader(
         val host = url.host?.lowercase() ?: ""
         if (host.isEmpty() ||
             host == "localhost" ||
-            host == "127.0.0.1" ||
+            host.startsWith("127.") ||
             host == "::1" ||
             host == "0.0.0.0" ||
+            host == "::" ||
             host.endsWith(".local") ||
             host.endsWith(".internal") ||
             host.startsWith("10.") ||
-            host.startsWith("192.168.")
+            host.startsWith("192.168.") ||
+            host.startsWith("169.254.") ||
+            host.startsWith("fc") ||
+            host.startsWith("fd") ||
+            host.startsWith("fe80") ||
+            isRfc1918ClassB(host)
         ) {
             return DownloadResult.InvalidSource("Local and private network endpoints are rejected")
         }
         return null
+    }
+
+    private fun isRfc1918ClassB(host: String): Boolean {
+        if (!host.startsWith("172.")) return false
+        val parts = host.split('.')
+        if (parts.size != 4) return false
+        val secondOctet = parts[1].toIntOrNull() ?: return false
+        return secondOctet in 16..31
     }
 
     companion object {

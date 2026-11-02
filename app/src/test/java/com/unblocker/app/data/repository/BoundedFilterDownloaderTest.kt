@@ -48,8 +48,14 @@ class BoundedFilterDownloaderTest {
     fun rejectsLocalhostTarget() = runBlocking {
         val dest = File(tempFolder.root, "rules.txt")
         val downloader = BoundedFilterDownloader()
-        val result = downloader.download(URL("https://127.0.0.1/filter.txt"), dest)
-        assertTrue("Expected InvalidSource, got $result", result is DownloadResult.InvalidSource)
+        val result1 = downloader.download(URL("https://127.0.0.1/filter.txt"), dest)
+        assertTrue("Expected InvalidSource, got $result1", result1 is DownloadResult.InvalidSource)
+
+        val result2 = downloader.download(URL("https://127.0.0.2/filter.txt"), dest)
+        assertTrue("Expected InvalidSource for loopback, got $result2", result2 is DownloadResult.InvalidSource)
+
+        val result3 = downloader.download(URL("https://172.16.1.1/filter.txt"), dest)
+        assertTrue("Expected InvalidSource for RFC1918, got $result3", result3 is DownloadResult.InvalidSource)
     }
 
     @Test

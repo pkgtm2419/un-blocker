@@ -233,6 +233,9 @@ jobs:
           set -euo pipefail
           dir="$(dirname "${APK_PATH}")"
           assets=("${APK_PATH}" "${dir}/SHA256SUMS")
+          if [ "${BUILD_TYPE}" = "release" ] && [ -f app/build/outputs/mapping/release/mapping.txt ]; then
+            assets+=("app/build/outputs/mapping/release/mapping.txt")
+          fi
           if [ "${PRERELEASE}" = "true" ]; then
             title="Un-Blocker ${VERSION_NAME} test build"
             notes="Test-signed build for testing only (debuggable). Verify with SHA256SUMS."

@@ -1,0 +1,531 @@
+{
+  "repository": "pkgtm2419/un-blocker",
+  "commit": "6fd537e34773e3f799e3685f68a0fbef761eb71c",
+  "ci_run": 41342081066,
+  "source_artifact": "reports-41342081066",
+  "totals": {
+    "tests": 260,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suites": 62,
+  "modules": {
+    "app": {
+      "tests": 254,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "data-store": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "vpn-engine": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "suites_detail": [
+    {
+      "name": "com.unblocker.app.analysis.EvidenceLearningTest",
+      "module": "app",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.analysis.LearnerIntegrationTest",
+      "module": "app",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.analysis.PublicSuffixRulesTest",
+      "module": "app",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.data.logs.QueryLogSinkTest",
+      "module": "app",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.data.model.ExtensionFilterTest",
+      "module": "app",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.data.repository.ExtensionRepositoryTest",
+      "module": "app",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.dns.AdvancedDnsPacketTest",
+      "module": "app",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.dns.ByteArrayPoolTest",
+      "module": "app",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.dns.DnsCacheTest",
+      "module": "app",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.dns.DnsErrorResponseTest",
+      "module": "app",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.dns.DnsFuzzMutationTest",
+      "module": "app",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.dns.DnsPacketEdgeCaseTest",
+      "module": "app",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.dns.DnsPacketTest",
+      "module": "app",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.dns.DnsResponseValidatorTest",
+      "module": "app",
+      "tests": 17,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.dns.DnsServfailResponseTest",
+      "module": "app",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.dns.ForwardingDnsRequestTest",
+      "module": "app",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.dns.InternetChecksumTest",
+      "module": "app",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.dns.PacketPropertiesTest",
+      "module": "app",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.dns.SvcbAliasTest",
+      "module": "app",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.dns.TcpDnsResponderTest",
+      "module": "app",
+      "tests": 15,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.domain.DecideBlockingUseCaseTest",
+      "module": "app",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.logic.AdDetectorTest",
+      "module": "app",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.logic.AdaptiveBlockingEngineTest",
+      "module": "app",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.logic.AdultContentDetectorTest",
+      "module": "app",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.logic.DomainFeatureExtractorTest",
+      "module": "app",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.logic.DomainNameTest",
+      "module": "app",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.logic.LocalNetworkLearnerTest",
+      "module": "app",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.logic.MultiFactorAdClassifierTest",
+      "module": "app",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.logic.NeverBlockPolicyTest",
+      "module": "app",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.logic.OnDeviceAdAnalysisTest",
+      "module": "app",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.logic.analysis.EvidenceStoreWriteBehindTest",
+      "module": "app",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.logic.rules.ExtensionRuleStoreTest",
+      "module": "app",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.manifest.ManifestServiceDeclarationTest",
+      "module": "app",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.performance.MatcherBenchmarkTest",
+      "module": "app",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.privacy.PrivateDomainSetTest",
+      "module": "app",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.privacy.PrivateEvidenceStoreTest",
+      "module": "app",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.privacy.PrivateReputationStoreTest",
+      "module": "app",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.privacy.ReviewPrivacyRegressionTest",
+      "module": "app",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.quality.BlockingRegressionCorpusTest",
+      "module": "app",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.quality.CoverageReportTest",
+      "module": "app",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.quality.SeedListProvenanceTest",
+      "module": "app",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.responsive.ResponsiveLayoutTest",
+      "module": "app",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.rules.CnamePolicyTest",
+      "module": "app",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.rules.DnsRuleEngineTest",
+      "module": "app",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.rules.PackedMatcherTest",
+      "module": "app",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.rules.RuleSetDifferentialTest",
+      "module": "app",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.services.BlockingRegressionCheckTest",
+      "module": "app",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.services.DnsRequestCoalescerTest",
+      "module": "app",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.services.DnsResolverPolicyTest",
+      "module": "app",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.services.DnsUpstreamClientSecurityTest",
+      "module": "app",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.services.DnsUpstreamClientTest",
+      "module": "app",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.services.HealthCheckPolicyTest",
+      "module": "app",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.services.PrivateDnsDetectionTest",
+      "module": "app",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.services.ResolverRegistryTest",
+      "module": "app",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.services.TunResponseWriterTest",
+      "module": "app",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.services.TunnelRunTest",
+      "module": "app",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.services.UnblockerVpnServiceTest",
+      "module": "app",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.services.VpnDiagnosticsTest",
+      "module": "app",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.services.VpnSessionStateTest",
+      "module": "app",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.app.ui.theme.VpnStateColorsTest",
+      "module": "app",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.data.cache.RuleCompilerTest",
+      "module": "data-store",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.unblocker.vpn.parser.DnsPacketEngineTest",
+      "module": "vpn-engine",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ]
+}

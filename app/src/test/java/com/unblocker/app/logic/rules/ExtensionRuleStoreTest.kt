@@ -1,5 +1,6 @@
 package com.unblocker.app.logic.rules
 
+import com.unblocker.app.domain.model.BlockingCategory
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -49,9 +50,12 @@ class ExtensionRuleStoreTest {
         assertEquals(RuleKind.SUFFIX, allowRule.kind)
         assertEquals("goodservice.com", allowRule.value)
 
-        val optionsRule = ExtensionRuleStore.parseLine("||adserver.net^\$third-party,image")
-        assertNotNull(optionsRule)
-        assertEquals("adserver.net", optionsRule!!.value)
+        val bareOptionsRule = ExtensionRuleStore.parseLine("||adserver.net^\$third-party,image")
+        assertNull(bareOptionsRule)
+
+        val subOptionsRule = ExtensionRuleStore.parseLine("||ads.adserver.net^\$third-party,image")
+        assertNotNull(subOptionsRule)
+        assertEquals("ads.adserver.net", subOptionsRule!!.value)
 
         val commentRule = ExtensionRuleStore.parseLine("! This is a comment")
         assertNull(commentRule)
@@ -101,6 +105,18 @@ class ExtensionRuleStoreTest {
         // Unrelated domain
         val mClean = ExtensionRuleStore.matchRule("wikipedia.org")
         assertNull(mClean)
+    }
+
+    @Test
+    fun testSingleLabelParentNeverBlocks() {
+        // Even if an admitted rule with value 'com' exists in blockSuffix
+        val builder = ExtensionRuleStore.Builder()
+        builder.blockSuffix.add("com")
+        builder.count = 1
+        ExtensionRuleStore.applyBuilder(builder)
+
+        assertNull(ExtensionRuleStore.matchRule("example.com"))
+        assertNull(ExtensionRuleStore.matchRule("google.com"))
     }
 
     @Test

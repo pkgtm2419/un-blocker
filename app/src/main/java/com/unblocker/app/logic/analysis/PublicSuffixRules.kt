@@ -44,8 +44,19 @@ class PublicSuffixRules(lines: Sequence<String>) {
         return if (domain == base) "" else domain.removeSuffix(".$base")
     }
 
+    fun isPublicSuffix(raw: String): Boolean {
+        val domain = DomainName.normalize(raw) ?: return false
+        if (domain in exact) return true
+        val dot = domain.indexOf('.')
+        if (dot != -1) {
+            val parent = domain.substring(dot + 1)
+            if (parent in wildcard && domain !in exceptions) return true
+        }
+        return registrableDomain(domain) == null
+    }
+
     companion object {
-        val fallback = PublicSuffixRules("com\nnet\norg\nco.uk\ncom.au\nco.in\nblogspot.com\n*.ck\n!www.ck".lineSequence())
+        val fallback = PublicSuffixRules("com\nnet\norg\nco.uk\ncom.au\nco.in\nblogspot.com\ngithub.io\n*.ck\n!www.ck".lineSequence())
         fun from(context: android.content.Context?): PublicSuffixRules = if (context == null) fallback else
             context.assets.open("public_suffix_list.dat").bufferedReader().use { PublicSuffixRules(it.lineSequence()) }
     }

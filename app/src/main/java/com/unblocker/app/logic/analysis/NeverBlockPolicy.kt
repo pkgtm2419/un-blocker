@@ -38,11 +38,55 @@ object NeverBlockPolicy {
         "www.yahoo.com",
         "whatsapp.com",
         "whatsapp.net",
+        "web.whatsapp.com",
         "telegram.org",
         "signal.org",
         "wikipedia.org",
         "cloudflare.com",
-        "github.com"
+        "github.com",
+        // Extended gap hosts (WP3)
+        "docs.google.com",
+        "mail.google.com",
+        "drive.google.com",
+        "maps.google.com",
+        "youtube.com",
+        "www.youtube.com",
+        "m.youtube.com",
+        "music.youtube.com",
+        "i.ytimg.com",
+        "play.googleapis.com",
+        "firebaseinstallations.googleapis.com",
+        "facebook.com",
+        "www.facebook.com",
+        "instagram.com",
+        "www.instagram.com",
+        "x.com",
+        "twitter.com",
+        "reddit.com",
+        "www.reddit.com",
+        "old.reddit.com",
+        "linkedin.com",
+        "www.linkedin.com",
+        "paypal.com",
+        "www.paypal.com",
+        "login.live.com",
+        "outlook.live.com",
+        "amazon.in",
+        "www.amazon.in",
+        "amazon.com",
+        "flipkart.com",
+        "www.flipkart.com",
+        "paytm.com",
+        "phonepe.com",
+        "groww.in",
+        "zerodha.com",
+        "kite.zerodha.com",
+        "claude.ai",
+        "anthropic.com",
+        "openai.com",
+        "chatgpt.com",
+        "stackoverflow.com",
+        "npmjs.com"
     )
 
     @Volatile
@@ -71,19 +115,12 @@ object NeverBlockPolicy {
         loaded = true
     }
 
+    fun getProtectedHosts(): Set<String> = protectedHosts
+
     fun isNeverBlock(rawDomain: String): Boolean {
         val domain = DomainName.normalize(rawDomain) ?: return false
-        val hosts = protectedHosts
-        if (domain in hosts) return true
-        if (domain.startsWith("www.") && domain.removePrefix("www.") in hosts) return true
-        for (host in hosts) {
-            if (host.startsWith("*.")) {
-                val suffix = host.substring(2)
-                if (domain.endsWith(".$suffix") || domain == suffix) {
-                    return true
-                }
-            }
-        }
+        if (domain in protectedHosts) return true
+        if (domain.startsWith("www.") && domain.removePrefix("www.") in protectedHosts) return true
         return false
     }
 }

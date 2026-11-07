@@ -3,6 +3,20 @@ package com.unblocker.app.logic.rules
 import com.unblocker.app.domain.model.BlockingCategory
 import com.unblocker.app.logic.DomainName
 
+data class RuleStats(
+    val totalRules: Int,
+    val skipCounters: Map<SkipReason, Int>
+) {
+    val skippedCosmetic: Int get() = skipCounters[SkipReason.COSMETIC] ?: 0
+    val skippedOptions: Int get() = (skipCounters[SkipReason.UNSUPPORTED_OPTIONS] ?: 0) + (skipCounters[SkipReason.OPTIONS_ON_REGISTRABLE] ?: 0)
+    val skippedUnsafe: Int get() = (skipCounters[SkipReason.SINGLE_LABEL] ?: 0) +
+        (skipCounters[SkipReason.PUBLIC_SUFFIX] ?: 0) +
+        (skipCounters[SkipReason.IP_LITERAL] ?: 0) +
+        (skipCounters[SkipReason.PROTECTED_HOST] ?: 0) +
+        (skipCounters[SkipReason.QUARANTINED] ?: 0)
+    val totalSkipped: Int get() = skipCounters.values.sum()
+}
+
 /**
  * Thread-safe, ultra-low latency in-memory rule store for dynamic extensions and filter lists.
  * Evaluates rules with zero network delay and provides O(1) set-based lookups.
@@ -27,8 +41,17 @@ object ExtensionRuleStore {
     @Volatile
     private var snapshot: RuleSnapshot = RuleSnapshot.EMPTY
 
+    @Volatile
+    private var lastStats: RuleStats = RuleStats(0, emptyMap())
+
     val ruleCount: Int
         get() = snapshot.totalCount
+
+    val stats: RuleStats
+        get() = lastStats
+
+    private val lineParser = RuleLineParser()
+    private val ruleAdmission: RuleAdmission = DefaultRuleAdmission()
 
     fun matchRule(rawDomain: String): DnsRule? {
         val domain = DomainName.normalize(rawDomain) ?: return null
@@ -46,6 +69,9 @@ object ExtensionRuleStore {
         var dotIndex = domain.indexOf('.')
         while (dotIndex != -1) {
             val parentSuffix = domain.substring(dotIndex + 1)
+            // WP2: Never test a single-label parent (e.g., 'com')
+            if (!parentSuffix.contains('.')) break
+
             if (parentSuffix in current.allowSuffix) {
                 return DnsRule(RuleAction.ALLOW, RuleKind.SUFFIX, parentSuffix, BlockingCategory.AD)
             }
@@ -64,6 +90,9 @@ object ExtensionRuleStore {
         dotIndex = domain.indexOf('.')
         while (dotIndex != -1) {
             val parentSuffix = domain.substring(dotIndex + 1)
+            // WP2: Never test a single-label parent (e.g., 'com')
+            if (!parentSuffix.contains('.')) break
+
             if (parentSuffix in current.blockSuffix) {
                 return DnsRule(RuleAction.BLOCK, RuleKind.SUFFIX, parentSuffix, BlockingCategory.AD)
             }
@@ -76,20 +105,32 @@ object ExtensionRuleStore {
         return null
     }
 
-    class Builder {
+    class Builder(
+        private val parser: RuleLineParser = lineParser,
+        private val admission: RuleAdmission = ruleAdmission
+    ) {
         val allowExact = HashSet<String>()
         val allowSuffix = HashSet<String>()
         val blockExact = HashSet<String>()
         val blockSuffix = HashSet<String>()
         val blockWildcard = HashSet<String>()
+        val skipCounters = IntArray(SkipReason.values().size)
         var count = 0
 
         fun addLine(line: String, category: BlockingCategory = BlockingCategory.AD) {
-            val rule = parseLine(line, category) ?: return
-            addRule(rule)
+            val ctx = ParseContext(category = category)
+            when (val res = parser.parse(line, ctx)) {
+                is ParsedLine.Rule -> addRule(res.rule)
+                is ParsedLine.Skipped -> skipCounters[res.why.ordinal]++
+            }
         }
 
         fun addRule(rule: DnsRule) {
+            val skip = admission.check(rule.action, rule.kind, rule.value)
+            if (skip != null) {
+                skipCounters[skip.ordinal]++
+                return
+            }
             val added = when (rule.action) {
                 RuleAction.ALLOW -> {
                     when (rule.kind) {
@@ -120,11 +161,17 @@ object ExtensionRuleStore {
                 totalCount = count
             )
         }
+
+        fun toStats(): RuleStats {
+            val map = SkipReason.values().associateWith { skipCounters[it.ordinal] }
+            return RuleStats(count, map)
+        }
     }
 
     @Synchronized
     fun applyBuilder(builder: Builder) {
         snapshot = builder.build()
+        lastStats = builder.toStats()
     }
 
     @Synchronized
@@ -136,78 +183,17 @@ object ExtensionRuleStore {
         applyBuilder(builder)
     }
 
-    private val META_HOSTS = setOf(
-        "localhost", "localhost.localdomain", "local", "broadcasthost",
-        "0.0.0.0", "127.0.0.1", "::1", "ip6-localhost", "ip6-loopback",
-        "ip6-localnet", "ip6-mcastprefix", "ip6-allnodes", "ip6-allrouters", "ip6-allhosts"
-    )
-
     fun parseLine(rawLine: String, defaultCategory: BlockingCategory = BlockingCategory.AD): DnsRule? {
-        var line = rawLine.trim()
-        if (line.isEmpty() || line.startsWith('!') || line.startsWith('#')) return null
+        val parsed = lineParser.parse(rawLine, ParseContext(category = defaultCategory))
+        return (parsed as? ParsedLine.Rule)?.rule
+    }
 
-        // Strip inline comments #
-        val hashIdx = line.indexOf('#')
-        if (hashIdx >= 0) {
-            line = line.substring(0, hashIdx).trim()
-        }
-        if (line.isEmpty()) return null
-
-        // Strip options e.g. $third-party,script,important
-        val dollarIdx = line.indexOf('$')
-        if (dollarIdx >= 0) {
-            line = line.substring(0, dollarIdx).trim()
-        }
-        if (line.isEmpty()) return null
-
-        // Strip hosts prefix (0.0.0.0 or 127.0.0.1)
-        if (line.startsWith("0.0.0.0 ") || line.startsWith("0.0.0.0\t")) {
-            line = line.substring(8).trim()
-            val spaceIdx = line.indexOfAny(charArrayOf(' ', '\t'))
-            if (spaceIdx >= 0) line = line.substring(0, spaceIdx).trim()
-        } else if (line.startsWith("127.0.0.1 ") || line.startsWith("127.0.0.1\t")) {
-            line = line.substring(10).trim()
-            val spaceIdx = line.indexOfAny(charArrayOf(' ', '\t'))
-            if (spaceIdx >= 0) line = line.substring(0, spaceIdx).trim()
-        } else if (line.startsWith("::1") || line.startsWith("255.255.255.255")) {
-            return null
-        }
-
-        var action = RuleAction.BLOCK
-        if (line.startsWith("@@")) {
-            action = RuleAction.ALLOW
-            line = line.substring(2)
-        }
-
-        val kind: RuleKind
-        if (line.startsWith("||")) {
-            line = line.substring(2)
-            if (line.endsWith('^')) {
-                line = line.substring(0, line.length - 1)
-            }
-            kind = RuleKind.SUFFIX
-        } else if (line.startsWith("*.")) {
-            line = line.substring(2)
-            kind = RuleKind.WILDCARD
-        } else {
-            if (line.endsWith('^')) {
-                line = line.substring(0, line.length - 1)
-            }
-            kind = RuleKind.EXACT
-        }
-
-        val normalized = DomainName.normalizeUserEntry(line) ?: return null
-        if (normalized in META_HOSTS || normalized.startsWith("ip6-")) return null
-
-        return DnsRule(
-            action = action,
-            kind = kind,
-            value = normalized,
-            category = defaultCategory
-        )
+    fun parseLine(rawLine: String, ctx: ParseContext): ParsedLine {
+        return lineParser.parse(rawLine, ctx)
     }
 
     fun clearForTesting() {
         snapshot = RuleSnapshot.EMPTY
+        lastStats = RuleStats(0, emptyMap())
     }
 }

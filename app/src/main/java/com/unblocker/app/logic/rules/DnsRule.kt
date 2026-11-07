@@ -17,14 +17,17 @@ class CompiledRuleSet(rules: List<DnsRule>) {
     val rules: List<DnsRule> = rules.distinct().toList()
     companion object {
         fun fromTsv(reader: java.io.Reader): CompiledRuleSet {
-            val rules=reader.buffered().lineSequence().filter { it.isNotBlank() }.map { line ->
-                val fields=line.split('\t')
-                require(fields.size==5) { "Invalid compiled DNS asset" }
-                val source=fields[4].toInt()
-                require(source>=0) { "Invalid rule source" }
-                DnsRule(RuleAction.valueOf(fields[0]),RuleKind.valueOf(fields[1]),
-                    requireNotNull(com.unblocker.app.logic.DomainName.normalize(fields[2])),
-                    BlockingCategory.valueOf(fields[3]),source)
+            val admission = DefaultRuleAdmission()
+            val rules = reader.buffered().lineSequence().filter { it.isNotBlank() }.mapNotNull { line ->
+                val fields = line.split('\t')
+                require(fields.size == 5) { "Invalid compiled DNS asset" }
+                val source = fields[4].toInt()
+                require(source >= 0) { "Invalid rule source" }
+                val action = RuleAction.valueOf(fields[0])
+                val kind = RuleKind.valueOf(fields[1])
+                val domain = com.unblocker.app.logic.DomainName.normalize(fields[2]) ?: return@mapNotNull null
+                if (admission.check(action, kind, domain) != null) return@mapNotNull null
+                DnsRule(action, kind, domain, BlockingCategory.valueOf(fields[3]), source)
             }.toList()
             return CompiledRuleSet(rules)
         }

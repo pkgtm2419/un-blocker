@@ -37,3 +37,11 @@ All test suites pass deterministically offline:
 | **Fix 2** | UI Component Collision Fix | **Complete** | Modified `MainScreen.kt` to correctly sequence the Notification Permission Request and VPN Permission Request. Fixed the silent Activity Launcher collision that prevented the main shield button from turning on the protection. |
 | **Fix 3** | Samsung One UI 9.0 Styling | **Complete** | Updated the `NavigationBar` in `MainScreen.kt` to have a modern, elevated, floating pill shape with rounded corners (32.dp), precise borders, and proper spacing mirroring One UI aesthetics. |
 | **Fix 4** | Log Deduplication | **Complete** | Updated `LogViewerScreen.kt` and created `GroupedLogEntry` to group incoming queries by domain. The logs UI now displays the total call count and the latest timestamp for each domain, rather than redundantly listing every individual request. |
+
+
+## 5. False Positive Fixes & Validation Progress
+
+| Workstream | Objective | Status | Key Deliverables & Changes |
+| :--- | :--- | :--- | :--- |
+| **WP1 (F1, F2, F3, F5, F9)** | Rule-Line Parser Rewrite | **Complete** | Added `RuleLineParser.kt`, `rule-parser-cases.tsv`, and options/cosmetic skip policy to prevent false positive DNS blocks on primary domains. |
+| **WP2 (F3, F4)** | Rule Admission Guard & TLD Protection | **Complete** | Added `RuleAdmission.kt`, public suffix and IP literal checks, and single-label parent loop breaks in `ExtensionRuleStore`. |

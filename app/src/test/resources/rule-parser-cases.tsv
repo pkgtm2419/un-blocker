@@ -1,0 +1,36 @@
+||facebook.com^$removeparam=mibextid	PRIVACY	SKIP:UNSUPPORTED_OPTIONS
+||youtube.com^$removeparam=pp	PRIVACY	SKIP:UNSUPPORTED_OPTIONS
+||instagram.com^$removeparam=ig_rid	PRIVACY	SKIP:UNSUPPORTED_OPTIONS
+||reddit.com^$doc,removeparam=/web_only=/	PRIVACY	SKIP:UNSUPPORTED_OPTIONS
+||open.spotify.com^$removeparam=referral	PRIVACY	SKIP:UNSUPPORTED_OPTIONS
+||twitch.tv^$xhr,3p,domain=controlc.com	AD	SKIP:UNSUPPORTED_OPTIONS
+||indiatimes.com^$image,redirect-rule=1x1.gif	AD	SKIP:UNSUPPORTED_OPTIONS
+||com^$doc,ipaddress=206.82.7.123	SECURITY	SKIP:UNSUPPORTED_OPTIONS
+||com^	AD	SKIP:SINGLE_LABEL
+||co.uk^	AD	SKIP:PUBLIC_SUFFIX
+||github.io^	AD	SKIP:PUBLIC_SUFFIX
+www.youtube.com##+js(trusted-replace-xhr-response, /"adPlacements.*?/)	AD	SKIP:COSMETIC
+mail.google.com#@#div[aria-label="Ads"]	AD	SKIP:COSMETIC
+docs.google.com##+js(no-xhr-if, method:POST url:/logImpressions)	AD	SKIP:COSMETIC
+linkedin.com##.ad-banner-container	AD	SKIP:COSMETIC
+x.com##+js(prevent-xhr, /api/1.1/flow/viewer.json)	AD	SKIP:COSMETIC
+paypal.com##+js(href-sanitizer, a[href^="https://app.adjust.com/"])	AD	SKIP:COSMETIC
+windowsreport.com##.code-block	AD	SKIP:COSMETIC
+||vlc.de^$doc	SECURITY	RULE:BLOCK:SUFFIX:vlc.de
+||vlc.de^$doc	AD	SKIP:UNSUPPORTED_OPTIONS
+||adserver.net^$third-party,image	AD	SKIP:OPTIONS_ON_REGISTRABLE
+||ads.adserver.net^$third-party,image	AD	RULE:BLOCK:SUFFIX:ads.adserver.net
+||adserver.net^	AD	RULE:BLOCK:SUFFIX:adserver.net
+||adserver.net^$important	AD	RULE:BLOCK:SUFFIX:adserver.net
+@@||goodservice.com^	AD	RULE:ALLOW:SUFFIX:goodservice.com
+@@||goodservice.com^$script,domain=a.com	AD	SKIP:UNSUPPORTED_OPTIONS
+||example.com/ads/banner.js	AD	SKIP:PATH_OR_REGEX
+/banner\d+\.gif/	AD	SKIP:PATH_OR_REGEX
+0.0.0.0 tracker.example.net	AD	RULE:BLOCK:EXACT:tracker.example.net
+0.0.0.0 tracker.example.net # comment	AD	RULE:BLOCK:EXACT:tracker.example.net
+127.0.0.1 localhost	AD	SKIP:INVALID_HOST
+tracker.example.net	AD	RULE:BLOCK:EXACT:tracker.example.net
+*.tracker.example.net	AD	RULE:BLOCK:WILDCARD:tracker.example.net
+||google.com^	AD	SKIP:PROTECTED_HOST
+||ads.google.com^	AD	RULE:BLOCK:SUFFIX:ads.google.com
+||www.youtube.com^	AD	SKIP:PROTECTED_HOST

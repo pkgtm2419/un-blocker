@@ -10,13 +10,16 @@ class AdDetector(
     private val ruleSet: RuleSet? = null
 ) {
     private val overlay = mutableListOf<DnsRule>()
+    private val admission: RuleAdmission = DefaultRuleAdmission()
     private val activeRuleSet: RuleSet by lazy {
         ruleSet ?: compiledRules?.toRuleSet() ?: if (context != null) RuleSetHolder.get(context) else fallbackRuleSet()
     }
 
     @Synchronized fun addDomain(domain: String) {
         DomainName.normalizeUserEntry(domain)?.let {
-            overlay.add(DnsRule(RuleAction.BLOCK, RuleKind.SUFFIX, it))
+            if (admission.check(RuleAction.BLOCK, RuleKind.SUFFIX, it) == null) {
+                overlay.add(DnsRule(RuleAction.BLOCK, RuleKind.SUFFIX, it))
+            }
         }
     }
 
@@ -72,7 +75,7 @@ class AdDetector(
             "chartboost.com", "fyber.com", "tapjoy.com", "an.facebook.com",
             "atlassbx.com", "mopub.com", "advertising.apple.com"
         )
-        
-        val fallback = defaultSeedRules
+
+        private val fallback = defaultSeedRules
     }
 }

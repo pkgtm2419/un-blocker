@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Pause
@@ -29,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import kotlinx.coroutines.launch
 import com.unblocker.app.ui.components.HaikeiAtmosphericBackground
 import com.unblocker.app.ui.components.SkeuomorphicCard
 import com.unblocker.app.ui.theme.AdBlockedRed
@@ -75,6 +77,24 @@ fun LogViewerScreen(
     val summary by viewModel.protectionSummary.collectAsState()
     val userMessage by viewModel.userMessage.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
+    val exportLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/csv")
+    ) { uri ->
+        if (uri != null) {
+            coroutineScope.launch {
+                try {
+                    context.contentResolver.openOutputStream(uri)?.use { os ->
+                        viewModel.exportLogsToCsv(os)
+                    }
+                } catch (e: Exception) {
+                    snackbarHostState.showSnackbar("Export failed: ${e.message}")
+                }
+            }
+        }
+    }
 
     LaunchedEffect(userMessage) {
         userMessage?.let { msg ->
@@ -172,6 +192,27 @@ fun LogViewerScreen(
                                         imageVector = if (isLoggingPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
                                         contentDescription = if (isLoggingPaused) "Resume Logging" else "Pause Logging",
                                         tint = if (isLoggingPaused) Color(0xFFEF4444) else MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                modifier = Modifier.size(42.dp)
+                            ) {
+                                IconButton(
+                                    onClick = {
+                                        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+                                        exportLauncher.launch("unblocker_export_$timestamp.csv")
+                                    },
+                                    modifier = Modifier.fillMaxSize()
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Download,
+                                        contentDescription = "Export CSV",
+                                        tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(20.dp)
                                     )
                                 }

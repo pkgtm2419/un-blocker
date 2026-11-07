@@ -83,6 +83,9 @@ interface DomainLogDao {
     @Query("SELECT * FROM domain_events WHERE domain = :domain ORDER BY ts DESC LIMIT :limit")
     suspend fun getEventsForDomain(domain: String, limit: Int = 50): List<DomainEventEntity>
 
+    @Query("SELECT * FROM domain_stats ORDER BY last_seen DESC")
+    suspend fun getAllStatsForExport(): List<DomainStatEntity>
+
     @Query("SELECT COUNT(*) FROM domain_stats")
     fun getTotalDomainsCountFlow(): Flow<Long>
 

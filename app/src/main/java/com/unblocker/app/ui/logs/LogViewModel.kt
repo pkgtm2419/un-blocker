@@ -194,4 +194,11 @@ class LogViewModel @Inject constructor(
     fun resetRule(domain: String) {
         resetDomain(domain)
     }
+
+    suspend fun exportLogsToCsv(outputStream: java.io.OutputStream): Int {
+        val stats = domainLogDao.getAllStatsForExport()
+        val count = com.unblocker.app.data.export.DomainExporter.exportToCsv(stats, outputStream)
+        _userMessage.value = "Exported $count domains to CSV"
+        return count
+    }
 }

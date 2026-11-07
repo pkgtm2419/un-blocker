@@ -44,6 +44,7 @@ class QueryLogSinkTest {
 
         override fun getDomainStatsFlow(filter: Int, query: String?, sortByCalls: Int, limit: Int): Flow<List<DomainStatEntity>> = emptyFlow()
         override suspend fun getEventsForDomain(domain: String, limit: Int): List<DomainEventEntity> = emptyList()
+        override suspend fun getAllStatsForExport(): List<DomainStatEntity> = emptyList()
         override fun getTotalDomainsCountFlow(): Flow<Long> = emptyFlow()
         override fun getTotalCallsCountFlow(): Flow<Long> = emptyFlow()
         override fun getTotalBlockedCountFlow(): Flow<Long> = emptyFlow()

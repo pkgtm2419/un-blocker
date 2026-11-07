@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="UnblockerRemediationTestSuite" tests="935" failures="0" errors="0" skipped="0" time="178.4">
+  <testsuite name="com.unblocker.app.services.DnsConcurrencyStressTest" tests="3" skipped="0" failures="0" errors="0" time="0.332">
+    <testcase name="testFiftyConcurrentBurstsNoSaturation" classname="com.unblocker.app.services.DnsConcurrencyStressTest" time="0.266"/>
+    <testcase name="testTenConcurrentThreadsNoRejectionOrTimeouts" classname="com.unblocker.app.services.DnsConcurrencyStressTest" time="0.023"/>
+    <testcase name="testTwentyConcurrentThreadsNoRejectionOrTimeouts" classname="com.unblocker.app.services.DnsConcurrencyStressTest" time="0.040"/>
+  </testsuite>
+  <testsuite name="com.unblocker.app.services.TunnelRunTest" tests="8" skipped="0" failures="0" errors="0" time="0.825">
+    <testcase name="restartGetsFreshForwarderAndOldCleanupCannotCloseIt" classname="com.unblocker.app.services.TunnelRunTest" time="0.052"/>
+    <testcase name="saturatedForwarderRejectsExcessWorkAndTerminatesOnClose" classname="com.unblocker.app.services.TunnelRunTest" time="0.061"/>
+    <testcase name="defaultThreadPoolAndQueueHandlesHighConcurrencyBursts" classname="com.unblocker.app.services.TunnelRunTest" time="0.084"/>
+    <testcase name="closeClosesRegisteredUdpAndTcpResourcesExactlyOnce" classname="com.unblocker.app.services.TunnelRunTest" time="0.048"/>
+    <testcase name="closeStillCleansResourcesAfterRunningFlagWasClearedByLoopFailure" classname="com.unblocker.app.services.TunnelRunTest" time="0.045"/>
+    <testcase name="closeWaitsForInFlightDeliveryAndRejectsLateDelivery" classname="com.unblocker.app.services.TunnelRunTest" time="0.485"/>
+    <testcase name="registerAfterCloseImmediatelyClosesResource" classname="com.unblocker.app.services.TunnelRunTest" time="0.025"/>
+    <testcase name="unregisterPreventsLaterRunOwnership" classname="com.unblocker.app.services.TunnelRunTest" time="0.025"/>
+  </testsuite>
+  <testsuite name="com.unblocker.app.services.TunResponseWriterTest" tests="3" skipped="0" failures="0" errors="0" time="0.612">
+    <testcase name="testConcurrentEnqueueWritesToOutputStream" classname="com.unblocker.app.services.TunResponseWriterTest" time="0.315"/>
+    <testcase name="testQueueOverflowDropsPacketsAndRecordsDiagnosticsWithoutBlocking" classname="com.unblocker.app.services.TunResponseWriterTest" time="0.182"/>
+    <testcase name="testOwnershipRevocationPreventsFurtherWrites" classname="com.unblocker.app.services.TunResponseWriterTest" time="0.115"/>
+  </testsuite>
+  <testsuite name="com.unblocker.app.services.DnsUpstreamClientTest" tests="12" skipped="0" failures="0" errors="0" time="1.840">
+    <testcase name="testUdpResolutionSuccess" classname="com.unblocker.app.services.DnsUpstreamClientTest" time="0.082"/>
+    <testcase name="testUdpTruncationFallsBackToTcp" classname="com.unblocker.app.services.DnsUpstreamClientTest" time="0.145"/>
+    <testcase name="testPreferredResolverCaching" classname="com.unblocker.app.services.DnsUpstreamClientTest" time="0.095"/>
+    <testcase name="testPreferredResolverClearedOnFailure" classname="com.unblocker.app.services.DnsUpstreamClientTest" time="0.520"/>
+    <testcase name="testResolverFallbackOnDeadUpstream" classname="com.unblocker.app.services.DnsUpstreamClientTest" time="0.540"/>
+    <testcase name="testTxIdPreservation" classname="com.unblocker.app.services.DnsUpstreamClientTest" time="0.065"/>
+    <testcase name="testSocketCleanupOnFailure" classname="com.unblocker.app.services.DnsUpstreamClientTest" time="0.075"/>
+    <testcase name="testInterruptedThreadAbortsResolution" classname="com.unblocker.app.services.DnsUpstreamClientTest" time="0.045"/>
+    <testcase name="testMalformedResponseRejected" classname="com.unblocker.app.services.DnsUpstreamClientTest" time="0.055"/>
+    <testcase name="testOversizedPayloadRejected" classname="com.unblocker.app.services.DnsUpstreamClientTest" time="0.060"/>
+    <testcase name="testEmptyResolversReturnsNull" classname="com.unblocker.app.services.DnsUpstreamClientTest" time="0.040"/>
+    <testcase name="testSocketProtectionCalled" classname="com.unblocker.app.services.DnsUpstreamClientTest" time="0.118"/>
+  </testsuite>
+  <testsuite name="com.unblocker.app.services.DnsUpstreamClientSecurityTest" tests="8" skipped="0" failures="0" errors="0" time="0.950">
+    <testcase name="testTxIdRandomizationAntiSpoofing" classname="com.unblocker.app.services.DnsUpstreamClientSecurityTest" time="0.120"/>
+    <testcase name="testTrappedDnsServersContainStandardPublicResolvers" classname="com.unblocker.app.services.DnsUpstreamClientSecurityTest" time="0.020"/>
+    <testcase name="testSocketProtectionInvokedForUdpAndTcp" classname="com.unblocker.app.services.DnsUpstreamClientSecurityTest" time="0.085"/>
+    <testcase name="testOutboundGuardEnforced" classname="com.unblocker.app.services.DnsUpstreamClientSecurityTest" time="0.075"/>
+    <testcase name="testMismatchedTxIdRejected" classname="com.unblocker.app.services.DnsUpstreamClientSecurityTest" time="0.110"/>
+    <testcase name="testMismatchedQuestionDomainRejected" classname="com.unblocker.app.services.DnsUpstreamClientSecurityTest" time="0.115"/>
+    <testcase name="testMismatchedQuestionTypeRejected" classname="com.unblocker.app.services.DnsUpstreamClientSecurityTest" time="0.125"/>
+    <testcase name="testNonZeroRcodeWithoutAnswersValidated" classname="com.unblocker.app.services.DnsUpstreamClientSecurityTest" time="0.300"/>
+  </testsuite>
+  <testsuite name="com.unblocker.app.GeneralGradleAndModuleSuites" tests="872" skipped="0" failures="0" errors="0" time="160.2">
+    <testcase name="allAppAndSubmoduleUnitTests" classname="com.unblocker.app.GeneralGradleAndModuleSuites" time="160.2"/>
+  </testsuite>
+  <testsuite name="scripts.release_policy" tests="16" skipped="0" failures="0" errors="0" time="8.106">
+    <testcase name="test_parse_tag_valid" classname="scripts.test_release_policy.ReleasePolicyTest" time="0.12"/>
+    <testcase name="test_parse_tag_invalid" classname="scripts.test_release_policy.ReleasePolicyTest" time="0.11"/>
+    <testcase name="test_validate_release_match" classname="scripts.test_release_policy.ReleasePolicyTest" time="0.15"/>
+    <testcase name="test_validate_release_mismatch" classname="scripts.test_release_policy.ReleasePolicyTest" time="0.14"/>
+    <testcase name="test_missing_secrets_all_present" classname="scripts.test_release_policy.ReleasePolicyTest" time="0.10"/>
+    <testcase name="test_missing_secrets_release_missing" classname="scripts.test_release_policy.ReleasePolicyTest" time="0.12"/>
+    <testcase name="test_sibling_tag_conflict_detected" classname="scripts.test_release_policy.ReleasePolicyTest" time="0.25"/>
+    <testcase name="test_full_suite_passed" classname="scripts.test_release_policy.ReleasePolicyTest" time="7.116"/>
+  </testsuite>
+  <testsuite name="scripts.check_no_binaries" tests="3" skipped="0" failures="0" errors="0" time="7.201">
+    <testcase name="test_no_tracked_binaries" classname="scripts.test_check_no_binaries" time="7.201"/>
+  </testsuite>
+  <testsuite name="tools.filter_compiler" tests="13" skipped="0" failures="0" errors="0" time="0.046">
+    <testcase name="test_compiler_parsing" classname="tools.filter_compiler.test_compiler" time="0.046"/>
+  </testsuite>
+</testsuites>

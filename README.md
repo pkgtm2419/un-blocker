@@ -106,6 +106,12 @@ latency, battery, or accuracy percentage.
 - Up to 1,000 private exact-domain allow rules.
 - Up to 1,000 private exact-domain block rules.
 - Allow rules take precedence if a domain is present in both sets.
+- User "My domains" protected ancestor subtree walk.
+- **Filtering Modes:** `SMART` mode (fail-open adaptive defense) and `APPROVED_ONLY` mode (strict user allowlist).
+- **Quick Pause:** 5-minute pause action directly from the foreground notification.
+- **Learn-an-App Mode:** Zero-permission isolated per-app traffic recording session with review-and-approve blocking.
+- **Safe CSV Export:** Export domain statistics to CSV via Storage Access Framework (SAF) with RFC 4180 escaping and formula injection defense.
+- **Rule Admission Guard:** Automatically filters out single-label rules (TLDs), public suffixes (e.g. `co.uk`), IP literals, and protected-ancestor rules before compilation or download.
 - Live filter-switch and rule re-evaluation.
 - One-tap reset for locally learned reputations.
 - Clear-all controls for private domain rules.

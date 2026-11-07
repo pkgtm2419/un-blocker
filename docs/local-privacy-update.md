@@ -21,6 +21,11 @@ Implementation checklist:
 - [x] Android 16/API 36 build target with edge-to-edge safe insets.
 - [x] Six-hour local regression cadence gated by protection intent; stopping
       protection cancels periodic work and stale logging/update settings were removed.
+- [x] Rule admission guards reject single-label, public suffix, IP literals, and protected ancestor rules.
+- [x] Fail-open SMART and APPROVED_ONLY blocking modes with 5-minute pause action via notification.
+- [x] Learn-an-App Mode: isolated 10-minute recording session using launcher intents without QUERY_ALL_PACKAGES.
+- [x] Safe CSV Export via Storage Access Framework with RFC 4180 escaping and formula injection guard.
+- [x] Forwarding saturation resilience synthesizing immediate DNS SERVFAIL packets to prevent app hangs.
 
 Tests exercise persistence/reload, identifiers differing by key, corrupt records,
 legacy migration, capacity and concurrency, boot eligibility, failed establishment,

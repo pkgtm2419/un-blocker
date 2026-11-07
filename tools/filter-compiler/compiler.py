@@ -222,6 +222,12 @@ def compile_sources(root, manifest, output_assets_dir, output_test_dir=None):
         output_assets.mkdir(parents=True, exist_ok=True)
         (output_assets / 'never-block-hosts.txt').write_text('\n'.join(sorted(never_block_domains)) + '\n', encoding='utf-8')
 
+    quarantine_file = root / 'tools/filter-compiler/quarantine.txt'
+    if quarantine_file.is_file():
+        output_assets = pathlib.Path(output_assets_dir)
+        output_assets.mkdir(parents=True, exist_ok=True)
+        (output_assets / 'rule-quarantine.txt').write_text(quarantine_file.read_text(encoding='utf-8'), encoding='utf-8')
+
     tsv_encoded = ''.join('\t'.join(row) + '\n' for row in sorted(rows)).encode('utf-8')
     bin_bytes = build_binary_ruleset(rows)
 

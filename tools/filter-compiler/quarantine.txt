@@ -1,0 +1,4 @@
+# Quarantine list for Un-Blocker filter compiler
+# Rules that are quarantined due to false positives or anomalous behavior.
+# Format: KIND\tDOMAIN (e.g. SUFFIX\tbadrule.com or EXACT\ttemp-quarantine.org)
+# Lines starting with # are comments.

@@ -179,6 +179,7 @@ class UnblockerVpnService : VpnService() {
         try {
             // Asset loading, Keystore and migration stay off the main/foreground deadline path.
             val filterEngine = ContentFilterEngine(this, preferences = preferences)
+            val uidResolver = UidResolver(this)
             val builder = Builder()
                 .setSession("Un-Blocker DNS Shield")
                 .setMtu(1500)
@@ -245,6 +246,15 @@ class UnblockerVpnService : VpnService() {
                 },
                 queryResolver = { dnsWireBytes, isIpv6, clientIp ->
                     val wireQuery = DnsPacketUtil.parseWireQuery(dnsWireBytes, isIpv6, clientIp) ?: return@TcpDnsResponder null
+                    if (RecordingSessionManager.instance.isRecordingActive()) {
+                        try {
+                            val clientAddr = java.net.InetAddress.getByAddress(clientIp)
+                            val srcAddr = java.net.InetSocketAddress(clientAddr, 0)
+                            val dstAddr = java.net.InetSocketAddress(clientAddr, 53)
+                            val uid = uidResolver.resolveUid(android.system.OsConstants.IPPROTO_TCP, srcAddr, dstAddr)
+                            RecordingSessionManager.instance.recordDomain(wireQuery.domain, uid)
+                        } catch (_: Exception) {}
+                    }
                     val filterResult = filterEngine.analyzeAndFilter(wireQuery.domain)
                     val wireDecision = if (filterResult.shouldBlock) 1 else 0
                     com.unblocker.app.data.logs.QueryLogSink.record(wireQuery.domain, wireDecision, filterResult.detectionMethod.ordinal)
@@ -329,6 +339,14 @@ class UnblockerVpnService : VpnService() {
 
                         // Autonomous local analysis
                         if (!isRunning.get()) break
+                        if (RecordingSessionManager.instance.isRecordingActive()) {
+                            try {
+                                val srcAddr = java.net.InetSocketAddress(java.net.InetAddress.getByAddress(query.srcIp), query.srcPort)
+                                val dstAddr = java.net.InetSocketAddress(java.net.InetAddress.getByAddress(query.dstIp), query.dstPort)
+                                val uid = uidResolver.resolveUid(android.system.OsConstants.IPPROTO_UDP, srcAddr, dstAddr)
+                                RecordingSessionManager.instance.recordDomain(query.domain, uid)
+                            } catch (_: Exception) {}
+                        }
                         val result = filterEngine.analyzeAndFilter(query.domain)
                         val queryDecision = if (result.shouldBlock) 1 else 0
                         com.unblocker.app.data.logs.QueryLogSink.record(query.domain, queryDecision, result.detectionMethod.ordinal)

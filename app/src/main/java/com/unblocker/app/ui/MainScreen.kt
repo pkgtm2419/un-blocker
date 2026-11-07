@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -29,6 +30,7 @@ import com.unblocker.app.services.QuickStartManager
 import com.unblocker.app.ui.components.FloatingPillNavBar
 import com.unblocker.app.ui.components.NavItem
 import com.unblocker.app.ui.extensions.ExtensionsScreen
+import com.unblocker.app.ui.learn.LearnAppScreen
 import com.unblocker.app.ui.logs.LogViewerScreen
 import com.unblocker.app.ui.screens.UnblockerScreen
 
@@ -87,6 +89,7 @@ fun MainScreen(
     val navItems = remember {
         listOf(
             NavItem(title = "Home", icon = Icons.Filled.Security),
+            NavItem(title = "Learn", icon = Icons.Filled.Apps),
             NavItem(title = "Logs", icon = Icons.AutoMirrored.Filled.List)
         )
     }
@@ -101,19 +104,28 @@ fun MainScreen(
     } else {
         Box(modifier = Modifier.fillMaxSize()) {
             Surface(modifier = Modifier.fillMaxSize()) {
-                if (selectedTab == 0) {
-                    UnblockerScreen(
-                        preferences = preferences,
-                        quickStartManager = quickStartManager,
-                        onRequestVpnPermission = requestPermissionsAndStart,
-                        contentPadding = contentPadding,
-                        onOpenSettings = { isExtensionsOpen = true },
-                        onNavigateToLogs = { selectedTab = 1 }
-                    )
-                } else {
-                    LogViewerScreen(
-                        contentPadding = contentPadding
-                    )
+                when (selectedTab) {
+                    0 -> {
+                        UnblockerScreen(
+                            preferences = preferences,
+                            quickStartManager = quickStartManager,
+                            onRequestVpnPermission = requestPermissionsAndStart,
+                            contentPadding = contentPadding,
+                            onOpenSettings = { isExtensionsOpen = true },
+                            onNavigateToLogs = { selectedTab = 2 }
+                        )
+                    }
+                    1 -> {
+                        LearnAppScreen(
+                            onNavigateBack = { selectedTab = 0 },
+                            contentPadding = contentPadding
+                        )
+                    }
+                    else -> {
+                        LogViewerScreen(
+                            contentPadding = contentPadding
+                        )
+                    }
                 }
             }
 

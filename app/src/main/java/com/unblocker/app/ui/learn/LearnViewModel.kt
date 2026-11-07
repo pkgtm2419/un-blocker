@@ -12,6 +12,7 @@ import com.unblocker.app.logic.analysis.UserFeedback
 import com.unblocker.app.services.RecordingSessionManager
 import com.unblocker.app.services.SessionDomain
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -51,7 +52,8 @@ sealed interface LearnUiState {
     data class SelectingApp(
         val installedApps: List<AppItem>,
         val filteredApps: List<AppItem>,
-        val query: String = ""
+        val query: String = "",
+        val isLoading: Boolean = false
     ) : LearnUiState
 
     data class Recording(
@@ -74,7 +76,9 @@ class LearnViewModel @Inject constructor(
 ) : AndroidViewModel(application) {
 
     private val sessionManager = RecordingSessionManager.instance
-    private val _uiState = MutableStateFlow<LearnUiState>(LearnUiState.SelectingApp(emptyList(), emptyList()))
+    private val _uiState = MutableStateFlow<LearnUiState>(
+        LearnUiState.SelectingApp(emptyList(), emptyList(), isLoading = true)
+    )
     val uiState: StateFlow<LearnUiState> = _uiState.asStateFlow()
 
     private var timerJob: Job? = null
@@ -85,14 +89,9 @@ class LearnViewModel @Inject constructor(
     }
 
     fun loadInstalledLauncherApps() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val pm = getApplication<Application>().packageManager
             val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-            val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                PackageManager.ResolveInfoFlags.of(0)
-            } else {
-                0
-            }
             val resolveInfos = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 pm.queryIntentActivities(intent, PackageManager.ResolveInfoFlags.of(0))
             } else {
@@ -105,12 +104,15 @@ class LearnViewModel @Inject constructor(
                 // Don't include self
                 if (pkg == getApplication<Application>().packageName) return@mapNotNull null
                 val label = ri.loadLabel(pm).toString()
-                val icon = ri.loadIcon(pm)
-                AppItem(pkg, label, icon)
+                AppItem(packageName = pkg, label = label)
             }.distinctBy { it.packageName }.sortedBy { it.label.lowercase(Locale.ROOT) }
 
             allApps = appList
-            _uiState.value = LearnUiState.SelectingApp(appList, appList)
+            _uiState.value = LearnUiState.SelectingApp(
+                installedApps = appList,
+                filteredApps = appList,
+                isLoading = false
+            )
         }
     }
 
@@ -122,7 +124,7 @@ class LearnViewModel @Inject constructor(
                 it.label.contains(query, ignoreCase = true) || it.packageName.contains(query, ignoreCase = true)
             }
         }
-        _uiState.value = LearnUiState.SelectingApp(allApps, filtered, query)
+        _uiState.value = LearnUiState.SelectingApp(allApps, filtered, query, isLoading = false)
     }
 
     fun startRecording(app: AppItem) {

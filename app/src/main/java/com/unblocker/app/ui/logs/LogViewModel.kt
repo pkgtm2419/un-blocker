@@ -62,26 +62,28 @@ class LogViewModel @Inject constructor(
     private val _isLoggingPaused = MutableStateFlow(preferences.isQueryLoggingPaused.value)
     val isLoggingPaused: StateFlow<Boolean> = _isLoggingPaused.asStateFlow()
 
-    val totalDomains: StateFlow<Long> = domainLogDao.getTotalDomainsCountFlow()
+    private val aggregateFlow = domainLogDao.getAggregateStatsFlow()
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            com.unblocker.data.db.dao.DomainLogAggregate(0L, 0L, 0L, null, null)
+        )
+
+    val totalDomains: StateFlow<Long> = aggregateFlow.map { it.totalDomains }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
 
-    val totalCalls: StateFlow<Long> = domainLogDao.getTotalCallsCountFlow()
+    val totalCalls: StateFlow<Long> = aggregateFlow.map { it.totalCalls }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
 
-    val totalBlocked: StateFlow<Long> = domainLogDao.getTotalBlockedCountFlow()
+    val totalBlocked: StateFlow<Long> = aggregateFlow.map { it.totalBlocked }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
 
-    val protectionSummary: StateFlow<com.unblocker.app.ui.model.LocalProtectionSummary> = combine(
-        totalCalls,
-        totalBlocked,
-        domainLogDao.getFirstObservedTimeFlow(),
-        domainLogDao.getLastObservedTimeFlow()
-    ) { calls, blocked, first, last ->
+    val protectionSummary: StateFlow<com.unblocker.app.ui.model.LocalProtectionSummary> = aggregateFlow.map { agg ->
         com.unblocker.app.ui.model.LocalProtectionSummary(
-            dnsQueries = calls,
-            blockedDnsQueries = blocked,
-            firstObservedMs = first,
-            lastObservedMs = last
+            dnsQueries = agg.totalCalls,
+            blockedDnsQueries = agg.totalBlocked,
+            firstObservedMs = agg.firstObserved,
+            lastObservedMs = agg.lastObserved
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.unblocker.app.ui.model.LocalProtectionSummary(0L, 0L, null, null))
 

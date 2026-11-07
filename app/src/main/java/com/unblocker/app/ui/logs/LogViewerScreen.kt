@@ -524,7 +524,7 @@ fun DomainStatCard(
 
                     if (events.isEmpty()) {
                         Text(
-                            text = "Loading events…",
+                            text = "Aggregated statistics: ${stat.callCount} total queries (${stat.blockedCount} blocked). Query events are summarized for maximum privacy.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

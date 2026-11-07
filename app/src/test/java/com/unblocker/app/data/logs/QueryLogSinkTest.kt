@@ -43,6 +43,9 @@ class QueryLogSinkTest {
         }
 
         override fun getDomainStatsFlow(filter: Int, query: String?, sortByCalls: Int, limit: Int): Flow<List<DomainStatEntity>> = emptyFlow()
+        override fun getDomainStatsByCallsFlow(filter: Int, query: String?, limit: Int): Flow<List<DomainStatEntity>> = emptyFlow()
+        override fun getDomainStatsByRecentFlow(filter: Int, query: String?, limit: Int): Flow<List<DomainStatEntity>> = emptyFlow()
+        override fun getAggregateStatsFlow(): Flow<com.unblocker.data.db.dao.DomainLogAggregate> = emptyFlow()
         override suspend fun getEventsForDomain(domain: String, limit: Int): List<DomainEventEntity> = emptyList()
         override suspend fun getAllStatsForExport(): List<DomainStatEntity> = emptyList()
         override fun getTotalDomainsCountFlow(): Flow<Long> = emptyFlow()

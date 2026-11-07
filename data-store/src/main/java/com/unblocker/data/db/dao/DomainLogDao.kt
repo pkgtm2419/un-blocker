@@ -19,6 +19,14 @@ data class DomainStatUpsert(
     val lastReason: Int
 )
 
+data class DomainLogAggregate(
+    val totalDomains: Long,
+    val totalCalls: Long,
+    val totalBlocked: Long,
+    val firstObserved: Long?,
+    val lastObserved: Long?
+)
+
 /**
  * DAO for domain aggregated statistics and bounded event history.
  */
@@ -68,17 +76,47 @@ interface DomainLogDao {
         SELECT * FROM domain_stats
         WHERE (:filter = 0 OR (:filter = 1 AND blocked_count > 0) OR (:filter = 2 AND allowed_count > 0))
           AND (:query IS NULL OR domain LIKE :query || '%')
-        ORDER BY
-            CASE WHEN :sortByCalls = 1 THEN call_count END DESC,
-            CASE WHEN :sortByCalls = 0 THEN last_seen END DESC
+        ORDER BY call_count DESC
         LIMIT :limit
     """)
+    fun getDomainStatsByCallsFlow(
+        filter: Int,
+        query: String?,
+        limit: Int = 200
+    ): Flow<List<DomainStatEntity>>
+
+    @Query("""
+        SELECT * FROM domain_stats
+        WHERE (:filter = 0 OR (:filter = 1 AND blocked_count > 0) OR (:filter = 2 AND allowed_count > 0))
+          AND (:query IS NULL OR domain LIKE :query || '%')
+        ORDER BY last_seen DESC
+        LIMIT :limit
+    """)
+    fun getDomainStatsByRecentFlow(
+        filter: Int,
+        query: String?,
+        limit: Int = 200
+    ): Flow<List<DomainStatEntity>>
+
     fun getDomainStatsFlow(
         filter: Int, // 0 = all, 1 = blocked, 2 = allowed
         query: String?,
         sortByCalls: Int, // 1 = sort by call_count, 0 = sort by last_seen
         limit: Int = 200
-    ): Flow<List<DomainStatEntity>>
+    ): Flow<List<DomainStatEntity>> =
+        if (sortByCalls == 1) getDomainStatsByCallsFlow(filter, query, limit)
+        else getDomainStatsByRecentFlow(filter, query, limit)
+
+    @Query("""
+        SELECT
+            COUNT(*) AS totalDomains,
+            COALESCE(SUM(call_count), 0) AS totalCalls,
+            COALESCE(SUM(blocked_count), 0) AS totalBlocked,
+            MIN(first_seen) AS firstObserved,
+            MAX(last_seen) AS lastObserved
+        FROM domain_stats
+    """)
+    fun getAggregateStatsFlow(): Flow<DomainLogAggregate>
 
     @Query("SELECT * FROM domain_events WHERE domain = :domain ORDER BY ts DESC LIMIT :limit")
     suspend fun getEventsForDomain(domain: String, limit: Int = 50): List<DomainEventEntity>

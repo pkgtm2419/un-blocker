@@ -29,7 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.unblocker.app.ui.theme.TealAccent
 import com.unblocker.app.ui.theme.TealPrimary
 
@@ -37,7 +37,7 @@ import com.unblocker.app.ui.theme.TealPrimary
 @Composable
 fun LearnAppScreen(
     onNavigateBack: () -> Unit,
-    viewModel: LearnViewModel = viewModel(),
+    viewModel: LearnViewModel = hiltViewModel(),
     contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -93,6 +93,7 @@ fun LearnAppScreen(
                     AppSelectionContent(
                         apps = s.filteredApps,
                         query = s.query,
+                        isLoading = s.isLoading,
                         onQueryChange = viewModel::searchApps,
                         onSelectApp = viewModel::startRecording
                     )
@@ -130,6 +131,7 @@ fun LearnAppScreen(
 private fun AppSelectionContent(
     apps: List<AppItem>,
     query: String,
+    isLoading: Boolean,
     onQueryChange: (String) -> Unit,
     onSelectApp: (AppItem) -> Unit
 ) {
@@ -154,11 +156,42 @@ private fun AppSelectionContent(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(bottom = 16.dp)
-        ) {
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(32.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Loading installed applications…",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        } else if (apps.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(32.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = if (query.isEmpty()) "No installed launcher apps found" else "No matching apps found",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(bottom = 16.dp)
+            ) {
             items(apps, key = { it.packageName }) { app ->
                 Surface(
                     shape = RoundedCornerShape(12.dp),
@@ -199,6 +232,7 @@ private fun AppSelectionContent(
                     }
                 }
             }
+        }
         }
     }
 }

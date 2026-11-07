@@ -3,6 +3,7 @@ package com.unblocker.app.ui
 import android.app.Activity
 import android.net.VpnService
 import android.os.Build
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
@@ -96,6 +97,10 @@ fun MainScreen(
 
     val navBarBottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val contentPadding = PaddingValues(bottom = 64.dp + 16.dp + navBarBottomInset)
+
+    BackHandler(enabled = !isExtensionsOpen && selectedTab != 0) {
+        selectedTab = 0
+    }
 
     if (isExtensionsOpen) {
         ExtensionsScreen(

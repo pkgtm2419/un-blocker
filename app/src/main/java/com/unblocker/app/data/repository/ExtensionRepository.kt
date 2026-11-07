@@ -5,10 +5,13 @@ import android.content.SharedPreferences
 import com.unblocker.app.data.model.ExtensionFilter
 import com.unblocker.app.data.model.FilterCategories
 import com.unblocker.app.logic.rules.ExtensionRuleStore
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -29,6 +32,7 @@ class ExtensionRepository private constructor(private val context: Context) {
         context.getSharedPreferences("extension_preferences", Context.MODE_PRIVATE)
 
     private val extensionsDir = File(context.filesDir, "extensions").apply { mkdirs() }
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     private val _extensions = MutableStateFlow<List<ExtensionFilter>>(emptyList())
     val extensions: StateFlow<List<ExtensionFilter>> = _extensions.asStateFlow()
@@ -44,7 +48,13 @@ class ExtensionRepository private constructor(private val context: Context) {
 
     init {
         loadExtensions()
-        reloadActiveRules()
+        reloadActiveRulesAsync()
+    }
+
+    fun reloadActiveRulesAsync() {
+        scope.launch {
+            reloadActiveRules()
+        }
     }
 
     fun setAutoUpdateEnabled(enabled: Boolean) {
@@ -58,14 +68,14 @@ class ExtensionRepository private constructor(private val context: Context) {
         }
         _extensions.value = updated
         persistExtensions(updated)
-        reloadActiveRules()
+        reloadActiveRulesAsync()
     }
 
     fun setAllEnabled(enabled: Boolean) {
         val updated = _extensions.value.map { it.copy(isEnabled = enabled) }
         _extensions.value = updated
         persistExtensions(updated)
-        reloadActiveRules()
+        reloadActiveRulesAsync()
     }
 
     fun addCustomFilter(name: String, url: String) {
@@ -93,7 +103,7 @@ class ExtensionRepository private constructor(private val context: Context) {
         persistExtensions(updated)
         val file = File(extensionsDir, "$id.rules")
         if (file.exists()) file.delete()
-        reloadActiveRules()
+        reloadActiveRulesAsync()
     }
 
     fun reloadActiveRules() {

@@ -56,10 +56,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -211,7 +211,11 @@ fun UnblockerScreen(
                     Box(
                         modifier = Modifier
                             .size(outerGlowSize)
-                            .scale(if (isRunning) pulseGlowScale else 1.0f)
+                            .graphicsLayer {
+                                val s = if (isRunning) pulseGlowScale else 1.0f
+                                scaleX = s
+                                scaleY = s
+                            }
                             .background(
                                 brush = Brush.radialGradient(
                                     colors = listOf(
@@ -228,7 +232,10 @@ fun UnblockerScreen(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
                             .size(buttonSize)
-                            .scale(pressScale)
+                            .graphicsLayer {
+                                scaleX = pressScale
+                                scaleY = pressScale
+                            }
                             .shadow(
                                 elevation = if (isRunning) 18.dp else 8.dp,
                                 shape = CircleShape,

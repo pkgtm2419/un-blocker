@@ -37,16 +37,13 @@ class FilteringPreferences(context: Context) : FilteringPreferenceStore {
     private val _protectionEnabled = MutableStateFlow(prefs.getBoolean(KEY_PROTECTION_ENABLED,
         prefs.getBoolean(KEY_SERVICE_RUNNING, false) && prefs.getBoolean(KEY_AD_BLOCKING, true)).also {
         if (!prefs.contains(KEY_PROTECTION_ENABLED)) {
-            prefs.edit().putBoolean(KEY_PROTECTION_ENABLED, it).commit()
+            prefs.edit().putBoolean(KEY_PROTECTION_ENABLED, it).apply()
         }
     })
     val protectionEnabled: StateFlow<Boolean> = _protectionEnabled.asStateFlow()
 
     fun setProtectionEnabled(enabled: Boolean) {
-        val committed = runCatching { prefs.edit().putBoolean(KEY_PROTECTION_ENABLED, enabled).commit() }.getOrDefault(false)
-        if (!committed) {
-            prefs.edit().putBoolean(KEY_PROTECTION_ENABLED, enabled).apply()
-        }
+        prefs.edit().putBoolean(KEY_PROTECTION_ENABLED, enabled).apply()
         _protectionEnabled.value = enabled
     }
 

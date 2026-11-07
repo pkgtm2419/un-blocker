@@ -71,6 +71,9 @@ class RuleRecoveryFlowTest {
         override suspend fun upsertStat(domain: String, callDelta: Long, blockedDelta: Long, allowedDelta: Long, ts: Long, lastDecision: Int, lastReason: Int) {}
         override suspend fun insertEvents(events: List<DomainEventEntity>) {}
         override fun getDomainStatsFlow(filter: Int, query: String?, sortByCalls: Int, limit: Int): Flow<List<DomainStatEntity>> = emptyFlow()
+        override fun getDomainStatsByCallsFlow(filter: Int, query: String?, limit: Int): Flow<List<DomainStatEntity>> = emptyFlow()
+        override fun getDomainStatsByRecentFlow(filter: Int, query: String?, limit: Int): Flow<List<DomainStatEntity>> = emptyFlow()
+        override fun getAggregateStatsFlow(): Flow<com.unblocker.data.db.dao.DomainLogAggregate> = emptyFlow()
         override suspend fun getEventsForDomain(domain: String, limit: Int): List<DomainEventEntity> = emptyList()
         override suspend fun getAllStatsForExport(): List<DomainStatEntity> = emptyList()
         override fun getTotalDomainsCountFlow(): Flow<Long> = emptyFlow()

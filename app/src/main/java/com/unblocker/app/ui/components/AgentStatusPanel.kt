@@ -60,7 +60,6 @@ fun AgentStatusPanel(
     val stateColors = LocalVpnStateColors.current
     var isExpanded by remember { mutableStateOf(false) }
     val isRunning = serviceStatus == ServiceStatus.RUNNING
-    val pulseScale = rememberBreathingPulse(minScale = 0.90f, maxScale = 1.15f, durationMillis = 1500)
     val protectionState = remember(serviceStatus, isPrivateDnsActive) {
         com.unblocker.app.ui.model.ProtectionUiStateMapper.from(
             status = serviceStatus,

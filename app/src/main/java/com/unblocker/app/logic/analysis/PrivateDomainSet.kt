@@ -32,7 +32,34 @@ class PrivateDomainSet(
 
     @Synchronized fun contains(domain: String): Boolean {
         val normalized = DomainName.normalize(domain) ?: return false
+        // 1. Exact match
+        val exactId = runCatching { identifier(normalized) }.getOrNull()
+        if (exactId != null && exactId in identifiers) return true
+
+        // 2. Subtree match on host itself
+        val subtreeId = runCatching { identifier("subtree:$normalized") }.getOrNull()
+        if (subtreeId != null && subtreeId in identifiers) return true
+
+        // 3. Subtree match on any parent domain
+        var dot = normalized.indexOf('.')
+        while (dot != -1) {
+            val parent = normalized.substring(dot + 1)
+            val parentSubtreeId = runCatching { identifier("subtree:$parent") }.getOrNull()
+            if (parentSubtreeId != null && parentSubtreeId in identifiers) return true
+            dot = normalized.indexOf('.', dot + 1)
+        }
+
+        return false
+    }
+
+    @Synchronized fun containsExact(domain: String): Boolean {
+        val normalized = DomainName.normalize(domain) ?: return false
         return runCatching { identifier(normalized) in identifiers }.getOrDefault(false)
+    }
+
+    @Synchronized fun containsSubtree(domain: String): Boolean {
+        val normalized = DomainName.normalize(domain) ?: return false
+        return runCatching { identifier("subtree:$normalized") in identifiers }.getOrDefault(false)
     }
 
     @Synchronized fun add(domain: String): Boolean {
@@ -44,12 +71,26 @@ class PrivateDomainSet(
         return true
     }
 
-    @Synchronized fun remove(domain: String): Boolean {
+    @Synchronized fun addSubtree(domain: String): Boolean {
         val normalized = DomainName.normalize(domain) ?: return false
-        val id = runCatching { identifier(normalized) }.getOrNull() ?: return false
-        if (!identifiers.remove(id)) return false
+        val id = runCatching { identifier("subtree:$normalized") }.getOrNull() ?: return false
+        if (!identifiers.add(id)) return false
+        while (identifiers.size > capacity) identifiers.remove(identifiers.first())
         runCatching { save() }
         return true
+    }
+
+    @Synchronized fun remove(domain: String): Boolean {
+        val normalized = DomainName.normalize(domain) ?: return false
+        val id = runCatching { identifier(normalized) }.getOrNull()
+        val subtreeId = runCatching { identifier("subtree:$normalized") }.getOrNull()
+        var removed = false
+        if (id != null && identifiers.remove(id)) removed = true
+        if (subtreeId != null && identifiers.remove(subtreeId)) removed = true
+        if (removed) {
+            runCatching { save() }
+        }
+        return removed
     }
 
     @Synchronized fun clear() {
@@ -60,31 +101,28 @@ class PrivateDomainSet(
     @Synchronized fun size(): Int = identifiers.size
 
     private fun identifier(value: String): String {
-        val mac = Mac.getInstance("HmacSHA256")
+        val mac = Mac.getInstance(ALGORITHM)
         mac.init(key)
-        return mac.doFinal(value.toByteArray(Charsets.UTF_8))
-            .joinToString("") { "%02x".format(it.toInt() and 255) }
+        return mac.doFinal(value.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
     }
 
     private fun save() {
-        val destination = file ?: return
-        destination.parentFile?.mkdirs()
-        val temporary = File(destination.parentFile, "${destination.name}.tmp")
-        val snapshot = buildString {
-            append(header).append('\n')
-            identifiers.forEach { append(it).append('\n') }
-        }
+        if (file == null) return
+        val temp = File.createTempFile("pds-", ".tmp", file.parentFile)
         try {
-            FileOutputStream(temporary).use { it.write(snapshot.toByteArray(Charsets.UTF_8)) }
-            Files.move(temporary.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING,
-                StandardCopyOption.ATOMIC_MOVE)
+            FileOutputStream(temp).bufferedWriter(Charsets.UTF_8).use { writer ->
+                writer.append(header).append('\n')
+                identifiers.forEach { id -> writer.append(id).append('\n') }
+            }
+            Files.move(temp.toPath(), file.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
         } finally {
-            temporary.delete()
+            if (temp.exists()) temp.delete()
         }
     }
 
     companion object {
-        const val DEFAULT_CAPACITY = 1_000
+        const val DEFAULT_CAPACITY = 1000
+        private const val ALGORITHM = "HmacSHA256"
         private val IDENTIFIER_PATTERN = Regex("[0-9a-f]{64}")
     }
 }

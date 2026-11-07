@@ -9,6 +9,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONObject
 
+enum class BlockingMode {
+    SMART,
+    APPROVED_ONLY
+}
+
 interface FilteringPreferenceStore {
     val isQueryLoggingPaused: StateFlow<Boolean>
     fun setQueryLoggingPaused(paused: Boolean)
@@ -74,6 +79,44 @@ class FilteringPreferences(context: Context) : FilteringPreferenceStore {
     )
     val learningStartTime: StateFlow<Long> = _learningStartTime.asStateFlow()
 
+    private val _blockingMode = MutableStateFlow(
+        try {
+            BlockingMode.valueOf(prefs.getString(KEY_BLOCKING_MODE, BlockingMode.SMART.name) ?: BlockingMode.SMART.name)
+        } catch (_: Exception) {
+            BlockingMode.SMART
+        }
+    )
+    val blockingMode: StateFlow<BlockingMode> = _blockingMode.asStateFlow()
+
+    fun setBlockingMode(mode: BlockingMode) {
+        prefs.edit().putString(KEY_BLOCKING_MODE, mode.name).apply()
+        _blockingMode.value = mode
+    }
+
+    private val _pausedUntil = MutableStateFlow(prefs.getLong(KEY_PAUSED_UNTIL, 0L))
+    val pausedUntil: StateFlow<Long> = _pausedUntil.asStateFlow()
+
+    fun pauseProtection(durationMs: Long = 5 * 60 * 1000L) {
+        val until = System.currentTimeMillis() + durationMs
+        prefs.edit().putLong(KEY_PAUSED_UNTIL, until).apply()
+        _pausedUntil.value = until
+    }
+
+    fun resumeProtection() {
+        prefs.edit().putLong(KEY_PAUSED_UNTIL, 0L).apply()
+        _pausedUntil.value = 0L
+    }
+
+    fun isPaused(): Boolean = System.currentTimeMillis() < _pausedUntil.value
+
+    private val _blockAnalyticsBreakage = MutableStateFlow(prefs.getBoolean(KEY_BLOCK_ANALYTICS_BREAKAGE, true))
+    val blockAnalyticsBreakage: StateFlow<Boolean> = _blockAnalyticsBreakage.asStateFlow()
+
+    fun setBlockAnalyticsBreakage(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_BLOCK_ANALYTICS_BREAKAGE, enabled).apply()
+        _blockAnalyticsBreakage.value = enabled
+    }
+
     fun getDaysSinceInstall(): Int {
         val start = _learningStartTime.value
         val now = System.currentTimeMillis()
@@ -132,6 +175,7 @@ class FilteringPreferences(context: Context) : FilteringPreferenceStore {
                 .putBoolean(KEY_AUTO_BOOT, defaultConfig.autoRestartOnBootEnabled)
                 .putInt(KEY_HEALTH_CHECK_INTERVAL, (defaultConfig.healthCheckInterval / 60000).toInt()
                     .coerceAtLeast(HealthCheckPolicy.DEFAULT_INTERVAL_MINUTES))
+                .putString(KEY_BLOCKING_MODE, BlockingMode.SMART.name)
                 .apply()
 
             _adBlockingEnabled.value = defaultConfig.adBlockingEnabled
@@ -139,6 +183,7 @@ class FilteringPreferences(context: Context) : FilteringPreferenceStore {
             _autoRestartOnBoot.value = defaultConfig.autoRestartOnBootEnabled
             _healthCheckIntervalMinutes.value = (defaultConfig.healthCheckInterval / 60000).toInt()
                 .coerceAtLeast(HealthCheckPolicy.DEFAULT_INTERVAL_MINUTES)
+            _blockingMode.value = BlockingMode.SMART
         }
     }
 
@@ -161,6 +206,9 @@ class FilteringPreferences(context: Context) : FilteringPreferenceStore {
         private const val KEY_LAST_HEALTH_CHECK = "last_health_check"
         private const val KEY_LEARNING_START_TIME = "learning_start_time"
         private const val KEY_QUERY_LOGGING_PAUSED = "query_logging_paused"
+        private const val KEY_BLOCKING_MODE = "blocking_mode"
+        private const val KEY_PAUSED_UNTIL = "paused_until"
+        private const val KEY_BLOCK_ANALYTICS_BREAKAGE = "block_analytics_breakage"
 
         @Volatile
         private var INSTANCE: FilteringPreferences? = null

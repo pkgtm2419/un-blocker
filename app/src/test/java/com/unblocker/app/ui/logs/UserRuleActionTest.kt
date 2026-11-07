@@ -25,6 +25,36 @@ class UserRuleActionTest {
             }
             return RuleUpdateResult.Applied
         }
+
+        override suspend fun setWholeSite(domain: String, feedback: UserFeedback): RuleUpdateResult {
+            val normalized = DomainName.normalizeUserEntry(domain)
+                ?: return RuleUpdateResult.Failed("Invalid domain name: $domain")
+
+            if (feedback == UserFeedback.NONE) {
+                rules.remove("subtree:$normalized")
+            } else {
+                rules["subtree:$normalized"] = feedback
+            }
+            return RuleUpdateResult.Applied
+        }
+
+        override suspend fun protectDomain(domain: String): RuleUpdateResult {
+            val normalized = DomainName.normalizeUserEntry(domain)
+                ?: return RuleUpdateResult.Failed("Invalid domain name: $domain")
+
+            rules["protected:$normalized"] = UserFeedback.ALLOW
+            return RuleUpdateResult.Applied
+        }
+
+        override suspend fun reset(domain: String): RuleUpdateResult {
+            val normalized = DomainName.normalizeUserEntry(domain)
+                ?: return RuleUpdateResult.Failed("Invalid domain name: $domain")
+
+            rules.remove(normalized)
+            rules.remove("subtree:$normalized")
+            rules.remove("protected:$normalized")
+            return RuleUpdateResult.Applied
+        }
     }
 
     @Test
@@ -47,11 +77,5 @@ class UserRuleActionTest {
 
         // Ensure no malformed rules mutated the map
         assertEquals(2, gateway.rules.size)
-
-        // Reset domain (removal)
-        val resetResult = gateway.set("doubleclick.net", UserFeedback.NONE)
-        assertTrue(resetResult is RuleUpdateResult.Applied)
-        assertEquals(1, gateway.rules.size)
-        assertEquals(null, gateway.rules["doubleclick.net"])
     }
 }

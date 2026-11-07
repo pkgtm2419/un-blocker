@@ -39,6 +39,8 @@ object DeviceLearning {
         evidenceInstance?.flush()
     }
     fun memoryEvidenceStore()=PrivateEvidenceStore(KeyGenerator.getInstance("HmacSHA256").apply {init(256)}.generateKey())
+    fun memoryDomainSet() = PrivateDomainSet(KeyGenerator.getInstance("HmacSHA256").apply { init(256) }.generateKey())
+    fun memoryAllowlist() = memoryDomainSet()
     private fun ruleFile(context:Context,name:String):File {
         val legacy=File(context.noBackupFilesDir,"$name-v1")
         return if(legacy.exists()) legacy else File(context.noBackupFilesDir,"$name-v3")
@@ -54,16 +56,27 @@ object DeviceLearning {
         return changed
     }
 
+    @Synchronized fun setUserRuleSubtree(context:Context,domain:String,feedback:UserFeedback):Boolean {
+        val changed=when(feedback) {
+            UserFeedback.ALLOW -> { blocklist(context).remove(domain); allowlist(context).addSubtree(domain) }
+            UserFeedback.BLOCK -> { allowlist(context).remove(domain); blocklist(context).addSubtree(domain) }
+            UserFeedback.NONE -> { val a=allowlist(context).remove(domain); val b=blocklist(context).remove(domain); a||b }
+        }
+        policy(context).feedback(domain,feedback)
+        return changed
+    }
+
     @Synchronized fun store(context: Context): PrivateReputationStore {
         instance?.let { return it }
         val legacy = File(context.filesDir, "learned_trackers.txt")
         val result = try {
-            PrivateReputationStore(deviceKey(), File(context.noBackupFilesDir, "learning-v1"))
-                .apply { migrate(legacy) }
+            val key = deviceKey()
+            val file = File(context.noBackupFilesDir, "learned_trackers.bin")
+            PrivateReputationStore(key, file).apply { migrate(legacy) }
         } catch (_: Exception) {
-            // No plaintext fallback: ephemeral learning if device storage/Keystore is unavailable.
             legacy.delete()
-            memoryStore()
+            val key = KeyGenerator.getInstance("HmacSHA256").apply { init(256) }.generateKey()
+            PrivateReputationStore(key, null)
         }
         instance = result
         return result
@@ -71,12 +84,12 @@ object DeviceLearning {
 
     @Synchronized fun allowlist(context: Context): PrivateDomainSet {
         allowlistInstance?.let { return it }
-        val result = try {
-            val file=ruleFile(context,"allowlist")
-            PrivateDomainSet(ruleKey(file,"allowlist"),file)
-        } catch (_: Exception) {
-            // No plaintext fallback: exceptions remain memory-only if protected storage fails.
-            memoryAllowlist()
+        val file = ruleFile(context, "allowlist")
+        val result = runCatching {
+            PrivateDomainSet(ruleKey(file, "allowlist"), file)
+        }.getOrElse {
+            val ephemeral = KeyGenerator.getInstance("HmacSHA256").apply { init(256) }.generateKey()
+            PrivateDomainSet(ephemeral, null)
         }
         allowlistInstance = result
         return result
@@ -84,60 +97,22 @@ object DeviceLearning {
 
     @Synchronized fun blocklist(context: Context): PrivateDomainSet {
         blocklistInstance?.let { return it }
-        val result = try {
-            val file=ruleFile(context,"blocklist")
-            PrivateDomainSet(ruleKey(file,"blocklist"),file)
-        } catch (_: Exception) {
-            // No plaintext fallback: rules remain memory-only if protected storage fails.
-            memoryDomainSet()
+        val file = ruleFile(context, "blocklist")
+        val result = runCatching {
+            PrivateDomainSet(ruleKey(file, "blocklist"), file)
+        }.getOrElse {
+            val ephemeral = KeyGenerator.getInstance("HmacSHA256").apply { init(256) }.generateKey()
+            PrivateDomainSet(ephemeral, null)
         }
         blocklistInstance = result
         return result
     }
 
-    fun memoryStore() = PrivateReputationStore(KeyGenerator.getInstance("HmacSHA256").apply {
-        init(256)
-    }.generateKey())
-
-    fun memoryDomainSet() = PrivateDomainSet(KeyGenerator.getInstance("HmacSHA256").apply {
-        init(256)
-    }.generateKey())
-
-    fun memoryAllowlist() = memoryDomainSet()
-
-    @Synchronized fun clear(context: Context) {
-        store(context).clear()
-        evidenceStore(context).clear()
-        // Also remove an older snapshot if this process fell back to a memory-only store.
-        listOf(File(context.noBackupFilesDir, "learning-v1"),
-            File(context.noBackupFilesDir, "learning-v1.tmp"),
-            File(context.noBackupFilesDir,"learning-v3"),File(context.noBackupFilesDir,"learning-v3.tmp"),
-            File(context.filesDir, "learned_trackers.txt")).forEach { file ->
-            check(!file.exists() || file.delete()) { "Learning cleanup failed" }
-        }
-    }
-
-    @Synchronized fun clearAllowlist(context: Context) {
-        allowlist(context).clear()
-        listOf(File(context.noBackupFilesDir, "allowlist-v1"),
-            File(context.noBackupFilesDir,"allowlist-v3"),File(context.noBackupFilesDir,"allowlist-v3.tmp"),
-            File(context.noBackupFilesDir, "allowlist-v1.tmp")).forEach { file ->
-            check(!file.exists() || file.delete()) { "Allowlist cleanup failed" }
-        }
-    }
-
-    @Synchronized fun clearBlocklist(context: Context) {
-        blocklist(context).clear()
-        listOf(File(context.noBackupFilesDir, "blocklist-v1"),
-            File(context.noBackupFilesDir,"blocklist-v3"),File(context.noBackupFilesDir,"blocklist-v3.tmp"),
-            File(context.noBackupFilesDir, "blocklist-v1.tmp")).forEach { file ->
-            check(!file.exists() || file.delete()) { "Blocklist cleanup failed" }
-        }
-    }
-
-    fun clearRules(context: Context) {
-        clearAllowlist(context)
-        clearBlocklist(context)
-        evidenceStore(context).clearFeedback()
+    @Synchronized fun clearForTesting() {
+        instance = null
+        allowlistInstance = null
+        blocklistInstance = null
+        evidenceInstance = null
+        policyInstance = null
     }
 }

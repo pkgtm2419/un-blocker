@@ -9,4 +9,7 @@ sealed interface RuleUpdateResult {
 
 interface UserRuleGateway {
     suspend fun set(domain: String, feedback: UserFeedback): RuleUpdateResult
+    suspend fun setWholeSite(domain: String, feedback: UserFeedback): RuleUpdateResult
+    suspend fun protectDomain(domain: String): RuleUpdateResult
+    suspend fun reset(domain: String): RuleUpdateResult
 }

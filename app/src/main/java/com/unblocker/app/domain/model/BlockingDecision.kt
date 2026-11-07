@@ -1,5 +1,7 @@
 package com.unblocker.app.domain.model
 
+import com.unblocker.app.logic.rules.RuleKind
+
 enum class BlockingAction {
     BLOCK,
     ALLOW
@@ -13,8 +15,23 @@ enum class BlockingCategory {
     NORMAL
 }
 
-enum class DecisionReason { ALLOWED, USER_ALLOW, USER_BLOCK, STATIC_RULE, LEARNED_EVIDENCE,
-    ADULT_STATIC, ADULT_TLD, ADULT_PATTERN }
+enum class DecisionReason {
+    ALLOWED,
+    USER_ALLOW,
+    USER_BLOCK,
+    STATIC_RULE,
+    LEARNED_EVIDENCE,
+    ADULT_STATIC,
+    ADULT_TLD,
+    ADULT_PATTERN,
+    // New reasons per spec Section 2.2
+    PROTECTED,
+    PAUSED,
+    NO_MATCH,
+    ENGINE_ERROR,
+    SUGGESTED,
+    INVALID
+}
 
 /**
  * Domain model representing a verified blocking decision produced by the on-device filtering pipeline.
@@ -25,7 +42,10 @@ data class BlockingDecision(
     val confidence: Float,
     val category: BlockingCategory,
     val timestamp: Long = System.currentTimeMillis(),
-    val reasonCode: DecisionReason = DecisionReason.ALLOWED
+    val reasonCode: DecisionReason = DecisionReason.ALLOWED,
+    val ruleValue: String? = null,
+    val ruleKind: RuleKind? = null,
+    val sourceId: Int? = null
 ) {
     val isBlocked: Boolean get() = action == BlockingAction.BLOCK
 

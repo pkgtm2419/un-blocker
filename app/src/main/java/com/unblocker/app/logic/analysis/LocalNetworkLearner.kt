@@ -11,7 +11,8 @@ class LocalNetworkLearner(
         else DeviceLearning.policy(context),
     private val clock: () -> Long = if (context == null) ({System.nanoTime()/1_000_000})
         else ({android.os.SystemClock.elapsedRealtime()}),
-    private val isKnownTracker: (String) -> Boolean = { false }
+    private val isKnownTracker: (String) -> Boolean = { false },
+    private val protectedDomains: ProtectedDomains = ProtectedDomains.DEFAULT
 ) {
     private val cadence = CadenceTracker()
     private val extractor = DomainFeatureExtractor(suffixRules)
@@ -29,7 +30,9 @@ class LocalNetworkLearner(
     @Suppress("UNUSED_PARAMETER")
     fun analyzeQuery(raw:String, threshold:Float=BLOCK_THRESHOLD): AnalysisScore {
         val domain=DomainName.normalize(raw) ?: return AnalysisScore(0f,"Invalid domain")
-        if (NeverBlockPolicy.isNeverBlock(domain) || domain in FIRST_PARTY_TOOLING_HOSTS) return AnalysisScore(0f, "Protected infrastructure", ReputationState.SUPPRESSED, DecisionReason.ALLOWED)
+        if (NeverBlockPolicy.isNeverBlock(domain) || protectedDomains.isProtected(domain) || domain in FIRST_PARTY_TOOLING_HOSTS) {
+            return AnalysisScore(0f, "Protected infrastructure", ReputationState.SUPPRESSED, DecisionReason.ALLOWED)
+        }
         if(known(domain)) return AnalysisScore(.95f,"Known tracker rule",ReputationState.CONFIRMED,DecisionReason.STATIC_RULE)
         val now=clock()
         val features=extractor.extract(domain,cadence.observe(domain,now))
@@ -58,7 +61,6 @@ class LocalNetworkLearner(
             "ads.twitter.com",
             "metrics.cloudflare.com",
             "pixel.google.com",
-            "track.example.org",
             "sentry.io",
             "app.datadoghq.com"
         )

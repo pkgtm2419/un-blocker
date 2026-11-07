@@ -1,11 +1,14 @@
 package com.unblocker.app.domain
 
+import com.unblocker.app.data.preferences.BlockingMode
 import com.unblocker.app.domain.model.BlockingAction
 import com.unblocker.app.domain.model.BlockingCategory
+import com.unblocker.app.domain.model.DecisionReason
 import com.unblocker.app.domain.usecase.DecideBlockingUseCase
 import com.unblocker.app.logic.AdDetector
 import com.unblocker.app.logic.AdultContentDetector
 import com.unblocker.app.logic.analysis.AdaptiveBlockingEngine
+import com.unblocker.app.logic.analysis.DefaultProtectedDomains
 import com.unblocker.app.logic.analysis.LocalNetworkLearner
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -18,14 +21,18 @@ class DecideBlockingUseCaseTest {
     private lateinit var useCase: DecideBlockingUseCase
     private var adEnabled = true
     private var adultEnabled = true
+    private var paused = false
+    private var mode = BlockingMode.SMART
     private var allowlistedDomains = emptySet<String>()
     private var blocklistedDomains = emptySet<String>()
+    private var myDomains = mutableSetOf<String>()
 
     @Before
     fun setup() {
         val adDetector = AdDetector(context = null).apply {
             addDomain("doubleclick.net")
             addDomain("adservice.google.com")
+            addDomain("track.mybank.com")
         }
         val adultDetector = AdultContentDetector(context = null).apply {
             addDomain("pornhub.com")
@@ -33,6 +40,10 @@ class DecideBlockingUseCaseTest {
         }
         val learner = LocalNetworkLearner()
         val adaptiveEngine = AdaptiveBlockingEngine(preferences = null, networkLearner = learner)
+        val protectedDomains = DefaultProtectedDomains(
+            builtIn = setOf("google.com", "duckduckgo.com"),
+            myDomains = myDomains
+        )
 
         useCase = DecideBlockingUseCase(
             adDetector = adDetector,
@@ -41,7 +52,10 @@ class DecideBlockingUseCaseTest {
             isAllowlisted = { it in allowlistedDomains },
             isBlocklisted = { it in blocklistedDomains },
             isAdBlockingEnabled = { adEnabled },
-            isAdultBlockingEnabled = { adultEnabled }
+            isAdultBlockingEnabled = { adultEnabled },
+            isPaused = { paused },
+            blockingMode = { mode },
+            protectedDomains = protectedDomains
         )
     }
 
@@ -122,7 +136,6 @@ class DecideBlockingUseCaseTest {
         com.unblocker.app.logic.analysis.NeverBlockPolicy.injectForTest(
             setOf("duckduckgo.com", "google.com")
         )
-        // Even if an adDetector or overlay rule attempts to block duckduckgo.com
         adEnabled = true
         val decision = useCase("duckduckgo.com")
         assertFalse("duckduckgo.com must never be blocked by ad rules", decision.isBlocked)
@@ -131,5 +144,36 @@ class DecideBlockingUseCaseTest {
         val wwwDecision = useCase("www.duckduckgo.com")
         assertFalse("www.duckduckgo.com must never be blocked by ad rules", wwwDecision.isBlocked)
         assertEquals(BlockingAction.ALLOW, wwwDecision.action)
+    }
+
+    @Test
+    fun testMyDomainsSubtreeProtection() {
+        myDomains.add("mybank.com")
+        // Rebuild useCase with updated myDomains
+        setup()
+
+        val decision = useCase("track.mybank.com")
+        assertFalse("Subdomain of My Domains must be allowed despite matching ad rule", decision.isBlocked)
+        assertEquals(DecisionReason.PROTECTED, decision.reasonCode)
+    }
+
+    @Test
+    fun testApprovedOnlyModeDoesNotBlockLists() {
+        mode = BlockingMode.APPROVED_ONLY
+        setup()
+
+        val decision = useCase("doubleclick.net")
+        assertFalse("Approved only mode must not block list rules", decision.isBlocked)
+        assertEquals(DecisionReason.NO_MATCH, decision.reasonCode)
+    }
+
+    @Test
+    fun testPausedAllowsTraffic() {
+        paused = true
+        setup()
+
+        val decision = useCase("doubleclick.net")
+        assertFalse("Paused protection must allow traffic", decision.isBlocked)
+        assertEquals(DecisionReason.PAUSED, decision.reasonCode)
     }
 }

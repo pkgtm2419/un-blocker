@@ -5,13 +5,17 @@ import com.unblocker.app.data.model.ContentType
 import com.unblocker.app.data.model.DetectionMethod
 import com.unblocker.app.data.model.FilterResult
 import com.unblocker.app.data.preferences.FilteringPreferences
+import com.unblocker.app.data.preferences.MyDomainsStore
 import com.unblocker.app.domain.model.BlockingCategory
 import com.unblocker.app.domain.model.BlockingDecision
 import com.unblocker.app.domain.usecase.DecideBlockingUseCase
 import com.unblocker.app.logic.analysis.AdaptiveBlockingEngine
+import com.unblocker.app.logic.analysis.DefaultProtectedDomains
 import com.unblocker.app.logic.analysis.DeviceLearning
 import com.unblocker.app.logic.analysis.LocalNetworkLearner
+import com.unblocker.app.logic.analysis.NeverBlockPolicy
 import com.unblocker.app.logic.analysis.PrivateDomainSet
+import com.unblocker.app.logic.analysis.PublicSuffixRules
 import com.unblocker.app.logic.rules.CnamePolicy
 
 /**
@@ -34,12 +38,22 @@ class ContentFilterEngine(
     val adaptiveEngine: AdaptiveBlockingEngine = AdaptiveBlockingEngine(preferences, networkLearner)
 ) {
     init {
-        com.unblocker.app.logic.analysis.NeverBlockPolicy.load(context)
+        NeverBlockPolicy.load(context)
         com.unblocker.app.data.repository.ExtensionRepository.getInstance(context).reloadActiveRules()
     }
 
+    private val myDomainsStore = MyDomainsStore.getInstance(context)
+    private val protectedDomains = DefaultProtectedDomains(
+        builtInSupplier = { NeverBlockPolicy.getProtectedHosts() },
+        myDomainsSupplier = { myDomainsStore.domains.value },
+        psl = PublicSuffixRules.from(context)
+    )
+
     private val cnamePolicy = CnamePolicy(
-        { preferences.adBlockingEnabled.value }, allowlistedDomains::contains, adDetector::matchRule
+        { preferences.adBlockingEnabled.value },
+        allowlistedDomains::contains,
+        adDetector::matchRule,
+        protectedDomains
     )
 
     fun blockedAlias(original: String, aliases: List<String>): String? =
@@ -49,10 +63,11 @@ class ContentFilterEngine(
         adDetector = adDetector,
         adultContentDetector = adultContentDetector,
         adaptiveBlockingEngine = adaptiveEngine,
+        preferences = preferences,
         isAllowlisted = allowlistedDomains::contains,
         isBlocklisted = blocklistedDomains::contains,
-        isAdBlockingEnabled = { preferences.adBlockingEnabled.value },
-        isAdultBlockingEnabled = { preferences.adultBlockingEnabled.value }
+        protectedDomains = protectedDomains,
+        psl = PublicSuffixRules.from(context)
     )
 
     fun analyzeAndFilter(rawDomain: String): FilterResult {
@@ -68,8 +83,6 @@ class ContentFilterEngine(
             )
         }
 
-        // Every request must reach behavioral learning and current settings.
-        // Caching NORMAL decisions prevented cadence learning and toggle updates.
         return evaluateDomain(domain)
     }
 
@@ -102,10 +115,4 @@ class ContentFilterEngine(
             confidence = decision.confidence
         )
     }
-
-    fun getAdDetector(): AdDetector = adDetector
-    fun getAdultContentDetector(): AdultContentDetector = adultContentDetector
-    fun getNetworkLearner(): LocalNetworkLearner = networkLearner
-    fun getAdaptiveBlockingEngine(): AdaptiveBlockingEngine = adaptiveEngine
-    fun getDecideBlockingUseCase(): DecideBlockingUseCase = decideBlockingUseCase
 }

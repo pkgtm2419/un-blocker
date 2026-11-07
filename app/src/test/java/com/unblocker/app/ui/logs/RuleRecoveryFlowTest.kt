@@ -38,6 +38,24 @@ class RuleRecoveryFlowTest {
             rules[domain] = feedback
             return RuleUpdateResult.Applied
         }
+
+        override suspend fun setWholeSite(domain: String, feedback: UserFeedback): RuleUpdateResult {
+            if (shouldFail) return RuleUpdateResult.Failed("Disk write error")
+            rules["subtree:$domain"] = feedback
+            return RuleUpdateResult.Applied
+        }
+
+        override suspend fun protectDomain(domain: String): RuleUpdateResult {
+            if (shouldFail) return RuleUpdateResult.Failed("Disk write error")
+            rules["protected:$domain"] = UserFeedback.ALLOW
+            return RuleUpdateResult.Applied
+        }
+
+        override suspend fun reset(domain: String): RuleUpdateResult {
+            if (shouldFail) return RuleUpdateResult.Failed("Disk write error")
+            rules.remove(domain)
+            return RuleUpdateResult.Applied
+        }
     }
 
     private class FakeFilteringPreferenceStore : FilteringPreferenceStore {

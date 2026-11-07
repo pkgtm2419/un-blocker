@@ -172,4 +172,26 @@ class LogViewModel @Inject constructor(
             }
         }
     }
+
+    fun allowWholeSite(domain: String) {
+        viewModelScope.launch {
+            when (val result = userRuleGateway.setWholeSite(domain, UserFeedback.ALLOW)) {
+                is RuleUpdateResult.Applied -> _userMessage.value = "Allowed whole site: $domain"
+                is RuleUpdateResult.Failed -> _userMessage.value = "Failed: ${result.reason}"
+            }
+        }
+    }
+
+    fun protectDomain(domain: String) {
+        viewModelScope.launch {
+            when (val result = userRuleGateway.protectDomain(domain)) {
+                is RuleUpdateResult.Applied -> _userMessage.value = "Protected: $domain"
+                is RuleUpdateResult.Failed -> _userMessage.value = "Failed: ${result.reason}"
+            }
+        }
+    }
+
+    fun resetRule(domain: String) {
+        resetDomain(domain)
+    }
 }

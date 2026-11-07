@@ -17,7 +17,7 @@ internal class TunResponseWriter(
     private val run: TunnelRun,
     private val session: VpnSessionState,
     private val outputStream: OutputStream?,
-    val queueCapacity: Int = 128,
+    val queueCapacity: Int = 256,
     private val onWriteError: (Exception) -> Unit = { e ->
         VpnDiagnostics.record(
             code = VpnDiagnostics.FailureCode.TUN_WRITE_ERROR,

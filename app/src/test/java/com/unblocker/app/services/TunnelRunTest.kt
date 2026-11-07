@@ -27,7 +27,7 @@ class TunnelRunTest {
     }
 
     @Test fun saturatedForwarderRejectsExcessWorkAndTerminatesOnClose() {
-        val run = TunnelRun(1)
+        val run = TunnelRun(1, coreThreads = 4, maxThreads = 4, queueCapacity = 64)
         val entered = CountDownLatch(4)
         val release = CountDownLatch(1)
         try {
@@ -46,6 +46,22 @@ class TunnelRunTest {
             release.countDown()
         }
         assertTrue(run.forwarding.awaitTermination(3, TimeUnit.SECONDS))
+    }
+
+    @Test fun defaultThreadPoolAndQueueHandlesHighConcurrencyBursts() {
+        val run = TunnelRun(1)
+        try {
+            assertTrue("Core pool size should be at least 8", run.forwarding.corePoolSize >= 8)
+            assertEquals("Queue capacity should be 256", 256, run.forwarding.queue.remainingCapacity())
+            val burstCount = 100
+            val latch = CountDownLatch(burstCount)
+            repeat(burstCount) {
+                run.forwarding.execute { latch.countDown() }
+            }
+            assertTrue("Burst of 100 tasks should execute without rejection", latch.await(5, TimeUnit.SECONDS))
+        } finally {
+            run.close()
+        }
     }
 
     @Test fun closeClosesRegisteredUdpAndTcpResourcesExactlyOnce() {

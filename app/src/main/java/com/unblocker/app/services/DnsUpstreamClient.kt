@@ -21,9 +21,9 @@ internal class DnsUpstreamClient(
     private val protectDatagramSocket: (DatagramSocket) -> Boolean,
     private val protectTcpSocket: (Socket) -> Boolean,
     private val port: Int = 53,
-    private val udpTimeoutMillis: Int = 700,
-    private val tcpConnectTimeoutMillis: Int = 1_000,
-    private val tcpReadTimeoutMillis: Int = 1_000,
+    private val udpTimeoutMillis: Int = 500,
+    private val tcpConnectTimeoutMillis: Int = 750,
+    private val tcpReadTimeoutMillis: Int = 750,
     private val maxDnsMessageBytes: Int = 0xffff,
     private val txIdGenerator: () -> Short = { secureRandom.nextInt(0x10000).toShort() }
 ) {

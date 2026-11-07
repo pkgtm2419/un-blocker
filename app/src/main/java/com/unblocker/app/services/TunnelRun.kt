@@ -9,9 +9,30 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** Resources belong to one run, including restarts of the same Android Service instance. */
-internal class TunnelRun(val owner: Long, val startId: Int = 0) {
+internal class TunnelRun(
+    val owner: Long,
+    val startId: Int = 0,
+    coreThreads: Int = DEFAULT_CORE_POOL_SIZE,
+    maxThreads: Int = DEFAULT_MAX_POOL_SIZE,
+    queueCapacity: Int = DEFAULT_QUEUE_CAPACITY
+) {
+    companion object {
+        private val CPU_COUNT = Runtime.getRuntime().availableProcessors()
+        val DEFAULT_CORE_POOL_SIZE = maxOf(8, CPU_COUNT * 2).coerceAtMost(16)
+        val DEFAULT_MAX_POOL_SIZE = (DEFAULT_CORE_POOL_SIZE * 2).coerceAtMost(32)
+        const val DEFAULT_QUEUE_CAPACITY = 256
+        const val KEEP_ALIVE_SECONDS = 60L
+    }
     val running = AtomicBoolean(true)
-    val forwarding = ThreadPoolExecutor(4, 4, 0L, TimeUnit.MILLISECONDS, ArrayBlockingQueue<Runnable>(64))
+    val forwarding: ThreadPoolExecutor = ThreadPoolExecutor(
+        coreThreads,
+        maxThreads,
+        KEEP_ALIVE_SECONDS,
+        TimeUnit.SECONDS,
+        ArrayBlockingQueue<Runnable>(queueCapacity)
+    ).apply {
+        allowCoreThreadTimeOut(true)
+    }
     private val cleanupStarted = AtomicBoolean(false)
     private val cleanupLock = Any()
     private val resources = ConcurrentHashMap.newKeySet<Closeable>()

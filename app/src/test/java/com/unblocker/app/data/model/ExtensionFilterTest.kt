@@ -77,6 +77,15 @@ class ExtensionFilterTest {
     }
 
     @Test
+    fun testBrowserOnlyFlag() {
+        val defaultFilter = ExtensionFilter(id = "test_default", name = "Default")
+        org.junit.Assert.assertFalse(defaultFilter.browserOnly)
+
+        val annoyance = ExtensionFilter(id = "annoyance", name = "Annoyances", browserOnly = true)
+        assertTrue(annoyance.browserOnly)
+    }
+
+    @Test
     fun testCategoriesList() {
         assertTrue(FilterCategories.ALL_CATEGORIES.contains(FilterCategories.ALL))
         assertTrue(FilterCategories.ALL_CATEGORIES.contains(FilterCategories.RECOMMENDED))

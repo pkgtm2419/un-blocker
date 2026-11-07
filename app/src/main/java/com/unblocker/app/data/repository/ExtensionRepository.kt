@@ -280,7 +280,8 @@ class ExtensionRepository private constructor(private val context: Context) {
                             isCustom = obj.optBoolean("custom", false),
                             syntax = obj.optString("syntax", "rules"),
                             category = obj.optString("category", if (obj.optBoolean("custom", false)) FilterCategories.CUSTOM else FilterCategories.PRIVACY),
-                            description = obj.optString("description", "")
+                            description = obj.optString("description", ""),
+                            browserOnly = obj.optBoolean("browserOnly", false)
                         )
                     )
                 }
@@ -304,6 +305,7 @@ class ExtensionRepository private constructor(private val context: Context) {
                 put("syntax", item.syntax)
                 put("category", item.category)
                 put("description", item.description)
+                put("browserOnly", item.browserOnly)
             }
             array.put(obj)
         }
@@ -327,7 +329,8 @@ class ExtensionRepository private constructor(private val context: Context) {
                     isCustom = obj.optBoolean("custom", false),
                     syntax = obj.optString("syntax", "rules"),
                     category = obj.optString("category", if (obj.optBoolean("custom", false)) FilterCategories.CUSTOM else FilterCategories.PRIVACY),
-                    description = obj.optString("description", "")
+                    description = obj.optString("description", ""),
+                    browserOnly = obj.optBoolean("browserOnly", false)
                 )
             )
         }
@@ -351,8 +354,13 @@ class ExtensionRepository private constructor(private val context: Context) {
                 val saved = savedMap[bundled.id]
                     ?: if (bundled.id == "oisd_small") savedMap["oisd_abp_full"] else null
                 if (saved != null) {
+                    val isEnabled = if (bundled.browserOnly && !bundled.isEnabled) {
+                        false
+                    } else {
+                        saved.isEnabled
+                    }
                     bundled.copy(
-                        isEnabled = saved.isEnabled,
+                        isEnabled = isEnabled,
                         filterCount = if (saved.filterCount > 0) saved.filterCount else bundled.filterCount,
                         sizeBytes = if (saved.sizeBytes > 0) saved.sizeBytes else bundled.sizeBytes,
                         lastUpdatedEpochMs = if (saved.lastUpdatedEpochMs > 0) saved.lastUpdatedEpochMs else bundled.lastUpdatedEpochMs

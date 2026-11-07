@@ -46,7 +46,8 @@ data class ExtensionFilter(
     val isCustom: Boolean = false,
     val syntax: String = "rules",
     val category: String = FilterCategories.PRIVACY,
-    val description: String = ""
+    val description: String = "",
+    val browserOnly: Boolean = false
 ) {
     fun formattedSize(): String {
         if (sizeBytes <= 0L) {

@@ -559,6 +559,21 @@ fun ExtensionCard(
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
+                    if (item.browserOnly) {
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = MaterialTheme.colorScheme.errorContainer,
+                            modifier = Modifier.padding(start = 2.dp)
+                        ) {
+                            Text(
+                                text = "Browser-only",
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
                 }
 
                 if (item.description.isNotBlank()) {
@@ -570,6 +585,16 @@ fun ExtensionCard(
                         lineHeight = 16.sp,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                if (item.browserOnly && item.isEnabled) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "Warning: May break apps if enabled in system-wide VPN",
+                        color = MaterialTheme.colorScheme.error,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
 

@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "extensions": [
     {
       "id": "manual_filters",
@@ -12,7 +12,8 @@
       "lastUpdated": 1728412320000,
       "enabled": true,
       "custom": true,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": false
     },
     {
       "id": "1dm_filters",
@@ -25,7 +26,8 @@
       "lastUpdated": 1728412320000,
       "enabled": true,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": false
     },
     {
       "id": "easylist",
@@ -38,7 +40,8 @@
       "lastUpdated": 1728412320000,
       "enabled": true,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": false
     },
     {
       "id": "ublock_filters",
@@ -51,7 +54,8 @@
       "lastUpdated": 1728412320000,
       "enabled": true,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": false
     },
     {
       "id": "adguard_base",
@@ -64,7 +68,8 @@
       "lastUpdated": 1728412260000,
       "enabled": true,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": false
     },
     {
       "id": "easyprivacy",
@@ -77,7 +82,8 @@
       "lastUpdated": 1728412260000,
       "enabled": true,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": false
     },
     {
       "id": "peter_lowe",
@@ -90,7 +96,8 @@
       "lastUpdated": 1728412260000,
       "enabled": true,
       "custom": false,
-      "syntax": "hosts"
+      "syntax": "hosts",
+      "browserOnly": false
     },
     {
       "id": "adblock_warning_removal",
@@ -101,9 +108,10 @@
       "filterCount": 850,
       "sizeBytes": 25497,
       "lastUpdated": 1728412260000,
-      "enabled": true,
+      "enabled": false,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": true
     },
     {
       "id": "ublock_unbreak",
@@ -116,7 +124,8 @@
       "lastUpdated": 1728412260000,
       "enabled": true,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": false
     },
     {
       "id": "adguard_mobile",
@@ -129,7 +138,8 @@
       "lastUpdated": 1728412260000,
       "enabled": true,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": false
     },
     {
       "id": "ublock_badware",
@@ -142,7 +152,8 @@
       "lastUpdated": 1728412260000,
       "enabled": true,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": false
     },
     {
       "id": "ublock_privacy",
@@ -155,7 +166,8 @@
       "lastUpdated": 1728412260000,
       "enabled": true,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": false
     },
     {
       "id": "ublock_resource_abuse",
@@ -168,20 +180,8 @@
       "lastUpdated": 1728412260000,
       "enabled": true,
       "custom": false,
-      "syntax": "rules"
-    },
-    {
-      "id": "malicious_url_blocklist",
-      "name": "Online Malicious URL Blocklist",
-      "url": "https://malware-filter.gitlab.io/malware-filter/urlhaus-filter-agh-online.txt",
-      "category": "Security",
-      "description": "Live malware distribution and malicious domain feed (URLhaus)",
-      "filterCount": 8700,
-      "sizeBytes": 238182,
-      "lastUpdated": 1728412260000,
-      "enabled": true,
-      "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": false
     },
     {
       "id": "adguard_annoyances",
@@ -192,9 +192,10 @@
       "filterCount": 32000,
       "sizeBytes": 1258291,
       "lastUpdated": 1728412260000,
-      "enabled": true,
+      "enabled": false,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": true
     },
     {
       "id": "fanboy_annoyance",
@@ -205,9 +206,10 @@
       "filterCount": 22000,
       "sizeBytes": 684441,
       "lastUpdated": 1728412260000,
-      "enabled": true,
+      "enabled": false,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": true
     },
     {
       "id": "ublock_annoyances",
@@ -218,9 +220,10 @@
       "filterCount": 45,
       "sizeBytes": 393,
       "lastUpdated": 1728412260000,
-      "enabled": true,
+      "enabled": false,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": true
     },
     {
       "id": "easylist_cookie",
@@ -231,9 +234,10 @@
       "filterCount": 9500,
       "sizeBytes": 305561,
       "lastUpdated": 1728412260000,
-      "enabled": true,
+      "enabled": false,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": true
     },
     {
       "id": "onehosts_lite",
@@ -246,7 +250,8 @@
       "lastUpdated": 1728412260000,
       "enabled": true,
       "custom": false,
-      "syntax": "domains"
+      "syntax": "domains",
+      "browserOnly": false
     },
     {
       "id": "fanboy_indian",
@@ -259,7 +264,8 @@
       "lastUpdated": 1728412260000,
       "enabled": true,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": false
     },
     {
       "id": "adguard_turkish",
@@ -270,9 +276,10 @@
       "filterCount": 4100,
       "sizeBytes": 114176,
       "lastUpdated": 1728412260000,
-      "enabled": true,
+      "enabled": false,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": false
     },
     {
       "id": "abpindo_indonesian",
@@ -283,9 +290,10 @@
       "filterCount": 2600,
       "sizeBytes": 68710,
       "lastUpdated": 1728412260000,
-      "enabled": true,
+      "enabled": false,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": false
     },
     {
       "id": "adguard_russian",
@@ -296,9 +304,10 @@
       "filterCount": 12000,
       "sizeBytes": 287539,
       "lastUpdated": 1728412260000,
-      "enabled": true,
+      "enabled": false,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": false
     },
     {
       "id": "adguard_spanish_portuguese",
@@ -309,9 +318,10 @@
       "filterCount": 3900,
       "sizeBytes": 99225,
       "lastUpdated": 1728412260000,
-      "enabled": true,
+      "enabled": false,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": false
     },
     {
       "id": "easylist_german",
@@ -322,9 +332,10 @@
       "filterCount": 3400,
       "sizeBytes": 82636,
       "lastUpdated": 1728412260000,
-      "enabled": true,
+      "enabled": false,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": false
     },
     {
       "id": "oisd_small",
@@ -337,7 +348,8 @@
       "lastUpdated": 1728412320000,
       "enabled": true,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": false
     },
     {
       "id": "ffadblock",
@@ -348,9 +360,10 @@
       "filterCount": 150,
       "sizeBytes": 2764,
       "lastUpdated": 1728412320000,
-      "enabled": true,
+      "enabled": false,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": true
     },
     {
       "id": "adguard_dns",
@@ -363,7 +376,8 @@
       "lastUpdated": 1728412320000,
       "enabled": true,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": false
     },
     {
       "id": "hagezi_multi_light",
@@ -376,7 +390,8 @@
       "lastUpdated": 1728412320000,
       "enabled": true,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": false
     },
     {
       "id": "hagezi_multi_pro",
@@ -389,7 +404,8 @@
       "lastUpdated": 1728412320000,
       "enabled": false,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": false
     },
     {
       "id": "oisd_big",
@@ -402,7 +418,8 @@
       "lastUpdated": 1728412320000,
       "enabled": false,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": false
     },
     {
       "id": "dandelion_adguard_compilation",
@@ -415,7 +432,8 @@
       "lastUpdated": 1728412320000,
       "enabled": false,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": false
     },
     {
       "id": "adaway_default",
@@ -428,7 +446,8 @@
       "lastUpdated": 1728412320000,
       "enabled": true,
       "custom": false,
-      "syntax": "hosts"
+      "syntax": "hosts",
+      "browserOnly": false
     },
     {
       "id": "hagezi_native_samsung",
@@ -441,7 +460,8 @@
       "lastUpdated": 1728412320000,
       "enabled": true,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": false
     },
     {
       "id": "hagezi_native_xiaomi",
@@ -454,7 +474,8 @@
       "lastUpdated": 1728412320000,
       "enabled": true,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": false
     },
     {
       "id": "hagezi_native_apple",
@@ -467,7 +488,8 @@
       "lastUpdated": 1728412320000,
       "enabled": false,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": false
     },
     {
       "id": "hagezi_native_tiktok",
@@ -480,7 +502,8 @@
       "lastUpdated": 1728412320000,
       "enabled": false,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": false
     },
     {
       "id": "anudeep_adservers",
@@ -493,7 +516,8 @@
       "lastUpdated": 1728412320000,
       "enabled": false,
       "custom": false,
-      "syntax": "domains"
+      "syntax": "domains",
+      "browserOnly": false
     },
     {
       "id": "threatfox_malware",
@@ -506,7 +530,8 @@
       "lastUpdated": 1728412320000,
       "enabled": true,
       "custom": false,
-      "syntax": "hosts"
+      "syntax": "hosts",
+      "browserOnly": false
     },
     {
       "id": "stalkerware_indicators",
@@ -519,7 +544,8 @@
       "lastUpdated": 1728412320000,
       "enabled": true,
       "custom": false,
-      "syntax": "hosts"
+      "syntax": "hosts",
+      "browserOnly": false
     },
     {
       "id": "hagezi_tif_mini",
@@ -532,7 +558,8 @@
       "lastUpdated": 1728412320000,
       "enabled": false,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": false
     },
     {
       "id": "urlhaus_agh",
@@ -545,7 +572,8 @@
       "lastUpdated": 1728412320000,
       "enabled": true,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": false
     },
     {
       "id": "phishing_army_extended",
@@ -558,7 +586,8 @@
       "lastUpdated": 1728412320000,
       "enabled": true,
       "custom": false,
-      "syntax": "domains"
+      "syntax": "domains",
+      "browserOnly": false
     },
     {
       "id": "hagezi_doh_bypass",
@@ -571,7 +600,8 @@
       "lastUpdated": 1728412320000,
       "enabled": false,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": false
     },
     {
       "id": "oisd_nsfw",
@@ -584,7 +614,8 @@
       "lastUpdated": 1728412320000,
       "enabled": false,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": false
     },
     {
       "id": "stevenblack_porn",
@@ -597,7 +628,8 @@
       "lastUpdated": 1728412320000,
       "enabled": false,
       "custom": false,
-      "syntax": "hosts"
+      "syntax": "hosts",
+      "browserOnly": false
     },
     {
       "id": "stevenblack_gambling",
@@ -610,7 +642,8 @@
       "lastUpdated": 1728412320000,
       "enabled": false,
       "custom": false,
-      "syntax": "hosts"
+      "syntax": "hosts",
+      "browserOnly": false
     },
     {
       "id": "smarttv_perflyst",
@@ -623,7 +656,8 @@
       "lastUpdated": 1728412320000,
       "enabled": true,
       "custom": false,
-      "syntax": "hosts"
+      "syntax": "hosts",
+      "browserOnly": false
     },
     {
       "id": "amazon_firetv",
@@ -636,7 +670,8 @@
       "lastUpdated": 1728412320000,
       "enabled": true,
       "custom": false,
-      "syntax": "hosts"
+      "syntax": "hosts",
+      "browserOnly": false
     },
     {
       "id": "dandelion_game_consoles",
@@ -649,7 +684,8 @@
       "lastUpdated": 1728412320000,
       "enabled": true,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": false
     },
     {
       "id": "firebog_wally3k",
@@ -662,7 +698,8 @@
       "lastUpdated": 1728412320000,
       "enabled": true,
       "custom": false,
-      "syntax": "domains"
+      "syntax": "domains",
+      "browserOnly": false
     },
     {
       "id": "firebog_admiral",
@@ -675,7 +712,8 @@
       "lastUpdated": 1728412320000,
       "enabled": true,
       "custom": false,
-      "syntax": "domains"
+      "syntax": "domains",
+      "browserOnly": false
     },
     {
       "id": "adguard_url_tracking",
@@ -688,7 +726,8 @@
       "lastUpdated": 1728412320000,
       "enabled": true,
       "custom": false,
-      "syntax": "rules"
+      "syntax": "rules",
+      "browserOnly": false
     },
     {
       "id": "windows_spy_blocker",
@@ -701,7 +740,8 @@
       "lastUpdated": 1728412320000,
       "enabled": false,
       "custom": false,
-      "syntax": "hosts"
+      "syntax": "hosts",
+      "browserOnly": false
     }
   ]
 }

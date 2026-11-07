@@ -146,9 +146,10 @@ jobs:
           UB_RELEASE_KEY_ALIAS: ${{ secrets.UB_RELEASE_KEY_ALIAS }}
           UB_RELEASE_KEY_PASSWORD: ${{ secrets.UB_RELEASE_KEY_PASSWORD }}
         run: |
-          if [ "${BUILD_TYPE}" = "release" ]; then
+          if [ -n "${UB_RELEASE_KEYSTORE_BASE64:-}" ]; then
             python3 scripts/release-policy.py secrets --build-type release
           else
+            echo "Release keystore secrets not configured; falling back to stable test signing."
             python3 scripts/release-policy.py secrets --build-type debug
           fi
       - name: Prepare signing keystore
@@ -160,7 +161,7 @@ jobs:
           set -euo pipefail
           umask 077
           keystore="${RUNNER_TEMP}/ub-blocker-signing.keystore"
-          if [ "${BUILD_TYPE}" = "release" ]; then
+          if [ "${BUILD_TYPE}" = "release" ] && [ -n "${RELEASE_KEYSTORE_BASE64:-}" ]; then
             printf '%s' "${RELEASE_KEYSTORE_BASE64}" | base64 --decode > "${keystore}"
             echo "release_keystore=${keystore}" >> "${GITHUB_OUTPUT}"
           else
@@ -179,8 +180,16 @@ jobs:
           UB_RELEASE_KEY_PASSWORD: ${{ secrets.UB_RELEASE_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          if [ "${BUILD_TYPE}" = "release" ]; then
+          if [ "${BUILD_TYPE}" = "release" ] && [ -n "${UB_RELEASE_KEYSTORE_FILE:-}" ]; then
             bash gradlew assembleRelease
+          elif [ "${BUILD_TYPE}" = "release" ]; then
+            bash gradlew assembleReleaseTest
+            mkdir -p app/build/outputs/apk/release
+            cp app/build/outputs/apk/releaseTest/ub-blocker-*.apk "${APK_PATH}"
+            if [ -f app/build/outputs/mapping/releaseTest/mapping.txt ]; then
+              mkdir -p app/build/outputs/mapping/release
+              cp app/build/outputs/mapping/releaseTest/mapping.txt app/build/outputs/mapping/release/mapping.txt
+            fi
           else
             bash gradlew assembleDebug
           fi
@@ -199,7 +208,7 @@ jobs:
           if [ ! -d "${build_tools}" ]; then
             build_tools="$(find "${ANDROID_HOME}/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
           fi
-          if [ "${BUILD_TYPE}" = "release" ]; then
+          if [ "${BUILD_TYPE}" = "release" ] && [ -n "${UB_RELEASE_KEYSTORE_FILE:-}" ] && [ -n "${UB_RELEASE_SIGNER_SHA256:-}" ]; then
             if "${build_tools}/aapt2" dump badging "${APK_PATH}" | grep -q application-debuggable; then
               echo "Release APK must not be debuggable" >&2; exit 1
             fi

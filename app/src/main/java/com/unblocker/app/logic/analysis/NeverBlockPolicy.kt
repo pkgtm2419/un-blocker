@@ -121,6 +121,12 @@ object NeverBlockPolicy {
         val domain = DomainName.normalize(rawDomain) ?: return false
         if (domain in protectedHosts) return true
         if (domain.startsWith("www.") && domain.removePrefix("www.") in protectedHosts) return true
+        for (host in protectedHosts) {
+            if (host.startsWith("*.")) {
+                val suffix = host.substring(2)
+                if (domain == suffix || domain.endsWith(".$suffix")) return true
+            }
+        }
         return false
     }
 }

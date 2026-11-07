@@ -102,7 +102,7 @@ class DecideBlockingUseCase(
 
         // Step 6: protected (built-in exact | user "My domains" subtree) -> ALLOW(PROTECTED)
         if (protectedDomains.isProtected(domain) || NeverBlockPolicy.isNeverBlock(domain)) {
-            return BlockingDecision.allow("Protected domain", 1.0f).copy(reasonCode = DecisionReason.PROTECTED)
+            return BlockingDecision.allow("Protected infrastructure", 1.0f).copy(reasonCode = DecisionReason.PROTECTED)
         }
 
         // Step 7: rules (shipped + downloaded): ALLOW beats BLOCK; BLOCK only if admitted

@@ -1,6 +1,4 @@
 # SPDX-License-Identifier: Apache-2.0
-# Curated high-impact ad networks, programmatic exchanges, trackers, telemetry, and DoH canaries.
-# Unblocker Comprehensive Mobile & Web Ad Blocklist
 07c225f3.online
 19706903.xyz
 2mdn.net
@@ -19,6 +17,7 @@ aax-us-east.amazon-adsystem.com
 aax-us.amazon-adsystem.com
 aax.amazon-adsystem.com
 abaftscaly.com
+ad-host-backup-asia.oss-ap-southeast-1.aliyuncs.com
 ad-maven.com
 ad.atdmt.com
 ad.crwdcntrl.net
@@ -29,6 +28,7 @@ adcell.de
 adclick.g.doubleclick.net
 adclickmedia.com
 adcolony.com
+adeventtracker.spotify.com
 adexc.net
 adexprt.com
 adf.ly
@@ -376,6 +376,7 @@ adsupply.com
 adtarget.me
 adtechus.com
 adtracker.inmobi.com
+adtrafficquality.google
 adtrue.com
 adultadworld.com
 adup-tech.com
@@ -386,8 +387,10 @@ adwhirl.com
 adwo.com
 adxad.com
 adxpansion.com
+aet.spotify.com
 affili.net
 afs.googlesyndication.com
+aifrwk.com
 airpush.com
 al5sm.com
 allownotification.com
@@ -397,10 +400,13 @@ alwingulla.com
 amazon-adsystem.com
 amplify.outbrain.com
 ams1-ib.adnxs.com
+android17.logs.netflix.com
 aniview.com
+api-partners.kindred.co
 api.amplitude.com
 api.appsflyer.com
 api.branch.io
+api.firwinds.site
 api.kochava.com
 api.mixpanel.com
 api.segment.io
@@ -413,9 +419,12 @@ app-measurement.com
 app.adjust.com
 app.appsflyer.com
 appbrain.com
+appcenter.ms
 appnext-a.akamaihd.net
 appnext.com
 appnexus.com
+appsflyersdk.com
+appsgrowthpromo-pa.googleapis.com
 apptentive.com
 asg.clckhss.com
 assoc-amazon.com
@@ -432,6 +441,8 @@ beacon.krxd.net
 bebi.com
 begallure.com
 begun.ru
+betteradsystem.com
+bhm.progmore.com
 bidder.criteo.com
 bidgear.com
 bidswitch.net
@@ -440,9 +451,11 @@ bidvertiser.com
 bingsads.microsoft.com
 bluekai.com
 branch.metrics.io
+braze.eu
 brightroll.com
 browser-intake-datadoghq.com
 bugsnag.com
+busycdn.xyz
 buysellads.com
 buysellads.net
 c.amazon-adsystem.com
@@ -462,6 +475,7 @@ chartboost.com
 chitika.com
 choice.microsoft.com
 clckd.net
+clevertap-prod.com
 clevertap.com
 clickadu.com
 clickaine.com
@@ -472,6 +486,8 @@ clicmanager.fr
 cloudflare-dns.com
 cobrowse.io
 coinhive.com
+collector.github.com
+collector.snowplow.supercell.com
 config.inmobi.com
 config.unityads.unity3d.com
 content.ad
@@ -482,6 +498,7 @@ conversantmedia.com
 convertdl.com
 count.ly
 cpxinteractive.com
+crackle.co.in
 crazyegg.com
 crimtan.com
 criteo.com
@@ -489,15 +506,20 @@ criteo.net
 crosspixel.net
 crwdcntrl.net
 cryptoloot.pro
+cs.ns1p.net
 cxense.com
 d.adroll.com
 d.applovin.com
 d1sq8m76ef4pny.cloudfront.net
+d2dxy39sqorbhv.cloudfront.net
+d2kk0o3fr7ed01.cloudfront.net
 da.chartboost.com
+darklewawa.com
 data.flurry.com
 datadoghq.com
 dc9xwpjprguup.cloudfront.net
 decide.mixpanel.com
+deedwaifpleas.org
 defymedia.com
 demdex.net
 despairdiscontinue.com
@@ -508,6 +530,7 @@ directrev.com
 dis.criteo.com
 districtm.io
 districtm.net
+dls.di.atlas.samsung.com
 dns.adguard-dns.com
 dns.google
 dns.google.com
@@ -516,6 +539,7 @@ dns.quad9.net
 doh.opendns.com
 domob.cn
 doubleclick.net
+doubleverify.com
 dpm.demdex.net
 droplink.co
 ds.recrampwiped.com
@@ -551,6 +575,7 @@ gemini.yahoo.com
 geniee.co.jp
 geo.moatads.com
 geo.yahoo.com
+ghabovethec.info
 glks.net
 gloapheew.net
 gloaphie.net
@@ -573,6 +598,7 @@ gum.criteo.com
 gumgum-ad.com
 gumgum.com
 harrenmedia.com
+hb.crackle.co.in
 heapanalytics.com
 hedeuntacks.com
 hilltopads.com
@@ -591,6 +617,7 @@ imrworldwide.com
 inadco.com
 indexexchange.com
 infolinks.com
+init.mkt.supercell.com
 inmobi.com
 inner-active.mobi
 innovid.com
@@ -599,6 +626,7 @@ insticator.com
 intentiq.com
 intercom.io
 intext.infolinks.com
+inventory.mtech.supercell.com
 ironsource.com
 ironsrc.com
 jivox.com
@@ -616,6 +644,7 @@ leadbolt.com
 leadboltads.net
 leanplum.com
 legbaratwind.com
+li.protechts.net
 liftoff.io
 ligatus.com
 lijit.com
@@ -624,12 +653,14 @@ linkvertise.com
 linkvertise.net
 live.chartboost.com
 liveintent.com
+llvpn.com
 localytics.com
 log.outbrain.com
 loggly.com
 lotame.com
 lp.legbaratwind.com
 luckyorange.com
+luugy.com
 lzrikate.com
 m.doubleclick.net
 madadsmedia.com
@@ -660,6 +691,7 @@ mobile-collector.newrelic.com
 mobipium.com
 mobtrks.com
 moengage.com
+moloco.com
 mondiad.com
 monetag.com
 monetizemore.com
@@ -667,6 +699,7 @@ mopub.com
 mouseflow.com
 mozilla.cloudflare-dns.com
 msecnd.net
+mtgglobals.com
 mybestmv.com
 mytarget.com
 nanigans.com
@@ -680,6 +713,8 @@ notificationallow.com
 nym1-ib.adnxs.com
 oath.com
 octoclick.com
+ogads-pa.clients6.google.com
+ogads-pa.googleapis.com
 ogury.com
 ogury.io
 omtrdc.net
@@ -710,6 +745,7 @@ pglstatp-toutiao.com
 pheegoab.click
 phenver.com
 piano.io
+pipe.aria.microsoft.com
 piwik.org
 pixel.quantserve.com
 pixel.rubiconproject.com
@@ -736,13 +772,16 @@ propellerclick.com
 propellerpops.com
 proper.io
 propu.sh
+protechts.net
 pubads.g.doubleclick.net
 pubconnector.com
 pubmatic.com
 pulsepoint.com
+push-sdk.com
 pushno.com
 pushwoosh.com
 px.moatads.com
+qcc.qualcomm.com
 quantcast.com
 quantcount.com
 quantserve.com
@@ -750,6 +789,7 @@ quattro.com
 radiumone.com
 rakutenadvertising.com
 raygun.io
+rbqlocmewza.com
 rcm-images.amazon.com
 readpeak.com
 realsrv.com
@@ -775,12 +815,14 @@ rollerads.com
 ronracepub.com
 rt.applovin.com
 rtb.openx.net
+rtmark.net
 rubiconproject.com
 run-ads.com
 runative-syndicate.com
 s.amazon-adsystem.com
 s0.2mdn.net
 sads.adsboosters.xyz
+samsung.telemetry.eyeo.com
 saymedia.com
 sb.scorecardresearch.com
 scenestealer.tv
@@ -805,6 +847,7 @@ showads.pubmatic.com
 shrinkearn.com
 shrinkme.io
 shrinkme.org
+sia.internet.apps.samsung.com
 silvermob.com
 simpli.fi
 sin3-ib.adnxs.com
@@ -826,6 +869,7 @@ spotx.tv
 spotxchange.com
 srv.carbonads.net
 ssl.google-analytics.com
+ssp.samsung.com
 stags.bluekai.com
 startapp.com
 startappservice.com
@@ -870,8 +914,10 @@ trafficforce.com
 trafficjunky.com
 trafficjunky.net
 trafficstars.com
+traffmovie.com
 traffpartners.com
 trc.taboola.com
+trend-log.aifrwk.com
 trends.revcontent.com
 tribalfusion.com
 trion.com
@@ -883,10 +929,13 @@ tynt.com
 u.openx.net
 uberads.com
 udc.yahoo.com
+uidsync.net
+ukankingwithea.com
 undertone.com
 undertone.net
 unityads.unity3d.com
 unrulymedia.com
+ureca.samsungapps.com
 use-application-dns.net
 uxcam.com
 v.revcontent.com
@@ -905,6 +954,7 @@ vrtcal.com
 vungle.com
 webminepool.com
 webview.unityads.unity3d.com
+werefilledwit.org
 whomeverthe.com
 whosamung.us
 widespace.com
@@ -913,6 +963,7 @@ woopra.com
 ws-na.amazon-adsystem.com
 www.googleadservices.com
 xaxis.com
+xgapromomanager-pa.googleapis.com
 xpanalytics.com
 yadro.ru
 yieldbird.com
@@ -927,3 +978,5 @@ z-na.amazon-adsystem.com
 z.moatads.com
 zemanta.com
 zergnet.com
+zjbsxac.com
+zzgmtalhhma.com

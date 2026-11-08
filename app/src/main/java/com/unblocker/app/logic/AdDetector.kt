@@ -65,7 +65,7 @@ class AdDetector(
             "doubleclick.net", "googleads.g.doubleclick.net", "adservice.google.com",
             "pagead2.googlesyndication.com", "pubads.g.doubleclick.net", "admob.com",
             "a.applovin.com", "unityads.unity3d.com", "vungle.com", "inmobi.com", "ironsrc.com",
-            "criteo.com", "taboola.com", "outbrain.com", "adnxs.com", "app.adjust.com", "appsflyer.com",
+            "criteo.com", "taboola.com", "outbrain.com", "adnxs.com", "app.adjust.com", "appsflyer.com", "appsflyersdk.com", "moloco.com",
             "branch.io", "kochava.com", "flurry.com", "api.mixpanel.com", "api.segment.io", "api.amplitude.com",
             "static.hotjar.com", "clarity.ms", "recrampwiped.com", "adsboosters.xyz", "hedeuntacks.com",
             "legbaratwind.com", "ronracepub.com", "popads.net", "popcash.net", "adsterra.com",

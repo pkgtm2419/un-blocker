@@ -66,7 +66,7 @@ fun FloatingPillNavBar(
             tonalElevation = 4.dp,
             shadowElevation = 16.dp,
             modifier = Modifier
-                .widthIn(min = 220.dp, max = 340.dp)
+                .widthIn(min = 240.dp, max = 380.dp)
                 .height(68.dp)
                 .border(
                     width = 1.dp,
@@ -85,7 +85,7 @@ fun FloatingPillNavBar(
             Row(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -149,7 +149,7 @@ fun FloatingPillNavBar(
                             verticalArrangement = Arrangement.Center,
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                .padding(horizontal = 4.dp, vertical = 4.dp)
                         ) {
                             Icon(
                                 imageVector = item.icon,

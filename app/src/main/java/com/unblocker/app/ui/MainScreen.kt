@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -34,6 +35,7 @@ import com.unblocker.app.ui.extensions.ExtensionsScreen
 import com.unblocker.app.ui.learn.LearnAppScreen
 import com.unblocker.app.ui.logs.LogViewerScreen
 import com.unblocker.app.ui.screens.UnblockerScreen
+import com.unblocker.app.ui.settings.SettingsScreen
 
 /**
  * Main application host container with Samsung One UI 9 style floating pill navigation.
@@ -91,7 +93,8 @@ fun MainScreen(
         listOf(
             NavItem(title = "Home", icon = Icons.Filled.Security),
             NavItem(title = "Learn", icon = Icons.Filled.Apps),
-            NavItem(title = "Logs", icon = Icons.AutoMirrored.Filled.List)
+            NavItem(title = "Logs", icon = Icons.AutoMirrored.Filled.List),
+            NavItem(title = "Settings", icon = Icons.Filled.Settings)
         )
     }
 
@@ -116,7 +119,7 @@ fun MainScreen(
                             quickStartManager = quickStartManager,
                             onRequestVpnPermission = requestPermissionsAndStart,
                             contentPadding = contentPadding,
-                            onOpenSettings = { isExtensionsOpen = true },
+                            onOpenSettings = { selectedTab = 3 },
                             onNavigateToLogs = { selectedTab = 2 }
                         )
                     }
@@ -126,8 +129,16 @@ fun MainScreen(
                             contentPadding = contentPadding
                         )
                     }
-                    else -> {
+                    2 -> {
                         LogViewerScreen(
+                            contentPadding = contentPadding
+                        )
+                    }
+                    else -> {
+                        SettingsScreen(
+                            preferences = preferences,
+                            quickStartManager = quickStartManager,
+                            onNavigateToExtensions = { isExtensionsOpen = true },
                             contentPadding = contentPadding
                         )
                     }

@@ -144,26 +144,12 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
 
     companion object {
         val RECOMMENDED_EXTENSIONS = setOf(
-            "adguard_dns",
-            "hagezi_multi_light",
-            "oisd_small",
-            "adaway_default",
-            "threatfox_malware",
-            "stalkerware_indicators",
-            "urlhaus_agh",
-            "malicious_url_blocklist",
-            "phishing_army_extended",
-            "hagezi_native_samsung",
-            "hagezi_native_xiaomi",
-            "smarttv_perflyst",
-            "firebog_wally3k",
-            "firebog_admiral",
-            "adguard_url_tracking",
-            "easylist",
-            "adguard_base",
+            "ublock_unbreak",
+            "adguard_mobile",
             "easyprivacy",
-            "onehosts_lite",
-            "1dm_filters"
+            "hagezi_light_oem",
+            "malware_urlhaus_c2",
+            "oisd_small"
         )
     }
 }

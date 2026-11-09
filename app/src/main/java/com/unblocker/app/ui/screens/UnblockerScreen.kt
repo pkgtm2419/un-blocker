@@ -35,6 +35,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.PowerSettingsNew
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -42,6 +43,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -116,6 +118,7 @@ fun UnblockerScreen(
     val context = LocalContext.current
 
     val adultBlockingEnabled by preferences.adultBlockingEnabled.collectAsState()
+    val filteringTier by preferences.filteringTier.collectAsState()
     val isPrivateDnsActive by UnblockerVpnService.isPrivateDnsActive.collectAsState()
     val privateDnsServerName by UnblockerVpnService.privateDnsServerName.collectAsState()
 
@@ -345,6 +348,17 @@ fun UnblockerScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
+                // Protection Tier Selection Card (Basic, Optimal, Complete)
+                FilteringTierCard(
+                    currentTier = filteringTier,
+                    onTierSelected = { tier ->
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        preferences.setFilteringTier(tier)
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
                 // 3. SKEUOMORPHIC 18+ ADULT CONTENT TOGGLE
                 SkeuomorphicCard(
                     modifier = Modifier.widthIn(max = 420.dp),
@@ -471,6 +485,88 @@ fun UnblockerScreen(
                     )
                 }
 
+            }
+        }
+    }
+}
+
+@Composable
+fun FilteringTierCard(
+    currentTier: com.unblocker.app.data.preferences.FilteringTier,
+    onTierSelected: (com.unblocker.app.data.preferences.FilteringTier) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    SkeuomorphicCard(
+        modifier = modifier
+            .fillMaxWidth()
+            .widthIn(max = 420.dp),
+        shape = RoundedCornerShape(20.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Tune,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Protection Level",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                com.unblocker.app.data.preferences.FilteringTier.entries.forEach { tier ->
+                    val isSelected = tier == currentTier
+                    val (label, desc) = when (tier) {
+                        com.unblocker.app.data.preferences.FilteringTier.BASIC -> "Basic" to "Game & shopping friendly"
+                        com.unblocker.app.data.preferences.FilteringTier.OPTIMAL -> "Optimal" to "Balanced shield"
+                        com.unblocker.app.data.preferences.FilteringTier.COMPLETE -> "Complete" to "Strict shield"
+                    }
+                    Surface(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { onTierSelected(tier) },
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = desc,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 9.sp,
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 2
+                            )
+                        }
+                    }
+                }
             }
         }
     }

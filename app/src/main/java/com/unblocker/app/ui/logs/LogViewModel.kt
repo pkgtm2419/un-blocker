@@ -12,6 +12,7 @@ import com.unblocker.data.db.entity.DomainEventEntity
 import com.unblocker.data.db.entity.DomainStatEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -87,7 +88,7 @@ class LogViewModel @Inject constructor(
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.unblocker.app.ui.model.LocalProtectionSummary(0L, 0L, null, null))
 
-    @OptIn(ExperimentalCoroutinesApi::class)
+    @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
     val domainStats: StateFlow<List<DomainStatEntity>> = combine(
         _filter,
         _sort,
@@ -99,7 +100,7 @@ class LogViewModel @Inject constructor(
             filter = filter.value,
             query = query,
             sortByCalls = sort.value
-        )
+        ).debounce(300L)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun setFilter(newFilter: LogFilter) {

@@ -419,7 +419,7 @@ fun LogViewerScreen(
                     }
                 }
             } else {
-                items(domainStats, key = { it.domain }) { stat ->
+                items(domainStats.take(150), key = { it.domain }) { stat ->
                     DomainStatCard(
                         stat = stat,
                         isExpanded = expandedDomain == stat.domain,

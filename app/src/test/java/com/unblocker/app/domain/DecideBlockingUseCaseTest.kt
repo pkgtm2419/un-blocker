@@ -213,4 +213,57 @@ class DecideBlockingUseCaseTest {
         val safeDecision = customUseCase("legitimate-site.org")
         assertFalse("Unrelated domain must be allowed", safeDecision.isBlocked)
     }
+
+    @Test
+    fun testMobileUnbreakListAllowsEssentialAppDomains() {
+        val supercellDecision = useCase("accounts.supercell.com")
+        assertFalse("Supercell login must be allowed", supercellDecision.isBlocked)
+        assertEquals(DecisionReason.ALLOWED, supercellDecision.reasonCode)
+
+        val spotifyDecision = useCase("login5.spotify.com")
+        assertFalse("Spotify login must be allowed", spotifyDecision.isBlocked)
+        assertEquals(DecisionReason.ALLOWED, spotifyDecision.reasonCode)
+
+        val playStoreDecision = useCase("prod-lt-playstoregatewayadapter-pa.googleapis.com")
+        assertFalse("Play store adapter must be allowed", playStoreDecision.isBlocked)
+        assertEquals(DecisionReason.ALLOWED, playStoreDecision.reasonCode)
+
+        val whatsappDecision = useCase("static.whatsapp.net")
+        assertFalse("WhatsApp static CDN must be allowed", whatsappDecision.isBlocked)
+        assertEquals(DecisionReason.ALLOWED, whatsappDecision.reasonCode)
+    }
+
+    @Test
+    fun testBasicTierPreservesRewardAndShoppingRedirects() {
+        var currentTier = com.unblocker.app.data.preferences.FilteringTier.BASIC
+        val adDetector = AdDetector(context = null).apply {
+            addDomain("doubleclick.net")
+            addDomain("googleadservices.com")
+            addDomain("reward.unityads.unity3d.com")
+        }
+        val tieredUseCase = DecideBlockingUseCase(
+            adDetector = adDetector,
+            adultContentDetector = AdultContentDetector(context = null),
+            adaptiveBlockingEngine = AdaptiveBlockingEngine(null, LocalNetworkLearner()),
+            filteringTier = { currentTier }
+        )
+
+        // In BASIC mode, reward and shopping redirects are preserved
+        val shoppingDecision = tieredUseCase("googleadservices.com")
+        assertFalse("Shopping redirect must be allowed in BASIC mode", shoppingDecision.isBlocked)
+        assertEquals(DecisionReason.ALLOWED, shoppingDecision.reasonCode)
+
+        val rewardDecision = tieredUseCase("reward.unityads.unity3d.com")
+        assertFalse("Game reward ads must be allowed in BASIC mode", rewardDecision.isBlocked)
+        assertEquals(DecisionReason.ALLOWED, rewardDecision.reasonCode)
+
+        // Standard ad domains without reward/shopping function are still blocked
+        val standardAd = tieredUseCase("doubleclick.net")
+        assertTrue("Standard ad must be blocked even in BASIC mode", standardAd.isBlocked)
+
+        // In OPTIMAL mode, reward and shopping redirects are blocked
+        currentTier = com.unblocker.app.data.preferences.FilteringTier.OPTIMAL
+        val optimalShopping = tieredUseCase("googleadservices.com")
+        assertTrue("Shopping redirect must be blocked in OPTIMAL mode", optimalShopping.isBlocked)
+    }
 }

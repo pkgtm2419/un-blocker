@@ -14,6 +14,12 @@ enum class BlockingMode {
     APPROVED_ONLY
 }
 
+enum class FilteringTier {
+    BASIC,
+    OPTIMAL,
+    COMPLETE
+}
+
 interface FilteringPreferenceStore {
     val isQueryLoggingPaused: StateFlow<Boolean>
     fun setQueryLoggingPaused(paused: Boolean)
@@ -88,6 +94,20 @@ class FilteringPreferences(context: Context) : FilteringPreferenceStore {
     fun setBlockingMode(mode: BlockingMode) {
         prefs.edit().putString(KEY_BLOCKING_MODE, mode.name).apply()
         _blockingMode.value = mode
+    }
+
+    private val _filteringTier = MutableStateFlow(
+        try {
+            FilteringTier.valueOf(prefs.getString(KEY_FILTERING_TIER, FilteringTier.OPTIMAL.name) ?: FilteringTier.OPTIMAL.name)
+        } catch (_: Exception) {
+            FilteringTier.OPTIMAL
+        }
+    )
+    val filteringTier: StateFlow<FilteringTier> = _filteringTier.asStateFlow()
+
+    fun setFilteringTier(tier: FilteringTier) {
+        prefs.edit().putString(KEY_FILTERING_TIER, tier.name).apply()
+        _filteringTier.value = tier
     }
 
     private val _pausedUntil = MutableStateFlow(prefs.getLong(KEY_PAUSED_UNTIL, 0L))
@@ -204,6 +224,7 @@ class FilteringPreferences(context: Context) : FilteringPreferenceStore {
         private const val KEY_LEARNING_START_TIME = "learning_start_time"
         private const val KEY_QUERY_LOGGING_PAUSED = "query_logging_paused"
         private const val KEY_BLOCKING_MODE = "blocking_mode"
+        private const val KEY_FILTERING_TIER = "filtering_tier"
         private const val KEY_PAUSED_UNTIL = "paused_until"
         private const val KEY_BLOCK_ANALYTICS_BREAKAGE = "block_analytics_breakage"
 

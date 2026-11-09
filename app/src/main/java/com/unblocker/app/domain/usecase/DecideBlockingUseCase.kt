@@ -30,6 +30,7 @@ class DecideBlockingUseCase(
     private val isAdultBlockingEnabled: () -> Boolean = { true },
     private val isPaused: () -> Boolean = { false },
     private val blockingMode: () -> BlockingMode = { BlockingMode.SMART },
+    private val filteringTier: () -> com.unblocker.app.data.preferences.FilteringTier = { com.unblocker.app.data.preferences.FilteringTier.OPTIMAL },
     private val protectedDomains: ProtectedDomains = ProtectedDomains.DEFAULT,
     private val psl: PublicSuffixRules = PublicSuffixRules.fallback
 ) {
@@ -52,6 +53,7 @@ class DecideBlockingUseCase(
         isAdultBlockingEnabled = { preferences.adultBlockingEnabled.value },
         isPaused = { preferences.isPaused() },
         blockingMode = { preferences.blockingMode.value },
+        filteringTier = { preferences.filteringTier.value },
         protectedDomains = protectedDomains,
         psl = psl
     )
@@ -105,9 +107,25 @@ class DecideBlockingUseCase(
             return BlockingDecision.allow("Protected infrastructure", 1.0f).copy(reasonCode = DecisionReason.PROTECTED)
         }
 
+        // Step 6b: Mobile Unbreak protection (essential mobile app dependencies) -> ALLOW(UNBREAK)
+        if (com.unblocker.app.logic.analysis.MobileUnbreakList.isEssentialDomain(domain)) {
+            return BlockingDecision.allow("Essential mobile app dependency", 1.0f).copy(
+                reasonCode = DecisionReason.ALLOWED
+            )
+        }
+
         // Step 7: rules (shipped + downloaded): ALLOW beats BLOCK; BLOCK only if admitted
         val isAdBlocking = isAdBlockingEnabled()
         if (isAdBlocking) {
+            // In BASIC mode, allow game reward ads and shopping redirects to prevent app breakage
+            val currentTier = filteringTier()
+            if (currentTier == com.unblocker.app.data.preferences.FilteringTier.BASIC &&
+                com.unblocker.app.logic.analysis.MobileUnbreakList.isRewardOrShoppingDomain(domain)) {
+                return BlockingDecision.allow("Basic mode: game reward and shopping redirect preserved", 1.0f).copy(
+                    reasonCode = DecisionReason.ALLOWED
+                )
+            }
+
             val rule = adDetector.matchRule(domain)
             if (rule != null) {
                 if (rule.action == RuleAction.ALLOW) {

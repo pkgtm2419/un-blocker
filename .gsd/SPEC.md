@@ -5,26 +5,27 @@
 > ⚠️ **Planning Lock**: No code may be written until this spec is marked `FINALIZED`.
 
 ## Vision
-Deliver `v2.2.0` of `un-blocker`: Eliminate the ~280 MB JVM heap memory bottleneck across 42 active filters (~686,200 rules) via an off-heap 64-bit binary rule engine (`rules.bin`), fix dual-stack ad-blocking across Wi-Fi, 5G, and LTE via split-tunnel routing and checksum-verified NXDOMAIN synthesis, buffer database logging, stabilize R8 minification/CodeQL/Release CI pipelines, and publish release `v2.2.0`.
+Deliver `v2.5.0` of `un-blocker`: Resolve UI lag and screen freezes across all pages, eliminate OOM crashes and GC thrashing by pruning 53 bloated filter extensions down to a curated Essential 7 Pack, integrate off-heap binary rule evaluation, implement a 3-tier filtering architecture (Basic, Optimal, Complete) with an active Mobile Unbreak list to prevent game and shopping breakage, fix the VPN state toggle disconnect that leaked DoubleClick and ad traffic, optimize Compose logging and page navigation, and publish signed release `v2.5.0` to GitHub.
 
 ## Goals
-1. **Off-Heap Binary Rule Engine & Multi-Syntax Compiler (Phase 1)** — Compile Hosts (`0.0.0.0`), Adblock/uBlock (`||domain^$third-party`), and plain domains into sorted, deduplicated 64-bit FNV-1a hashes in `rules.bin`. Map off-heap via `MappedByteBuffer` with allocation-free $O(\log_2 N)$ binary search and subdomain walk.
-2. **Dual-Stack Split-Tunnel VPN & Checksum-Verified NXDOMAIN Engine (Phase 2)** — Support IPv4 and IPv6 DNS query parsing, valid IPv4 header checksums and RFC 2460 IPv6 UDP checksums, transparent NXDOMAIN synthesis (`0x8183`), and dual-stack DNS server routing (`10.111.222.1/24`, `fd00:1:fd00:1:fd00:1:fd00:1/128`).
-3. **Batched Database Logging & Deferred On-Device Learning (Phase 3)** — Non-blocking `Channel<DnsLogEntity>` with batch insertion to prevent SQLite lock contention and UI frame drops during high-frequency network bursts.
-4. **R8 Keep Rules, Lint Stabilization & GitHub Actions CI/CD Repair (Phase 4)** — Add explicit keep rules for Room, JNI, and TFLite; configure lint warnings; fix GitHub Actions checkout/Java 17 setup, permissions, and release publication; bump version to `2.2.0` (`versionCode = 27`).
-5. **Release v2.2.0 Packaging & Verification (Phase 5)** — Run full verification gates, assemble release APKs, commit with atomic commits, tag `v2.2.0`, push to GitHub, and verify automated release.
+1. **Engine Optimization & State Synchronization Fix (Phase 1)** — Decouple `protectionEnabled` (tunnel state) from `adBlockingEnabled` (user preference) to prevent silent ad-blocking bypass; wire `OffHeapRuleEngine` directly into `AdDetector` and `DecideBlockingUseCase`; implement allocation-free label pointer walking on CharSequence; quarantine suspicious DGA domain `deofleadyetca.org`.
+2. **Curated Essential 7 Extension Pack (Phase 2)** — Prune bloated 53-item `extensions_manifest.json` down to the Essential 7 mobile-optimized lists; update filter downloader and parser to strip cosmetic browser selectors (`##`, `###`, `#?#`) and preserve only pure DNS rules (`||domain^`, `0.0.0.0 domain`).
+3. **Tiered Filtering & Mobile Unbreak Integration (Phase 3)** — Add `FilteringTier` (Basic, Optimal, Complete) to user preferences; implement `MobileUnbreakList` protecting essential app/game backends (Supercell, Spotify login, Google Play Store gateway, WhatsApp CDN); support reward ad preservation under Basic mode.
+4. **UI Performance & Page Navigation Fixes (Phase 4)** — Debounce Room database emission flows (500ms throttle) and add paging/windowing to `LogViewerScreen` to prevent recomposition storms; add Tier Selection Card to `UnblockerScreen`; optimize `ExtensionsScreen` rendering and state.
+5. **Comprehensive Verification & GitHub Release (Phase 5)** — Pass all unit tests across modules, build release test bundle, pass `release-policy.py preflight`, bump version to `2.5.0` (versionCode 33), tag `v2.5.0`, push to GitHub, and verify release artifacts.
 
 ## Constraints
-- Target Android SDK 35, minimum SDK 26.
-- Strict privacy: Zero PII / domain leakage in logs.
-- Memory: Maximum ~5.5 MB memory footprint for 686k rules off-heap.
-- Zero placeholders: Complete, compilable production code.
-- Phase-gated execution: Stop and fix on any failure before moving to the next phase.
+- Android SDK 35 target, minimum SDK 26.
+- Strict privacy: Zero PII or external telemetry.
+- Zero JVM heap string allocations on DNS resolution hot path.
+- 100% backward compatibility with existing Room databases and user rules.
+- Single command execution per PowerShell invocation (no `&&` or `||`).
+- Atomic commits per task (`type(scope): description`).
 
 ## Success Criteria
-- [x] SPEC finalized and roadmap planned.
-- [ ] Phase 1: `RuleCompiler` and `OffHeapRuleEngine` pass `RuleCompilerTest` with zero string allocations on hot path.
-- [ ] Phase 2: Dual-stack IPv4/IPv6 packet parser and checksum synthesis pass `:vpn-engine:testDebugUnitTest`.
-- [ ] Phase 3: Buffered log repository and deferred ML learning pass `assembleDebug` and `testDebugUnitTest`.
-- [ ] Phase 4: Proguard keep rules, lint configuration, and CI workflows updated; version bumped to `2.2.0`.
-- [ ] Phase 5: Complete test suite passes, git tagged `v2.2.0`, pushed, and GitHub Release verified.
+- [x] SPEC finalized and approved.
+- [ ] Phase 1: State disconnect fixed; off-heap rule evaluation verified; quarantine domain blocked.
+- [ ] Phase 2: Essential 7 manifest active; cosmetic rules stripped; unit tests pass.
+- [ ] Phase 3: Basic/Optimal/Complete tiers and Mobile Unbreak list verified with unit tests.
+- [ ] Phase 4: UI lag and recomposition storms resolved; tier selection card functional.
+- [ ] Phase 5: 900+ unit tests pass; `assembleReleaseTest` clean; tagged and released `v2.5.0` on GitHub.

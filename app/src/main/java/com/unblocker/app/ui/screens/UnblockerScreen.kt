@@ -270,7 +270,6 @@ fun UnblockerScreen(
 
                                     if (isRunning) {
                                         preferences.setProtectionEnabled(false)
-                                        preferences.setAdBlockingEnabled(false)
                                         quickStartManager.stopBlockingServices()
                                     } else {
                                         onRequestVpnPermission()

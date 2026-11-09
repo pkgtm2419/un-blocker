@@ -26,7 +26,10 @@ import com.unblocker.app.logic.rules.CnamePolicy
  */
 class ContentFilterEngine(
     private val context: Context,
-    private val adDetector: AdDetector = AdDetector(context),
+    private val adDetector: AdDetector = AdDetector(
+        context = context,
+        offHeapRuleEngine = createDefaultOffHeapEngine(context)
+    ),
     private val adultContentDetector: AdultContentDetector = AdultContentDetector(context),
     private val networkLearner: LocalNetworkLearner = LocalNetworkLearner(
         context = context,
@@ -114,5 +117,17 @@ class ContentFilterEngine(
             detectionMethod = method,
             confidence = decision.confidence
         )
+    }
+
+    companion object {
+        fun createDefaultOffHeapEngine(context: Context): com.unblocker.data.cache.OffHeapRuleEngine? {
+            val file = java.io.File(context.filesDir, "rules.bin")
+            if (!file.exists() || file.length() < 8L) return null
+            return runCatching {
+                com.unblocker.data.cache.OffHeapRuleEngine().apply {
+                    reloadFromFile(file)
+                }
+            }.getOrNull()
+        }
     }
 }

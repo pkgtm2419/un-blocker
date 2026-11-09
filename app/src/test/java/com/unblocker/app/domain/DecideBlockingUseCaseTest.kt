@@ -176,4 +176,41 @@ class DecideBlockingUseCaseTest {
         assertFalse("Paused protection must allow traffic", decision.isBlocked)
         assertEquals(DecisionReason.PAUSED, decision.reasonCode)
     }
+
+    @Test
+    fun testDeofleadyetcaQuarantinedSeedBlocked() {
+        val decision = useCase("deofleadyetca.org")
+        assertTrue("Suspicious domain deofleadyetca.org must be blocked", decision.isBlocked)
+        assertEquals(DecisionReason.STATIC_RULE, decision.reasonCode)
+    }
+
+    @Test
+    fun testOffHeapRuleEngineIntegration() {
+        val tempFile = java.io.File.createTempFile("rules_test", ".bin").apply { deleteOnExit() }
+        val reader = java.io.BufferedReader(java.io.StringReader("||custom-tracker.com^\n0.0.0.0 bad-actor.xyz"))
+        com.unblocker.data.cache.RuleCompiler.compileStreamsToBinaryFile(listOf(reader), tempFile)
+
+        val offHeapEngine = com.unblocker.data.cache.OffHeapRuleEngine().apply {
+            reloadFromFile(tempFile)
+        }
+        val customDetector = AdDetector(context = null, offHeapRuleEngine = offHeapEngine)
+        val customUseCase = DecideBlockingUseCase(
+            adDetector = customDetector,
+            adultContentDetector = AdultContentDetector(context = null),
+            adaptiveBlockingEngine = AdaptiveBlockingEngine(null, LocalNetworkLearner()),
+            isAdBlockingEnabled = { true }
+        )
+
+        val directDecision = customUseCase("custom-tracker.com")
+        assertTrue("Domain from OffHeapRuleEngine must be blocked", directDecision.isBlocked)
+
+        val subDecision = customUseCase("sub.custom-tracker.com")
+        assertTrue("Subdomain from OffHeapRuleEngine must be blocked", subDecision.isBlocked)
+
+        val badActorDecision = customUseCase("bad-actor.xyz")
+        assertTrue("Host from OffHeapRuleEngine must be blocked", badActorDecision.isBlocked)
+
+        val safeDecision = customUseCase("legitimate-site.org")
+        assertFalse("Unrelated domain must be allowed", safeDecision.isBlocked)
+    }
 }

@@ -82,6 +82,7 @@ class QuickStartManager(context: Context) {
         try {
             loadDefaultConfiguration()
             preferences.setProtectionEnabled(true)
+            preferences.setAdBlockingEnabled(true)
             UnblockerVpnService.start(appContext)
         } catch (_: Exception) {
             UnblockerVpnService.session.failed()

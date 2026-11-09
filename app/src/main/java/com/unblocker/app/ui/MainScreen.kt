@@ -53,7 +53,7 @@ fun MainScreen(
             preferences.setAdBlockingEnabled(true)
             quickStartManager.startBlockingServices(onPermissionRequired = {})
         } else {
-            preferences.setAdBlockingEnabled(false)
+            preferences.setProtectionEnabled(false)
         }
     }
 

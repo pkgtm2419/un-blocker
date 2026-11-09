@@ -7,7 +7,8 @@ import com.unblocker.app.logic.rules.*
 class AdDetector(
     private val context: Context? = null,
     private val compiledRules: CompiledRuleSet? = null,
-    private val ruleSet: RuleSet? = null
+    private val ruleSet: RuleSet? = null,
+    private val offHeapRuleEngine: com.unblocker.data.cache.OffHeapRuleEngine? = null
 ) {
     private val overlay = mutableListOf<DnsRule>()
     private val admission: RuleAdmission = DefaultRuleAdmission()
@@ -37,6 +38,9 @@ class AdDetector(
             }
         }
         ExtensionRuleStore.matchRule(normalized)?.let { return it }
+        if (offHeapRuleEngine != null && offHeapRuleEngine.isLoaded() && offHeapRuleEngine.isDomainBlocked(normalized)) {
+            return DnsRule(RuleAction.BLOCK, RuleKind.SUFFIX, normalized, BlockingCategory.AD)
+        }
         return activeRuleSet.match(domain)
     }
 
@@ -51,7 +55,8 @@ class AdDetector(
             else "Domain Suffix Match (${rule.value})"
     }
 
-    @Synchronized fun getDomainCount(): Int = activeRuleSet.ruleCount + overlay.size + ExtensionRuleStore.ruleCount
+    @Synchronized fun getDomainCount(): Int =
+        activeRuleSet.ruleCount + overlay.size + ExtensionRuleStore.ruleCount + (offHeapRuleEngine?.ruleCount() ?: 0)
 
     companion object {
         private fun fallbackRuleSet(): RuleSet {
@@ -73,7 +78,7 @@ class AdDetector(
             "admaven.com", "onclickads.net", "droplink.co", "openx.net",
             "mintegral.com", "rayjump.com", "ironsource.com", "pangle.io",
             "chartboost.com", "fyber.com", "tapjoy.com", "an.facebook.com",
-            "atlassbx.com", "mopub.com", "advertising.apple.com"
+            "atlassbx.com", "mopub.com", "advertising.apple.com", "deofleadyetca.org"
         )
 
         private val fallback = defaultSeedRules

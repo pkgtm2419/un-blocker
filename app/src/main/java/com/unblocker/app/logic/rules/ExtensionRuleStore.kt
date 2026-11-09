@@ -66,16 +66,19 @@ object ExtensionRuleStore {
             return DnsRule(RuleAction.ALLOW, RuleKind.SUFFIX, domain, BlockingCategory.AD)
         }
 
-        var dotIndex = domain.indexOf('.')
-        while (dotIndex != -1) {
-            val parentSuffix = domain.substring(dotIndex + 1)
-            // WP2: Never test a single-label parent (e.g., 'com')
-            if (!parentSuffix.contains('.')) break
+        if (current.allowSuffix.isNotEmpty()) {
+            var dotIndex = domain.indexOf('.')
+            while (dotIndex != -1) {
+                val nextDot = domain.indexOf('.', dotIndex + 1)
+                // WP2: Never test a single-label parent (e.g., 'com')
+                if (nextDot == -1) break
 
-            if (parentSuffix in current.allowSuffix) {
-                return DnsRule(RuleAction.ALLOW, RuleKind.SUFFIX, parentSuffix, BlockingCategory.AD)
+                val parentSuffix = domain.substring(dotIndex + 1)
+                if (parentSuffix in current.allowSuffix) {
+                    return DnsRule(RuleAction.ALLOW, RuleKind.SUFFIX, parentSuffix, BlockingCategory.AD)
+                }
+                dotIndex = nextDot
             }
-            dotIndex = domain.indexOf('.', dotIndex + 1)
         }
 
         // 2. Check Block Rules (exact and full domain suffix)
@@ -87,19 +90,22 @@ object ExtensionRuleStore {
         }
 
         // Parent domain checks for suffix and wildcard
-        dotIndex = domain.indexOf('.')
-        while (dotIndex != -1) {
-            val parentSuffix = domain.substring(dotIndex + 1)
-            // WP2: Never test a single-label parent (e.g., 'com')
-            if (!parentSuffix.contains('.')) break
+        if (current.blockSuffix.isNotEmpty() || current.blockWildcard.isNotEmpty()) {
+            var dotIndex = domain.indexOf('.')
+            while (dotIndex != -1) {
+                val nextDot = domain.indexOf('.', dotIndex + 1)
+                // WP2: Never test a single-label parent (e.g., 'com')
+                if (nextDot == -1) break
 
-            if (parentSuffix in current.blockSuffix) {
-                return DnsRule(RuleAction.BLOCK, RuleKind.SUFFIX, parentSuffix, BlockingCategory.AD)
+                val parentSuffix = domain.substring(dotIndex + 1)
+                if (parentSuffix in current.blockSuffix) {
+                    return DnsRule(RuleAction.BLOCK, RuleKind.SUFFIX, parentSuffix, BlockingCategory.AD)
+                }
+                if (parentSuffix in current.blockWildcard) {
+                    return DnsRule(RuleAction.BLOCK, RuleKind.WILDCARD, parentSuffix, BlockingCategory.AD)
+                }
+                dotIndex = nextDot
             }
-            if (parentSuffix in current.blockWildcard) {
-                return DnsRule(RuleAction.BLOCK, RuleKind.WILDCARD, parentSuffix, BlockingCategory.AD)
-            }
-            dotIndex = domain.indexOf('.', dotIndex + 1)
         }
 
         return null

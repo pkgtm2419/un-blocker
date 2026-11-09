@@ -1,32 +1,24 @@
 ---
-updated: 2026-11-02T23:45:00+05:30
+updated: 2026-11-09T16:24:00+05:30
 ---
 
 # Project State
 
 ## Current Position
 
-**Milestone:** Superpowers Improvement Plans & Release v2.3.0
-**Phase:** Phase 6 - Superpowers Improvement Plans & Release v2.3.0
-**Status:** ready
-**Plan:** Plan 6.1 - 6.3: Bump version to 2.3.0 (versionCode 28), update README, tag v2.3.0, and push to trigger automated release
+**Milestone:** Un-Blocker v2.5.0: Essential Extensions, Tiered Filtering & UI Performance  
+**Phase:** Phase 1 - Engine Optimization & State Synchronization Fix  
+**Status:** ready  
+**Plan:** Task 1.1 - Fix VPN toggle disconnect in `UnblockerScreen.kt`, `MainScreen.kt`, and `QuickStartManager.kt`  
 
 ## Last Action
 
-Completed all 6 architectural improvement plans from `START_HERE.txt`, passed 812 unit tests and 19 policy scripts, bumped app version to `2.3.0` (`versionCode 28`), and updated README download links.
+Updated `.gsd/SPEC.md`, `.gsd/ROADMAP.md`, and authored comprehensive implementation plan `COMPREHENSIVE_APPLICATION_AUDIT_AND_FILTERING_PLAN.md`.
 
 ## Next Steps
 
-1. Commit version bump and README updates.
-2. Push `main` to `origin`.
-3. Create annotated tag `v2.3.0`.
-4. Push tag `v2.3.0` to `origin`.
-5. Monitor GitHub Actions `Publish release APK` workflow to completion.
-
-## Active Decisions
-
-| Decision | Choice | Made | Affects |
-|----------|--------|------|---------|
-| Off-Heap 64-bit Index | 64-bit FNV-1a hashes sorted and deduplicated in `rules.bin`, mapped via MappedByteBuffer | 2026-11-02 | Memory footprint dropped from ~280 MB to ~5.5 MB for 686k rules |
-| Multi-Syntax Normalization | Support Hosts, Adblock/uBlock (`||domain^$third-party`), and plain domains | 2026-11-02 | Compatibility across 42 active filter lists |
-| Zero-Allocation Walk | Compute FNV-1a on label offsets directly without string slicing | 2026-11-02 | Subdomain blocking with 0 GC overhead |
+1. Execute Task 1.1: Fix VPN toggle disconnect in `UnblockerScreen.kt`, `MainScreen.kt`, and `QuickStartManager.kt`.
+2. Execute Task 1.2: Connect `OffHeapRuleEngine` to `AdDetector` and `DecideBlockingUseCase`.
+3. Execute Task 1.3: Eliminate string slicing in `ExtensionRuleStore.kt`.
+4. Execute Task 1.4: Quarantine `deofleadyetca.org`.
+5. Run unit tests and commit Task 1.1-1.5.

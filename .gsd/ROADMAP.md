@@ -1,74 +1,49 @@
----
-milestone: Superpowers Improvement Plans & Release v2.3.0
-version: 2.3.0
-updated: 2026-11-02T23:45:00+05:30
----
+# ROADMAP.md — Project Roadmap
 
-# Roadmap
-
-> **Current Phase:** Phase 6 - Superpowers Improvement Plans & Release v2.3.0
-> **Status:** ready
-
-## Must-Haves (from SPEC)
-- [x] 64-bit FNV-1a binary index (`rules.bin`) mapped off-heap with $O(\log_2 N)$ binary search (Phase 1)
-- [x] Multi-syntax rule compiler normalizing Hosts, Adblock/uBlock, and plain domains (Phase 1)
-- [x] Dual-stack IPv4/IPv6 DNS parsing and checksum-verified NXDOMAIN synthesis in VPN engine (Phase 2)
-- [x] Split-tunnel routing for DNS addresses with underlying physical network auto-tracking (Phase 2)
-- [x] Non-blocking buffered log channel (`Channel<DnsLogEntity>`) with batched DB insertion (Phase 3)
-- [x] Deferred on-device ML rule compilation and removal of high-memory bottleneck warnings (Phase 3)
-- [x] Proguard keep rules for Room/JNI/TFLite and lint configuration (Phase 4)
-- [x] GitHub Actions workflow repairs (`android-checks.yml`, `codeql.yml`, `release.yml`) (Phase 4)
-- [x] Version bumped to 2.2.0 (versionCode 27), test verification gates, and release packaging (Phase 5)
+**Milestone:** Un-Blocker v2.5.0: Essential Extensions, Tiered Filtering & UI Performance  
+**Status:** In Progress  
+**Spec Reference:** `.gsd/SPEC.md` (FINALIZED)
 
 ---
 
-## Phases
+## Phase Overview
 
-### Phase 1: Off-Heap Binary Rule Engine & Multi-Syntax Compiler
-**Status:** ✅ Completed
-**Objective:** Eliminate the ~280 MB JVM heap spike and GC freezes caused by holding ~686,200 domain strings in memory. Normalize Hosts (`0.0.0.0`), Adblock/uBlock (`||domain^$third-party`), and plain-domain syntaxes into a sorted, deduplicated 64-bit FNV-1a binary index (`rules.bin`) mapped off-heap via `MappedByteBuffer`.
-**Plans:**
-- [x] Plan 1.1: Implement `RuleCompiler.kt` in `data-store` with multi-syntax parser, FNV-1a 64-bit hash, and binary file compiler
-- [x] Plan 1.2: Implement `OffHeapRuleEngine.kt` in `data-store` with off-heap MappedByteBuffer, atomic hot-reload, and zero-allocation binary search
-- [x] Plan 1.3: Add unit tests in `RuleCompilerTest.kt` and run Phase 1 verification gate (`./gradlew testDebugUnitTest`)
+| Phase | Description | Status |
+| :--- | :--- | :--- |
+| **Phase 1** | Engine Optimization & State Synchronization Fix | In Progress |
+| **Phase 2** | Curate the Essential 7 Extension Pack & Parser Pruning | Pending |
+| **Phase 3** | Tiered Filtering (Basic/Optimal/Complete) & Mobile Unbreak | Pending |
+| **Phase 4** | UI Performance, Page Navigation & Compose Optimization | Pending |
+| **Phase 5** | Comprehensive Verification, APK Build & GitHub Release | Pending |
 
-### Phase 2: Dual-Stack Split-Tunnel VPN & Checksum-Verified NXDOMAIN Engine
-**Status:** ✅ Completed
-**Objective:** Fix dual-stack ad-blocking across Wi-Fi, 5G, and LTE via split-tunnel routing, valid IPv4 header checksums, RFC 2460 IPv6 UDP checksums, and transparent NXDOMAIN synthesis.
-**Plans:**
-- [x] Plan 2.1: Refactor `DnsPacketEngine.kt` with IPv4/IPv6 parsing, checksum validation, and NXDOMAIN synthesis
-- [x] Plan 2.2: Refactor `UnblockerVpnService.kt` with dual-stack virtual sinkhole, DNS-only split-tunnel routes, and underlying network tracking
-- [x] Plan 2.3: Run Phase 2 verification gate (`./gradlew :vpn-engine:assembleDebug :vpn-engine:testDebugUnitTest`)
+---
 
-### Phase 3: Batched Database Logging & Deferred On-Device Learning
-**Status:** ✅ Completed
-**Objective:** Prevent SQLite lock contention and UI frame drops during heavy network bursts while maintaining the on-device learning pipeline.
-**Plans:**
-- [x] Plan 3.1: Implement buffered log channel in `LogRepository.kt` with batch insertion
-- [x] Plan 3.2: Update `BatchDomainAnalysisWorker.kt` to trigger off-heap rule recompilation and clean up manifest memory flags
-- [x] Plan 3.3: Run Phase 3 verification gate (`./gradlew assembleDebug testDebugUnitTest`)
+## Phase 1: Engine Optimization & State Synchronization Fix
+- [ ] Task 1.1: Fix VPN toggle disconnect in `UnblockerScreen.kt`, `MainScreen.kt`, and `QuickStartManager.kt` so toggling protection never disables `adBlockingEnabled`.
+- [ ] Task 1.2: Connect `OffHeapRuleEngine` to `AdDetector.kt` and `DecideBlockingUseCase.kt` for zero-heap binary rule evaluation.
+- [ ] Task 1.3: Eliminate string slicing (`substring`) in `ExtensionRuleStore.kt` by using label offset walking on `CharSequence`.
+- [ ] Task 1.4: Add `deofleadyetca.org` to quarantine list and update default seed rules.
+- [ ] Task 1.5: Verify Phase 1 with regression unit tests.
 
-### Phase 4: R8 Keep Rules, Lint Stabilization & GitHub Actions CI/CD Repair
-**Status:** ✅ Completed
-**Objective:** Fix all failures in CI workflows, add explicit keep rules for Room/JNI/TFLite, configure lint warnings, and bump version to 2.2.0.
-**Plans:**
-- [x] Plan 4.1: Update `app/proguard-rules.pro` with Room, JNI, TFLite, and Coroutines keep rules
-- [x] Plan 4.2: Update `app/build.gradle.kts` with `versionCode = 27`, `versionName = "2.2.0"`, and lint options
-- [x] Plan 4.3: Repair GitHub Actions workflows (`.github/workflows/*.yml`) for Java 17, permissions, and robust release publishing
-- [x] Plan 4.4: Run Phase 4 verification gate (`./gradlew testDebugUnitTest lintDebug assembleRelease`)
+## Phase 2: Curate the Essential 7 Extension Pack
+- [ ] Task 2.1: Overhaul `extensions_manifest.json` from 53 entries down to the Essential 7 mobile-optimized lists.
+- [ ] Task 2.2: Update `BoundedFilterDownloader.kt` and `RuleLineParser.kt` to filter out browser-only cosmetic rules (`##`, `###`, `#?#`) and keep pure DNS rules.
+- [ ] Task 2.3: Verify Phase 2 with `ExtensionRepositoryTest`.
 
-### Phase 5: Repository Hygiene, Commit, Tag & Push Release v2.2.0
-**Status:** ✅ Completed
-**Objective:** Verify working tree cleanliness, commit with atomic commits, tag `v2.2.0`, push to GitHub, and verify automated release publishing.
-**Plans:**
-- [x] Plan 5.1: Pre-push hygiene and verification gate
-- [x] Plan 5.2: Git commit, tag, and push release `v2.2.0`
-- [x] Plan 5.3: Verify GitHub Actions run and release assets
+## Phase 3: Tiered Filtering & Mobile Unbreak Integration
+- [ ] Task 3.1: Add `FilteringTier` (`BASIC`, `OPTIMAL`, `COMPLETE`) to `FilteringPreferences.kt`.
+- [ ] Task 3.2: Implement `MobileUnbreakList.kt` protecting essential mobile apps (Supercell, Spotify, Play Store, WhatsApp CDN, banking).
+- [ ] Task 3.3: Wire tier logic into `DecideBlockingUseCase.kt`: allow reward ads and shopping redirects under `BASIC`, balanced shield under `OPTIMAL`, strict shield under `COMPLETE`.
+- [ ] Task 3.4: Verify Phase 3 with dedicated unit tests.
 
-### Phase 6: Superpowers Improvement Plans & Release v2.3.0
-**Status:** ✅ Completed
-**Objective:** Execute 6 architectural improvement plans (VPN TCP routing, non-destructive migration, APK optimization, bounded filter downloads, protection UI, release CI gates) and publish release v2.3.0.
-**Plans:**
-- [x] Plan 6.1: Implement 6 architectural improvement plans from START_HERE.txt
-- [x] Plan 6.2: Bump app version to 2.3.0 (versionCode 28) and update README download links
-- [x] Plan 6.3: Pass verification gates, tag v2.3.0, and publish release APK via GitHub Actions
+## Phase 4: UI Performance & Page Navigation Fixes
+- [ ] Task 4.1: Debounce Room emissions in `LogViewModel.kt` (500ms throttle) and add paging/windowing (`take(100)`) in `LogViewerScreen.kt`.
+- [ ] Task 4.2: Add Tier Selection Card (Basic / Optimal / Complete) to `UnblockerScreen.kt`.
+- [ ] Task 4.3: Optimize `ExtensionsScreen.kt` for the Essential 7.
+- [ ] Task 4.4: Verify UI performance and compose navigation without frame drops.
+
+## Phase 5: Comprehensive Verification & GitHub Release
+- [ ] Task 5.1: Run all unit tests (`./gradlew testDebugUnitTest`).
+- [ ] Task 5.2: Build release test APK (`./gradlew assembleReleaseTest`).
+- [ ] Task 5.3: Run `python tools/eval/release-policy.py preflight`.
+- [ ] Task 5.4: Bump version to `2.5.0` (`versionCode 33`), tag `v2.5.0`, push to GitHub, and verify release artifacts.

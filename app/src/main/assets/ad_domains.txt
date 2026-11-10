@@ -92,6 +92,7 @@ adredirect.com
 adreload.com
 adrenalads.com
 adrenalin.com
+adreq.razorpayads.com
 adrevolution.com
 adring.com
 adriver.ru
@@ -372,8 +373,10 @@ adskeeper.co.uk
 adskeeper.com
 adspiral.com
 adsterra.com
+adstudio-assets.scdn.co
 adsupply.com
 adtarget.me
+adtech-events.bookmyshow.com
 adtechus.com
 adtracker.inmobi.com
 adtrafficquality.google
@@ -392,6 +395,7 @@ affili.net
 afs.googlesyndication.com
 aifrwk.com
 airpush.com
+aisensia.com
 al5sm.com
 allownotification.com
 allownotifications.com
@@ -409,6 +413,7 @@ api.branch.io
 api.firwinds.site
 api.kochava.com
 api.mixpanel.com
+api.revenuecat.com
 api.segment.io
 api.singular.net
 api.taboola.com
@@ -426,11 +431,13 @@ appnexus.com
 appsflyersdk.com
 appsgrowthpromo-pa.googleapis.com
 apptentive.com
+arrowsaway.aisensia.com
 asg.clckhss.com
 assoc-amazon.com
 atdmt.com
 atom-data.io
 auction.unityads.unity3d.com
+aureliatmeses.com
 avazu.net
 b.gemini.yahoo.com
 b.scorecardresearch.com
@@ -442,6 +449,7 @@ bebi.com
 begallure.com
 begun.ru
 betteradsystem.com
+bflixcdn.xyz
 bhm.progmore.com
 bidder.criteo.com
 bidgear.com
@@ -481,6 +489,7 @@ clickadu.com
 clickaine.com
 clickmngr.com
 clicksor.com
+clickstream-in.bookmyshow.com
 clickterra.net
 clicmanager.fr
 cloudflare-dns.com
@@ -491,6 +500,7 @@ collector.snowplow.supercell.com
 config.inmobi.com
 config.unityads.unity3d.com
 content.ad
+contentsblock.samqaicongen.com
 contextual.media.net
 contextweb.com
 control.kochava.com
@@ -503,6 +513,7 @@ crazyegg.com
 crimtan.com
 criteo.com
 criteo.net
+crm.aisensia.com
 crosspixel.net
 crwdcntrl.net
 cryptoloot.pro
@@ -518,10 +529,12 @@ darklewawa.com
 data.flurry.com
 datadoghq.com
 dc9xwpjprguup.cloudfront.net
+dcg.microsoft.com
 decide.mixpanel.com
 deedwaifpleas.org
 defymedia.com
 demdex.net
+deofleadyetca.org
 despairdiscontinue.com
 dev.braze.com
 dh.hedeuntacks.com
@@ -613,6 +626,7 @@ hyprmx.com
 ib.adnxs.com
 ignitionone.com
 image2.pubmatic.com
+imasdk.googleapis.com
 imrworldwide.com
 inadco.com
 indexexchange.com
@@ -636,6 +650,7 @@ juicyads.com
 jumptap.com
 justpremium.com
 kargo.com
+kernesowan.com
 kiosked.com
 komoona.com
 krxd.net
@@ -657,6 +672,7 @@ llvpn.com
 localytics.com
 log.outbrain.com
 loggly.com
+logs.razorpayads.com
 lotame.com
 lp.legbaratwind.com
 luckyorange.com
@@ -688,6 +704,7 @@ moatads.com
 mobclix.com
 mobfox.com
 mobile-collector.newrelic.com
+mobile.events.data.microsoft.com
 mobipium.com
 mobtrks.com
 moengage.com
@@ -700,6 +717,7 @@ mouseflow.com
 mozilla.cloudflare-dns.com
 msecnd.net
 mtgglobals.com
+multi.aisensia.com
 mybestmv.com
 mytarget.com
 nanigans.com
@@ -756,6 +774,7 @@ playwire.com
 plista.com
 plugrush.com
 polar.me
+poll.gras.samsungdm.com
 pollfish.com
 pontiflex.com
 popads.net
@@ -789,6 +808,7 @@ quattro.com
 radiumone.com
 rakutenadvertising.com
 raygun.io
+razorpayads.com
 rbqlocmewza.com
 rcm-images.amazon.com
 readpeak.com
@@ -797,6 +817,7 @@ recommendsinsistence.com
 recrampwiped.com
 reddleops.pro
 redshell.io
+remote-config.razorpayads.com
 republer.com
 res.applovin.com
 retargeter.com
@@ -820,6 +841,7 @@ rubiconproject.com
 run-ads.com
 runative-syndicate.com
 s.amazon-adsystem.com
+s.youtube.com
 s0.2mdn.net
 sads.adsboosters.xyz
 samsung.telemetry.eyeo.com
@@ -859,6 +881,7 @@ smaato.net
 smartadserver.com
 smartclip.net
 smartlook.com
+sneerscuartel.com
 snigel.com
 sodahead.com
 sonobi.com
@@ -940,6 +963,7 @@ use-application-dns.net
 uxcam.com
 v.revcontent.com
 valueclick.com
+vas.samsungapps.com
 vdo.ai
 vertamedia.com
 verve.com

@@ -13,17 +13,31 @@ object MobileUnbreakList {
      * Verified across 11,900+ real-world query logs.
      */
     private val essentialAppDomains = setOf(
-        // Supercell Games (Clash of Clans, Brawl Stars, Clash Royale)
+        // Supercell Games (Clash of Clans, Brawl Stars, Clash Royale) - Game traffic & ID login
         "accounts.supercell.com",
         "supercell.com",
-        "images.store.supercell.com",
+        "id.supercell.com",
+        "cdn.id.supercell.com",
+        "gamea.clashofclans.com",
+        "clashofclans.inbox.supercell.com",
         "clash-static.inbox.supercell.com",
+        "sdk.social.supercell.com",
+        "assets.social.supercell.com",
+        "images.store.supercell.com",
+        "store.supercell.com",
+        "event-assets.clashofclans.com",
+        "game-assets.store.supercell.com",
+        "security.id.supercell.com",
 
         // Spotify Authentication & Audio Transport
         "login5.spotify.com",
         "spclient.wg.spotify.com",
         "ap.spotify.com",
         "dealer.spotify.com",
+        "apresolve.spotify.com",
+        "audio-ak.spotifycdn.com",
+        "gae2-spclient.spotify.com",
+        "gae2-dealer.g2.spotify.com",
 
         // Messaging & WhatsApp CDN Delivery
         "static.whatsapp.net",
@@ -43,7 +57,6 @@ object MobileUnbreakList {
 
     private val essentialSuffixes = listOf(
         ".cdn.whatsapp.net",
-        ".supercell.com",
         ".akamaized.net"
     )
 

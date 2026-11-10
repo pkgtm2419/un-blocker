@@ -78,7 +78,9 @@ class AdDetector(
             "admaven.com", "onclickads.net", "droplink.co", "openx.net",
             "mintegral.com", "rayjump.com", "ironsource.com", "pangle.io",
             "chartboost.com", "fyber.com", "tapjoy.com", "an.facebook.com",
-            "atlassbx.com", "mopub.com", "advertising.apple.com", "deofleadyetca.org"
+            "atlassbx.com", "mopub.com", "advertising.apple.com", "deofleadyetca.org",
+            "razorpayads.com", "aureliatmeses.com", "sneerscuartel.com", "kernesowan.com",
+            "busycdn.xyz", "bflixcdn.xyz", "googlesyndication.com", "s.youtube.com", "imasdk.googleapis.com"
         )
 
         private val fallback = defaultSeedRules

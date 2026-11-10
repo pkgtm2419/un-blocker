@@ -1,6 +1,6 @@
 ! Unblocker Bundled Extension Rules
 ! Pre-installed seed rules covering in-app ads, video ad telemetry, trackers, annoyances, malware
-! Comprehensive Mobile & Video Ad Network Rules (AdMob, Unity, AppLovin, ironSource, Vungle, InMobi)
+! Comprehensive Mobile & Video Ad Network Rules (AdMob, Unity, AppLovin, ironSource, Vungle, InMobi, RazorpayAds)
 ! uBlock Origin & EasyList Core Ad/Tracker Baseline
 
 ||02ip.ru^
@@ -39,6 +39,7 @@
 ||adnxs-simple.com^
 ||adnxs.com^
 ||adreliz.com^
+||adreq.razorpayads.com^
 ||adriver.ru^
 ||adroll.com^
 ||ads.adcolony.com^
@@ -52,6 +53,8 @@
 ||adserver.unityads.unity3d.com^
 ||adservice.google.com^
 ||adsterra.com^
+||adstudio-assets.scdn.co^
+||adtech-events.bookmyshow.com^
 ||adtng.com^
 ||adtrafficquality.google^
 ||adv-static.com^
@@ -61,10 +64,12 @@
 ||advertnet.ru^
 ||advertur.ru^
 ||advmaker.net^
+||adx.g.doubleclick.net^
 ||aet.spotify.com^
 ||affise.com^
 ||aifrwk.com^
 ||airbrake.io^
+||aisensia.com^
 ||amazon-adsystem.com^
 ||amoeba.web.roku.com^
 ||amung.us^
@@ -79,6 +84,7 @@
 ||api.amplitude.com^
 ||api.firwinds.site^
 ||api.mixpanel.com^
+||api.revenuecat.com^
 ||api.segment.io^
 ||api2.branch.io^
 ||app-measurement.com^
@@ -90,15 +96,18 @@
 ||appsflyer.com^
 ||appsflyersdk.com^
 ||appsgrowthpromo-pa.googleapis.com^
+||arrowsaway.aisensia.com^
 ||assets.applovin.com^
 ||atlassbx.com^
 ||auction.unityads.unity3d.com^
+||aureliatmeses.com^
 ||awstats.sourceforge.net^
 ||axiom.co^
 ||begun.ru^
 ||bet365.com^
 ||betteradsystem.com^
 ||betterstack.com^
+||bflixcdn.xyz^
 ||bhm.progmore.com^
 ||bi.vungle.com^
 ||bidswitch.net^
@@ -119,8 +128,10 @@
 ||clevertap.com^
 ||click.redditmail.com^
 ||clickadu.com^
+||clickstream-in.bookmyshow.com^
 ||clickunder.biz^
 ||clustrmaps.com^
+||cm.g.doubleclick.net^
 ||cmp.uniconsent.com^
 ||cnt.i.ua^
 ||cocospy.com^
@@ -129,6 +140,7 @@
 ||config.inmobi.com^
 ||config.samsungads.com^
 ||config.unityads.unity3d.com^
+||contentsblock.samqaicongen.com^
 ||contextweb.com^
 ||control.kochava.com^
 ||cookiebot.com^
@@ -147,6 +159,7 @@
 ||crackle.co.in^
 ||crashlytics.com^
 ||criteo.com^
+||crm.aisensia.com^
 ||cs.ns1p.net^
 ||cydia-app.com^
 ||d.applovin.com^
@@ -157,9 +170,11 @@
 ||data.flurry.com^
 ||data.mistat.xiaomi.com^
 ||datadoghq.com^
+||dcg.microsoft.com^
 ||deedwaifpleas.org^
 ||defendermedia.net^
 ||delivery.admiral.com^
+||deofleadyetca.org^
 ||device-metrics-eu.amazon.com^
 ||device-metrics-us.amazon.com^
 ||diagmon-common.samsungeshop.com^
@@ -192,6 +207,8 @@
 ||globalteaser.com^
 ||globalteaser.ru^
 ||googleads.g.doubleclick.net^
+||googleads4.g.doubleclick.net^
+||googlesyndication.com^
 ||hb.crackle.co.in^
 ||hedeuntacks.com^
 ||hentai.com^
@@ -225,6 +242,7 @@
 ||ironsrc.mobi^
 ||juicyads.com^
 ||kadam.ru^
+||kernesowan.com^
 ||ketch.com^
 ||kochava.com^
 ||lcprd1.samsungcloudsolution.net^
@@ -245,6 +263,7 @@
 ||logentries.com^
 ||loggly.com^
 ||logs.ironsrc.mobi^
+||logs.razorpayads.com^
 ||logtail.com^
 ||logz.io^
 ||luugy.com^
@@ -261,6 +280,7 @@
 ||mgid.com^
 ||mintegral.com^
 ||moatads.com^
+||mobile.events.data.microsoft.com^
 ||mobileads.google.com^
 ||moe.video^
 ||moloco.com^
@@ -270,6 +290,7 @@
 ||ms.applovin.com^
 ||mspy.com^
 ||mtgglobals.com^
+||multi.aisensia.com^
 ||nativo.com^
 ||nedstat.com^
 ||newrelic.com^
@@ -305,6 +326,7 @@
 ||pipe.aria.microsoft.com^
 ||plugrush.com^
 ||pokerstars.com^
+||poll.gras.samsungdm.com^
 ||popads.net^
 ||popcash.net^
 ||propellerads.com^
@@ -318,12 +340,15 @@
 ||rating.openstat.ru^
 ||raygun.io^
 ||rayjump.com^
+||razorpayads.com^
 ||rbqlocmewza.com^
 ||recrampwiped.com^
 ||recreativ.ru^
 ||redclick.ru^
 ||redirector.gvt1.com^
 ||relap.io^
+||remote-config.razorpayads.com^
+||report.mkt.supercell.com^
 ||res.applovin.com^
 ||revcontent.com^
 ||revolvermaps.com^
@@ -340,8 +365,10 @@
 ||samsungads.com^
 ||scalyr.com^
 ||scorecardresearch.com^
+||sdk.pushmessage.samsung.com^
 ||sdkconfig.ad.xiaomi.com^
 ||securepubads.g.doubleclick.net^
+||sentry.bookmyshow.com^
 ||sentry.io^
 ||serving-sys.com^
 ||setting.mintegral.com^
@@ -355,6 +382,7 @@
 ||smartadserver.com^
 ||smartlook.com^
 ||smi2.ru^
+||sneerscuartel.com^
 ||soma.smaato.net^
 ||sony-bravia-ads.com^
 ||sourcepoint.mgr.consensu.org^
@@ -391,6 +419,7 @@
 ||tns-counter.ru^
 ||top.mail.ru^
 ||top100.rambler.ru^
+||tpc.googlesyndication.com^
 ||track.ironsrc.mobi^
 ||track.roku.com^
 ||tracker.inmobi.com^
@@ -416,6 +445,7 @@
 ||usercentrics.eu^
 ||v10.events.data.microsoft.com^
 ||v20.events.data.microsoft.com^
+||vas.samsungapps.com^
 ||vi-stream.ru^
 ||video-stats.l.google.com^
 ||videoiq.ru^

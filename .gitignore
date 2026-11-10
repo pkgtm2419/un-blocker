@@ -34,3 +34,4 @@ jdk*/
 *.zip
 .env
 Screenshot_*.png
+*.csv

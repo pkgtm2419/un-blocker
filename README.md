@@ -1,10 +1,10 @@
 # Un-Blocker
 
-[![Download APK](https://img.shields.io/badge/Download-APK%20(v2.5.0)-brightgreen?style=flat&logo=android&logoColor=white)](https://github.com/pkgtm2419/un-blocker/releases/download/v2.5.0/ub-blocker-2.5.0.apk)
+[![Download APK](https://img.shields.io/badge/Download-APK%20(v2.6.0)-brightgreen?style=flat&logo=android&logoColor=white)](https://github.com/pkgtm2419/un-blocker/releases/download/v2.6.0/ub-blocker-2.6.0.apk)
 [![Latest Release](https://img.shields.io/github/v/release/pkgtm2419/un-blocker?label=Latest%20Release&logo=github)](https://github.com/pkgtm2419/un-blocker/releases/latest)
 [![Release CI](https://github.com/pkgtm2419/un-blocker/actions/workflows/release.yml/badge.svg)](https://github.com/pkgtm2419/un-blocker/actions/workflows/release.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Development](https://img.shields.io/badge/development-2.5.0-orange.svg)](app/build.gradle.kts)
+[![Development](https://img.shields.io/badge/development-2.6.0-orange.svg)](app/build.gradle.kts)
 [![Android 8.0+](https://img.shields.io/badge/Android-8.0%2B-3DDC84?logo=android&logoColor=white)](#requirements)
 [![Privacy: local only](https://img.shields.io/badge/Privacy-local--only-success)](#privacy-by-design)
 
@@ -30,18 +30,18 @@ Implementation progress and verification: [phase tracker](docs/improvement-progr
 
 <div align="center">
 
-[![Download APK](https://img.shields.io/badge/Download_APK-ub--blocker--2.5.0.apk-brightgreen?style=for-the-badge&logo=android&logoColor=white)](https://github.com/pkgtm2419/un-blocker/releases/download/v2.5.0/ub-blocker-2.5.0.apk)
+[![Download APK](https://img.shields.io/badge/Download_APK-ub--blocker--2.6.0.apk-brightgreen?style=for-the-badge&logo=android&logoColor=white)](https://github.com/pkgtm2419/un-blocker/releases/download/v2.6.0/ub-blocker-2.6.0.apk)
 [![All Releases](https://img.shields.io/badge/All_Releases-GitHub-238636?style=for-the-badge&logo=github&logoColor=white)](https://github.com/pkgtm2419/un-blocker/releases)
 
 </div>
 
-### Latest Release Package (v2.5.0)
+### Latest Release Package (v2.6.0)
 
 | Asset | Link | Details |
 | :--- | :--- | :--- |
-| **Android APK (Production)** | [**`ub-blocker-2.5.0.apk`**](https://github.com/pkgtm2419/un-blocker/releases/download/v2.5.0/ub-blocker-2.5.0.apk) | Direct production APK download (optimized & shrunk) |
-| **Android APK (Signed Test)** | [**`ub-blocker-2.5.0.apk`**](https://github.com/pkgtm2419/un-blocker/releases/download/v2.5.0/ub-blocker-2.5.0.apk) | Ready to install on any Android device |
-| **Release Page** | [**Release `v2.5.0` Notes**](https://github.com/pkgtm2419/un-blocker/releases/tag/v2.5.0) | View release details and changelog |
+| **Android APK (Production)** | [**`ub-blocker-2.6.0.apk`**](https://github.com/pkgtm2419/un-blocker/releases/download/v2.6.0/ub-blocker-2.6.0.apk) | Direct production APK download (optimized & shrunk) |
+| **Android APK (Signed Test)** | [**`ub-blocker-2.6.0.apk`**](https://github.com/pkgtm2419/un-blocker/releases/download/v2.6.0/ub-blocker-2.6.0.apk) | Ready to install on any Android device |
+| **Release Page** | [**Release `v2.6.0` Notes**](https://github.com/pkgtm2419/un-blocker/releases/tag/v2.6.0) | View release details and changelog |
 | **All Releases** | [**GitHub Releases Catalog**](https://github.com/pkgtm2419/un-blocker/releases) | Browse all published version releases |
 
 > [!TIP]
@@ -121,9 +121,11 @@ Because custom rules are stored as one-way identifiers, the app cannot display a
 saved plaintext list. Enter the same domain again to remove it, or use the
 appropriate **Clear all** action.
 
-### Known Limitations
+### Protection Scope & Architecture
 
-- **First-party ads**: Ads served from the same domain or video content delivery networks as the requested content (e.g., YouTube in-stream video ads, Twitter/X in-feed ads) share hostnames with primary content. Because Un-Blocker operates strictly at the DNS level without TLS decryption or HTTPS payload tampering, these cannot be blocked without breaking playback.
+- **In-App Mobile Ads & Mediation**: All major mobile ad networks (Google AdMob, Unity Ads, AppLovin, ironSource, Vungle, Mintegral, InMobi, Chartboost, Pangle) are blocked network-wide across installed apps and games.
+- **Video Ad Telemetry & Companion Banners**: Ad reporting beacons, companion banners, video ad tags, and tracking endpoints (including `s.youtube.com`, `imasdk.googleapis.com`, `pagead2.googlesyndication.com`, and `googleads.g.doubleclick.net`) are actively blocked without disrupting primary media delivery.
+- **Shared CDN Media Streams**: Primary video delivery streams that share identical delivery hostnames with user media are preserved with unbreak rules to ensure smooth playback without buffering or breakage.
 - **Private DNS and encrypted browser resolvers**: When Android's Private DNS setting is configured to "Strict Hostname" mode, or browsers are configured to use third-party DoH resolvers directly, queries bypass the local port 53 VPN interface. Un-Blocker actively detects Private DNS on API 28+ and displays a warning banner with a shortcut to Android settings. See [Private DNS bypass matrix](docs/dns-bypass-matrix.md).
 - **Pure IP-based traffic**: Applications communicating directly with hardcoded numerical IP addresses without issuing DNS lookups are not filtered.
 

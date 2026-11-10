@@ -1,0 +1,79 @@
+{
+  "audit_version": "2.4.1",
+  "audit_date": "2026-11-08T01:14:00+05:30",
+  "evaluation_verdict": "CONDITIONALLY READY",
+  "environment": {
+    "host_os": "Windows 11 Enterprise (10.0.26300)",
+    "cpu": "Intel Core i9-14900HX (24 cores)",
+    "ram_host_gb": 32,
+    "android_emulator_version": "37.2.12.0",
+    "android_target_api": 37,
+    "android_version_string": "17 (Preview)",
+    "apk_tested": "app/build/outputs/apk/release/ub-blocker-2.4.1.apk",
+    "apk_version_code": 30,
+    "apk_signer_certificate_dn": "C=US, O=Android, CN=Android Debug"
+  },
+  "automated_tests": {
+    "claimed_count": 868,
+    "genuine_gradle_unit_tests": 254,
+    "genuine_pass_rate_pct": 100.0,
+    "codebase_test_annotations": 337,
+    "python_test_functions": 40
+  },
+  "dns_engine_metrics": {
+    "target_endpoint": "10.111.222.2:53",
+    "protocol": "RFC 1035 UDP DNS",
+    "actual_sinkhole_ip": "0.0.0.0",
+    "claimed_sinkhole_ip_previous_report": "127.0.0.1",
+    "single_thread_throughput_qps": 3.65,
+    "blocked_p50_latency_ms": 273.324,
+    "blocked_p95_latency_ms": 367.566,
+    "blocked_p99_latency_ms": 448.209,
+    "concurrency_10_threads_success_pct": 40.0,
+    "concurrency_10_threads_timeout_pct": 59.0,
+    "concurrency_bottleneck_file": "app/src/main/java/com/unblocker/app/services/TunnelRun.kt:14",
+    "forwarding_pool_threads": 4,
+    "forwarding_queue_capacity": 64
+  },
+  "memory_metrics": {
+    "cold_launch_pss_kb": 25942,
+    "vpn_active_idle_pss_kb": 42739,
+    "burst_pss_kb": 38866,
+    "post_burst_steady_pss_kb": 42111,
+    "relaunch_pss_kb": 36111,
+    "java_dalvik_heap_alloc_kb": 9366,
+    "sqlite_engine_kb": 519,
+    "retained_activities": 1,
+    "retained_views": 9,
+    "threads_active": 41
+  },
+  "network_ab_speed": {
+    "cold_lookup_dns_p95_ms": {
+      "scenario_a_native": 319.06,
+      "scenario_b_vpn_active": 2209.84
+    },
+    "warm_lookup_dns_median_ms": {
+      "scenario_a_native": 2.34,
+      "scenario_b_vpn_active": 0.28
+    },
+    "large_asset_download_1_33mb_median_ms": {
+      "scenario_a_native": 983.01,
+      "scenario_b_vpn_active": 682.87
+    },
+    "http_packet_loss_pct": 0.0
+  },
+  "release_blockers": [
+    {
+      "id": "BLOCKER-01",
+      "severity": "CRITICAL",
+      "title": "Release APK signed with Debug Keystore",
+      "detail": "Certificate DN: CN=Android Debug. Rejected by Google Play Console."
+    },
+    {
+      "id": "BLOCKER-02",
+      "severity": "HIGH",
+      "title": "Forwarding Executor Saturation",
+      "detail": "4 worker threads with 64 queue size triggers 59% timeouts on 10 parallel queries."
+    }
+  ]
+}

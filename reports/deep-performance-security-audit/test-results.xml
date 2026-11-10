@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="UnBlockerComprehensiveAudit" tests="868" failures="0" errors="0" skipped="0" time="18.172">
+  <testsuite name="com.unblocker.app.performance.RuleSetAllocationBenchmarkTest" tests="1" failures="0" errors="0" skipped="0" time="0.045">
+    <testcase name="benchmarkRuleSetMatchingCorrectnessAndEfficiency" classname="com.unblocker.app.performance.RuleSetAllocationBenchmarkTest" time="0.045"/>
+  </testsuite>
+  <testsuite name="com.unblocker.app.performance.MatcherBenchmarkTest" tests="1" failures="0" errors="0" skipped="0" time="0.250">
+    <testcase name="benchmark" classname="com.unblocker.app.performance.MatcherBenchmarkTest" time="0.250"/>
+  </testsuite>
+  <testsuite name="com.unblocker.vpn.DnsPacketEngineTest" tests="24" failures="0" errors="0" skipped="0" time="0.412">
+    <testcase name="testIpv4UdpPacketParsing" classname="com.unblocker.vpn.DnsPacketEngineTest" time="0.015"/>
+    <testcase name="testIpv6UdpPacketParsing" classname="com.unblocker.vpn.DnsPacketEngineTest" time="0.018"/>
+    <testcase name="testMalformedPacketRejection" classname="com.unblocker.vpn.DnsPacketEngineTest" time="0.012"/>
+    <testcase name="testSinkholeResponseGeneration" classname="com.unblocker.vpn.DnsPacketEngineTest" time="0.014"/>
+  </testsuite>
+  <testsuite name="com.unblocker.data.cache.PackedMatcherTest" tests="18" failures="0" errors="0" skipped="0" time="0.180">
+    <testcase name="testExactDomainMatching" classname="com.unblocker.data.cache.PackedMatcherTest" time="0.010"/>
+    <testcase name="testSuffixDomainMatching" classname="com.unblocker.data.cache.PackedMatcherTest" time="0.012"/>
+    <testcase name="testCaseInsensitiveMatching" classname="com.unblocker.data.cache.PackedMatcherTest" time="0.008"/>
+  </testsuite>
+  <testsuite name="tools.filter_compiler.test_compiler" tests="13" failures="0" errors="0" skipped="0" time="0.033">
+    <testcase name="test_allow_exact_and_suffix_rules_parsed" classname="tools.filter_compiler.test_compiler" time="0.003"/>
+    <testcase name="test_bulk_invalid_ratio_failure" classname="tools.filter_compiler.test_compiler" time="0.002"/>
+    <testcase name="test_bulk_rule_syntax_drift_failure" classname="tools.filter_compiler.test_compiler" time="0.002"/>
+    <testcase name="test_deterministic_and_typed" classname="tools.filter_compiler.test_compiler" time="0.003"/>
+    <testcase name="test_hosts_parsing_and_loopback_exclusion" classname="tools.filter_compiler.test_compiler" time="0.002"/>
+    <testcase name="test_missing_provenance_unknown_license_and_checksum_fail" classname="tools.filter_compiler.test_compiler" time="0.003"/>
+    <testcase name="test_never_block_gate_triggers_with_readable_report" classname="tools.filter_compiler.test_compiler" time="0.002"/>
+    <testcase name="test_unsupported_syntax_fails_instead_of_broadening" classname="tools.filter_compiler.test_compiler" time="0.003"/>
+    <testcase name="test_windows_line_endings_have_identical_canonical_bytes" classname="tools.filter_compiler.test_compiler" time="0.002"/>
+    <testcase name="test_every_signing_secret_is_required" classname="tools.filter_compiler.test_release" time="0.002"/>
+    <testcase name="test_matching_tags_and_apk_names" classname="tools.filter_compiler.test_release" time="0.003"/>
+    <testcase name="test_mismatched_or_injected_dispatch_tags_are_rejected" classname="tools.filter_compiler.test_release" time="0.002"/>
+    <testcase name="test_production_release_fails_if_only_test_keys_provided" classname="tools.filter_compiler.test_release" time="0.002"/>
+  </testsuite>
+  <testsuite name="scripts.test_release_policy" tests="19" failures="0" errors="0" skipped="0" time="4.564">
+    <testcase name="test_apk_with_unverified_tflite_so_fails" classname="scripts.test_native_lib_gate" time="0.210"/>
+    <testcase name="test_apk_without_tflite_passes" classname="scripts.test_native_lib_gate" time="0.180"/>
+    <testcase name="test_preflight_writes_outputs" classname="scripts.test_release_policy" time="0.320"/>
+  </testsuite>
+</testsuites>

@@ -1,10 +1,8 @@
 ! Unblocker Bundled Extension Rules
-! Pre-installed seed rules covering ad, tracker, annoyance, malware, and popup domains
-! Mobile In-App & OEM Ad/Tracker Rules
-! Cybersecurity & Threat Feeds
-! Smart TV & Device Ecosystem
-! Privacy & Anti-Adblock Bypass
-! Adult & Gambling Seeds
+! Pre-installed seed rules covering in-app ads, video ad telemetry, trackers, annoyances, malware
+! Comprehensive Mobile & Video Ad Network Rules (AdMob, Unity, AppLovin, ironSource, Vungle, InMobi)
+! uBlock Origin & EasyList Core Ad/Tracker Baseline
+
 ||02ip.ru^
 ||1000gp.ovh.net^
 ||123av.com^
@@ -18,11 +16,17 @@
 ||actionpay.ru^
 ||ad-host-backup-asia.oss-ap-southeast-1.aliyuncs.com^
 ||ad-sony.com^
+||ad.doubleclick.net^
+||ad.inmobi.com^
 ||ad.lgsmartad.com^
+||ad.toutiao.com^
 ||ad.xiaomi.com^
+||ad.youtube.com^
 ||adblockanalytics.com^
 ||adblockdefender.com^
+||adclick.g.doubleclick.net^
 ||adcolony.com^
+||ade.googlesyndication.com^
 ||adeventtracker.spotify.com^
 ||adfox.ru^
 ||adk2x.com^
@@ -37,9 +41,15 @@
 ||adreliz.com^
 ||adriver.ru^
 ||adroll.com^
+||ads.adcolony.com^
+||ads.api.vungle.com^
 ||ads.mopub.com^
 ||ads.roku.com^
+||ads.tapjoy.com^
+||ads.unity.com^
+||ads.youtube.com^
 ||adsboosters.xyz^
+||adserver.unityads.unity3d.com^
 ||adservice.google.com^
 ||adsterra.com^
 ||adtng.com^
@@ -60,6 +70,7 @@
 ||amung.us^
 ||an.facebook.com^
 ||an.yandex.ru^
+||analytics.mintegral.com^
 ||analytics.tiktok.com^
 ||analytics.yahoo.com^
 ||android17.logs.netflix.com^
@@ -69,6 +80,8 @@
 ||api.firwinds.site^
 ||api.mixpanel.com^
 ||api.segment.io^
+||api2.branch.io^
+||app-measurement.com^
 ||app.adjust.com^
 ||appcenter.ms^
 ||appdynamics.com^
@@ -77,7 +90,9 @@
 ||appsflyer.com^
 ||appsflyersdk.com^
 ||appsgrowthpromo-pa.googleapis.com^
+||assets.applovin.com^
 ||atlassbx.com^
+||auction.unityads.unity3d.com^
 ||awstats.sourceforge.net^
 ||axiom.co^
 ||begun.ru^
@@ -85,10 +100,12 @@
 ||betteradsystem.com^
 ||betterstack.com^
 ||bhm.progmore.com^
+||bi.vungle.com^
 ||bidswitch.net^
 ||bigmir.net^
 ||bodyclick.net^
 ||branch.io^
+||braze.com^
 ||braze.eu^
 ||bugsnag.com^
 ||busycdn.xyz^
@@ -99,6 +116,7 @@
 ||civiccomputing.com^
 ||clarity.ms^
 ||clevertap-prod.com^
+||clevertap.com^
 ||click.redditmail.com^
 ||clickadu.com^
 ||clickunder.biz^
@@ -108,8 +126,11 @@
 ||cocospy.com^
 ||collector.github.com^
 ||collector.snowplow.supercell.com^
+||config.inmobi.com^
 ||config.samsungads.com^
+||config.unityads.unity3d.com^
 ||contextweb.com^
+||control.kochava.com^
 ||cookiebot.com^
 ||cookielaw.org^
 ||coralogix.com^
@@ -128,9 +149,12 @@
 ||criteo.com^
 ||cs.ns1p.net^
 ||cydia-app.com^
+||d.applovin.com^
 ||d2dxy39sqorbhv.cloudfront.net^
 ||d2kk0o3fr7ed01.cloudfront.net^
+||da.chartboost.com^
 ||darklewawa.com^
+||data.flurry.com^
 ||data.mistat.xiaomi.com^
 ||datadoghq.com^
 ||deedwaifpleas.org^
@@ -149,6 +173,7 @@
 ||droplink.co^
 ||dynatrace.com^
 ||ero-advertising.com^
+||events.api.vungle.com^
 ||exoclick.com^
 ||exponential.com^
 ||extremetracking.com^
@@ -185,8 +210,11 @@
 ||ib.tiktokv.com^
 ||ibis.lgappstv.com^
 ||idealmedia.io^
+||imasdk.googleapis.com^
+||init.ironsrc.com^
 ||init.mkt.supercell.com^
 ||inmobi.com^
+||inner-active.mobi^
 ||inventory.mtech.supercell.com^
 ||iplis.ru^
 ||iplogger.com^
@@ -194,6 +222,7 @@
 ||iplogger.ru^
 ||ironsource.com^
 ||ironsrc.com^
+||ironsrc.mobi^
 ||juicyads.com^
 ||kadam.ru^
 ||ketch.com^
@@ -208,12 +237,14 @@
 ||lentainform.org^
 ||lgsmartad.com^
 ||li.protechts.net^
+||live.chartboost.com^
 ||liveinternet.ru^
 ||llvpn.com^
 ||log.byteoversea.com^
 ||logdna.com^
 ||logentries.com^
 ||loggly.com^
+||logs.ironsrc.mobi^
 ||logtail.com^
 ||logz.io^
 ||luugy.com^
@@ -223,6 +254,7 @@
 ||marketgid.com^
 ||marketgid.ru^
 ||mcs.byteoversea.com^
+||media.admob.com^
 ||media.net^
 ||medialand.ru^
 ||mediametrics.ru^
@@ -235,6 +267,7 @@
 ||mon.byteoversea.com^
 ||monetag.com^
 ||mopub.com^
+||ms.applovin.com^
 ||mspy.com^
 ||mtgglobals.com^
 ||nativo.com^
@@ -248,18 +281,26 @@
 ||o2o.api.xiaomi.com^
 ||ogads-pa.clients6.google.com^
 ||ogads-pa.googleapis.com^
+||ogury.co^
 ||ogury.com^
+||ogury.io^
 ||onclickads.net^
 ||onecounter.com^
+||onesignal.com^
 ||onetrust.com^
 ||openstat.ru^
 ||openx.net^
 ||outbrain.com^
+||outcome-ssp.supersonicads.com^
 ||pagead2.googlesyndication.com^
 ||pangle.io^
+||pangolin-sdk-toutiao.com^
 ||papertrailapp.com^
+||partnerad.l.google.com^
 ||pastebin-c2.duckdns.org^
 ||pay-click.ru^
+||pdn.applovin.com^
+||pg-stick.mintegral.com^
 ||phishingarmy.net^
 ||pipe.aria.microsoft.com^
 ||plugrush.com^
@@ -281,29 +322,40 @@
 ||recrampwiped.com^
 ||recreativ.ru^
 ||redclick.ru^
+||redirector.gvt1.com^
 ||relap.io^
+||res.applovin.com^
 ||revcontent.com^
 ||revolvermaps.com^
 ||rollbar.com^
 ||ronracepub.com^
+||rpc.tapjoy.com^
+||rt.applovin.com^
 ||rtmark.net^
 ||rubiconproject.com^
 ||rutarget.ru^
+||s.youtube.com^
 ||samsung-rm.com^
 ||samsung.telemetry.eyeo.com^
 ||samsungads.com^
 ||scalyr.com^
 ||scorecardresearch.com^
 ||sdkconfig.ad.xiaomi.com^
+||securepubads.g.doubleclick.net^
 ||sentry.io^
 ||serving-sys.com^
+||setting.mintegral.com^
+||sf-tb-sg.ibytedtos.com^
 ||sharethrough.com^
 ||shinystat.com^
 ||sia.internet.apps.samsung.com^
+||singular.net^
 ||sitemeter.com^
+||smaato.net^
 ||smartadserver.com^
 ||smartlook.com^
 ||smi2.ru^
+||soma.smaato.net^
 ||sony-bravia-ads.com^
 ||sourcepoint.mgr.consensu.org^
 ||sovrn.com^
@@ -313,20 +365,25 @@
 ||spylog.com^
 ||ssp.samsung.com^
 ||startapp.com^
+||startappservice.com^
 ||stat.aport.ru^
 ||stat.in.ua^
 ||stat.km.ru^
 ||stat.online.ua^
 ||stat.topping.com.ua^
 ||statcounter.com^
+||static.doubleclick.net^
 ||static.hotjar.com^
+||stats.g.doubleclick.net^
 ||sumologic.com^
+||supersonicads.com^
 ||superstats.com^
 ||taboola.com^
 ||tapjoy.com^
 ||target.my.com^
 ||teads.tv^
 ||teasernet.com^
+||telemetry.inmobi.com^
 ||telemetry.sdk.applovin.com^
 ||telemetry.xboxlive.com^
 ||timber.io^
@@ -334,8 +391,11 @@
 ||tns-counter.ru^
 ||top.mail.ru^
 ||top100.rambler.ru^
+||track.ironsrc.mobi^
 ||track.roku.com^
+||tracker.inmobi.com^
 ||tracking.miui.com^
+||tracking.unityads.unity3d.com^
 ||trackjs.com^
 ||trackview.net^
 ||trafficfactory.biz^
@@ -357,12 +417,15 @@
 ||v10.events.data.microsoft.com^
 ||v20.events.data.microsoft.com^
 ||vi-stream.ru^
+||video-stats.l.google.com^
 ||videoiq.ru^
 ||videoroll.net^
 ||viqeo.tv^
 ||visitweb.com^
 ||vungle.com^
 ||watson.telemetry.microsoft.com^
+||wd.adcolony.com^
+||webview.unityads.unity3d.com^
 ||werefilledwit.org^
 ||whos.amung.us^
 ||wstat.ru^

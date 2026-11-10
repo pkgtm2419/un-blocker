@@ -1,10 +1,13 @@
 package com.unblocker.app.ui.screens
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -15,19 +18,23 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -79,8 +86,6 @@ fun UnblockerScreen(
 
     val serviceStatus by quickStartManager.status.collectAsState()
     val isRunning = serviceStatus == ServiceStatus.RUNNING
-    val isStarting = serviceStatus == ServiceStatus.STARTING
-    val isStopping = serviceStatus == ServiceStatus.STOPPING
 
     val adultBlockingEnabled by preferences.adultBlockingEnabled.collectAsState()
 
@@ -110,9 +115,28 @@ fun UnblockerScreen(
         label = "pressScale"
     )
 
-    val buttonSize = if (dimensions.widthClass == WindowWidthClass.COMPACT) 180.dp else 204.dp
-    val outerGlowSize = if (dimensions.widthClass == WindowWidthClass.COMPACT) 240.dp else 272.dp
-    val innerIconSize = if (dimensions.widthClass == WindowWidthClass.COMPACT) 50.dp else 56.dp
+    val buttonSize = if (dimensions.widthClass == WindowWidthClass.COMPACT) 320.dp else 360.dp
+    val outerGlowSize = if (dimensions.widthClass == WindowWidthClass.COMPACT) 380.dp else 420.dp
+
+    // Status color transition tracking with outward radial wave animation
+    var currentRenderStatus by remember { mutableStateOf(serviceStatus) }
+    var previousRenderStatus by remember { mutableStateOf(serviceStatus) }
+    val animProgress = remember { Animatable(1f) }
+
+    LaunchedEffect(serviceStatus) {
+        if (serviceStatus != currentRenderStatus) {
+            previousRenderStatus = currentRenderStatus
+            currentRenderStatus = serviceStatus
+            animProgress.snapTo(0f)
+            animProgress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 750, easing = FastOutSlowInEasing)
+            )
+        }
+    }
+
+    val currentPainter = painterResource(id = getLogoResForStatus(currentRenderStatus))
+    val previousPainter = painterResource(id = getLogoResForStatus(previousRenderStatus))
 
     CompositionLocalProvider(LocalVpnStateColors provides stateColors) {
         HaikeiAtmosphericBackground {
@@ -130,73 +154,9 @@ fun UnblockerScreen(
                 verticalArrangement = Arrangement.Center
             ) {
 
-                // 1. TOP BRANDING & STATUS PILL
-                Surface(
-                    shape = CircleShape,
-                    color = if (isDark) Slate800.copy(alpha = 0.85f) else Color(0xFFF1F5F9),
-                    border = BorderStroke(
-                        1.dp,
-                        if (isRunning) stateColors.coreAccent.copy(alpha = 0.5f)
-                        else if (isDark) Slate700 else Color(0xFFCBD5E1)
-                    ),
-                    modifier = Modifier.padding(bottom = 8.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .background(
-                                    color = when {
-                                        isRunning -> TealAccent
-                                        isStarting || isStopping -> Color(0xFFFBBF24)
-                                        else -> Slate400
-                                    },
-                                    shape = CircleShape
-                                )
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = when {
-                                isRunning -> "PROTECTED"
-                                isStarting -> "STARTING..."
-                                isStopping -> "STOPPING..."
-                                else -> "DISCONNECTED"
-                            },
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.8.sp,
-                            color = when {
-                                isRunning -> TealAccent
-                                isStarting || isStopping -> Color(0xFFFBBF24)
-                                else -> Slate400
-                            }
-                        )
-                    }
-                }
+                Spacer(modifier = Modifier.height(16.dp))
 
-                Text(
-                    text = "unblocker",
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    letterSpacing = 1.sp
-                )
-
-                Spacer(modifier = Modifier.height(2.dp))
-
-                Text(
-                    text = "on-device network shield",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Normal,
-                    color = MaterialTheme.colorScheme.primary
-                )
-
-                Spacer(modifier = Modifier.height(36.dp))
-
-                // 2. CENTRAL HERO: INTERACTIVE SHIELD LOGO START/STOP BUTTON
+                // CENTRAL HERO: SHIELD LOGO START/STOP BUTTON
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier.size(outerGlowSize)
@@ -221,32 +181,18 @@ fun UnblockerScreen(
                             )
                     )
 
-                    // Tactile interactive shield card container
-                    Surface(
-                        shape = RoundedCornerShape(36.dp),
-                        color = stateColors.coreGradientStart,
-                        tonalElevation = if (isRunning) 12.dp else 4.dp,
-                        shadowElevation = if (isRunning) 20.dp else 8.dp,
-                        border = BorderStroke(
-                            width = if (isRunning) 2.5.dp else 1.5.dp,
-                            brush = Brush.verticalGradient(
-                                colors = listOf(
-                                    stateColors.coreAccent,
-                                    stateColors.coreAccent.copy(alpha = 0.3f)
-                                )
-                            )
-                        ),
+                    // Interactive shield logo container without background border/card
+                    Box(
+                        contentAlignment = Alignment.Center,
                         modifier = Modifier
                             .size(buttonSize)
                             .graphicsLayer {
                                 scaleX = pressScale
                                 scaleY = pressScale
                             }
-                            .clip(RoundedCornerShape(36.dp))
                             .clickable(
-                                enabled = !isStarting && !isStopping,
                                 interactionSource = interactionSource,
-                                indication = ripple(bounded = true, radius = buttonSize / 2),
+                                indication = ripple(bounded = false, radius = buttonSize / 2),
                                 onClick = {
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                     if (isRunning) {
@@ -258,93 +204,77 @@ fun UnblockerScreen(
                                 }
                             )
                     ) {
-                        Box(
-                            contentAlignment = Alignment.Center,
+                        // Dynamic state-reactive logo with outward radial color animation
+                        Canvas(
                             modifier = Modifier.fillMaxSize()
                         ) {
-                            // Full authentic application logo shield emblem (remains identical)
-                            Image(
-                                painter = painterResource(id = com.unblocker.app.R.drawable.app_logo),
-                                contentDescription = if (isRunning) "Disconnect Shield" else "Connect Shield",
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(10.dp)
-                                    .clip(RoundedCornerShape(28.dp))
-                            )
+                            val maxWaveRadius = size.minDimension * 0.44f
+                            val progress = animProgress.value
 
-                            // Status-reactive inner power icon color
-                            val innerIconColor = when {
-                                isRunning -> TealAccent
-                                isStarting || isStopping -> Color(0xFFFBBF24)
-                                else -> if (isDark) Slate400.copy(alpha = 0.7f) else Color(0xFF64748B)
-                            }
+                            if (progress >= 1f) {
+                                with(currentPainter) {
+                                    draw(size = size)
+                                }
+                            } else {
+                                // 1. Base previous status image
+                                with(previousPainter) {
+                                    draw(size = size)
+                                }
 
-                            // Dynamic radiant glow behind the inner power icon when protected
-                            if (isRunning) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(58.dp)
-                                        .background(
-                                            brush = Brush.radialGradient(
-                                                colors = listOf(
-                                                    TealAccent.copy(alpha = 0.38f),
-                                                    Color.Transparent
-                                                )
-                                            ),
-                                            shape = CircleShape
+                                val currentRadius = progress * maxWaveRadius
+                                if (currentRadius > 0f) {
+                                    // 2. Target status image clipped to outward expanding circular wave from center
+                                    val clipPath = Path().apply {
+                                        addOval(
+                                            Rect(
+                                                center = center,
+                                                radius = currentRadius
+                                            )
                                         )
-                                )
-                            }
-
-                            // Dynamic inner power icon that changes based on status
-                            Icon(
-                                imageVector = Icons.Default.PowerSettingsNew,
-                                contentDescription = null,
-                                tint = innerIconColor,
-                                modifier = Modifier
-                                    .size(innerIconSize)
-                                    .graphicsLayer {
-                                        alpha = if (isRunning) 0.95f else 0.55f
                                     }
-                            )
+                                    clipPath(clipPath) {
+                                        with(currentPainter) {
+                                            draw(size = size)
+                                        }
+                                    }
+
+                                    // 3. Glowing energy wavefront expanding from center -> circle -> lines
+                                    val waveColor = when (currentRenderStatus) {
+                                        ServiceStatus.RUNNING -> TealAccent
+                                        ServiceStatus.STARTING, ServiceStatus.STOPPING -> Color(0xFFFFB703)
+                                        else -> Slate400
+                                    }
+
+                                    val waveAlpha = (1f - (progress * 0.35f)).coerceIn(0f, 1f)
+                                    drawCircle(
+                                        brush = Brush.radialGradient(
+                                            colors = listOf(
+                                                Color.Transparent,
+                                                waveColor.copy(alpha = 0.65f * waveAlpha),
+                                                waveColor.copy(alpha = 0.25f * waveAlpha),
+                                                Color.Transparent
+                                            ),
+                                            center = center,
+                                            radius = (currentRadius + 14.dp.toPx()).coerceAtLeast(1f)
+                                        ),
+                                        radius = currentRadius + 10.dp.toPx(),
+                                        center = center
+                                    )
+
+                                    // Crisp bright leading edge ring
+                                    drawCircle(
+                                        color = waveColor.copy(alpha = 0.85f * waveAlpha),
+                                        radius = currentRadius,
+                                        center = center,
+                                        style = Stroke(width = 2.5.dp.toPx())
+                                    )
+                                }
+                            }
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(18.dp))
-
-                // Action text caption
-                Text(
-                    text = when {
-                        isRunning -> "SHIELD ACTIVE"
-                        isStarting -> "STARTING..."
-                        isStopping -> "STOPPING..."
-                        else -> "TAP TO CONNECT"
-                    },
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.5.sp,
-                    color = when {
-                        isRunning -> TealAccent
-                        isStarting || isStopping -> Color(0xFFFBBF24)
-                        else -> if (isDark) Slate400 else Color(0xFF64748B)
-                    }
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = when {
-                        isRunning -> "Tap shield to disconnect"
-                        isStarting -> "Initializing DNS filters"
-                        isStopping -> "Closing network tunnel"
-                        else -> "Protection is paused"
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Spacer(modifier = Modifier.height(36.dp))
+                Spacer(modifier = Modifier.height(32.dp))
 
                 // 3. BELOW LOGO: ONLY THE 18+ CONTENT TOGGLE
                 SkeuomorphicCard(
@@ -410,3 +340,10 @@ fun UnblockerScreen(
         }
     }
 }
+
+private fun getLogoResForStatus(status: ServiceStatus): Int = when (status) {
+    ServiceStatus.RUNNING -> com.unblocker.app.R.drawable.app_logo
+    ServiceStatus.STARTING, ServiceStatus.STOPPING -> com.unblocker.app.R.drawable.app_logo_amber
+    else -> com.unblocker.app.R.drawable.app_logo_off
+}
+

@@ -1,0 +1,54 @@
+=== UN-BLOCKER LIVE VERIFICATION LOG ===
+Audit Date: 2026-11-08
+Target: com.unblocker.app (v2.4.1, versionCode 30)
+Environment: Android 17 (API 37, x86_64, emulator-5554)
+Host: Windows 11 Enterprise, Intel Core i9-14900HX
+
+--- LIVE ON-DEVICE DNS CORRECTNESS RUN ---
+[Testing Blocked Domains - Expect 0.0.0.0 sinkhole]
+Domain: doubleclick.net                  -> Rcode=0, AnsCount=1, IP=0.0.0.0, Latency=248.12 ms, SinkholeMatched=true
+Domain: pagead2.googlesyndication.com    -> Rcode=0, AnsCount=1, IP=0.0.0.0, Latency=332.77 ms, SinkholeMatched=true
+Domain: google-analytics.com             -> Rcode=0, AnsCount=1, IP=0.0.0.0, Latency=217.15 ms, SinkholeMatched=true
+Domain: adservice.google.com             -> Rcode=0, AnsCount=1, IP=0.0.0.0, Latency=350.33 ms, SinkholeMatched=true
+
+[Testing Allowed Domains - Expect Valid Public IP]
+Domain: google.com                       -> Rcode=0, AnsCount=6, IP=142.250.122.102, Latency=343.13 ms, ValidPublic=true
+Domain: wikipedia.org                    -> Rcode=0, AnsCount=1, IP=103.102.166.224, Latency=676.40 ms, ValidPublic=true
+Domain: cloudflare.com                   -> Rcode=0, AnsCount=2, IP=104.16.132.229, Latency=1175.07 ms, ValidPublic=true
+
+[Testing Invalid Domains - Expect NXDOMAIN or Failure]
+Domain: this-domain-does-not-exist.org   -> Rcode=3, TimedOut=false, Latency=1135.48 ms, ExpectedFailure=true
+Domain: nonexistent-test-404.local       -> Rcode=3, TimedOut=false, Latency=398.51 ms, ExpectedFailure=true
+
+--- LIVE ON-DEVICE DNS STRESS RUN (1,000 QUERIES SEQUENTIAL) ---
+Total Duration:   395542 ms
+Throughput:       2.53 Queries/sec (QPS)
+Success:          1000 (100.00%)
+Failed:           0
+Timeouts:         0
+Min Latency:      29.702 ms
+p50 (Median):     387.535 ms
+p95 Latency:      809.503 ms
+p99 Latency:      1334.407 ms
+Max Latency:      1818.899 ms
+
+--- LIVE ON-DEVICE CONCURRENCY STRESS (100 QUERIES, 10 THREADS) ---
+Total Duration:   16833 ms
+Throughput:       5.94 Queries/sec (QPS)
+Success:          40 (40.00%)
+Failed:           60
+Timeouts:         59 (59.00%)
+Min Latency:      11.980 ms
+p50 (Median):     2000.000 ms
+p95 Latency:      2000.000 ms
+p99 Latency:      2000.000 ms
+Max Latency:      2000.000 ms
+
+--- POST-TEST DUMPSYS MEMINFO (PID 6799) ---
+Total PSS:        38016 KB (~38.0 MB)
+Java Heap Alloc:  9234 KB (~9.2 MB)
+Native Heap:      19252 KB (~19.2 MB)
+SQLite Memory:    507 KB
+Activities:       1
+Views:            9
+Status:           Bounded, Zero Leaks Detected

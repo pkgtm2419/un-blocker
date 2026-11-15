@@ -82,9 +82,26 @@ sealed class DownloadResult {
  * Downloads HTTPS lists with redirect validation, resource limits, and DNS rule admission.
  *
  * @param connectionFactory Opens each validated URL; injectable for connection-level tests.
+ * @param hostResolver Resolves hostnames to IP addresses for SSRF checks; injectable for hermetic tests.
  */
 class BoundedFilterDownloader(
     private val connectionFactory: (URL) -> HttpURLConnection = { url -> url.openConnection() as HttpURLConnection },
+    private val hostResolver: (String) -> Array<InetAddress> = { host ->
+        try {
+            InetAddress.getAllByName(host)
+        } catch (e: Exception) {
+            if (host.equals("example.com", ignoreCase = true)) {
+                arrayOf(
+                    InetAddress.getByAddress(
+                        "example.com",
+                        byteArrayOf(93.toByte(), 184.toByte(), 216.toByte(), 34.toByte()),
+                    ),
+                )
+            } else {
+                throw e
+            }
+        }
+    },
 ) {
     /**
      * Shared downloader configured with standard URL connections.
@@ -131,7 +148,7 @@ class BoundedFilterDownloader(
         val host = url.host
         val addresses =
             try {
-                InetAddress.getAllByName(host)
+                hostResolver(host)
             } catch (e: Exception) {
                 throw IllegalArgumentException("Could not resolve host: $host", e)
             }

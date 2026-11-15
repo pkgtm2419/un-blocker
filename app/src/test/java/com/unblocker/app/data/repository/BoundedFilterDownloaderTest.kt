@@ -46,6 +46,40 @@ class BoundedFilterDownloaderTest {
         }
     }
 
+    private val hermeticHostResolver: (String) -> Array<java.net.InetAddress> = { host ->
+        when (host) {
+            "127.0.0.1" -> {
+                arrayOf(java.net.InetAddress.getByAddress("127.0.0.1", byteArrayOf(127, 0, 0, 1)))
+            }
+
+            "127.0.0.2" -> {
+                arrayOf(java.net.InetAddress.getByAddress("127.0.0.2", byteArrayOf(127, 0, 0, 2)))
+            }
+
+            "172.16.1.1" -> {
+                arrayOf(
+                    java.net.InetAddress.getByAddress(
+                        "172.16.1.1",
+                        byteArrayOf(172.toByte(), 16, 1, 1),
+                    ),
+                )
+            }
+
+            else -> {
+                arrayOf(
+                    java.net.InetAddress.getByAddress(
+                        host,
+                        byteArrayOf(93.toByte(), 184.toByte(), 216.toByte(), 34.toByte()),
+                    ),
+                )
+            }
+        }
+    }
+
+    private fun hermeticDownloader(
+        connectionFactory: (URL) -> HttpURLConnection = { url -> url.openConnection() as HttpURLConnection },
+    ): BoundedFilterDownloader = BoundedFilterDownloader(connectionFactory, hermeticHostResolver)
+
     /**
      * Verifies that rejects non https URL.
      */
@@ -53,7 +87,7 @@ class BoundedFilterDownloaderTest {
     fun rejectsNonHttpsUrl() =
         runBlocking {
             val dest = File(tempFolder.root, "rules.txt")
-            val downloader = BoundedFilterDownloader()
+            val downloader = hermeticDownloader()
             val result = downloader.download(URL("http://example.com/filter.txt"), dest)
             assertTrue("Expected InvalidSource, got $result", result is DownloadResult.InvalidSource)
         }
@@ -65,7 +99,7 @@ class BoundedFilterDownloaderTest {
     fun rejectsLocalhostTarget() =
         runBlocking {
             val dest = File(tempFolder.root, "rules.txt")
-            val downloader = BoundedFilterDownloader()
+            val downloader = hermeticDownloader()
             val result1 = downloader.download(URL("https://127.0.0.1/filter.txt"), dest)
             assertTrue("Expected InvalidSource, got $result1", result1 is DownloadResult.InvalidSource)
 
@@ -88,7 +122,7 @@ class BoundedFilterDownloaderTest {
             val maxBytes = bytes.size.toLong()
 
             val downloader =
-                BoundedFilterDownloader { url ->
+                hermeticDownloader { url ->
                     FakeHttpURLConnection(url, 200, body = bytes)
                 }
 
@@ -112,7 +146,7 @@ class BoundedFilterDownloaderTest {
             val maxBytes = (bytes.size - 1).toLong()
 
             val downloader =
-                BoundedFilterDownloader { url ->
+                hermeticDownloader { url ->
                     FakeHttpURLConnection(url, 200, body = bytes)
                 }
 
@@ -132,7 +166,7 @@ class BoundedFilterDownloaderTest {
             val bytes = longLine.toByteArray(Charsets.UTF_8)
 
             val downloader =
-                BoundedFilterDownloader { url ->
+                hermeticDownloader { url ->
                     FakeHttpURLConnection(url, 200, body = bytes)
                 }
 
@@ -149,7 +183,7 @@ class BoundedFilterDownloaderTest {
         runBlocking {
             val dest = File(tempFolder.root, "rules.txt")
             val downloader =
-                BoundedFilterDownloader { url ->
+                hermeticDownloader { url ->
                     if (url.toString() == "https://example.com/initial") {
                         FakeHttpURLConnection(url, 302, headers = mapOf("Location" to "http://example.com/insecure"))
                     } else {
@@ -170,7 +204,7 @@ class BoundedFilterDownloaderTest {
         runBlocking {
             val dest = File(tempFolder.root, "rules.txt")
             val downloader =
-                BoundedFilterDownloader { url ->
+                hermeticDownloader { url ->
                     FakeHttpURLConnection(url, 301, headers = emptyMap())
                 }
 
@@ -188,7 +222,7 @@ class BoundedFilterDownloaderTest {
             val dest = File(tempFolder.root, "rules.txt")
             var count = 0
             val downloader =
-                BoundedFilterDownloader { url ->
+                hermeticDownloader { url ->
                     count++
                     FakeHttpURLConnection(
                         url,
@@ -213,7 +247,7 @@ class BoundedFilterDownloaderTest {
             dest.writeText(initialContent)
 
             val downloader =
-                BoundedFilterDownloader { url ->
+                hermeticDownloader { url ->
                     FakeHttpURLConnection(url, 200, streamException = SocketTimeoutException("Read timed out"))
                 }
 
@@ -232,7 +266,7 @@ class BoundedFilterDownloaderTest {
             val emptyContent = "# Only comments\n\n# Another comment\n"
 
             val downloader =
-                BoundedFilterDownloader { url ->
+                hermeticDownloader { url ->
                     FakeHttpURLConnection(url, 200, body = emptyContent.toByteArray(Charsets.UTF_8))
                 }
 

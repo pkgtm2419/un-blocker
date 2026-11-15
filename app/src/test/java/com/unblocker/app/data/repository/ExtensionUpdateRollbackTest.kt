@@ -45,6 +45,19 @@ class ExtensionUpdateRollbackTest {
         }
     }
 
+    private val hermeticHostResolver: (String) -> Array<java.net.InetAddress> = { host ->
+        arrayOf(
+            java.net.InetAddress.getByAddress(
+                host,
+                byteArrayOf(93.toByte(), 184.toByte(), 216.toByte(), 34.toByte()),
+            ),
+        )
+    }
+
+    private fun hermeticDownloader(
+        connectionFactory: (URL) -> HttpURLConnection,
+    ): BoundedFilterDownloader = BoundedFilterDownloader(connectionFactory, hermeticHostResolver)
+
     /**
      * Verifies that failed update preserves existing filter and rules.
      */
@@ -61,7 +74,7 @@ class ExtensionUpdateRollbackTest {
 
             // Simulate failing network update with SocketTimeoutException
             val failingDownloader =
-                BoundedFilterDownloader { url ->
+                hermeticDownloader { url ->
                     FakeHttpURLConnection(url, 200, errorToThrow = SocketTimeoutException("Connection reset"))
                 }
 
@@ -84,7 +97,7 @@ class ExtensionUpdateRollbackTest {
 
             val invalidContent = "# Just a header\n# No valid rules at all\n"
             val downloader =
-                BoundedFilterDownloader { url ->
+                hermeticDownloader { url ->
                     FakeHttpURLConnection(url, 200, body = invalidContent.toByteArray(Charsets.UTF_8))
                 }
 
@@ -107,7 +120,7 @@ class ExtensionUpdateRollbackTest {
 
             val largeContent = "0.0.0.0 extra-domain.com\n".repeat(100)
             val downloader =
-                BoundedFilterDownloader { url ->
+                hermeticDownloader { url ->
                     FakeHttpURLConnection(url, 200, body = largeContent.toByteArray(Charsets.UTF_8))
                 }
 
@@ -131,7 +144,7 @@ class ExtensionUpdateRollbackTest {
 
             val newRuleContent = "0.0.0.0 newly-blocked.com\n"
             val downloader =
-                BoundedFilterDownloader { url ->
+                hermeticDownloader { url ->
                     FakeHttpURLConnection(url, 200, body = newRuleContent.toByteArray(Charsets.UTF_8))
                 }
 

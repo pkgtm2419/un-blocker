@@ -53,6 +53,7 @@ jobs:
           REF_NAME: ${{ github.ref_name }}
         run: |
           set -euo pipefail
+          git fetch origin main:refs/remotes/origin/main || true
           tag="${REF_NAME}"
           if [ "${EVENT_NAME}" = "workflow_dispatch" ]; then tag="${INPUT_TAG}"; fi
           python3 scripts/release-policy.py preflight --tag "${tag}" --github-output "${GITHUB_OUTPUT}"
@@ -101,7 +102,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
           path: |
-            **/build/reports/tests/
+            **/build/reports/tests/**
             **/build/reports/lint-results-*.html
 
   publish:

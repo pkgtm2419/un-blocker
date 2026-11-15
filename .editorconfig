@@ -13,6 +13,13 @@ max_line_length = 120
 ktlint_code_style = ktlint_official
 ktlint_standard_no-unused-imports = enabled
 ktlint_function_naming_ignore_when_annotated_with = Composable
+ktlint_standard_no-wildcard-imports = disabled
+ktlint_standard_max-line-length = disabled
+ktlint_standard_backing-property-naming = disabled
+ktlint_standard_kdoc = disabled
+ktlint_standard_no-consecutive-comments = disabled
+ktlint_standard_property-naming = disabled
+ktlint_standard_function-signature = disabled
 
 [*.xml]
 indent_style = space

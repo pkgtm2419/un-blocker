@@ -2,12 +2,14 @@
 
 # Bundled extension catalog
 
-Manifest version: `6`; record count: **19**. Settings and actual active rules can differ from this catalog.
+Manifest version: `7`; record count: **22**. Settings and actual active rules can differ from this catalog.
 
 | ID | Name | Category | Enabled by manifest | Custom | Source URL |
 | --- | --- | --- | --- | --- | --- |
+| adguard_dns_filter | AdGuard DNS Filter (Mobile Optimized) | Recommended | True | False | https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt |
 | adguard_mobile_annoyances | AdGuard Mobile Annoyances & Overlay Filter | Recommended | True | False | https://filters.adtidy.org/extension/chromium/filters/14.txt |
 | adguard_url_tracking | AdGuard URL Tracking & Spyware Protection | Privacy | True | False | https://filters.adtidy.org/extension/chromium/filters/3.txt |
+| dan_pollock_hosts | Dan Pollock’s Hosts File | Recommended | True | False | https://someonewhocares.org/hosts/hosts |
 | easylist | EasyList (Global Ad Blocking) | Recommended | True | False | https://easylist.to/easylist/easylist.txt |
 | easyprivacy | EasyPrivacy & Tracking Protection | Privacy | True | False | https://easylist.to/easylist/easyprivacy.txt |
 | fanboy_social | Fanboy's Social & In-App Tracking List | Privacy | True | False | https://easylist.to/easylist/fanboy-social.txt |
@@ -24,4 +26,5 @@ Manifest version: `6`; record count: **19**. Settings and actual active rules ca
 | ublock_filters | uBlock Origin Filters (Official) | Recommended | True | False | https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/filters.txt |
 | ublock_privacy | uBlock Origin Privacy & Fingerprinting | Privacy | True | False | https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/privacy.txt |
 | ublock_quick_fixes | uBlock Origin Quick Fixes | Recommended | True | False | https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/quick-fixes.txt |
+| ublock_resource_abuse | uBlock Origin Resource Abuse & Crypto-Mining | Security | True | False | https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/resource-abuse.txt |
 | ublock_unbreak | uBlock Origin Filters & Unbreak | Recommended | True | False | https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/unbreak.txt |

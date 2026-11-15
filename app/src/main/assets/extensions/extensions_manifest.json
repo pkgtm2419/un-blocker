@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "extensions": [
     {
       "id": "manual_filters",
@@ -262,6 +262,48 @@
       "filterCount": 26000,
       "sizeBytes": 458752,
       "lastUpdated": 1728412320000,
+      "enabled": true,
+      "custom": false,
+      "syntax": "rules",
+      "browserOnly": false
+    },
+    {
+      "id": "ublock_resource_abuse",
+      "name": "uBlock Origin Resource Abuse & Crypto-Mining",
+      "url": "https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/resource-abuse.txt",
+      "category": "Security",
+      "description": "Blocks browser cryptojacking, unauthorized crypto-miners, and hardware resource hijacking",
+      "filterCount": 950,
+      "sizeBytes": 32768,
+      "lastUpdated": 1731715200000,
+      "enabled": true,
+      "custom": false,
+      "syntax": "rules",
+      "browserOnly": false
+    },
+    {
+      "id": "dan_pollock_hosts",
+      "name": "Dan Pollock\u2019s Hosts File",
+      "url": "https://someonewhocares.org/hosts/hosts",
+      "category": "Recommended",
+      "description": "Curated zero-false-positive ad, tracking, and malware hosts list (included in uBlock Origin multipurpose lists)",
+      "filterCount": 14500,
+      "sizeBytes": 368640,
+      "lastUpdated": 1731715200000,
+      "enabled": true,
+      "custom": false,
+      "syntax": "rules",
+      "browserOnly": false
+    },
+    {
+      "id": "adguard_dns_filter",
+      "name": "AdGuard DNS Filter (Mobile Optimized)",
+      "url": "https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt",
+      "category": "Recommended",
+      "description": "Comprehensive network-level filter composed of AdGuard Base, Mobile Ads, and Tracking Protection for DNS engines",
+      "filterCount": 58000,
+      "sizeBytes": 983040,
+      "lastUpdated": 1731715200000,
       "enabled": true,
       "custom": false,
       "syntax": "rules",

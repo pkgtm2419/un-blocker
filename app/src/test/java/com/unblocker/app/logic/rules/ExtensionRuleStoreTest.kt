@@ -4,8 +4,10 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.io.File
 
 /**
  * Regression coverage for extension rule store.
@@ -195,5 +197,45 @@ class ExtensionRuleStoreTest {
 
         ExtensionRuleStore.applyBuilder(builder)
         assertEquals(2, ExtensionRuleStore.ruleCount)
+    }
+
+    /**
+     * Verifies that bundled rules asset ingests correctly and blocks new mobile ads and cryptomining domains.
+     */
+    @Test
+    fun testBundledRulesAssetIngestionAndBlocking() {
+        val assetFile = File("src/main/assets/extensions/bundled_rules.txt")
+        assertTrue("bundled_rules.txt must exist in assets", assetFile.exists())
+
+        val builder = ExtensionRuleStore.Builder()
+        assetFile.forEachLine { line ->
+            builder.addLine(line)
+        }
+
+        assertTrue("Expected at least 450 rules in bundled set", builder.count >= 450)
+        ExtensionRuleStore.applyBuilder(builder)
+
+        val representativeAdDomains =
+            listOf(
+                "coinhive.com",
+                "crypto-loot.com",
+                "ads.chartboost.com",
+                "pangle-sdk.com",
+                "mediation.fyber.com",
+                "events.vungle.com",
+                "attr.appsflyer.com",
+                "log.ironsrc.com",
+            )
+
+        for (domain in representativeAdDomains) {
+            val matched = ExtensionRuleStore.matchRule(domain)
+            assertNotNull("Domain $domain should be blocked by bundled rules", matched)
+            assertEquals("Expected BLOCK action for $domain", RuleAction.BLOCK, matched!!.action)
+        }
+
+        assertNull(
+            "Legitimate domain should not be blocked",
+            ExtensionRuleStore.matchRule("wikipedia.org"),
+        )
     }
 }

@@ -2,7 +2,7 @@
 
 ## Toolchain snapshot
 
-`app/build.gradle.kts` at target `8934519`: `minSdk=26`, `compileSdk=35`, `targetSdk=35`, `versionName=2.6.1`, `versionCode=35`, JVM target 17. Version catalog `gradle/libs.versions.toml` has Android Gradle Plugin 8.10.1 and Kotlin 2.0.21. The root README currently mentions SDK 36 and source 2.3.0 in some sections; **Gradle is authoritative for builds**. Use Python 3.11 for tooling when possible and inspect `gradle/wrapper/gradle-wrapper.properties` for wrapper version.
+`app/build.gradle.kts`: `minSdk=26`, `compileSdk=35`, `targetSdk=35`, `versionName=2.7.0`, `versionCode=36`, JVM target 17. Version catalog `gradle/libs.versions.toml` has Android Gradle Plugin 8.10.1 and Kotlin 2.0.21. **Gradle is authoritative for builds**. Use Python 3.11 for tooling when possible and inspect `gradle/wrapper/gradle-wrapper.properties` for wrapper version.
 
 ## Quick commands
 

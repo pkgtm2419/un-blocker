@@ -10,15 +10,15 @@
 
 | Property | Value |
 |---|---|
-| **versionName** | `2.6.1` |
-| **versionCode** | `35` |
+| **versionName** | `2.7.0` |
+| **versionCode** | `36` |
 | **applicationId** | `com.unblocker.app` |
 | **minSdk** | `26` (Android 8.0 Oreo) |
 | **compileSdk / targetSdk** | `35` (Android 15) |
 | **Android Gradle Plugin** | `8.10.1` |
 | **Kotlin** | `2.0.21` |
 | **JVM target** | `17` |
-| **Latest published tag** | `v2.6.1` |
+| **Latest published tag** | `v2.7.0` |
 
 > [!NOTE]
 > `app/build.gradle.kts` is the authoritative source for all build properties. The root `README.md` previously contained stale version references (`2.3.0`, SDK 36); those are being corrected separately (reconciliation item R01).
@@ -124,7 +124,7 @@ python3 scripts/docs_sync.py --check
 |---|---|---|---|
 | **R01** | ✅ Done | README had stale version (`2.3.0`) and SDK level (`36`); corrected to 2.6.1 / SDK 35 on 2026-11-15 | ✅ Done |
 | **R02** | ⚠️ Issue | README referenced nonexistent `docs/*` pages; now restored as source-based placeholders | ✅ Done |
-| **R03** | ⚠️ Issue | GSD files focus on v2.5.0; current manifest has 19 extension records vs historical "Essential 7" | 📋 Planned |
+| **R03** | ✅ Done | Marked GSD as historical v2.5.0 milestone; updated manifest to v7 with 22 extensions (added uBO Resource Abuse, Dan Pollock hosts, AdGuard DNS mobile) | ✅ Done |
 | **R04** | ✅ Done | README and `PRIVACY.md` reconciled to accurately disclose bounded on-device domain statistics | ✅ Done |
 | **R05** | ✅ Done | `PRIVACY.md` reconciled to document exact retention: 30-day aggregates, 24-hour raw events | ✅ Done |
 | **R06** | ✅ Done | `vpn-engine` `UpstreamDnsServer.DEFAULTS` audited; verified `app` uses `DnsUpstreamClient` with `ConnectivityManager` link properties exclusively (no fallback to public DNS) | ✅ Done |

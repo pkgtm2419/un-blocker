@@ -7,7 +7,7 @@ Canonical existing policy: [DATASETS.md](../DATASETS.md), [THIRD_PARTY_NOTICES.m
 1. **Vendored pinned compiler sources:** e.g., StevenBlack snapshot under `tools/filter-compiler/vendor/stevenblack/…`, explicitly check revision, normalized SHA256 and license. Manifest-based deterministic build should fail on modified input.
 2. **PSL:** `app/src/main/assets/public_suffix_list.dat`, with MPL-2.0 notice. PSL marks registrable boundaries; PSL inclusion **does not** justify blocking a suffix.
 3. **Bundled app domain lists / extension rules:** `ad_domains.txt`, `adult_domains.txt`, `extensions/bundled_rules.txt`; require legal provenance and scope checks.
-4. **Remote update list catalog:** 19 entries in `extensions_manifest.json` at snapshot; URLs and enabled status are data, not automatically vetted endorsements.
+4. **Remote update list catalog:** 22 entries in `extensions_manifest.json` (v7); URLs and enabled status are data, not automatically vetted endorsements.
 
 ## Review checklist
 

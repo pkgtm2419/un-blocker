@@ -12,10 +12,13 @@ Versioning follows the `versionName` / `versionCode` declared in `app/build.grad
 
 ---
 
-## [Unreleased]
+## [2.7.0] — 2026-11-16 (versionCode 36)
 
 ### Added
 
+- Expanded filter extensions based on uBlock Origin (`gorhill/uBlock`) and DNS ecosystems: added uBlock Origin Resource Abuse & Crypto-Mining, Dan Pollock's Hosts File, and AdGuard DNS Filter (Mobile Optimized) into manifest v7 (22 records).
+- Pre-installed bundled seed rules expansion: added 30 mobile ad network, telemetry, and cryptomining rules in `bundled_rules.txt` for instant offline protection against CoinHive, Chartboost, Pangle, Fyber, Vungle, InMobi, and AppsFlyer.
+- Added comprehensive unit test coverage verifying that all bundled rules in `bundled_rules.txt` parse cleanly and block representative mobile ad, analytics, and cryptomining domains.
 - Project-specific Antigravity agent instructions (`AGENTS.md`), scoped conditional rules and
   task-skill definitions under `.agents/`.
 - Source-grounded reference documents: modules, features, runtime policy, security/privacy
@@ -123,6 +126,7 @@ Completed in five phases. All phases verified per `.gsd/ROADMAP.md`.
 
 ---
 
-[Unreleased]: https://github.com/pkgtm2419/un-blocker/compare/v2.6.1...HEAD
+[Unreleased]: https://github.com/pkgtm2419/un-blocker/compare/v2.7.0...HEAD
+[2.7.0]: https://github.com/pkgtm2419/un-blocker/compare/v2.6.1...v2.7.0
 [2.6.1]: https://github.com/pkgtm2419/un-blocker/compare/v2.5.0...v2.6.1
 [2.5.0]: https://github.com/pkgtm2419/un-blocker/releases/tag/v2.5.0

@@ -466,3 +466,37 @@
 ||zemanta.com^
 ||zjbsxac.com^
 ||zzgmtalhhma.com^
+
+! uBlock Origin Resource Abuse & Crypto-Mining
+||authedmine.com^
+||cloudcoins.co^
+||coin-hive.com^
+||coinhive.com^
+||crypto-loot.com^
+||cryptoloot.pro^
+||gridcash.net^
+||jsecoin.com^
+||mineralt.io^
+||minr.pw^
+||monerominer.rocks^
+||webassembly.stream^
+||webminepool.com^
+
+! Additional Mobile In-App Ad Networks & Analytics (Chartboost, Pangle, Fyber, InMobi, Vungle, AppsFlyer)
+||ads.flurry.com^
+||ads.chartboost.com^
+||pangle-sdk.com^
+||sf16-fe-tos-sg.pangle.io^
+||mediation.fyber.com^
+||event.inmobi.com^
+||events.vungle.com^
+||v.vungle.com^
+||attr.appsflyer.com^
+||gcdsdk.appsflyer.com^
+||t.appsflyer.com^
+||customerevents.appsflyer.com^
+||analytics.rayjump.com^
+||track.rayjump.com^
+||net.rayjump.com^
+||log.ironsrc.com^
+||analytics.samsungknox.com^

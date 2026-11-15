@@ -228,6 +228,8 @@ class ExtensionRuleStoreTest {
                 "admin.appnext.com",
                 "sspapi-prd.samsungrs.com",
                 "ketchapp.org",
+                "samsung-ingestion.edge.hiyaapi.com",
+                "orsplc.di.runestone.samsung.com",
             )
 
         for (domain in representativeAdDomains) {

@@ -526,3 +526,6 @@
 ||search.adcaffe.com^
 ||monitor.adcaffe.com^
 ||ad-api.ehawk.com^
+||hiyaapi.com^
+||runestone.samsung.com^
+||safeframe.googlesyndication.com^

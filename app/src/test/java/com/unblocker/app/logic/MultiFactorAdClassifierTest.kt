@@ -11,12 +11,18 @@ import org.junit.Test
  * Regression coverage for multi factor ad classifier.
  */
 class MultiFactorAdClassifierTest {
-
     private lateinit var learner: LocalNetworkLearner
-    private val trackers = setOf(
-        "adjust.com", "appsflyer.com", "branch.io", "kochava.com",
-        "mixpanel.com", "segment.com", "amplitude.com", "scorecardresearch.com"
-    )
+    private val trackers =
+        setOf(
+            "adjust.com",
+            "appsflyer.com",
+            "branch.io",
+            "kochava.com",
+            "mixpanel.com",
+            "segment.com",
+            "amplitude.com",
+            "scorecardresearch.com",
+        )
 
     /**
      * Resets the fixture state before each test to keep assertions independent.
@@ -56,10 +62,17 @@ class MultiFactorAdClassifierTest {
      */
     @Test
     fun testKnownMobileTrackerFrameworks() {
-        val trackers = listOf(
-            "adjust.com", "appsflyer.com", "branch.io", "kochava.com",
-            "mixpanel.com", "segment.com", "amplitude.com", "scorecardresearch.com"
-        )
+        val trackers =
+            listOf(
+                "adjust.com",
+                "appsflyer.com",
+                "branch.io",
+                "kochava.com",
+                "mixpanel.com",
+                "segment.com",
+                "amplitude.com",
+                "scorecardresearch.com",
+            )
 
         for (tracker in trackers) {
             val sig = learner.extractDomainSignature(tracker)

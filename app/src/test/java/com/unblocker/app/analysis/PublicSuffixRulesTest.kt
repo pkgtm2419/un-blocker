@@ -9,6 +9,7 @@ import org.junit.Test
  */
 class PublicSuffixRulesTest {
     private val psl = PublicSuffixRules("com\nco.uk\ncom.au\nblogspot.com\n*.ck\n!www.ck\n".lineSequence())
+
     /**
      * Verifies that longest public and private boundary is used.
      */
@@ -19,6 +20,7 @@ class PublicSuffixRulesTest {
         assertEquals("metrics", psl.subdomain("metrics.shop.co.uk"))
         assertNull(psl.registrableDomain("co.uk"))
     }
+
     /**
      * Verifies that wildcard and exception use whole labels.
      */
@@ -28,6 +30,7 @@ class PublicSuffixRulesTest {
         assertEquals("a", psl.subdomain("a.www.ck"))
         assertEquals("site.test", psl.registrableDomain("a.site.test"))
     }
+
     /**
      * Verifies that newer unicode suffix does not crash offline loading.
      */

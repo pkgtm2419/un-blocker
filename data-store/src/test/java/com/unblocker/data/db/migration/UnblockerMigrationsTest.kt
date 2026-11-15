@@ -10,7 +10,6 @@ import java.lang.reflect.Proxy
  * Regression coverage for unblocker migrations.
  */
 class UnblockerMigrationsTest {
-
     /**
      * Verifies that test migration1 to2 executes expected schema ddl.
      */
@@ -20,15 +19,16 @@ class UnblockerMigrationsTest {
         assertEquals(2, UnblockerMigrations.MIGRATION_1_2.endVersion)
 
         val executedSql = mutableListOf<String>()
-        val db = Proxy.newProxyInstance(
-            SupportSQLiteDatabase::class.java.classLoader,
-            arrayOf(SupportSQLiteDatabase::class.java)
-        ) { _, method, args ->
-            if (method.name == "execSQL" && args != null && args.isNotEmpty()) {
-                executedSql.add(args[0] as String)
-            }
-            null
-        } as SupportSQLiteDatabase
+        val db =
+            Proxy.newProxyInstance(
+                SupportSQLiteDatabase::class.java.classLoader,
+                arrayOf(SupportSQLiteDatabase::class.java),
+            ) { _, method, args ->
+                if (method.name == "execSQL" && args != null && args.isNotEmpty()) {
+                    executedSql.add(args[0] as String)
+                }
+                null
+            } as SupportSQLiteDatabase
 
         UnblockerMigrations.MIGRATION_1_2.migrate(db)
 

@@ -10,20 +10,50 @@ package com.unblocker.ml.analyzer
  * not evidence of a bundled trained model or a replacement for the separate app extractor.
  */
 object DomainFeatureExtractor {
-
     /**
      * Number of elements emitted by [extractFeatures], with stable feature indices 0 through 8.
      */
     const val FEATURE_SIZE = 9
 
     /** Heuristic tokens checked as full-domain substrings and split-label parts. */
-    private val SUSPICIOUS_TOKENS = setOf(
-        "ad", "ads", "adv", "adserver", "adservice", "adsystem", "adtech", "adclick",
-        "adlog", "pagead", "track", "tracker", "tracking", "telemetry", "pixel",
-        "beacon", "analytics", "metrics", "metric", "stat", "banner", "affiliate",
-        "sponsor", "bidder", "rtb", "ssp", "dsp", "sdk", "click", "counter",
-        "popunder", "statcounter", "impression", "conversion", "retarget"
-    )
+    private val SUSPICIOUS_TOKENS =
+        setOf(
+            "ad",
+            "ads",
+            "adv",
+            "adserver",
+            "adservice",
+            "adsystem",
+            "adtech",
+            "adclick",
+            "adlog",
+            "pagead",
+            "track",
+            "tracker",
+            "tracking",
+            "telemetry",
+            "pixel",
+            "beacon",
+            "analytics",
+            "metrics",
+            "metric",
+            "stat",
+            "banner",
+            "affiliate",
+            "sponsor",
+            "bidder",
+            "rtb",
+            "ssp",
+            "dsp",
+            "sdk",
+            "click",
+            "counter",
+            "popunder",
+            "statcounter",
+            "impression",
+            "conversion",
+            "retarget",
+        )
 
     /**
      * Extracts normalized features after lowercasing and removing trailing dots.
@@ -37,27 +67,28 @@ object DomainFeatureExtractor {
         val registrantLabel = if (labels.size >= 2) labels[labels.size - 2] else clean
         val subdomainLabels = if (labels.size > 2) labels.dropLast(2) else emptyList()
 
-        val domainLength    = clean.length.toFloat()
-        val entropy         = EntropyCalculator.calculate(registrantLabel)
-        val digitRatio      = registrantLabel.count { it.isDigit() }.toFloat() /
-                              registrantLabel.length.coerceAtLeast(1).toFloat()
-        val hyphens         = registrantLabel.count { it == '-' }.toFloat()
-        val subdomainDepth  = subdomainLabels.size.toFloat()
-        val keywordHit      = if (hasKeyword(clean, labels)) 1f else 0f
-        val entropySignal   = EntropyCalculator.toSignal(entropy)
-        val labelCount      = labels.size.toFloat()
-        val longestLabel    = labels.maxOfOrNull { it.length }?.toFloat() ?: 0f
+        val domainLength = clean.length.toFloat()
+        val entropy = EntropyCalculator.calculate(registrantLabel)
+        val digitRatio =
+            registrantLabel.count { it.isDigit() }.toFloat() /
+                registrantLabel.length.coerceAtLeast(1).toFloat()
+        val hyphens = registrantLabel.count { it == '-' }.toFloat()
+        val subdomainDepth = subdomainLabels.size.toFloat()
+        val keywordHit = if (hasKeyword(clean, labels)) 1f else 0f
+        val entropySignal = EntropyCalculator.toSignal(entropy)
+        val labelCount = labels.size.toFloat()
+        val longestLabel = labels.maxOfOrNull { it.length }?.toFloat() ?: 0f
 
         return floatArrayOf(
-            (domainLength / 50f).coerceIn(0f, 1f),      // [0] Domain length
-            (entropy / 5f).coerceIn(0f, 1f),            // [1] Entropy
-            digitRatio.coerceIn(0f, 1f),                // [2] Digit ratio
-            (hyphens / 5f).coerceIn(0f, 1f),            // [3] Hyphen count
-            (subdomainDepth / 4f).coerceIn(0f, 1f),     // [4] Subdomain depth
-            keywordHit,                                  // [5] Keyword flag
-            entropySignal,                               // [6] Entropy signal
-            (labelCount / 6f).coerceIn(0f, 1f),         // [7] Label count
-            (longestLabel / 30f).coerceIn(0f, 1f)       // [8] Longest label ratio
+            (domainLength / 50f).coerceIn(0f, 1f), // [0] Domain length
+            (entropy / 5f).coerceIn(0f, 1f), // [1] Entropy
+            digitRatio.coerceIn(0f, 1f), // [2] Digit ratio
+            (hyphens / 5f).coerceIn(0f, 1f), // [3] Hyphen count
+            (subdomainDepth / 4f).coerceIn(0f, 1f), // [4] Subdomain depth
+            keywordHit, // [5] Keyword flag
+            entropySignal, // [6] Entropy signal
+            (labelCount / 6f).coerceIn(0f, 1f), // [7] Label count
+            (longestLabel / 30f).coerceIn(0f, 1f), // [8] Longest label ratio
         )
     }
 
@@ -65,7 +96,10 @@ object DomainFeatureExtractor {
      * Checks whether [domain] or any of its [labels] contain a suspicious keyword token.
      * Splits hyphenated labels to catch "ad-server.example.com" style patterns.
      */
-    private fun hasKeyword(domain: String, labels: List<String>): Boolean {
+    private fun hasKeyword(
+        domain: String,
+        labels: List<String>,
+    ): Boolean {
         // Direct substring check on full domain first (fast path)
         for (token in SUSPICIOUS_TOKENS) {
             if (domain.contains(token)) return true

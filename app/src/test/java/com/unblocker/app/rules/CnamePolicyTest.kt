@@ -30,10 +30,21 @@ class CnamePolicyTest {
      * Verifies that benign and shipped exceptions are not alias blocks.
      */
     @Test fun benignAndShippedExceptionsAreNotAliasBlocks() {
-        val matcher = DnsRuleEngine(CompiledRuleSet(listOf(RuleParser.parse("||tracker.test^")!!,
-            RuleParser.parse("@@||good.tracker.test^")!!)))
-        assertNull(CnamePolicy({true}, {false}, matcher::match).blockedAlias("shop.test",
-            listOf("cdn.test", "good.tracker.test")))
+        val matcher =
+            DnsRuleEngine(
+                CompiledRuleSet(
+                    listOf(
+                        RuleParser.parse("||tracker.test^")!!,
+                        RuleParser.parse("@@||good.tracker.test^")!!,
+                    ),
+                ),
+            )
+        assertNull(
+            CnamePolicy({ true }, { false }, matcher::match).blockedAlias(
+                "shop.test",
+                listOf("cdn.test", "good.tracker.test"),
+            ),
+        )
     }
 
     /**

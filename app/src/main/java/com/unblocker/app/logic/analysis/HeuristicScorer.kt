@@ -18,7 +18,16 @@ class HeuristicScorer {
         if (features.structural >= .6f) mask = mask or 8
         // Entropy/cadence alone are common on benign CDNs. Require lexical corroboration.
         val positive = mask and 1 != 0 && Integer.bitCount(mask) >= 2
-        return ScoredFeatures(if (positive) .8f else if (mask != 0) .4f else 0f, mask)
+        return ScoredFeatures(
+            if (positive) {
+                .8f
+            } else if (mask != 0) {
+                .4f
+            } else {
+                0f
+            },
+            mask,
+        )
     }
 
     /**
@@ -27,7 +36,6 @@ class HeuristicScorer {
      * @param features Extracted heuristic strengths.
      * @return Whether the high-confidence diagnostic condition is met; this alone does not authorize blocking.
      */
-    fun isHighConfidenceAd(features: DomainFeatures): Boolean {
-        return features.lexical >= 0.8f && (features.entropy >= 0.65f || features.structural >= 0.65f)
-    }
+    fun isHighConfidenceAd(features: DomainFeatures): Boolean =
+        features.lexical >= 0.8f && (features.entropy >= 0.65f || features.structural >= 0.65f)
 }

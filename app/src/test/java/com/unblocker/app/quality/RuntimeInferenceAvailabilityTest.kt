@@ -18,7 +18,7 @@ class RuntimeInferenceAvailabilityTest {
         val benignScore = classifier.predictAdProbability("wikipedia.org")
         assertTrue(
             "Ad domain score ($adScore) must be higher than benign domain score ($benignScore)",
-            adScore > benignScore
+            adScore > benignScore,
         )
     }
 }

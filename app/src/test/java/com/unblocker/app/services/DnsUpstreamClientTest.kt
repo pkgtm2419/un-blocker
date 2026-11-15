@@ -2,6 +2,13 @@ package com.unblocker.app.services
 
 import com.unblocker.app.logic.dns.DnsPacketUtil
 import com.unblocker.app.logic.dns.DnsQuery
+import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
+import org.junit.Test
 import java.io.ByteArrayOutputStream
 import java.io.Closeable
 import java.io.DataInputStream
@@ -15,13 +22,6 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
-import org.junit.Assert.assertArrayEquals
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertThrows
-import org.junit.Assert.assertTrue
-import org.junit.Test
 
 /**
  * Regression coverage for DNS upstream client.
@@ -29,36 +29,46 @@ import org.junit.Test
 class DnsUpstreamClientTest {
     private val loopback = InetAddress.getLoopbackAddress()
     private val request = dnsQuery("ads.example", 0x1234)
-    private val query = DnsQuery(
-        transactionId = 0x1234,
-        domain = "ads.example",
-        queryType = DnsPacketUtil.TYPE_A,
-        queryClass = DnsPacketUtil.CLASS_IN,
-        rawPacket = ByteArray(0),
-        dnsOffset = 0,
-        dnsLength = request.size,
-        srcIp = byteArrayOf(10, 10, 0, 2),
-        dstIp = byteArrayOf(10, 10, 0, 1),
-        srcPort = 45_678,
-        dstPort = 53
-    )
+    private val query =
+        DnsQuery(
+            transactionId = 0x1234,
+            domain = "ads.example",
+            queryType = DnsPacketUtil.TYPE_A,
+            queryClass = DnsPacketUtil.CLASS_IN,
+            rawPacket = ByteArray(0),
+            dnsOffset = 0,
+            dnsLength = request.size,
+            srcIp = byteArrayOf(10, 10, 0, 2),
+            dstIp = byteArrayOf(10, 10, 0, 1),
+            srcPort = 45_678,
+            dstPort = 53,
+        )
 
     /**
      * Verifies that queued old epoch never sends UDP request.
      */
     @Test fun queuedOldEpochNeverSendsUdpRequest() {
         TestDnsServer(loopback).use { server ->
-            val registry=ResolverRegistry<String> {}
-            registry.update("wifi",listOf(InetAddress.getByName("192.0.2.1")))
-            val old=registry.snapshot()
+            val registry = ResolverRegistry<String> {}
+            registry.update("wifi", listOf(InetAddress.getByName("192.0.2.1")))
+            val old = registry.snapshot()
             registry.remove("wifi")
-            val run=TunnelRun(1)
+            val run = TunnelRun(1)
             try {
-                assertNull(client(server).resolve(run,query,request,listOf(loopback),
-                    outboundGuard={ action -> registry.useCurrent(old,action) }))
+                assertNull(
+                    client(server).resolve(
+                        run,
+                        query,
+                        request,
+                        listOf(loopback),
+                        outboundGuard = { action -> registry.useCurrent(old, action) },
+                    ),
+                )
                 server.assertNoUdpRequest()
                 server.assertNoTcpConnection()
-            } finally {run.close()}
+            } finally {
+                run.close()
+            }
         }
     }
 
@@ -67,20 +77,30 @@ class DnsUpstreamClientTest {
      */
     @Test fun replacementAfterTruncationSuppressesTcpFallback() {
         TestDnsServer(loopback).use { server ->
-            val registry=ResolverRegistry<String> {}
-            registry.update("wifi",listOf(InetAddress.getByName("192.0.2.1")))
-            val old=registry.snapshot()
-            val response=server.serveUdpOnce {
-                registry.remove("wifi")
-                dnsResponse("ads.example",flags=0x8380,includeAnswer=false)
-            }
-            val run=TunnelRun(1)
+            val registry = ResolverRegistry<String> {}
+            registry.update("wifi", listOf(InetAddress.getByName("192.0.2.1")))
+            val old = registry.snapshot()
+            val response =
+                server.serveUdpOnce {
+                    registry.remove("wifi")
+                    dnsResponse("ads.example", flags = 0x8380, includeAnswer = false)
+                }
+            val run = TunnelRun(1)
             try {
-                assertNull(client(server).resolve(run,query,request,listOf(loopback),
-                    outboundGuard={ action -> registry.useCurrent(old,action) }))
-                response.get(2,TimeUnit.SECONDS)
+                assertNull(
+                    client(server).resolve(
+                        run,
+                        query,
+                        request,
+                        listOf(loopback),
+                        outboundGuard = { action -> registry.useCurrent(old, action) },
+                    ),
+                )
+                response.get(2, TimeUnit.SECONDS)
                 server.assertNoTcpConnection()
-            } finally {run.close()}
+            } finally {
+                run.close()
+            }
         }
     }
 
@@ -99,7 +119,9 @@ class DnsUpstreamClientTest {
                 assertEquals(120L, result.metadata.minPositiveTtlSeconds)
                 udp.get(2, TimeUnit.SECONDS)
                 server.assertNoTcpConnection()
-            } finally { run.close() }
+            } finally {
+                run.close()
+            }
         }
     }
 
@@ -111,10 +133,11 @@ class DnsUpstreamClientTest {
             val truncated = dnsResponse("ads.example", flags = 0x8380, includeAnswer = false)
             val expected = dnsResponse("ads.example", answerTtl = 45)
             server.serveUdpOnce { truncated }
-            val tcpRequest = server.serveTcpOnce { _, output ->
-                output.writeShort(expected.size)
-                output.write(expected)
-            }
+            val tcpRequest =
+                server.serveTcpOnce { _, output ->
+                    output.writeShort(expected.size)
+                    output.write(expected)
+                }
             val run = TunnelRun(1)
             try {
                 val result = client(server).resolve(run, query, request, listOf(loopback))
@@ -122,7 +145,9 @@ class DnsUpstreamClientTest {
                 assertArrayEquals(expected, result!!.bytes)
                 assertEquals(45L, result.metadata.minPositiveTtlSeconds)
                 assertArrayEquals(request, tcpRequest.get(2, TimeUnit.SECONDS))
-            } finally { run.close() }
+            } finally {
+                run.close()
+            }
         }
     }
 
@@ -136,7 +161,9 @@ class DnsUpstreamClientTest {
             try {
                 assertNull(client(server).resolve(run, query, request, listOf(loopback)))
                 server.assertNoTcpConnection()
-            } finally { run.close() }
+            } finally {
+                run.close()
+            }
         }
     }
 
@@ -149,9 +176,13 @@ class DnsUpstreamClientTest {
             server.serveTcpOnce { _, output -> output.writeShort(65) }
             val run = TunnelRun(1)
             try {
-                assertNull(client(server, maxDnsMessageBytes = 64)
-                    .resolve(run, query, request, listOf(loopback)))
-            } finally { run.close() }
+                assertNull(
+                    client(server, maxDnsMessageBytes = 64)
+                        .resolve(run, query, request, listOf(loopback)),
+                )
+            } finally {
+                run.close()
+            }
         }
     }
 
@@ -169,7 +200,9 @@ class DnsUpstreamClientTest {
             val run = TunnelRun(1)
             try {
                 assertNull(client(server).resolve(run, query, request, listOf(loopback)))
-            } finally { run.close() }
+            } finally {
+                run.close()
+            }
         }
     }
 
@@ -187,7 +220,9 @@ class DnsUpstreamClientTest {
             val run = TunnelRun(1)
             try {
                 assertNull(client(server).resolve(run, query, request, listOf(loopback)))
-            } finally { run.close() }
+            } finally {
+                run.close()
+            }
         }
     }
 
@@ -206,10 +241,11 @@ class DnsUpstreamClientTest {
             val run = TunnelRun(1)
             val caller = Executors.newSingleThreadExecutor()
             try {
-                val result = caller.submit<ValidatedDnsResponse?> {
-                    client(server, tcpReadTimeoutMillis = 5_000)
-                        .resolve(run, query, request, listOf(loopback))
-                }
+                val result =
+                    caller.submit<ValidatedDnsResponse?> {
+                        client(server, tcpReadTimeoutMillis = 5_000)
+                            .resolve(run, query, request, listOf(loopback))
+                    }
                 assertTrue(tcpAccepted.await(2, TimeUnit.SECONDS))
 
                 run.close()
@@ -247,7 +283,7 @@ class DnsUpstreamClientTest {
         server: TestDnsServer,
         maxDnsMessageBytes: Int = 0xffff,
         tcpReadTimeoutMillis: Int = 1_000,
-        txIdGenerator: () -> Short = { 0x1234.toShort() }
+        txIdGenerator: () -> Short = { 0x1234.toShort() },
     ) = DnsUpstreamClient(
         protectDatagramSocket = { true },
         protectTcpSocket = { true },
@@ -256,22 +292,25 @@ class DnsUpstreamClientTest {
         tcpConnectTimeoutMillis = 500,
         tcpReadTimeoutMillis = tcpReadTimeoutMillis,
         maxDnsMessageBytes = maxDnsMessageBytes,
-        txIdGenerator = txIdGenerator
+        txIdGenerator = txIdGenerator,
     )
 
-    private class TestDnsServer(address: InetAddress) : Closeable {
+    private class TestDnsServer(
+        address: InetAddress,
+    ) : Closeable {
         private val executor = Executors.newCachedThreadPool()
         private val tcpServer = ServerSocket(0, 8, address)
         private val udpServer = DatagramSocket(tcpServer.localPort, address)
         val port: Int = tcpServer.localPort
 
-        fun serveUdpOnce(response: (ByteArray) -> ByteArray): Future<*> = executor.submit {
-            val packet = DatagramPacket(ByteArray(4096), 4096)
-            udpServer.receive(packet)
-            val request = packet.data.copyOf(packet.length)
-            val reply = response(request)
-            udpServer.send(DatagramPacket(reply, reply.size, packet.address, packet.port))
-        }
+        fun serveUdpOnce(response: (ByteArray) -> ByteArray): Future<*> =
+            executor.submit {
+                val packet = DatagramPacket(ByteArray(4096), 4096)
+                udpServer.receive(packet)
+                val request = packet.data.copyOf(packet.length)
+                val reply = response(request)
+                udpServer.send(DatagramPacket(reply, reply.size, packet.address, packet.port))
+            }
 
         fun serveTcpOnce(handler: (ByteArray, DataOutputStream) -> Unit): Future<ByteArray> =
             executor.submit<ByteArray> {
@@ -294,9 +333,9 @@ class DnsUpstreamClientTest {
         }
 
         fun assertNoUdpRequest() {
-            udpServer.soTimeout=250
+            udpServer.soTimeout = 250
             assertThrows(SocketTimeoutException::class.java) {
-                udpServer.receive(DatagramPacket(ByteArray(512),512))
+                udpServer.receive(DatagramPacket(ByteArray(512), 512))
             }
         }
 
@@ -308,7 +347,10 @@ class DnsUpstreamClientTest {
         }
     }
 
-    private fun dnsQuery(domain: String, transactionId: Int): ByteArray {
+    private fun dnsQuery(
+        domain: String,
+        transactionId: Int,
+    ): ByteArray {
         val output = ByteArrayOutputStream()
         DataOutputStream(output).use { data ->
             data.writeShort(transactionId)
@@ -328,7 +370,7 @@ class DnsUpstreamClientTest {
         domain: String,
         flags: Int = 0x8180,
         answerTtl: Int = 120,
-        includeAnswer: Boolean = true
+        includeAnswer: Boolean = true,
     ): ByteArray {
         val output = ByteArrayOutputStream()
         DataOutputStream(output).use { data ->

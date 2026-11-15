@@ -11,24 +11,30 @@ import com.unblocker.app.logic.DomainName
  */
 data class RuleStats(
     val totalRules: Int,
-    val skipCounters: Map<SkipReason, Int>
+    val skipCounters: Map<SkipReason, Int>,
 ) {
     /**
      * Number of lines skipped for cosmetic filtering syntax.
      */
     val skippedCosmetic: Int get() = skipCounters[SkipReason.COSMETIC] ?: 0
+
     /**
      * Number skipped for unsupported options or options on a registrable domain.
      */
-    val skippedOptions: Int get() = (skipCounters[SkipReason.UNSUPPORTED_OPTIONS] ?: 0) + (skipCounters[SkipReason.OPTIONS_ON_REGISTRABLE] ?: 0)
+    val skippedOptions: Int get() =
+        (skipCounters[SkipReason.UNSUPPORTED_OPTIONS] ?: 0) +
+            (skipCounters[SkipReason.OPTIONS_ON_REGISTRABLE] ?: 0)
+
     /**
      * Number skipped for single-label, public-suffix, IP, protected-host or quarantine restrictions.
      */
-    val skippedUnsafe: Int get() = (skipCounters[SkipReason.SINGLE_LABEL] ?: 0) +
-        (skipCounters[SkipReason.PUBLIC_SUFFIX] ?: 0) +
-        (skipCounters[SkipReason.IP_LITERAL] ?: 0) +
-        (skipCounters[SkipReason.PROTECTED_HOST] ?: 0) +
-        (skipCounters[SkipReason.QUARANTINED] ?: 0)
+    val skippedUnsafe: Int get() =
+        (skipCounters[SkipReason.SINGLE_LABEL] ?: 0) +
+            (skipCounters[SkipReason.PUBLIC_SUFFIX] ?: 0) +
+            (skipCounters[SkipReason.IP_LITERAL] ?: 0) +
+            (skipCounters[SkipReason.PROTECTED_HOST] ?: 0) +
+            (skipCounters[SkipReason.QUARANTINED] ?: 0)
+
     /**
      * Sum of all recorded skip counters.
      */
@@ -41,7 +47,6 @@ data class RuleStats(
  * Allow entries are checked before block entries, including ancestor suffix lookups.
  */
 object ExtensionRuleStore {
-
     internal class RuleSnapshot(
         val allowExact: Set<String>,
         val allowSuffix: Set<String>,
@@ -49,12 +54,19 @@ object ExtensionRuleStore {
         val blockExact: Set<String>,
         val blockSuffix: Set<String>,
         val blockWildcard: Set<String>,
-        val totalCount: Int
+        val totalCount: Int,
     ) {
         companion object {
-            val EMPTY = RuleSnapshot(
-                emptySet(), emptySet(), emptySet(), emptySet(), emptySet(), emptySet(), 0
-            )
+            val EMPTY =
+                RuleSnapshot(
+                    emptySet(),
+                    emptySet(),
+                    emptySet(),
+                    emptySet(),
+                    emptySet(),
+                    emptySet(),
+                    0,
+                )
         }
     }
 
@@ -154,36 +166,43 @@ object ExtensionRuleStore {
      */
     class Builder(
         private val parser: RuleLineParser = lineParser,
-        private val admission: RuleAdmission = ruleAdmission
+        private val admission: RuleAdmission = ruleAdmission,
     ) {
         /**
          * Mutable exact-host allow entries accumulated by this builder.
          */
         val allowExact = HashSet<String>()
+
         /**
          * Mutable allow entries covering the root hostname and descendants.
          */
         val allowSuffix = HashSet<String>()
+
         /**
          * Mutable allow entries covering strict descendants of the root hostname.
          */
         val allowWildcard = HashSet<String>()
+
         /**
          * Mutable exact-host block entries accumulated by this builder.
          */
         val blockExact = HashSet<String>()
+
         /**
          * Mutable block entries covering the root hostname and descendants.
          */
         val blockSuffix = HashSet<String>()
+
         /**
          * Mutable block entries covering strict descendants of the root hostname.
          */
         val blockWildcard = HashSet<String>()
+
         /**
          * Mutable rejection counters indexed by SkipReason ordinal.
          */
         val skipCounters = IntArray(SkipReason.values().size)
+
         /**
          * Number of distinct entries accepted through addRule; direct set mutation does not adjust it.
          */
@@ -195,7 +214,10 @@ object ExtensionRuleStore {
          * @param line Raw filter-list line.
          * @param category Default content category attached to a parsed rule.
          */
-        fun addLine(line: String, category: BlockingCategory = BlockingCategory.AD) {
+        fun addLine(
+            line: String,
+            category: BlockingCategory = BlockingCategory.AD,
+        ) {
             val ctx = ParseContext(category = category)
             when (val res = parser.parse(line, ctx)) {
                 is ParsedLine.Rule -> addRule(res.rule)
@@ -214,38 +236,39 @@ object ExtensionRuleStore {
                 skipCounters[skip.ordinal]++
                 return
             }
-            val added = when (rule.action) {
-                RuleAction.ALLOW -> {
-                    when (rule.kind) {
-                        RuleKind.EXACT -> allowExact.add(rule.value)
-                        RuleKind.SUFFIX -> allowSuffix.add(rule.value)
-                        RuleKind.WILDCARD -> allowWildcard.add(rule.value)
+            val added =
+                when (rule.action) {
+                    RuleAction.ALLOW -> {
+                        when (rule.kind) {
+                            RuleKind.EXACT -> allowExact.add(rule.value)
+                            RuleKind.SUFFIX -> allowSuffix.add(rule.value)
+                            RuleKind.WILDCARD -> allowWildcard.add(rule.value)
+                        }
+                    }
+
+                    RuleAction.BLOCK -> {
+                        when (rule.kind) {
+                            RuleKind.EXACT -> blockExact.add(rule.value)
+                            RuleKind.SUFFIX -> blockSuffix.add(rule.value)
+                            RuleKind.WILDCARD -> blockWildcard.add(rule.value)
+                        }
                     }
                 }
-                RuleAction.BLOCK -> {
-                    when (rule.kind) {
-                        RuleKind.EXACT -> blockExact.add(rule.value)
-                        RuleKind.SUFFIX -> blockSuffix.add(rule.value)
-                        RuleKind.WILDCARD -> blockWildcard.add(rule.value)
-                    }
-                }
-            }
             if (added) {
                 count++
             }
         }
 
-        internal fun build(): RuleSnapshot {
-            return RuleSnapshot(
+        internal fun build(): RuleSnapshot =
+            RuleSnapshot(
                 allowExact = allowExact,
                 allowSuffix = allowSuffix,
                 allowWildcard = allowWildcard,
                 blockExact = blockExact,
                 blockSuffix = blockSuffix,
                 blockWildcard = blockWildcard,
-                totalCount = count
+                totalCount = count,
             )
-        }
 
         /**
          * Returns a snapshot of admitted count and all skip counters.
@@ -288,7 +311,10 @@ object ExtensionRuleStore {
      * @param defaultCategory Category applied to an accepted rule.
      * @return Parsed rule, or null when skipped.
      */
-    fun parseLine(rawLine: String, defaultCategory: BlockingCategory = BlockingCategory.AD): DnsRule? {
+    fun parseLine(
+        rawLine: String,
+        defaultCategory: BlockingCategory = BlockingCategory.AD,
+    ): DnsRule? {
         val parsed = lineParser.parse(rawLine, ParseContext(category = defaultCategory))
         return (parsed as? ParsedLine.Rule)?.rule
     }
@@ -300,9 +326,10 @@ object ExtensionRuleStore {
      * @param ctx Source, security-list and category context.
      * @return Accepted rule or explicit skipped result.
      */
-    fun parseLine(rawLine: String, ctx: ParseContext): ParsedLine {
-        return lineParser.parse(rawLine, ctx)
-    }
+    fun parseLine(
+        rawLine: String,
+        ctx: ParseContext,
+    ): ParsedLine = lineParser.parse(rawLine, ctx)
 
     /**
      * Clears the active snapshot and statistics for tests.

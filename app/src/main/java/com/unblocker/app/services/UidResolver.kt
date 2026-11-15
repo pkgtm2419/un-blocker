@@ -12,7 +12,9 @@ import java.net.InetSocketAddress
  *
  * @param context Context supplying connectivity and package managers.
  */
-class UidResolver(private val context: Context) {
+class UidResolver(
+    private val context: Context,
+) {
     private val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
 
     /**
@@ -26,7 +28,7 @@ class UidResolver(private val context: Context) {
     fun resolveUid(
         protocol: Int,
         localAddress: InetSocketAddress,
-        remoteAddress: InetSocketAddress
+        remoteAddress: InetSocketAddress,
     ): Int? {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val cm = connectivityManager ?: return null
@@ -44,11 +46,10 @@ class UidResolver(private val context: Context) {
      * @param uid Android UID to inspect.
      * @return Package name, or null when unavailable or lookup fails.
      */
-    fun getPackageName(uid: Int): String? {
-        return runCatching {
+    fun getPackageName(uid: Int): String? =
+        runCatching {
             context.packageManager.getPackagesForUid(uid)?.firstOrNull()
         }.getOrNull()
-    }
 
     /**
      * Finds a user-visible application label.
@@ -56,15 +57,15 @@ class UidResolver(private val context: Context) {
      * @param packageName Package identifier to inspect.
      * @return Application label, falling back to the package identifier on lookup failure.
      */
-    fun getAppLabel(packageName: String): String {
-        return runCatching {
-            val appInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                context.packageManager.getApplicationInfo(packageName, PackageManager.ApplicationInfoFlags.of(0))
-            } else {
-                @Suppress("DEPRECATION")
-                context.packageManager.getApplicationInfo(packageName, 0)
-            }
+    fun getAppLabel(packageName: String): String =
+        runCatching {
+            val appInfo =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    context.packageManager.getApplicationInfo(packageName, PackageManager.ApplicationInfoFlags.of(0))
+                } else {
+                    @Suppress("DEPRECATION")
+                    context.packageManager.getApplicationInfo(packageName, 0)
+                }
             context.packageManager.getApplicationLabel(appInfo).toString()
         }.getOrDefault(packageName)
-    }
 }

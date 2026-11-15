@@ -11,26 +11,41 @@ import org.junit.Test
  * Regression coverage for DNS cache.
  */
 class DnsCacheTest {
-
     /**
      * Verifies that validated cache copies metadata and ages TTL without reparsing.
      */
     @Test fun validatedCacheCopiesMetadataAndAgesTtlWithoutReparsing() {
-        val query=DnsFixtures.query()
-        val aliases=mutableListOf("tracker.test")
-        val bytes=DnsFixtures.response(query,listOf(DnsFixtures.Record(query.domain,5,DnsFixtures.name("tracker.test"))))
-        val parsed=com.unblocker.app.logic.dns.DnsResponseValidator.parseAndValidate(bytes,bytes.size,query)!!
-        cache.putValidated(query,com.unblocker.app.services.ValidatedDnsResponse(bytes,parsed.copy(aliases=aliases)))
-        aliases.clear(); bytes.fill(0)
-        now+=2000
-        val hit=cache.getValidated(query.copy(transactionId=0x5678))!!
-        assertEquals(listOf("tracker.test"),hit.metadata.aliases)
-        assertEquals(0x5678,hit.metadata.transactionId)
-        val revalidated=com.unblocker.app.logic.dns.DnsResponseValidator.parseAndValidate(hit.bytes,hit.bytes.size,query.copy(transactionId=0x5678))!!
-        assertEquals(58L,revalidated.minPositiveTtlSeconds)
+        val query = DnsFixtures.query()
+        val aliases = mutableListOf("tracker.test")
+        val bytes =
+            DnsFixtures.response(
+                query,
+                listOf(DnsFixtures.Record(query.domain, 5, DnsFixtures.name("tracker.test"))),
+            )
+        val parsed =
+            com.unblocker.app.logic.dns.DnsResponseValidator
+                .parseAndValidate(bytes, bytes.size, query)!!
+        cache.putValidated(
+            query,
+            com.unblocker.app.services
+                .ValidatedDnsResponse(bytes, parsed.copy(aliases = aliases)),
+        )
+        aliases.clear()
+        bytes.fill(0)
+        now += 2000
+        val hit = cache.getValidated(query.copy(transactionId = 0x5678))!!
+        assertEquals(listOf("tracker.test"), hit.metadata.aliases)
+        assertEquals(0x5678, hit.metadata.transactionId)
+        val revalidated =
+            com.unblocker.app.logic.dns.DnsResponseValidator.parseAndValidate(
+                hit.bytes,
+                hit.bytes.size,
+                query.copy(transactionId = 0x5678),
+            )!!
+        assertEquals(58L, revalidated.minPositiveTtlSeconds)
         hit.bytes.fill(0)
         assertNotNull(cache.getValidated(query))
-        now+=60000
+        now += 60000
         assertNull(cache.getValidated(query))
     }
 
@@ -105,17 +120,18 @@ class DnsCacheTest {
      * Verifies that IP family is part of cache identity.
      */
     @Test fun ipFamilyIsPartOfCacheIdentity() {
-        val largeIpv6Payload = ByteArray(65_508).also {
-            it[0] = 0x12
-            it[1] = 0x34
-        }
+        val largeIpv6Payload =
+            ByteArray(65_508).also {
+                it[0] = 0x12
+                it[1] = 0x34
+            }
         cache.put(
             "large.example",
             1,
             largeIpv6Payload,
             ttlSeconds = 60,
             queryClass = 1,
-            isIpv6 = true
+            isIpv6 = true,
         )
 
         assertNotNull(cache.get("large.example", 1, 0x1111, queryClass = 1, isIpv6 = true))

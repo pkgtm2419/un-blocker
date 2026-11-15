@@ -6,7 +6,6 @@ import java.io.Writer
  * Escapes CSV fields and writes CRLF-terminated rows to caller-owned writers.
  */
 object CsvWriter {
-
     /**
      * Escapes one field and prefixes formula-leading characters with an apostrophe.
      *
@@ -21,7 +20,9 @@ object CsvWriter {
         // Defend against CSV Formula Injection (DDE attack vectors)
         if (value.isNotEmpty()) {
             val firstChar = value[0]
-            if (firstChar == '=' || firstChar == '+' || firstChar == '-' || firstChar == '@' || firstChar == '\t' || firstChar == '\r') {
+            if (firstChar == '=' || firstChar == '+' || firstChar == '-' || firstChar == '@' || firstChar == '\t' ||
+                firstChar == '\r'
+            ) {
                 value = "'$value"
             }
         }
@@ -41,7 +42,10 @@ object CsvWriter {
      * @param fields Unescaped field values in column order.
      * @throws java.io.IOException If the writer cannot accept the row.
      */
-    fun writeRow(writer: Writer, fields: List<String>) {
+    fun writeRow(
+        writer: Writer,
+        fields: List<String>,
+    ) {
         val row = fields.joinToString(separator = ",", postfix = "\r\n") { escapeCell(it) }
         writer.write(row)
     }

@@ -16,9 +16,8 @@ import android.os.ParcelFileDescriptor
  */
 class VpnConfiguration(
     private val service: VpnService,
-    private val upstreamServers: List<UpstreamDnsServer> = UpstreamDnsServer.DEFAULTS
+    private val upstreamServers: List<UpstreamDnsServer> = UpstreamDnsServer.DEFAULTS,
 ) {
-
     /**
      * Configures and attempts to establish the VPN interface.
      *
@@ -28,13 +27,15 @@ class VpnConfiguration(
      * @return Descriptor owned by the caller, or null when the final establishment fails or lacks consent.
      */
     fun establish(): ParcelFileDescriptor? {
-        val builder = service.Builder()
-            .setSession("Un-Blocker DNS Shield")
-            .setMtu(1500)
-            .setBlocking(true)
-            .addAddress("10.111.222.1", 24)
-            .addDnsServer("10.111.222.2")
-            .addRoute("10.111.222.2", 32)
+        val builder =
+            service
+                .Builder()
+                .setSession("Un-Blocker DNS Shield")
+                .setMtu(1500)
+                .setBlocking(true)
+                .addAddress("10.111.222.1", 24)
+                .addDnsServer("10.111.222.2")
+                .addRoute("10.111.222.2", 32)
 
         // Dual-stack IPv6 DNS intercept (/128)
         try {
@@ -48,13 +49,15 @@ class VpnConfiguration(
         // Exclude our own app process to avoid VPN routing loops
         try {
             builder.addDisallowedApplication(service.packageName)
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+        }
 
         // Automatic Physical Network Tracking (Wi-Fi <-> Cellular)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             try {
                 builder.setUnderlyingNetworks(null)
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

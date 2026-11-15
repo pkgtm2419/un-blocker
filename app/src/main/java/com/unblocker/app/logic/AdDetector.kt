@@ -16,7 +16,7 @@ class AdDetector(
     private val context: Context? = null,
     private val compiledRules: CompiledRuleSet? = null,
     private val ruleSet: RuleSet? = null,
-    private val offHeapRuleEngine: com.unblocker.data.cache.OffHeapRuleEngine? = null
+    private val offHeapRuleEngine: com.unblocker.data.cache.OffHeapRuleEngine? = null,
 ) {
     private val overlay = mutableListOf<DnsRule>()
     private val admission: RuleAdmission = DefaultRuleAdmission()
@@ -50,14 +50,20 @@ class AdDetector(
                 for (r in overlay) {
                     if (r.action == action) {
                         if (r.kind == RuleKind.EXACT && r.value == normalized) return r
-                        if (r.kind == RuleKind.SUFFIX && (normalized == r.value || normalized.endsWith("." + r.value))) return r
+                        if (r.kind == RuleKind.SUFFIX &&
+                            (normalized == r.value || normalized.endsWith("." + r.value))
+                        ) {
+                            return r
+                        }
                         if (r.kind == RuleKind.WILDCARD && normalized.endsWith("." + r.value)) return r
                     }
                 }
             }
         }
         ExtensionRuleStore.matchRule(normalized)?.let { return it }
-        if (offHeapRuleEngine != null && offHeapRuleEngine.isLoaded() && offHeapRuleEngine.isDomainBlocked(normalized)) {
+        if (offHeapRuleEngine != null && offHeapRuleEngine.isLoaded() &&
+            offHeapRuleEngine.isDomainBlocked(normalized)
+        ) {
             return DnsRule(RuleAction.BLOCK, RuleKind.SUFFIX, normalized, BlockingCategory.AD)
         }
         return activeRuleSet.match(domain)
@@ -76,8 +82,12 @@ class AdDetector(
         }
         val rule = matchRule(domain) ?: return false to ""
         if (rule.action == RuleAction.ALLOW) return false to "Shipped exception"
-        return true to if (domain == rule.value) "Static List Match ($domain)"
-            else "Domain Suffix Match (${rule.value})"
+        return true to
+            if (domain == rule.value) {
+                "Static List Match ($domain)"
+            } else {
+                "Domain Suffix Match (${rule.value})"
+            }
     }
 
     /**
@@ -91,31 +101,84 @@ class AdDetector(
      */
     companion object {
         private fun fallbackRuleSet(): RuleSet {
-            val rules = fallback.mapNotNull(DomainName::normalize).map {
-                DnsRule(RuleAction.BLOCK, RuleKind.SUFFIX, it, BlockingCategory.AD)
-            }
+            val rules =
+                fallback.mapNotNull(DomainName::normalize).map {
+                    DnsRule(RuleAction.BLOCK, RuleKind.SUFFIX, it, BlockingCategory.AD)
+                }
             return CompiledRuleSet(rules).toRuleSet()
         }
 
         /**
          * Built-in suffix-rule seed domains, subject to the final decision pipeline precedence.
          */
-        val defaultSeedRules = listOf(
-            "doubleclick.net", "googleads.g.doubleclick.net", "adservice.google.com",
-            "pagead2.googlesyndication.com", "pubads.g.doubleclick.net", "admob.com",
-            "a.applovin.com", "unityads.unity3d.com", "vungle.com", "inmobi.com", "ironsrc.com",
-            "criteo.com", "taboola.com", "outbrain.com", "adnxs.com", "app.adjust.com", "appsflyer.com", "appsflyersdk.com", "moloco.com",
-            "branch.io", "kochava.com", "flurry.com", "api.mixpanel.com", "api.segment.io", "api.amplitude.com",
-            "static.hotjar.com", "clarity.ms", "recrampwiped.com", "adsboosters.xyz", "hedeuntacks.com",
-            "legbaratwind.com", "ronracepub.com", "popads.net", "popcash.net", "adsterra.com",
-            "propellerads.com", "monetag.com", "clickadu.com", "hilltopads.com", "galaksion.com",
-            "admaven.com", "onclickads.net", "droplink.co", "openx.net",
-            "mintegral.com", "rayjump.com", "ironsource.com", "pangle.io",
-            "chartboost.com", "fyber.com", "tapjoy.com", "an.facebook.com",
-            "atlassbx.com", "mopub.com", "advertising.apple.com", "deofleadyetca.org",
-            "razorpayads.com", "aureliatmeses.com", "sneerscuartel.com", "kernesowan.com",
-            "busycdn.xyz", "bflixcdn.xyz", "googlesyndication.com", "s.youtube.com", "imasdk.googleapis.com"
-        )
+        val defaultSeedRules =
+            listOf(
+                "doubleclick.net",
+                "googleads.g.doubleclick.net",
+                "adservice.google.com",
+                "pagead2.googlesyndication.com",
+                "pubads.g.doubleclick.net",
+                "admob.com",
+                "a.applovin.com",
+                "unityads.unity3d.com",
+                "vungle.com",
+                "inmobi.com",
+                "ironsrc.com",
+                "criteo.com",
+                "taboola.com",
+                "outbrain.com",
+                "adnxs.com",
+                "app.adjust.com",
+                "appsflyer.com",
+                "appsflyersdk.com",
+                "moloco.com",
+                "branch.io",
+                "kochava.com",
+                "flurry.com",
+                "api.mixpanel.com",
+                "api.segment.io",
+                "api.amplitude.com",
+                "static.hotjar.com",
+                "clarity.ms",
+                "recrampwiped.com",
+                "adsboosters.xyz",
+                "hedeuntacks.com",
+                "legbaratwind.com",
+                "ronracepub.com",
+                "popads.net",
+                "popcash.net",
+                "adsterra.com",
+                "propellerads.com",
+                "monetag.com",
+                "clickadu.com",
+                "hilltopads.com",
+                "galaksion.com",
+                "admaven.com",
+                "onclickads.net",
+                "droplink.co",
+                "openx.net",
+                "mintegral.com",
+                "rayjump.com",
+                "ironsource.com",
+                "pangle.io",
+                "chartboost.com",
+                "fyber.com",
+                "tapjoy.com",
+                "an.facebook.com",
+                "atlassbx.com",
+                "mopub.com",
+                "advertising.apple.com",
+                "deofleadyetca.org",
+                "razorpayads.com",
+                "aureliatmeses.com",
+                "sneerscuartel.com",
+                "kernesowan.com",
+                "busycdn.xyz",
+                "bflixcdn.xyz",
+                "googlesyndication.com",
+                "s.youtube.com",
+                "imasdk.googleapis.com",
+            )
 
         private val fallback = defaultSeedRules
     }

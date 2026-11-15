@@ -32,7 +32,7 @@ import javax.inject.Inject
 data class AppItem(
     val packageName: String,
     val label: String,
-    val icon: Drawable? = null
+    val icon: Drawable? = null,
 )
 
 /**
@@ -42,7 +42,7 @@ enum class DomainCategory {
     FIRST_PARTY,
     CDN_INFRA,
     TRACKER_AD,
-    OTHER
+    OTHER,
 }
 
 /**
@@ -51,7 +51,7 @@ enum class DomainCategory {
 enum class ReviewAction {
     ALLOW,
     BLOCK,
-    KEEP_DEFAULT
+    KEEP_DEFAULT,
 }
 
 /**
@@ -66,7 +66,7 @@ data class ReviewedDomain(
     val domain: String,
     val count: Int,
     val category: DomainCategory,
-    val action: ReviewAction = ReviewAction.KEEP_DEFAULT
+    val action: ReviewAction = ReviewAction.KEEP_DEFAULT,
 )
 
 /**
@@ -85,7 +85,7 @@ sealed interface LearnUiState {
         val installedApps: List<AppItem>,
         val filteredApps: List<AppItem>,
         val query: String = "",
-        val isLoading: Boolean = false
+        val isLoading: Boolean = false,
     ) : LearnUiState
 
     /**
@@ -98,7 +98,7 @@ sealed interface LearnUiState {
     data class Recording(
         val app: AppItem,
         val elapsedSeconds: Int,
-        val recordedDomains: List<SessionDomain>
+        val recordedDomains: List<SessionDomain>,
     ) : LearnUiState
 
     /**
@@ -111,7 +111,7 @@ sealed interface LearnUiState {
     data class Reviewing(
         val app: AppItem,
         val domains: List<ReviewedDomain>,
-        val appliedSuccess: Boolean = false
+        val appliedSuccess: Boolean = false,
     ) : LearnUiState
 }
 
@@ -122,218 +122,271 @@ sealed interface LearnUiState {
  * @param userRuleGateway Destination for reviewed exact and whole-site overrides.
  */
 @HiltViewModel
-class LearnViewModel @Inject constructor(
-    application: Application,
-    private val userRuleGateway: UserRuleGateway
-) : AndroidViewModel(application) {
-
-    private val sessionManager = RecordingSessionManager.instance
-    private val _uiState = MutableStateFlow<LearnUiState>(
-        LearnUiState.SelectingApp(emptyList(), emptyList(), isLoading = true)
-    )
-    /**
-     * Current app-selection, recording, or review state exposed as a read-only flow.
-     */
-    val uiState: StateFlow<LearnUiState> = _uiState.asStateFlow()
-
-    private var timerJob: Job? = null
-    private var allApps: List<AppItem> = emptyList()
-
-    init {
-        loadInstalledLauncherApps()
-    }
-
-    /**
-     * Asynchronously discovers launcher apps, excluding this app, and publishes a sorted selection list.
-     */
-    fun loadInstalledLauncherApps() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val packageManager = getApplication<Application>().packageManager
-            val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-            val resolveInfos = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                packageManager.queryIntentActivities(intent, PackageManager.ResolveInfoFlags.of(0))
-            } else {
-                @Suppress("DEPRECATION")
-                packageManager.queryIntentActivities(intent, 0)
-            }
-
-            val appList = resolveInfos.mapNotNull { resolveInfo ->
-                val packageName = resolveInfo.activityInfo?.packageName ?: return@mapNotNull null
-                // Don't include self
-                if (packageName == getApplication<Application>().packageName) return@mapNotNull null
-                val label = resolveInfo.loadLabel(packageManager).toString()
-                AppItem(packageName = packageName, label = label)
-            }.distinctBy { it.packageName }.sortedBy { it.label.lowercase(Locale.ROOT) }
-
-            allApps = appList
-            _uiState.value = LearnUiState.SelectingApp(
-                installedApps = appList,
-                filteredApps = appList,
-                isLoading = false
+class LearnViewModel
+    @Inject
+    constructor(
+        application: Application,
+        private val userRuleGateway: UserRuleGateway,
+    ) : AndroidViewModel(application) {
+        private val sessionManager = RecordingSessionManager.instance
+        private val _uiState =
+            MutableStateFlow<LearnUiState>(
+                LearnUiState.SelectingApp(emptyList(), emptyList(), isLoading = true),
             )
-        }
-    }
 
-    /**
-     * Publishes app selection filtered by case-insensitive label or package-name matching.
-     *
-     * @param query Search text; blank input shows all discovered apps.
-     */
-    fun searchApps(query: String) {
-        val filtered = if (query.isBlank()) {
-            allApps
-        } else {
-            allApps.filter {
-                it.label.contains(query, ignoreCase = true) || it.packageName.contains(query, ignoreCase = true)
+        /**
+         * Current app-selection, recording, or review state exposed as a read-only flow.
+         */
+        val uiState: StateFlow<LearnUiState> = _uiState.asStateFlow()
+
+        private var timerJob: Job? = null
+        private var allApps: List<AppItem> = emptyList()
+
+        init {
+            loadInstalledLauncherApps()
+        }
+
+        /**
+         * Asynchronously discovers launcher apps, excluding this app, and publishes a sorted selection list.
+         */
+        fun loadInstalledLauncherApps() {
+            viewModelScope.launch(Dispatchers.IO) {
+                val packageManager = getApplication<Application>().packageManager
+                val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+                val resolveInfos =
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        packageManager.queryIntentActivities(intent, PackageManager.ResolveInfoFlags.of(0))
+                    } else {
+                        @Suppress("DEPRECATION")
+                        packageManager.queryIntentActivities(intent, 0)
+                    }
+
+                val appList =
+                    resolveInfos
+                        .mapNotNull { resolveInfo ->
+                            val packageName = resolveInfo.activityInfo?.packageName ?: return@mapNotNull null
+                            // Don't include self
+                            if (packageName == getApplication<Application>().packageName) return@mapNotNull null
+                            val label = resolveInfo.loadLabel(packageManager).toString()
+                            AppItem(packageName = packageName, label = label)
+                        }.distinctBy { it.packageName }
+                        .sortedBy { it.label.lowercase(Locale.ROOT) }
+
+                allApps = appList
+                _uiState.value =
+                    LearnUiState.SelectingApp(
+                        installedApps = appList,
+                        filteredApps = appList,
+                        isLoading = false,
+                    )
             }
         }
-        _uiState.value = LearnUiState.SelectingApp(allApps, filtered, query, isLoading = false)
-    }
 
-    /**
-     * Starts a session for the selected package and updates its presentation once per second.
-     *
-     * @param app Selected launcher app; package lookup supplies the target UID or minus one on failure.
-     */
-    fun startRecording(app: AppItem) {
-        val packageManager = getApplication<Application>().packageManager
-        val uid = runCatching {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                packageManager.getApplicationInfo(app.packageName, PackageManager.ApplicationInfoFlags.of(0)).uid
-            } else {
-                @Suppress("DEPRECATION")
-                packageManager.getApplicationInfo(app.packageName, 0).uid
-            }
-        }.getOrDefault(-1)
-
-        sessionManager.startSession(app.packageName, uid)
-        _uiState.value = LearnUiState.Recording(app, 0, emptyList())
-
-        timerJob?.cancel()
-        timerJob = viewModelScope.launch {
-            var elapsed = 0
-            while (sessionManager.isRecordingActive()) {
-                delay(1000L)
-                elapsed++
-                val domains = sessionManager.getRecordedDomains()
-                val current = _uiState.value
-                if (current is LearnUiState.Recording) {
-                    _uiState.value = current.copy(elapsedSeconds = elapsed, recordedDomains = domains)
-                }
-            }
-            stopRecording()
-        }
-    }
-
-    /**
-     * Stops the current session and builds heuristic review actions for its recorded hosts.
-     */
-    fun stopRecording() {
-        timerJob?.cancel()
-        val current = _uiState.value
-        val app = when (current) {
-            is LearnUiState.Recording -> current.app
-            is LearnUiState.Reviewing -> current.app
-            else -> return
-        }
-
-        val recorded = sessionManager.stopSession()
-        val reviewed = recorded.map { domainItem ->
-            val category = categorizeDomain(domainItem.domain, app.packageName)
-            val defaultAction = when (category) {
-                DomainCategory.FIRST_PARTY -> ReviewAction.ALLOW
-                DomainCategory.CDN_INFRA -> ReviewAction.ALLOW
-                DomainCategory.TRACKER_AD -> ReviewAction.BLOCK
-                DomainCategory.OTHER -> ReviewAction.KEEP_DEFAULT
-            }
-            ReviewedDomain(
-                domain = domainItem.domain,
-                count = domainItem.count,
-                category = category,
-                action = defaultAction
-            )
-        }
-
-        _uiState.value = LearnUiState.Reviewing(app, reviewed)
-    }
-
-    /**
-     * Changes the proposed action for a host while in the review state.
-     *
-     * @param domain Recorded host whose proposed action should change.
-     * @param action Action to apply when review is submitted.
-     */
-    fun setDomainAction(domain: String, action: ReviewAction) {
-        val current = _uiState.value
-        if (current is LearnUiState.Reviewing) {
-            val updated = current.domains.map {
-                if (it.domain == domain) it.copy(action = action) else it
-            }
-            _uiState.value = current.copy(domains = updated)
-        }
-    }
-
-    /**
-     * Asynchronously submits reviewed allow actions as whole-site rules and blocks as exact rules.
-     *
-     * Keep-default entries are skipped. The completion flag is set after submission without checking
-     * individual gateway results.
-     */
-    fun applyRules() {
-        val current = _uiState.value
-        if (current is LearnUiState.Reviewing) {
-            viewModelScope.launch {
-                current.domains.forEach { reviewed ->
-                    when (reviewed.action) {
-                        ReviewAction.ALLOW -> {
-                            userRuleGateway.setWholeSite(reviewed.domain, UserFeedback.ALLOW)
-                        }
-                        ReviewAction.BLOCK -> {
-                            userRuleGateway.set(reviewed.domain, UserFeedback.BLOCK)
-                        }
-                        ReviewAction.KEEP_DEFAULT -> {
-                            // No custom override applied
-                        }
+        /**
+         * Publishes app selection filtered by case-insensitive label or package-name matching.
+         *
+         * @param query Search text; blank input shows all discovered apps.
+         */
+        fun searchApps(query: String) {
+            val filtered =
+                if (query.isBlank()) {
+                    allApps
+                } else {
+                    allApps.filter {
+                        it.label.contains(query, ignoreCase = true) || it.packageName.contains(query, ignoreCase = true)
                     }
                 }
-                _uiState.value = current.copy(appliedSuccess = true)
+            _uiState.value = LearnUiState.SelectingApp(allApps, filtered, query, isLoading = false)
+        }
+
+        /**
+         * Starts a session for the selected package and updates its presentation once per second.
+         *
+         * @param app Selected launcher app; package lookup supplies the target UID or minus one on failure.
+         */
+        fun startRecording(app: AppItem) {
+            val packageManager = getApplication<Application>().packageManager
+            val uid =
+                runCatching {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        packageManager
+                            .getApplicationInfo(
+                                app.packageName,
+                                PackageManager.ApplicationInfoFlags.of(0),
+                            ).uid
+                    } else {
+                        @Suppress("DEPRECATION")
+                        packageManager.getApplicationInfo(app.packageName, 0).uid
+                    }
+                }.getOrDefault(-1)
+
+            sessionManager.startSession(app.packageName, uid)
+            _uiState.value = LearnUiState.Recording(app, 0, emptyList())
+
+            timerJob?.cancel()
+            timerJob =
+                viewModelScope.launch {
+                    var elapsed = 0
+                    while (sessionManager.isRecordingActive()) {
+                        delay(1000L)
+                        elapsed++
+                        val domains = sessionManager.getRecordedDomains()
+                        val current = _uiState.value
+                        if (current is LearnUiState.Recording) {
+                            _uiState.value = current.copy(elapsedSeconds = elapsed, recordedDomains = domains)
+                        }
+                    }
+                    stopRecording()
+                }
+        }
+
+        /**
+         * Stops the current session and builds heuristic review actions for its recorded hosts.
+         */
+        fun stopRecording() {
+            timerJob?.cancel()
+            val current = _uiState.value
+            val app =
+                when (current) {
+                    is LearnUiState.Recording -> current.app
+                    is LearnUiState.Reviewing -> current.app
+                    else -> return
+                }
+
+            val recorded = sessionManager.stopSession()
+            val reviewed =
+                recorded.map { domainItem ->
+                    val category = categorizeDomain(domainItem.domain, app.packageName)
+                    val defaultAction =
+                        when (category) {
+                            DomainCategory.FIRST_PARTY -> ReviewAction.ALLOW
+                            DomainCategory.CDN_INFRA -> ReviewAction.ALLOW
+                            DomainCategory.TRACKER_AD -> ReviewAction.BLOCK
+                            DomainCategory.OTHER -> ReviewAction.KEEP_DEFAULT
+                        }
+                    ReviewedDomain(
+                        domain = domainItem.domain,
+                        count = domainItem.count,
+                        category = category,
+                        action = defaultAction,
+                    )
+                }
+
+            _uiState.value = LearnUiState.Reviewing(app, reviewed)
+        }
+
+        /**
+         * Changes the proposed action for a host while in the review state.
+         *
+         * @param domain Recorded host whose proposed action should change.
+         * @param action Action to apply when review is submitted.
+         */
+        fun setDomainAction(
+            domain: String,
+            action: ReviewAction,
+        ) {
+            val current = _uiState.value
+            if (current is LearnUiState.Reviewing) {
+                val updated =
+                    current.domains.map {
+                        if (it.domain == domain) it.copy(action = action) else it
+                    }
+                _uiState.value = current.copy(domains = updated)
             }
         }
-    }
 
-    /**
-     * Stops recording, cancels timer updates, and returns to the complete app-selection list.
-     */
-    fun cancelSession() {
-        sessionManager.stopSession()
-        timerJob?.cancel()
-        _uiState.value = LearnUiState.SelectingApp(allApps, allApps)
-    }
+        /**
+         * Asynchronously submits reviewed allow actions as whole-site rules and blocks as exact rules.
+         *
+         * Keep-default entries are skipped. The completion flag is set after submission without checking
+         * individual gateway results.
+         */
+        fun applyRules() {
+            val current = _uiState.value
+            if (current is LearnUiState.Reviewing) {
+                viewModelScope.launch {
+                    current.domains.forEach { reviewed ->
+                        when (reviewed.action) {
+                            ReviewAction.ALLOW -> {
+                                userRuleGateway.setWholeSite(reviewed.domain, UserFeedback.ALLOW)
+                            }
 
-    private fun categorizeDomain(domain: String, targetPackage: String): DomainCategory {
-        val lower = domain.lowercase(Locale.ROOT)
-        // 1. Check known CDN / Infrastructure
-        val cdnSuffixes = listOf(
-            "cloudfront.net", "akamaihd.net", "akamaiedge.net", "edgekey.net",
-            "fastly.net", "cloudflare.com", "googleapis.com", "gstatic.com",
-            "amazonaws.com", "1e100.net", "azureedge.net", "trafficmanager.net"
-        )
-        if (cdnSuffixes.any { lower.endsWith(it) }) {
-            return DomainCategory.CDN_INFRA
+                            ReviewAction.BLOCK -> {
+                                userRuleGateway.set(reviewed.domain, UserFeedback.BLOCK)
+                            }
+
+                            ReviewAction.KEEP_DEFAULT -> {
+                                // No custom override applied
+                            }
+                        }
+                    }
+                    _uiState.value = current.copy(appliedSuccess = true)
+                }
+            }
         }
 
-        // 2. Check First Party from package name segments
-        val packageSegments = targetPackage.split('.').filter { it.length > 2 && it !in setOf("com", "org", "net", "app", "android") }
-        if (packageSegments.any { lower.contains(it) }) {
-            return DomainCategory.FIRST_PARTY
+        /**
+         * Stops recording, cancels timer updates, and returns to the complete app-selection list.
+         */
+        fun cancelSession() {
+            sessionManager.stopSession()
+            timerJob?.cancel()
+            _uiState.value = LearnUiState.SelectingApp(allApps, allApps)
         }
 
-        // 3. Check known tracking / telemetry patterns
-        val trackerPatterns = listOf("telemetry", "analytics", "crashlytics", "track", "metrics", "ads", "doubleclick", "applovin", "unityads", "vungle")
-        if (trackerPatterns.any { lower.contains(it) }) {
-            return DomainCategory.TRACKER_AD
-        }
+        private fun categorizeDomain(
+            domain: String,
+            targetPackage: String,
+        ): DomainCategory {
+            val lower = domain.lowercase(Locale.ROOT)
+            // 1. Check known CDN / Infrastructure
+            val cdnSuffixes =
+                listOf(
+                    "cloudfront.net",
+                    "akamaihd.net",
+                    "akamaiedge.net",
+                    "edgekey.net",
+                    "fastly.net",
+                    "cloudflare.com",
+                    "googleapis.com",
+                    "gstatic.com",
+                    "amazonaws.com",
+                    "1e100.net",
+                    "azureedge.net",
+                    "trafficmanager.net",
+                )
+            if (cdnSuffixes.any { lower.endsWith(it) }) {
+                return DomainCategory.CDN_INFRA
+            }
 
-        return DomainCategory.OTHER
+            // 2. Check First Party from package name segments
+            val packageSegments =
+                targetPackage.split('.').filter {
+                    it.length > 2 &&
+                        it !in setOf("com", "org", "net", "app", "android")
+                }
+            if (packageSegments.any { lower.contains(it) }) {
+                return DomainCategory.FIRST_PARTY
+            }
+
+            // 3. Check known tracking / telemetry patterns
+            val trackerPatterns =
+                listOf(
+                    "telemetry",
+                    "analytics",
+                    "crashlytics",
+                    "track",
+                    "metrics",
+                    "ads",
+                    "doubleclick",
+                    "applovin",
+                    "unityads",
+                    "vungle",
+                )
+            if (trackerPatterns.any { lower.contains(it) }) {
+                return DomainCategory.TRACKER_AD
+            }
+
+            return DomainCategory.OTHER
+        }
     }
-}

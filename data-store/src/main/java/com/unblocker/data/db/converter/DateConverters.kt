@@ -7,7 +7,6 @@ import java.util.Date
  * Room conversions between nullable dates and epoch-millisecond SQLite values.
  */
 class DateConverters {
-
     /**
      * Converts a stored timestamp to a Date.
      *

@@ -7,7 +7,7 @@ enum class ContentType {
     AD,
     ADULT_CONTENT,
     CUSTOM,
-    NORMAL
+    NORMAL,
 }
 
 /**
@@ -19,7 +19,7 @@ enum class DetectionMethod {
     TLD_RULE,
     HEURISTIC_ANALYSIS,
     CUSTOM_RULE,
-    NONE
+    NONE,
 }
 
 /**
@@ -38,5 +38,5 @@ data class FilterResult(
     val shouldBlock: Boolean,
     val reason: String,
     val detectionMethod: DetectionMethod,
-    val confidence: Float = 1.0f
+    val confidence: Float = 1.0f,
 )

@@ -18,7 +18,7 @@ enum class SkipReason {
     PUBLIC_SUFFIX,
     IP_LITERAL,
     PROTECTED_HOST,
-    QUARANTINED
+    QUARANTINED,
 }
 
 /**
@@ -30,13 +30,18 @@ sealed interface ParsedLine {
      *
      * @property rule Normalized and admitted rule.
      */
-    data class Rule(val rule: DnsRule) : ParsedLine
+    data class Rule(
+        val rule: DnsRule,
+    ) : ParsedLine
+
     /**
      * Rejected or non-rule line.
      *
      * @property why Parsing or admission reason for skipping.
      */
-    data class Skipped(val why: SkipReason) : ParsedLine
+    data class Skipped(
+        val why: SkipReason,
+    ) : ParsedLine
 }
 
 /**
@@ -49,7 +54,7 @@ sealed interface ParsedLine {
 data class ParseContext(
     val sourceId: Int = 0,
     val security: Boolean = false,
-    val category: BlockingCategory = BlockingCategory.AD
+    val category: BlockingCategory = BlockingCategory.AD,
 )
 
 /**
@@ -60,7 +65,7 @@ data class ParseContext(
  */
 class RuleLineParser(
     private val admission: RuleAdmission = DefaultRuleAdmission(),
-    @Suppress("unused") private val psl: PublicSuffixRules = PublicSuffixRules.fallback
+    @Suppress("unused") private val psl: PublicSuffixRules = PublicSuffixRules.fallback,
 ) {
     private val cosmetic = arrayOf("##", "#@#", "#?#", "#$#", "#%#", "#@$#", "#@?#", "#@%#", "$$")
     private val hostsIps = setOf("0.0.0.0", "127.0.0.1", "::", "::1")
@@ -74,7 +79,10 @@ class RuleLineParser(
      * @param ctx Source metadata and option policy.
      * @return Accepted rule or a concrete skip reason.
      */
-    fun parse(raw: String, ctx: ParseContext = ParseContext()): ParsedLine {
+    fun parse(
+        raw: String,
+        ctx: ParseContext = ParseContext(),
+    ): ParsedLine {
         val s = raw.trim()
         if (s.isEmpty() || s[0] == '!' || s[0] == '[' || (s[0] == '#' && !s.startsWith("##"))) {
             return skip(SkipReason.BLANK_OR_COMMENT)
@@ -88,7 +96,8 @@ class RuleLineParser(
             return admit(RuleAction.BLOCK, RuleKind.EXACT, parts[1], ctx)
         }
         if (parts.size == 1 && !s.startsWith("||") && !s.startsWith("@@") && !s.startsWith("*.") &&
-            s.none { it in "/$*?|^=:" }) {
+            s.none { it in "/$*?|^=:" }
+        ) {
             return admit(RuleAction.BLOCK, RuleKind.EXACT, s, ctx)
         }
 
@@ -105,11 +114,16 @@ class RuleLineParser(
 
         val dollar = rest.indexOf('$')
         val pattern = (if (dollar >= 0) rest.substring(0, dollar) else rest).removePrefix("||").removeSuffix("^")
-        val options = if (dollar >= 0) {
-            rest.substring(dollar + 1).split(',').map { it.trim().lowercase() }.filter { it.isNotEmpty() }
-        } else {
-            emptyList()
-        }
+        val options =
+            if (dollar >= 0) {
+                rest
+                    .substring(dollar + 1)
+                    .split(',')
+                    .map { it.trim().lowercase() }
+                    .filter { it.isNotEmpty() }
+            } else {
+                emptyList()
+            }
         val host = pattern.lowercase()
         if (!hostChars.matches(host)) return skip(SkipReason.PATH_OR_REGEX)
 
@@ -123,7 +137,12 @@ class RuleLineParser(
         return admit(action, RuleKind.SUFFIX, host, ctx)
     }
 
-    private fun admit(a: RuleAction, k: RuleKind, host: String, ctx: ParseContext): ParsedLine {
+    private fun admit(
+        a: RuleAction,
+        k: RuleKind,
+        host: String,
+        ctx: ParseContext,
+    ): ParsedLine {
         val n = DomainName.normalizeUserEntry(host) ?: return skip(SkipReason.INVALID_HOST)
         if (n in metaHosts) return skip(SkipReason.INVALID_HOST)
         admission.check(a, k, n)?.let { return skip(it) }

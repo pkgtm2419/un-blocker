@@ -18,7 +18,6 @@ import dagger.hilt.android.AndroidEntryPoint
  */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-
     /**
      * Initializes edge-to-edge rendering and installs application Compose content.
      *
@@ -35,11 +34,11 @@ class MainActivity : ComponentActivity() {
                 ProvideAdaptiveWindow {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
-                        color = MaterialTheme.colorScheme.background
+                        color = MaterialTheme.colorScheme.background,
                     ) {
                         MainScreen(
                             preferences = app.preferences,
-                            quickStartManager = app.quickStartManager
+                            quickStartManager = app.quickStartManager,
                         )
                     }
                 }

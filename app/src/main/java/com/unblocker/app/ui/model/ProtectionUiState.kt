@@ -8,7 +8,7 @@ import com.unblocker.app.services.ServiceStatus
 enum class RecoveryAction {
     OPEN_PRIVATE_DNS_SETTINGS,
     RETRY,
-    START_VPN
+    START_VPN,
 }
 
 /**
@@ -23,5 +23,5 @@ data class ProtectionUiState(
     val label: String,
     val detail: String,
     val action: RecoveryAction?,
-    val status: ServiceStatus
+    val status: ServiceStatus,
 )

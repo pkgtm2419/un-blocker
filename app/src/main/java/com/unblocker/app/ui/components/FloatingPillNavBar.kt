@@ -41,7 +41,7 @@ import com.unblocker.app.ui.theme.TealPrimary
  */
 data class NavItem(
     val title: String,
-    val icon: ImageVector
+    val icon: ImageVector,
 )
 
 /**
@@ -57,115 +57,128 @@ fun FloatingPillNavBar(
     items: List<NavItem>,
     selectedItem: Int,
     onItemSelected: (Int) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val isDark = isSystemInDarkTheme()
     val navBarsInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val bottomMargin = maxOf(16.dp, navBarsInset + 12.dp)
 
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp)
-            .padding(bottom = bottomMargin),
-        contentAlignment = Alignment.BottomCenter
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = bottomMargin),
+        contentAlignment = Alignment.BottomCenter,
     ) {
         Surface(
             shape = CircleShape,
             color = if (isDark) Slate900.copy(alpha = 0.95f) else Color.White.copy(alpha = 0.96f),
             tonalElevation = 4.dp,
             shadowElevation = 16.dp,
-            modifier = Modifier
-                .widthIn(min = 240.dp, max = 380.dp)
-                .height(68.dp)
-                .border(
-                    width = 1.dp,
-                    brush = Brush.verticalGradient(
-                        colors = if (isDark) listOf(
-                            Color.White.copy(alpha = 0.20f),
-                            Slate700.copy(alpha = 0.50f)
-                        ) else listOf(
-                            Color.White,
-                            Color(0xFFCBD5E1)
-                        )
+            modifier =
+                Modifier
+                    .widthIn(min = 240.dp, max = 380.dp)
+                    .height(68.dp)
+                    .border(
+                        width = 1.dp,
+                        brush =
+                            Brush.verticalGradient(
+                                colors =
+                                    if (isDark) {
+                                        listOf(
+                                            Color.White.copy(alpha = 0.20f),
+                                            Slate700.copy(alpha = 0.50f),
+                                        )
+                                    } else {
+                                        listOf(
+                                            Color.White,
+                                            Color(0xFFCBD5E1),
+                                        )
+                                    },
+                            ),
+                        shape = CircleShape,
                     ),
-                    shape = CircleShape
-                )
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 items.forEachIndexed { index, item ->
                     val isSelected = selectedItem == index
 
                     // Brand-aligned container color matching the theme
                     val containerColor by animateColorAsState(
-                        targetValue = if (isSelected) {
-                            if (isDark) Color(0xFF115E59) else Color(0xFFCCFBF1)
-                        } else {
-                            Color.Transparent
-                        },
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessLow
-                        ),
-                        label = "pillNavContainerColor"
+                        targetValue =
+                            if (isSelected) {
+                                if (isDark) Color(0xFF115E59) else Color(0xFFCCFBF1)
+                            } else {
+                                Color.Transparent
+                            },
+                        animationSpec =
+                            spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessLow,
+                            ),
+                        label = "pillNavContainerColor",
                     )
 
                     val contentColor by animateColorAsState(
-                        targetValue = if (isSelected) {
-                            if (isDark) Color(0xFFF0FDFA) else Color(0xFF0F766E)
-                        } else {
-                            if (isDark) Slate400 else Color(0xFF64748B)
-                        },
+                        targetValue =
+                            if (isSelected) {
+                                if (isDark) Color(0xFFF0FDFA) else Color(0xFF0F766E)
+                            } else {
+                                if (isDark) Slate400 else Color(0xFF64748B)
+                            },
                         animationSpec = spring(stiffness = Spring.StiffnessMedium),
-                        label = "pillNavContentColor"
+                        label = "pillNavContentColor",
                     )
 
                     val borderColor by animateColorAsState(
-                        targetValue = if (isSelected) {
-                            if (isDark) TealAccent.copy(alpha = 0.65f) else TealPrimary.copy(alpha = 0.5f)
-                        } else {
-                            Color.Transparent
-                        },
-                        label = "pillNavBorderColor"
+                        targetValue =
+                            if (isSelected) {
+                                if (isDark) TealAccent.copy(alpha = 0.65f) else TealPrimary.copy(alpha = 0.5f)
+                            } else {
+                                Color.Transparent
+                            },
+                        label = "pillNavBorderColor",
                     )
 
                     Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .clip(RoundedCornerShape(24.dp))
-                            .background(containerColor)
-                            .border(
-                                width = if (isSelected) 1.dp else 0.dp,
-                                color = borderColor,
-                                shape = RoundedCornerShape(24.dp)
-                            )
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = ripple(bounded = true),
-                                onClick = { onItemSelected(index) }
-                            )
-                            .semantics { role = Role.Tab },
-                        contentAlignment = Alignment.Center
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .clip(RoundedCornerShape(24.dp))
+                                .background(containerColor)
+                                .border(
+                                    width = if (isSelected) 1.dp else 0.dp,
+                                    color = borderColor,
+                                    shape = RoundedCornerShape(24.dp),
+                                ).clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = ripple(bounded = true),
+                                    onClick = { onItemSelected(index) },
+                                ).semantics { role = Role.Tab },
+                        contentAlignment = Alignment.Center,
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 4.dp, vertical = 4.dp)
+                            modifier =
+                                Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 4.dp, vertical = 4.dp),
                         ) {
                             Icon(
                                 imageVector = item.icon,
                                 contentDescription = item.title,
                                 tint = contentColor,
-                                modifier = Modifier.size(22.dp)
+                                modifier = Modifier.size(22.dp),
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
@@ -173,7 +186,7 @@ fun FloatingPillNavBar(
                                 color = contentColor,
                                 fontSize = 11.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                letterSpacing = 0.3.sp
+                                letterSpacing = 0.3.sp,
                             )
                         }
                     }

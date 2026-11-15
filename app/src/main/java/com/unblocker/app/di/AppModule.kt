@@ -40,8 +40,9 @@ abstract class AppModule {
          */
         @Provides
         @Singleton
-        fun provideFilteringPreferences(@ApplicationContext context: Context): FilteringPreferences =
-            FilteringPreferences.getInstance(context)
+        fun provideFilteringPreferences(
+            @ApplicationContext context: Context,
+        ): FilteringPreferences = FilteringPreferences.getInstance(context)
 
         /**
          * Exposes preferences through the narrower settings interface.
@@ -51,7 +52,8 @@ abstract class AppModule {
          */
         @Provides
         @Singleton
-        fun provideFilteringPreferenceStore(prefs: FilteringPreferences): com.unblocker.app.data.preferences.FilteringPreferenceStore =
-            prefs
+        fun provideFilteringPreferenceStore(
+            prefs: FilteringPreferences,
+        ): com.unblocker.app.data.preferences.FilteringPreferenceStore = prefs
     }
 }

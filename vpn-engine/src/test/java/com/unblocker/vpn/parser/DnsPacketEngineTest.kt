@@ -15,8 +15,10 @@ import java.io.ByteArrayOutputStream
  * and RFC-compliant NXDOMAIN (0x8183) packet synthesis.
  */
 class DnsPacketEngineTest {
-
-    private fun buildDnsQueryPayload(domain: String, txId: Short = 0x1234.toShort()): ByteArray {
+    private fun buildDnsQueryPayload(
+        domain: String,
+        txId: Short = 0x1234.toShort(),
+    ): ByteArray {
         val out = ByteArrayOutputStream()
         // DNS Header (12 bytes)
         out.write((txId.toInt() ushr 8) and 0xFF)
@@ -54,7 +56,7 @@ class DnsPacketEngineTest {
         domain: String,
         srcPort: Int = 54321,
         dstPort: Int = 53,
-        txId: Short = 0x1234.toShort()
+        txId: Short = 0x1234.toShort(),
     ): ByteArray {
         val dnsPayload = buildDnsQueryPayload(domain, txId)
         val udpLen = 8 + dnsPayload.size
@@ -66,16 +68,25 @@ class DnsPacketEngineTest {
         packet[1] = 0x00
         packet[2] = ((totalLen ushr 8) and 0xFF).toByte()
         packet[3] = (totalLen and 0xFF).toByte()
-        packet[4] = 0x00; packet[5] = 0x01 // Identification
-        packet[6] = 0x40.toByte(); packet[7] = 0x00 // DF flag
+        packet[4] = 0x00
+        packet[5] = 0x01 // Identification
+        packet[6] = 0x40.toByte()
+        packet[7] = 0x00 // DF flag
         packet[8] = 64 // TTL
         packet[9] = 17 // UDP protocol
-        packet[10] = 0; packet[11] = 0 // Checksum placeholder
+        packet[10] = 0
+        packet[11] = 0 // Checksum placeholder
 
         // Src IP: 192.168.1.100
-        packet[12] = 192.toByte(); packet[13] = 168.toByte(); packet[14] = 1; packet[15] = 100
+        packet[12] = 192.toByte()
+        packet[13] = 168.toByte()
+        packet[14] = 1
+        packet[15] = 100
         // Dst IP: 10.111.222.2
-        packet[16] = 10; packet[17] = 111.toByte(); packet[18] = 222.toByte(); packet[19] = 2
+        packet[16] = 10
+        packet[17] = 111.toByte()
+        packet[18] = 222.toByte()
+        packet[19] = 2
 
         // Compute valid IPv4 header checksum
         val cksum = DnsPacketEngine.calculateIpv4Checksum(packet, 0, 20)
@@ -89,7 +100,8 @@ class DnsPacketEngineTest {
         packet[23] = (dstPort and 0xFF).toByte()
         packet[24] = ((udpLen ushr 8) and 0xFF).toByte()
         packet[25] = (udpLen and 0xFF).toByte()
-        packet[26] = 0; packet[27] = 0
+        packet[26] = 0
+        packet[27] = 0
 
         // Copy DNS Payload
         System.arraycopy(dnsPayload, 0, packet, 28, dnsPayload.size)
@@ -101,7 +113,7 @@ class DnsPacketEngineTest {
         domain: String,
         srcPort: Int = 45678,
         dstPort: Int = 53,
-        txId: Short = 0x5678.toShort()
+        txId: Short = 0x5678.toShort(),
     ): ByteArray {
         val dnsPayload = buildDnsQueryPayload(domain, txId)
         val udpLen = 8 + dnsPayload.size
@@ -110,21 +122,38 @@ class DnsPacketEngineTest {
 
         // IPv6 Header (40 bytes)
         packet[0] = 0x60.toByte() // Version 6
-        packet[1] = 0x00; packet[2] = 0x00; packet[3] = 0x00
+        packet[1] = 0x00
+        packet[2] = 0x00
+        packet[3] = 0x00
         packet[4] = ((udpLen ushr 8) and 0xFF).toByte()
         packet[5] = (udpLen and 0xFF).toByte()
         packet[6] = 17 // Next Header = UDP
         packet[7] = 64 // Hop Limit
 
         // Src IPv6: 2001:db8::1 (bytes 8..23)
-        packet[8] = 0x20; packet[9] = 0x01; packet[10] = 0x0d; packet[11] = 0xb8.toByte()
+        packet[8] = 0x20
+        packet[9] = 0x01
+        packet[10] = 0x0d
+        packet[11] = 0xb8.toByte()
         packet[23] = 0x01
 
         // Dst IPv6: fd00:1:fd00:1:fd00:1:fd00:2 (bytes 24..39)
-        packet[24] = 0xfd.toByte(); packet[25] = 0x00; packet[26] = 0x00; packet[27] = 0x01
-        packet[28] = 0xfd.toByte(); packet[29] = 0x00; packet[30] = 0x00; packet[31] = 0x01
-        packet[32] = 0xfd.toByte(); packet[33] = 0x00; packet[34] = 0x00; packet[35] = 0x01
-        packet[36] = 0xfd.toByte(); packet[37] = 0x00; packet[38] = 0x00; packet[39] = 0x02
+        packet[24] = 0xfd.toByte()
+        packet[25] = 0x00
+        packet[26] = 0x00
+        packet[27] = 0x01
+        packet[28] = 0xfd.toByte()
+        packet[29] = 0x00
+        packet[30] = 0x00
+        packet[31] = 0x01
+        packet[32] = 0xfd.toByte()
+        packet[33] = 0x00
+        packet[34] = 0x00
+        packet[35] = 0x01
+        packet[36] = 0xfd.toByte()
+        packet[37] = 0x00
+        packet[38] = 0x00
+        packet[39] = 0x02
 
         // UDP Header (8 bytes) at offset 40
         packet[40] = ((srcPort ushr 8) and 0xFF).toByte()
@@ -133,7 +162,8 @@ class DnsPacketEngineTest {
         packet[43] = (dstPort and 0xFF).toByte()
         packet[44] = ((udpLen ushr 8) and 0xFF).toByte()
         packet[45] = (udpLen and 0xFF).toByte()
-        packet[46] = 0; packet[47] = 0
+        packet[46] = 0
+        packet[47] = 0
 
         // Copy DNS Payload
         System.arraycopy(dnsPayload, 0, packet, 48, dnsPayload.size)
@@ -171,7 +201,7 @@ class DnsPacketEngineTest {
         // 3. Verify IPv4 Header Checksum (must sum to 0xFFFF)
         assertTrue(
             "IPv4 header checksum must verify as 0xFFFF",
-            DnsPacketEngine.verifyIpv4Checksum(response, 0, 20)
+            DnsPacketEngine.verifyIpv4Checksum(response, 0, 20),
         )
 
         // 4. Verify Swapped Source and Destination IPs

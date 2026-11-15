@@ -10,22 +10,19 @@ import org.junit.Test
  * Regression coverage for responsive layout.
  */
 class ResponsiveLayoutTest {
-
-    private fun resolveWidthClass(widthDp: Float): WindowWidthClass {
-        return when {
+    private fun resolveWidthClass(widthDp: Float): WindowWidthClass =
+        when {
             widthDp < 600f -> WindowWidthClass.COMPACT
             widthDp < 840f -> WindowWidthClass.MEDIUM
             else -> WindowWidthClass.EXPANDED
         }
-    }
 
-    private fun resolveColumns(widthClass: WindowWidthClass): Int {
-        return when (widthClass) {
+    private fun resolveColumns(widthClass: WindowWidthClass): Int =
+        when (widthClass) {
             WindowWidthClass.COMPACT -> 1
             WindowWidthClass.MEDIUM -> 2
             WindowWidthClass.EXPANDED -> 4
         }
-    }
 
     /**
      * Verifies that test compact phone screens.

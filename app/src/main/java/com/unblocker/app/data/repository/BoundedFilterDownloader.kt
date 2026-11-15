@@ -25,38 +25,57 @@ sealed class DownloadResult {
      * @property bytesRead Total response body bytes consumed, including discarded lines.
      * @property validRuleCount Number of accepted rules written to the destination.
      */
-    data class Success(val bytesRead: Long, val validRuleCount: Int) : DownloadResult()
+    data class Success(
+        val bytesRead: Long,
+        val validRuleCount: Int,
+    ) : DownloadResult()
+
     /**
      * The HTTP response or redirect chain was rejected.
      *
      * @property statusCode Last observed HTTP response code.
      * @property message Failure explanation.
      */
-    data class HttpFailure(val statusCode: Int, val message: String) : DownloadResult()
+    data class HttpFailure(
+        val statusCode: Int,
+        val message: String,
+    ) : DownloadResult()
+
     /**
      * Reading the response failed.
      *
      * @property message Network or stream I/O failure explanation.
      */
-    data class NetworkFailure(val message: String) : DownloadResult()
+    data class NetworkFailure(
+        val message: String,
+    ) : DownloadResult()
+
     /**
      * A URL or resolved destination failed validation.
      *
      * @property message Source validation failure explanation.
      */
-    data class InvalidSource(val message: String) : DownloadResult()
+    data class InvalidSource(
+        val message: String,
+    ) : DownloadResult()
+
     /**
      * The byte, line, or rule budget was exceeded.
      *
      * @property message Description of the exceeded limit.
      */
-    data class TooLarge(val message: String) : DownloadResult()
+    data class TooLarge(
+        val message: String,
+    ) : DownloadResult()
+
     /**
      * The list contained no admitted rules or too many anomalous lines.
      *
      * @property message Rule admission failure explanation.
      */
-    data class InvalidRules(val message: String) : DownloadResult()
+    data class InvalidRules(
+        val message: String,
+    ) : DownloadResult()
 }
 
 /**
@@ -65,15 +84,15 @@ sealed class DownloadResult {
  * @param connectionFactory Opens each validated URL; injectable for connection-level tests.
  */
 class BoundedFilterDownloader(
-    private val connectionFactory: (URL) -> HttpURLConnection = { url -> url.openConnection() as HttpURLConnection }
+    private val connectionFactory: (URL) -> HttpURLConnection = { url -> url.openConnection() as HttpURLConnection },
 ) {
-
     /**
      * Shared downloader configured with standard URL connections.
      */
     companion object {
         private const val MAX_REDIRECTS = 3
         private const val MAX_ANOMALOUS_SKIP_RATIO = 0.02
+
         /**
          * Shared downloader using standard URL connections.
          */
@@ -81,7 +100,9 @@ class BoundedFilterDownloader(
     }
 
     private fun isPrivateIpAddress(address: InetAddress): Boolean {
-        if (address.isLoopbackAddress || address.isAnyLocalAddress || address.isLinkLocalAddress || address.isSiteLocalAddress) {
+        if (address.isLoopbackAddress || address.isAnyLocalAddress || address.isLinkLocalAddress ||
+            address.isSiteLocalAddress
+        ) {
             return true
         }
         val bytes = address.address
@@ -108,11 +129,12 @@ class BoundedFilterDownloader(
             throw IllegalArgumentException("Insecure protocol: ${url.protocol}. Only HTTPS is permitted.")
         }
         val host = url.host
-        val addresses = try {
-            InetAddress.getAllByName(host)
-        } catch (e: Exception) {
-            throw IllegalArgumentException("Could not resolve host: $host", e)
-        }
+        val addresses =
+            try {
+                InetAddress.getAllByName(host)
+            } catch (e: Exception) {
+                throw IllegalArgumentException("Could not resolve host: $host", e)
+            }
         for (address in addresses) {
             if (isPrivateIpAddress(address)) {
                 throw IllegalArgumentException("Blocked private network URL: $host ($address)")
@@ -140,10 +162,11 @@ class BoundedFilterDownloader(
         maxRules: Int = 300_000,
         maxLineBytes: Int = 4096,
         connectTimeoutMs: Int = 10_000,
-        readTimeoutMs: Int = 15_000
-    ): DownloadResult = withContext(Dispatchers.IO) {
-        downloadInternal(sourceUrl, destination, maxBytes, maxRules, maxLineBytes, connectTimeoutMs, readTimeoutMs)
-    }
+        readTimeoutMs: Int = 15_000,
+    ): DownloadResult =
+        withContext(Dispatchers.IO) {
+            downloadInternal(sourceUrl, destination, maxBytes, maxRules, maxLineBytes, connectTimeoutMs, readTimeoutMs)
+        }
 
     private fun downloadInternal(
         sourceUrl: URL,
@@ -152,7 +175,7 @@ class BoundedFilterDownloader(
         maxRules: Int,
         maxLineBytes: Int,
         connectTimeoutMs: Int,
-        readTimeoutMs: Int
+        readTimeoutMs: Int,
     ): DownloadResult {
         var currentUrl = sourceUrl
         var redirectCount = 0
@@ -169,12 +192,13 @@ class BoundedFilterDownloader(
             conn.readTimeout = readTimeoutMs
             conn.instanceFollowRedirects = false
 
-            val statusCode = try {
-                conn.responseCode
-            } catch (e: IOException) {
-                conn.disconnect()
-                return DownloadResult.NetworkFailure(e.message ?: "Network error connecting to $currentUrl")
-            }
+            val statusCode =
+                try {
+                    conn.responseCode
+                } catch (e: IOException) {
+                    conn.disconnect()
+                    return DownloadResult.NetworkFailure(e.message ?: "Network error connecting to $currentUrl")
+                }
 
             if (statusCode in 300..399) {
                 redirectCount++
@@ -187,11 +211,12 @@ class BoundedFilterDownloader(
                 if (location.isNullOrBlank()) {
                     return DownloadResult.HttpFailure(statusCode, "Redirect missing Location header")
                 }
-                currentUrl = try {
-                    URL(currentUrl, location)
-                } catch (e: Exception) {
-                    return DownloadResult.InvalidSource("Malformed redirect location: $location")
-                }
+                currentUrl =
+                    try {
+                        URL(currentUrl, location)
+                    } catch (e: Exception) {
+                        return DownloadResult.InvalidSource("Malformed redirect location: $location")
+                    }
                 continue
             }
 
@@ -226,7 +251,12 @@ class BoundedFilterDownloader(
                                     val line = lineBuffer.toString("UTF-8").trimEnd('\r')
                                     lineBuffer.reset()
                                     currentLineBytes = 0
-                                    val parsed = ExtensionRuleStore.parseLine(line, com.unblocker.app.logic.rules.ParseContext())
+                                    val parsed =
+                                        ExtensionRuleStore.parseLine(
+                                            line,
+                                            com.unblocker.app.logic.rules
+                                                .ParseContext(),
+                                        )
                                     when (parsed) {
                                         is ParsedLine.Rule -> {
                                             nonCommentLines++
@@ -237,12 +267,14 @@ class BoundedFilterDownloader(
                                             writer.write(line)
                                             writer.write("\n")
                                         }
+
                                         is ParsedLine.Skipped -> {
                                             if (parsed.why != SkipReason.BLANK_OR_COMMENT) {
                                                 nonCommentLines++
                                                 if (parsed.why != SkipReason.COSMETIC &&
                                                     parsed.why != SkipReason.OPTIONS_ON_REGISTRABLE &&
-                                                    parsed.why != SkipReason.UNSUPPORTED_OPTIONS) {
+                                                    parsed.why != SkipReason.UNSUPPORTED_OPTIONS
+                                                ) {
                                                     anomalousSkippedCount++
                                                 }
                                             }
@@ -251,7 +283,9 @@ class BoundedFilterDownloader(
                                 } else {
                                     currentLineBytes++
                                     if (currentLineBytes > maxLineBytes) {
-                                        return DownloadResult.TooLarge("Line length exceeded limit of $maxLineBytes bytes")
+                                        return DownloadResult.TooLarge(
+                                            "Line length exceeded limit of $maxLineBytes bytes",
+                                        )
                                     }
                                     lineBuffer.write(nextByte)
                                 }
@@ -260,7 +294,12 @@ class BoundedFilterDownloader(
                             if (lineBuffer.size() > 0) {
                                 val line = lineBuffer.toString("UTF-8").trimEnd('\r')
                                 lineBuffer.reset()
-                                val parsed = ExtensionRuleStore.parseLine(line, com.unblocker.app.logic.rules.ParseContext())
+                                val parsed =
+                                    ExtensionRuleStore.parseLine(
+                                        line,
+                                        com.unblocker.app.logic.rules
+                                            .ParseContext(),
+                                    )
                                 when (parsed) {
                                     is ParsedLine.Rule -> {
                                         nonCommentLines++
@@ -271,12 +310,14 @@ class BoundedFilterDownloader(
                                         writer.write(line)
                                         writer.write("\n")
                                     }
+
                                     is ParsedLine.Skipped -> {
                                         if (parsed.why != SkipReason.BLANK_OR_COMMENT) {
                                             nonCommentLines++
                                             if (parsed.why != SkipReason.COSMETIC &&
                                                 parsed.why != SkipReason.OPTIONS_ON_REGISTRABLE &&
-                                                parsed.why != SkipReason.UNSUPPORTED_OPTIONS) {
+                                                parsed.why != SkipReason.UNSUPPORTED_OPTIONS
+                                            ) {
                                                 anomalousSkippedCount++
                                             }
                                         }
@@ -300,7 +341,7 @@ class BoundedFilterDownloader(
                     val anomalousRatio = anomalousSkippedCount.toDouble() / nonCommentLines.toDouble()
                     if (anomalousRatio > MAX_ANOMALOUS_SKIP_RATIO) {
                         return DownloadResult.InvalidRules(
-                            "Filter rejected: anomalous skip rate ${(anomalousRatio * 100).toInt()}% exceeds 2% threshold"
+                            "Filter rejected: anomalous skip rate ${(anomalousRatio * 100).toInt()}% exceeds 2% threshold",
                         )
                     }
                 }
@@ -310,7 +351,7 @@ class BoundedFilterDownloader(
                         tempFile.toPath(),
                         destination.toPath(),
                         StandardCopyOption.REPLACE_EXISTING,
-                        StandardCopyOption.ATOMIC_MOVE
+                        StandardCopyOption.ATOMIC_MOVE,
                     )
                 } catch (_: Exception) {
                     tempFile.copyTo(destination, overwrite = true)

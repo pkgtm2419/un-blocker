@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.Flow
  */
 @Dao
 interface DnsLogDao {
-
     /**
      * Inserts a log row, ignoring a conflicting primary key.
      *

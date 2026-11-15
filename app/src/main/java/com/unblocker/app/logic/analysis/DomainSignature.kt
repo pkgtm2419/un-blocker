@@ -22,5 +22,5 @@ data class DomainSignature(
     val entropy: Float,
     val cadenceScore: Float,
     val suspiciousPatterns: List<String>,
-    val compositeThreatScore: Float
+    val compositeThreatScore: Float,
 )

@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.Flow
  */
 @Dao
 interface BlockRuleDao {
-
     /**
      * Replaces rows with matching domain keys in one bulk insert.
      *

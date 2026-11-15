@@ -24,36 +24,42 @@ import kotlinx.coroutines.launch
  *
  * @param application Application used for the repository and periodic update scheduling.
  */
-class ExtensionsViewModel(application: Application) : AndroidViewModel(application) {
-
+class ExtensionsViewModel(
+    application: Application,
+) : AndroidViewModel(application) {
     private val repository = ExtensionRepository.getInstance(application)
 
     /**
      * Complete extension catalog published by the repository.
      */
     val extensions: StateFlow<List<ExtensionFilter>> = repository.extensions
+
     /**
      * Whether the repository reports an update operation in progress.
      */
     val isUpdating: StateFlow<Boolean> = repository.isUpdating
+
     /**
      * Persisted preference for periodic extension updates.
      */
     val autoUpdateEnabled: StateFlow<Boolean> = repository.autoUpdateEnabled
 
     private val _searchQuery = MutableStateFlow("")
+
     /**
      * Current extension search text.
      */
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
     private val _selectedCategory = MutableStateFlow(FilterCategories.ALL)
+
     /**
      * Currently selected catalog grouping label.
      */
     val selectedCategory: StateFlow<String> = _selectedCategory.asStateFlow()
 
     private val _snackbarMessage = MutableSharedFlow<String>()
+
     /**
      * Transient user-visible messages from extension actions.
      */
@@ -62,45 +68,59 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
     /**
      * Catalog entries matching the current category and case-insensitive search text.
      */
-    val filteredExtensions: StateFlow<List<ExtensionFilter>> = combine(
-        extensions,
-        searchQuery,
-        selectedCategory
-    ) { list, query, category ->
-        val byCategory = when (category) {
-            FilterCategories.ALL -> list
-            FilterCategories.RECOMMENDED -> list.filter {
-                it.category.equals(FilterCategories.RECOMMENDED, ignoreCase = true) ||
-                it.id in RECOMMENDED_EXTENSIONS
-            }
-            else -> list.filter { it.category.equals(category, ignoreCase = true) }
-        }
+    val filteredExtensions: StateFlow<List<ExtensionFilter>> =
+        combine(
+            extensions,
+            searchQuery,
+            selectedCategory,
+        ) { list, query, category ->
+            val byCategory =
+                when (category) {
+                    FilterCategories.ALL -> {
+                        list
+                    }
 
-        if (query.isBlank()) {
-            byCategory
-        } else {
-            byCategory.filter {
-                it.name.contains(query, ignoreCase = true) ||
-                it.url.contains(query, ignoreCase = true) ||
-                it.description.contains(query, ignoreCase = true) ||
-                it.category.contains(query, ignoreCase = true)
+                    FilterCategories.RECOMMENDED -> {
+                        list.filter {
+                            it.category.equals(FilterCategories.RECOMMENDED, ignoreCase = true) ||
+                                it.id in RECOMMENDED_EXTENSIONS
+                        }
+                    }
+
+                    else -> {
+                        list.filter { it.category.equals(category, ignoreCase = true) }
+                    }
+                }
+
+            if (query.isBlank()) {
+                byCategory
+            } else {
+                byCategory.filter {
+                    it.name.contains(query, ignoreCase = true) ||
+                        it.url.contains(query, ignoreCase = true) ||
+                        it.description.contains(query, ignoreCase = true) ||
+                        it.category.contains(query, ignoreCase = true)
+                }
             }
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     /**
      * Number of enabled catalog entries, regardless of whether cached rules are present.
      */
-    val activeFilterCount: StateFlow<Int> = extensions.map { list ->
-        list.count { it.isEnabled }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+    val activeFilterCount: StateFlow<Int> =
+        extensions
+            .map { list ->
+                list.count { it.isEnabled }
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     /**
      * Sum of recorded rule counts for enabled entries; this is not a deduplicated runtime rule count.
      */
-    val totalEnabledRulesCount: StateFlow<Int> = extensions.map { list ->
-        list.filter { it.isEnabled }.sumOf { it.filterCount }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+    val totalEnabledRulesCount: StateFlow<Int> =
+        extensions
+            .map { list ->
+                list.filter { it.isEnabled }.sumOf { it.filterCount }
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     /**
      * Updates the extension search text.
@@ -126,7 +146,10 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
      * @param id Catalog entry identifier.
      * @param enabled Whether cached rules from this entry should be active.
      */
-    fun toggleExtension(id: String, enabled: Boolean) {
+    fun toggleExtension(
+        id: String,
+        enabled: Boolean,
+    ) {
         repository.toggleExtension(id, enabled)
     }
 
@@ -199,7 +222,10 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
      * @param name User-visible list name.
      * @param url Source URL saved for a later update attempt.
      */
-    fun addCustomFilter(name: String, url: String) {
+    fun addCustomFilter(
+        name: String,
+        url: String,
+    ) {
         if (name.isBlank()) return
         repository.addCustomFilter(name, url)
         viewModelScope.launch {
@@ -226,13 +252,14 @@ class ExtensionsViewModel(application: Application) : AndroidViewModel(applicati
         /**
          * Catalog identifiers treated as recommended in addition to entries explicitly carrying that category.
          */
-        val RECOMMENDED_EXTENSIONS = setOf(
-            "ublock_unbreak",
-            "adguard_mobile",
-            "easyprivacy",
-            "hagezi_light_oem",
-            "malware_urlhaus_c2",
-            "oisd_small"
-        )
+        val RECOMMENDED_EXTENSIONS =
+            setOf(
+                "ublock_unbreak",
+                "adguard_mobile",
+                "easyprivacy",
+                "hagezi_light_oem",
+                "malware_urlhaus_c2",
+                "oisd_small",
+            )
     }
 }

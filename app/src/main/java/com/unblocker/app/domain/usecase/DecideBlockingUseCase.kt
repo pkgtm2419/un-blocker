@@ -42,9 +42,11 @@ class DecideBlockingUseCase(
     private val isAdultBlockingEnabled: () -> Boolean = { true },
     private val isPaused: () -> Boolean = { false },
     private val blockingMode: () -> BlockingMode = { BlockingMode.SMART },
-    private val filteringTier: () -> com.unblocker.app.data.preferences.FilteringTier = { com.unblocker.app.data.preferences.FilteringTier.OPTIMAL },
+    private val filteringTier: () -> com.unblocker.app.data.preferences.FilteringTier = {
+        com.unblocker.app.data.preferences.FilteringTier.OPTIMAL
+    },
     private val protectedDomains: ProtectedDomains = ProtectedDomains.DEFAULT,
-    private val psl: PublicSuffixRules = PublicSuffixRules.fallback
+    private val psl: PublicSuffixRules = PublicSuffixRules.fallback,
 ) {
     /**
      * Builds a pipeline whose settings are read from current preference state.
@@ -66,7 +68,7 @@ class DecideBlockingUseCase(
         isAllowlisted: (String) -> Boolean = { false },
         isBlocklisted: (String) -> Boolean = { false },
         protectedDomains: ProtectedDomains = ProtectedDomains.DEFAULT,
-        psl: PublicSuffixRules = PublicSuffixRules.fallback
+        psl: PublicSuffixRules = PublicSuffixRules.fallback,
     ) : this(
         adDetector = adDetector,
         adultContentDetector = adultContentDetector,
@@ -79,7 +81,7 @@ class DecideBlockingUseCase(
         blockingMode = { preferences.blockingMode.value },
         filteringTier = { preferences.filteringTier.value },
         protectedDomains = protectedDomains,
-        psl = psl
+        psl = psl,
     )
 
     /**
@@ -88,21 +90,21 @@ class DecideBlockingUseCase(
      * @param rawDomain DNS hostname to normalize and evaluate.
      * @return Decision, including INVALID for malformed names or ENGINE_ERROR after an exception.
      */
-    operator fun invoke(rawDomain: String): BlockingDecision {
-        return try {
+    operator fun invoke(rawDomain: String): BlockingDecision =
+        try {
             evaluate(rawDomain)
         } catch (e: Exception) {
             // Preserve fail-open policy for exceptions during evaluation.
             BlockingDecision.allow("Engine error (fail open)", 1.0f).copy(
-                reasonCode = DecisionReason.ENGINE_ERROR
+                reasonCode = DecisionReason.ENGINE_ERROR,
             )
         }
-    }
 
     private fun evaluate(rawDomain: String): BlockingDecision {
         // Step 1: normalize(host) -> invalid => ALLOW(INVALID)
-        val domain = DomainName.normalize(rawDomain)
-            ?: return BlockingDecision.allow("Invalid domain query", 1.0f).copy(reasonCode = DecisionReason.INVALID)
+        val domain =
+            DomainName.normalize(rawDomain)
+                ?: return BlockingDecision.allow("Invalid domain query", 1.0f).copy(reasonCode = DecisionReason.INVALID)
 
         // Step 2: paused (notification "Pause 5 min") -> ALLOW(PAUSED)
         if (isPaused()) {
@@ -119,7 +121,7 @@ class DecideBlockingUseCase(
         if (isBlocklisted(domain)) {
             adaptiveBlockingEngine.networkLearner.syncFeedback(domain, UserFeedback.BLOCK)
             return BlockingDecision.block("Local block rule", 1.0f, BlockingCategory.CUSTOM).copy(
-                reasonCode = DecisionReason.USER_BLOCK
+                reasonCode = DecisionReason.USER_BLOCK,
             )
         }
         adaptiveBlockingEngine.networkLearner.syncFeedback(domain, UserFeedback.NONE)
@@ -128,7 +130,7 @@ class DecideBlockingUseCase(
         val currentMode = blockingMode()
         if (currentMode == BlockingMode.APPROVED_ONLY) {
             return BlockingDecision.allow("Approved-only mode: benign traffic", 1.0f).copy(
-                reasonCode = DecisionReason.NO_MATCH
+                reasonCode = DecisionReason.NO_MATCH,
             )
         }
 
@@ -138,9 +140,11 @@ class DecideBlockingUseCase(
         }
 
         // Step 6b: Mobile Unbreak protection (essential mobile app dependencies) -> ALLOW(UNBREAK)
-        if (com.unblocker.app.logic.analysis.MobileUnbreakList.isEssentialDomain(domain)) {
+        if (com.unblocker.app.logic.analysis.MobileUnbreakList
+                .isEssentialDomain(domain)
+        ) {
             return BlockingDecision.allow("Essential mobile app dependency", 1.0f).copy(
-                reasonCode = DecisionReason.ALLOWED
+                reasonCode = DecisionReason.ALLOWED,
             )
         }
 
@@ -150,9 +154,11 @@ class DecideBlockingUseCase(
             // In BASIC mode, allow game reward ads and shopping redirects to prevent app breakage
             val currentTier = filteringTier()
             if (currentTier == com.unblocker.app.data.preferences.FilteringTier.BASIC &&
-                com.unblocker.app.logic.analysis.MobileUnbreakList.isRewardOrShoppingDomain(domain)) {
+                com.unblocker.app.logic.analysis.MobileUnbreakList
+                    .isRewardOrShoppingDomain(domain)
+            ) {
                 return BlockingDecision.allow("Basic mode: game reward and shopping redirect preserved", 1.0f).copy(
-                    reasonCode = DecisionReason.ALLOWED
+                    reasonCode = DecisionReason.ALLOWED,
                 )
             }
 
@@ -167,18 +173,25 @@ class DecideBlockingUseCase(
                         reasonCode = DecisionReason.ALLOWED,
                         ruleValue = rule.value,
                         ruleKind = rule.kind,
-                        sourceId = rule.sourceId
+                        sourceId = rule.sourceId,
                     )
                 } else if (rule.action == RuleAction.BLOCK) {
                     return BlockingDecision(
                         action = BlockingAction.BLOCK,
-                        reason = if (domain == rule.value) "Static List Match ($domain)" else "Domain Suffix Match (${rule.value})",
+                        reason =
+                            if (domain ==
+                                rule.value
+                            ) {
+                                "Static List Match ($domain)"
+                            } else {
+                                "Domain Suffix Match (${rule.value})"
+                            },
                         confidence = 0.98f,
                         category = rule.category,
                         reasonCode = DecisionReason.STATIC_RULE,
                         ruleValue = rule.value,
                         ruleKind = rule.kind,
-                        sourceId = rule.sourceId
+                        sourceId = rule.sourceId,
                     )
                 }
             }
@@ -190,7 +203,7 @@ class DecideBlockingUseCase(
                     reason = seedReason,
                     confidence = 0.98f,
                     category = BlockingCategory.AD,
-                    reasonCode = DecisionReason.STATIC_RULE
+                    reasonCode = DecisionReason.STATIC_RULE,
                 )
             }
         }
@@ -216,7 +229,7 @@ class DecideBlockingUseCase(
                     reason = adult.reason,
                     confidence = 0.92f,
                     category = BlockingCategory.ADULT_CONTENT,
-                    reasonCode = adult.code
+                    reasonCode = adult.code,
                 )
             }
         }

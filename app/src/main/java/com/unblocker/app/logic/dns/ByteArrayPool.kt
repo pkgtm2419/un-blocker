@@ -12,7 +12,7 @@ import java.util.concurrent.ArrayBlockingQueue
  */
 class ByteArrayPool(
     val arraySize: Int = 4096,
-    val maxPoolSize: Int = 64
+    val maxPoolSize: Int = 64,
 ) {
     private val pool = ArrayBlockingQueue<ByteArray>(maxPoolSize)
 
@@ -26,9 +26,7 @@ class ByteArrayPool(
     /**
      * Returns a retained or newly allocated array whose exclusive ownership passes to the caller.
      */
-    fun acquire(): ByteArray {
-        return pool.poll() ?: ByteArray(arraySize)
-    }
+    fun acquire(): ByteArray = pool.poll() ?: ByteArray(arraySize)
 
     /**
      * Returns an exclusively owned buffer when its size matches; full queues discard it.

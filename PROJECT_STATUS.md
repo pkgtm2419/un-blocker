@@ -78,7 +78,7 @@
 | `android.yml` | push / PR | Hygiene, script/compile tests, unit tests, lint, APK smoke | ✅ Enforced — `abortOnError=true` (resolved 2026-11-15) |
 | `android-device-matrix.yml` | Nightly + manual | Instrumentation on API 26 / 30 / 35 | — |
 | `codeql.yml` | Schedule + push/PR | Static analysis (CodeQL) | ✅ |
-| `release.yml` | Tag / manual | Signed release build with preflight | ⚠️ Test-cert fallback risk (R14) |
+| `release.yml` | Tag / manual | Signed release build with preflight | ✅ Enforced — fail-closed without test-signer fallback (R14 resolved) |
 | `documentation-check.yml` | push / PR | Docs sync & contract checks | ✅ |
 | `documentation-sync.yml` | push | Docs inventory generation | ✅ |
 
@@ -127,17 +127,17 @@ python3 scripts/docs_sync.py --check
 | **R03** | ⚠️ Issue | GSD files focus on v2.5.0; current manifest has 19 extension records vs historical "Essential 7" | 📋 Planned |
 | **R04** | ✅ Done | README and `PRIVACY.md` reconciled to accurately disclose bounded on-device domain statistics | ✅ Done |
 | **R05** | ✅ Done | `PRIVACY.md` reconciled to document exact retention: 30-day aggregates, 24-hour raw events | ✅ Done |
-| **R06** | ⚠️ Issue | `vpn-engine` `UpstreamDnsServer.DEFAULTS` hardcodes Cloudflare/Google; app uses `DnsUpstreamClient` — fallback use not confirmed | 📋 Planned |
+| **R06** | ✅ Done | `vpn-engine` `UpstreamDnsServer.DEFAULTS` audited; verified `app` uses `DnsUpstreamClient` with `ConnectivityManager` link properties exclusively (no fallback to public DNS) | ✅ Done |
 | **R07** | ✅ Done | `abortOnError=true` and `ignoreWarnings=false` restored; verified `lintDebug` passes with 0 errors | ✅ Done |
-| **R08** | ⚠️ Issue | `ml-engine` comments mention TFLite; `MlEngineModule` binds `HeuristicDomainClassifier` (deterministic, no trained model) | 📋 Planned |
+| **R08** | ✅ Done | Confirmed no `.tflite` model packaged or loaded; `MlEngineModule` binds `HeuristicDomainClassifier` (deterministic scoring); documented across docs | ✅ Done |
 | **R09** | 📋 Planned | `BoundedFilterDownloader` DNS rebinding / redirect target binding — hypothesis, not confirmed | 📋 Planned |
 | **R10** | ✅ Done | Full Gradle unit test suite (335 tests, 0 failures), lint, and APK build verified on 2026-11-15 | ✅ Done |
 | **R11** | ✅ Done | `MyDomainsStore` / `protectDomain` now documented separately from HMAC rules in README and PRIVACY | ✅ Done |
 | **R12** | ✅ Done | `RuleLineParser.parse` rejects request-scoped options (`$script`, `$image`, `$3p`, `$doc`); only sole `$important` on `BLOCK` accepted — verified by unit tests | ✅ Done |
 | **R13** | ✅ Done | `ExtensionRuleStore` separates `allowWildcard` set from `allowSuffix`; apex remains blocked while subdomains unblock — verified by unit tests | ✅ Done |
-| **R14** | ⚠️ Issue | `release.yml` accepts test-signer fallback when production secrets absent; production-only signing not fully enforced | ⚠️ Issue |
+| **R14** | ✅ Done | `release.yml` hardened to fail closed without test-keystore fallback; production `v*` tags strictly require release secrets and pinned signer | ✅ Done |
 | **R15** | ✅ Done | `PRIVACY.md` aligned with `QueryLogSink.pruneOldLogs`; startup prune added; unit test verified | ✅ Done |
-| **R16** | 📋 Planned | No production `setHistoryMode` caller found; `WorkScheduler` has no app call site | 📋 Planned |
+| **R16** | ✅ Done | Documented API availability: `QueryLogSink.historyMode` defaults to `AGGREGATE_ONLY` (no raw history in production without caller); `WorkScheduler` is present in library but unscheduled at app startup | ✅ Done |
 | **R17** | ✅ Done | `START_HERE.txt` / `validate_plans.py` assumed 6 missing plans — reconciled by indexing 8 references | ✅ Done |
 
 ### Privacy & data-retention detail (R04 / R05 / R15)

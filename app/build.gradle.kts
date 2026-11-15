@@ -11,12 +11,13 @@ val stableTestKeystorePassword = System.getenv("UB_BLOCKER_KEYSTORE_PASSWORD")
 val stableTestKeyAlias = System.getenv("UB_BLOCKER_KEY_ALIAS")
 val stableTestKeyPassword = System.getenv("UB_BLOCKER_KEY_PASSWORD")
 
-val stableTestSigningValues = listOf(
-    stableTestKeystorePath,
-    stableTestKeystorePassword,
-    stableTestKeyAlias,
-    stableTestKeyPassword
-)
+val stableTestSigningValues =
+    listOf(
+        stableTestKeystorePath,
+        stableTestKeystorePassword,
+        stableTestKeyAlias,
+        stableTestKeyPassword,
+    )
 
 val hasAnyStableTestSigningValue = stableTestSigningValues.any { !it.isNullOrBlank() }
 val hasStableTestSigning = stableTestSigningValues.all { !it.isNullOrBlank() }
@@ -30,12 +31,13 @@ val releaseKeystorePassword = System.getenv("UB_RELEASE_KEYSTORE_PASSWORD")
 val releaseKeyAlias = System.getenv("UB_RELEASE_KEY_ALIAS")
 val releaseKeyPassword = System.getenv("UB_RELEASE_KEY_PASSWORD")
 
-val releaseSigningValues = listOf(
-    releaseKeystorePath,
-    releaseKeystorePassword,
-    releaseKeyAlias,
-    releaseKeyPassword
-)
+val releaseSigningValues =
+    listOf(
+        releaseKeystorePath,
+        releaseKeystorePassword,
+        releaseKeyAlias,
+        releaseKeyPassword,
+    )
 val hasAnyReleaseSigningValue = releaseSigningValues.any { !it.isNullOrBlank() }
 val hasReleaseSigning = releaseSigningValues.all { !it.isNullOrBlank() }
 
@@ -111,14 +113,15 @@ android {
         abortOnError = true
         checkReleaseBuilds = false
         ignoreWarnings = false
-        disable += setOf(
-            "GradleDependency",
-            "AndroidGradlePluginVersion",
-            "UnsafeOptInUsageError",
-            "NullSafeMutableLiveData",
-            "CustomX509TrustManager",
-            "UnprotectedSMSBroadcastReceiver"
-        )
+        disable +=
+            setOf(
+                "GradleDependency",
+                "AndroidGradlePluginVersion",
+                "UnsafeOptInUsageError",
+                "NullSafeMutableLiveData",
+                "CustomX509TrustManager",
+                "UnprotectedSMSBroadcastReceiver",
+            )
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -165,14 +168,19 @@ val compileDnsRules by tasks.registering(Exec::class) {
     outputs.dir("${layout.buildDirectory.get()}/generated/dns-assets")
     outputs.dir("${layout.buildDirectory.get()}/generated/dns-test")
 
-    val pythonExec = System.getenv("UB_BLOCKER_PYTHON") ?: if (System.getProperty("os.name").lowercase().contains("windows")) "python" else "python3"
-    
+    val pythonExec =
+        System.getenv("UB_BLOCKER_PYTHON")
+            ?: if (System.getProperty("os.name").lowercase().contains("windows")) "python" else "python3"
+
     commandLine(
         pythonExec,
         rootProject.file("tools/filter-compiler/compiler.py").absolutePath,
-        "--root", rootProject.projectDir.absolutePath,
-        "--output-assets", file("${layout.buildDirectory.get()}/generated/dns-assets").absolutePath,
-        "--output-test", file("${layout.buildDirectory.get()}/generated/dns-test").absolutePath
+        "--root",
+        rootProject.projectDir.absolutePath,
+        "--output-assets",
+        file("${layout.buildDirectory.get()}/generated/dns-assets").absolutePath,
+        "--output-test",
+        file("${layout.buildDirectory.get()}/generated/dns-test").absolutePath,
     )
 }
 tasks.named("preBuild").configure { dependsOn(compileDnsRules) }

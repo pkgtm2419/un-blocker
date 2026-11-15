@@ -34,7 +34,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Refresh
@@ -82,14 +81,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.unblocker.app.data.model.ExtensionFilter
 import com.unblocker.app.data.model.FilterCategories
-import com.unblocker.app.ui.theme.Slate300
-import com.unblocker.app.ui.theme.Slate400
-import com.unblocker.app.ui.theme.Slate700
-import com.unblocker.app.ui.theme.Slate800
-import com.unblocker.app.ui.theme.Slate900
-import com.unblocker.app.ui.theme.Slate950
-import com.unblocker.app.ui.theme.TealAccent
-import com.unblocker.app.ui.theme.TealPrimary
 import kotlinx.coroutines.flow.collectLatest
 
 /**
@@ -102,7 +93,7 @@ import kotlinx.coroutines.flow.collectLatest
 @Composable
 fun ExtensionsScreen(
     onNavigateBack: () -> Unit,
-    viewModel: ExtensionsViewModel = viewModel()
+    viewModel: ExtensionsViewModel = viewModel(),
 ) {
     BackHandler { onNavigateBack() }
 
@@ -130,11 +121,12 @@ fun ExtensionsScreen(
     val spinRotation by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "spin_angle"
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(1000, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart,
+            ),
+        label = "spin_angle",
     )
 
     val isDark = isSystemInDarkTheme()
@@ -149,33 +141,45 @@ fun ExtensionsScreen(
                         OutlinedTextField(
                             value = searchQuery,
                             onValueChange = viewModel::onSearchQueryChange,
-                            placeholder = { Text("Search filters…", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp) },
+                            placeholder = {
+                                Text(
+                                    "Search filters…",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 14.sp,
+                                )
+                            },
                             singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                                cursorColor = MaterialTheme.colorScheme.primary
-                            ),
+                            colors =
+                                OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                                    cursorColor = MaterialTheme.colorScheme.primary,
+                                ),
                             trailingIcon = {
                                 IconButton(onClick = {
                                     viewModel.onSearchQueryChange("")
                                     isSearchActive = false
                                 }) {
-                                    Icon(Icons.Default.Close, contentDescription = "Close search", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = "Close search",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
                                 }
                             },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(52.dp)
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(52.dp),
                         )
                     } else {
                         Text(
                             text = "Hosts & filters",
                             color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
                         )
                     }
                 },
@@ -184,57 +188,69 @@ fun ExtensionsScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back to home",
-                            tint = MaterialTheme.colorScheme.onSurface
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 },
                 actions = {
                     if (!isSearchActive) {
                         IconButton(onClick = { isSearchActive = true }) {
-                            Icon(Icons.Default.Search, contentDescription = "Search filters", tint = MaterialTheme.colorScheme.onSurface)
+                            Icon(
+                                Icons.Default.Search,
+                                contentDescription = "Search filters",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                            )
                         }
                     }
 
                     // Refresh / Update all button
                     IconButton(
                         onClick = { viewModel.updateAll() },
-                        enabled = !isUpdating
+                        enabled = !isUpdating,
                     ) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = "Update all filters from internet",
                             tint = if (isUpdating) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                            modifier = if (isUpdating) Modifier.rotate(spinRotation) else Modifier
+                            modifier = if (isUpdating) Modifier.rotate(spinRotation) else Modifier,
                         )
                     }
 
                     // Add Custom Filter button
                     IconButton(onClick = { showAddDialog = true }) {
-                        Icon(Icons.Default.Add, contentDescription = "Add custom filter", tint = MaterialTheme.colorScheme.onSurface)
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "Add custom filter",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
                     }
 
                     // Overflow Menu
                     Box {
                         IconButton(onClick = { showMenu = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "More options", tint = MaterialTheme.colorScheme.onSurface)
+                            Icon(
+                                Icons.Default.MoreVert,
+                                contentDescription = "More options",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                            )
                         }
 
                         DropdownMenu(
                             expanded = showMenu,
                             onDismissRequest = { showMenu = false },
-                            modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                            modifier = Modifier.background(MaterialTheme.colorScheme.surface),
                         ) {
                             DropdownMenuItem(
                                 text = {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.fillMaxWidth()
+                                        modifier = Modifier.fillMaxWidth(),
                                     ) {
                                         Text(
                                             text = "Auto-update extensions",
                                             color = MaterialTheme.colorScheme.onSurface,
                                             fontSize = 14.sp,
-                                            modifier = Modifier.weight(1f)
+                                            modifier = Modifier.weight(1f),
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Checkbox(
@@ -242,48 +258,68 @@ fun ExtensionsScreen(
                                             onCheckedChange = { checked ->
                                                 viewModel.setAutoUpdateEnabled(checked)
                                             },
-                                            colors = CheckboxDefaults.colors(
-                                                checkedColor = MaterialTheme.colorScheme.primary,
-                                                checkmarkColor = MaterialTheme.colorScheme.onPrimary,
-                                                uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
+                                            colors =
+                                                CheckboxDefaults.colors(
+                                                    checkedColor = MaterialTheme.colorScheme.primary,
+                                                    checkmarkColor = MaterialTheme.colorScheme.onPrimary,
+                                                    uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                ),
                                         )
                                     }
                                 },
                                 onClick = {
                                     viewModel.setAutoUpdateEnabled(!autoUpdateEnabled)
-                                }
+                                },
                             )
 
                             DropdownMenuItem(
-                                text = { Text("Update all extensions", color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp) },
+                                text = {
+                                    Text(
+                                        "Update all extensions",
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        fontSize = 14.sp,
+                                    )
+                                },
                                 onClick = {
                                     showMenu = false
                                     viewModel.updateAll()
-                                }
+                                },
                             )
 
                             DropdownMenuItem(
-                                text = { Text("Enable all", color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp) },
+                                text = {
+                                    Text(
+                                        "Enable all",
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        fontSize = 14.sp,
+                                    )
+                                },
                                 onClick = {
                                     showMenu = false
                                     viewModel.setAllEnabled(true)
-                                }
+                                },
                             )
 
                             DropdownMenuItem(
-                                text = { Text("Disable all", color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp) },
+                                text = {
+                                    Text(
+                                        "Disable all",
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        fontSize = 14.sp,
+                                    )
+                                },
                                 onClick = {
                                     showMenu = false
                                     viewModel.setAllEnabled(false)
-                                }
+                                },
                             )
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                    ),
             )
         },
         floatingActionButton = {
@@ -292,42 +328,48 @@ fun ExtensionsScreen(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = CircleShape,
-                modifier = Modifier.size(56.dp)
+                modifier = Modifier.size(56.dp),
             ) {
                 Icon(
                     imageVector = Icons.Default.Save,
                     contentDescription = "Save & Sync Filters",
-                    tint = MaterialTheme.colorScheme.onPrimary
+                    tint = MaterialTheme.colorScheme.onPrimary,
                 )
             }
-        }
+        },
     ) { innerPadding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
         ) {
             // Horizontal Category Filtering Chips
             LazyRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(FilterCategories.ALL_CATEGORIES) { category ->
                     val isSelected = category.equals(selectedCategory, ignoreCase = true)
                     Surface(
                         shape = RoundedCornerShape(20.dp),
                         color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                        border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
-                        modifier = Modifier.clickable { viewModel.onCategorySelect(category) }
+                        border =
+                            BorderStroke(
+                                1.dp,
+                                if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                            ),
+                        modifier = Modifier.clickable { viewModel.onCategorySelect(category) },
                     ) {
                         Text(
                             text = category,
                             color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 13.sp,
                             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
                         )
                     }
                 }
@@ -338,29 +380,31 @@ fun ExtensionsScreen(
                 shape = RoundedCornerShape(14.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 4.dp)
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 4.dp),
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
                         Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .background(
-                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                                    shape = CircleShape
-                                ),
-                            contentAlignment = Alignment.Center
+                            modifier =
+                                Modifier
+                                    .size(28.dp)
+                                    .background(
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                        shape = CircleShape,
+                                    ),
+                            contentAlignment = Alignment.Center,
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Security,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(16.dp),
                             )
                         }
                         Spacer(modifier = Modifier.width(10.dp))
@@ -371,12 +415,12 @@ fun ExtensionsScreen(
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface,
-                                    fontSize = 13.sp
+                                    fontSize = 13.sp,
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Surface(
                                     shape = RoundedCornerShape(4.dp),
-                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
                                 ) {
                                     Text(
                                         text = "uBlock + Mobile",
@@ -384,7 +428,7 @@ fun ExtensionsScreen(
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
                                     )
                                 }
                             }
@@ -395,7 +439,7 @@ fun ExtensionsScreen(
                         text = "In-app banner ads, popups, interstitials, rewarded ads, and video mediation networks (AdMob, Unity, AppLovin, ironSource, Vungle) are blocked network-wide across installed apps. Video ad telemetry & tracking beacons are blocked automatically while media playback remains uninterrupted.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 11.sp,
-                        lineHeight = 15.sp
+                        lineHeight = 15.sp,
                     )
                 }
             }
@@ -406,25 +450,26 @@ fun ExtensionsScreen(
                     shape = RoundedCornerShape(12.dp),
                     color = if (isDark) Color(0xFF451A03) else Color(0xFFFFFBEB),
                     border = BorderStroke(1.dp, if (isDark) Color(0xFFD97706) else Color(0xFFF59E0B)),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 4.dp)
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 4.dp),
                 ) {
                     Row(
                         modifier = Modifier.padding(10.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
                             imageVector = Icons.Default.Warning,
                             contentDescription = null,
                             tint = if (isDark) Color(0xFFFBBF24) else Color(0xFFB45309),
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(18.dp),
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "High rule count (~$totalEnabledRulesCount rules). Large heap is active, but enabling too many massive lists may impact device performance.",
                             color = if (isDark) Color(0xFFFEF3C7) else Color(0xFF92400E),
-                            fontSize = 11.sp
+                            fontSize = 11.sp,
                         )
                     }
                 }
@@ -432,24 +477,25 @@ fun ExtensionsScreen(
 
             // Subheader: Total active filters
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = "Total active filters: $activeFilterCount",
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
                 )
                 if (totalEnabledRulesCount > 0) {
                     Text(
                         text = "Rules: ~$totalEnabledRulesCount",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
                     )
                 }
             }
@@ -458,14 +504,14 @@ fun ExtensionsScreen(
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 items(filteredExtensions, key = { it.id }) { item ->
                     ExtensionCard(
                         item = item,
                         onToggle = { enabled -> viewModel.toggleExtension(item.id, enabled) },
                         onUpdate = { viewModel.updateExtension(item.id) },
-                        onDelete = { viewModel.removeCustomFilter(item.id) }
+                        onDelete = { viewModel.removeCustomFilter(item.id) },
                     )
                 }
                 item {
@@ -482,7 +528,13 @@ fun ExtensionsScreen(
 
         AlertDialog(
             onDismissRequest = { showAddDialog = false },
-            title = { Text("Add custom filter", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold) },
+            title = {
+                Text(
+                    "Add custom filter",
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold,
+                )
+            },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
@@ -490,26 +542,28 @@ fun ExtensionsScreen(
                         onValueChange = { name = it },
                         label = { Text("Filter Name", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                         singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
-                        ),
-                        modifier = Modifier.fillMaxWidth()
+                        colors =
+                            OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                            ),
+                        modifier = Modifier.fillMaxWidth(),
                     )
                     OutlinedTextField(
                         value = url,
                         onValueChange = { url = it },
                         label = { Text("Filter URL (optional)", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                         singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
-                        ),
-                        modifier = Modifier.fillMaxWidth()
+                        colors =
+                            OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                            ),
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
             },
@@ -520,7 +574,7 @@ fun ExtensionsScreen(
                             viewModel.addCustomFilter(name.trim(), url.trim())
                             showAddDialog = false
                         }
-                    }
+                    },
                 ) {
                     Text("Add", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 }
@@ -530,7 +584,7 @@ fun ExtensionsScreen(
                     Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surface,
         )
     }
 }
@@ -548,35 +602,38 @@ fun ExtensionCard(
     item: ExtensionFilter,
     onToggle: (Boolean) -> Unit,
     onUpdate: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
 ) {
     var showItemMenu by remember { mutableStateOf(false) }
 
     Surface(
         shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.surface,
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp)),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             // Left Icon
             Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .size(36.dp)
+                        .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
+                contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     imageVector = if (item.isCustom) Icons.Default.Edit else Icons.Default.Public,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(20.dp),
                 )
             }
 
@@ -586,7 +643,7 @@ fun ExtensionCard(
             Column(modifier = Modifier.weight(1f)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     Text(
                         text = item.name,
@@ -595,33 +652,33 @@ fun ExtensionCard(
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.weight(1f, fill = false),
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
                     )
                     Surface(
                         shape = RoundedCornerShape(4.dp),
                         color = MaterialTheme.colorScheme.surfaceVariant,
-                        modifier = Modifier.padding(start = 2.dp)
+                        modifier = Modifier.padding(start = 2.dp),
                     ) {
                         Text(
                             text = item.category,
                             color = MaterialTheme.colorScheme.primary,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                         )
                     }
                     if (item.browserOnly) {
                         Surface(
                             shape = RoundedCornerShape(4.dp),
                             color = MaterialTheme.colorScheme.errorContainer,
-                            modifier = Modifier.padding(start = 2.dp)
+                            modifier = Modifier.padding(start = 2.dp),
                         ) {
                             Text(
                                 text = "Browser-only",
                                 color = MaterialTheme.colorScheme.onErrorContainer,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Medium,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             )
                         }
                     }
@@ -635,7 +692,7 @@ fun ExtensionCard(
                         fontSize = 12.sp,
                         lineHeight = 16.sp,
                         maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
 
@@ -645,20 +702,21 @@ fun ExtensionCard(
                         text = "Warning: May break apps if enabled in system-wide VPN",
                         color = MaterialTheme.colorScheme.error,
                         fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
                     )
                 }
 
                 Spacer(modifier = Modifier.height(3.dp))
 
                 Text(
-                    text = if (item.isCustom && item.filterCount == 0 && item.sizeBytes == 0L) {
-                        "Filters: 0   N/A"
-                    } else {
-                        "Filters: ${item.filterCount}   Size: ${item.formattedSize()}"
-                    },
+                    text =
+                        if (item.isCustom && item.filterCount == 0 && item.sizeBytes == 0L) {
+                            "Filters: 0   N/A"
+                        } else {
+                            "Filters: ${item.filterCount}   Size: ${item.formattedSize()}"
+                        },
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 12.sp
+                    fontSize = 12.sp,
                 )
 
                 Spacer(modifier = Modifier.height(2.dp))
@@ -666,7 +724,7 @@ fun ExtensionCard(
                 Text(
                     text = item.formattedLastUpdated(),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 11.sp
+                    fontSize = 11.sp,
                 )
             }
 
@@ -676,32 +734,33 @@ fun ExtensionCard(
             Switch(
                 checked = item.isEnabled,
                 onCheckedChange = onToggle,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color.White,
-                    checkedTrackColor = MaterialTheme.colorScheme.primary,
-                    uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
-                )
+                colors =
+                    SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = MaterialTheme.colorScheme.primary,
+                        uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                    ),
             )
 
             // Item overflow menu
             Box {
                 IconButton(
                     onClick = { showItemMenu = true },
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(32.dp),
                 ) {
                     Icon(
                         imageVector = Icons.Default.MoreVert,
                         contentDescription = "Item actions",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(18.dp),
                     )
                 }
 
                 DropdownMenu(
                     expanded = showItemMenu,
                     onDismissRequest = { showItemMenu = false },
-                    modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surface),
                 ) {
                     if (item.url.isNotBlank()) {
                         DropdownMenuItem(
@@ -709,7 +768,7 @@ fun ExtensionCard(
                             onClick = {
                                 showItemMenu = false
                                 onUpdate()
-                            }
+                            },
                         )
                     }
                     if (item.isCustom) {
@@ -718,7 +777,7 @@ fun ExtensionCard(
                             onClick = {
                                 showItemMenu = false
                                 onDelete()
-                            }
+                            },
                         )
                     }
                 }

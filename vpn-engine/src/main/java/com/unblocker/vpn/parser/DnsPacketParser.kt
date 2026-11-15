@@ -12,12 +12,11 @@ import java.nio.ByteOrder
  * assume it produces a complete IPv6 UDP checksum.
  */
 object DnsPacketParser {
-
     private const val UDP_HEADER_LENGTH = 8
     private const val IPV4_HEADER_LENGTH = 20
     private const val IPV6_HEADER_LENGTH = 40
     private const val DNS_PORT = 53
-    private const val DNS_MIN_LENGTH = 12  // Minimum valid DNS header length
+    private const val DNS_MIN_LENGTH = 12 // Minimum valid DNS header length
     private const val MAX_DOMAIN_LENGTH = 253
 
     /**
@@ -31,7 +30,10 @@ object DnsPacketParser {
      * @return Query metadata, or null for rejected input.
      * @throws IndexOutOfBoundsException If declared bounds permit access beyond the supplied array.
      */
-    fun extractDnsQuery(buffer: ByteArray, length: Int): DnsPacket? {
+    fun extractDnsQuery(
+        buffer: ByteArray,
+        length: Int,
+    ): DnsPacket? {
         val ipPacket = IpPacket.parse(buffer, length) ?: return null
         if (!ipPacket.isUdp) return null
 
@@ -44,7 +46,7 @@ object DnsPacketParser {
 
         // Verify it is a DNS query (QR bit = 0)
         val flags = ((buffer[dnsStart + 2].toInt() and 0xFF) shl 8) or (buffer[dnsStart + 3].toInt() and 0xFF)
-        if ((flags and 0x8000) != 0) return null  // Response packet — skip
+        if ((flags and 0x8000) != 0) return null // Response packet — skip
 
         val qdCount = ((buffer[dnsStart + 4].toInt() and 0xFF) shl 8) or (buffer[dnsStart + 5].toInt() and 0xFF)
         if (qdCount <= 0) return null
@@ -58,7 +60,7 @@ object DnsPacketParser {
             srcIp = ipPacket.srcIp,
             dstIp = ipPacket.dstIp,
             srcPort = udpPacket.srcPort,
-            txId = txId
+            txId = txId,
         )
     }
 
@@ -73,17 +75,21 @@ object DnsPacketParser {
      * @return New IP/UDP packet containing the twelve-byte DNS response header.
      * @throws java.nio.BufferOverflowException If address arrays exceed the allocated header space.
      */
-    fun buildBlockedDnsResponse(query: DnsPacket, rcode: Int = 3): ByteArray {
+    fun buildBlockedDnsResponse(
+        query: DnsPacket,
+        rcode: Int = 3,
+    ): ByteArray {
         // Build minimal DNS response: header only (12 bytes), no answer records
-        val dnsResponse = ByteBuffer.allocate(DNS_MIN_LENGTH).order(ByteOrder.BIG_ENDIAN).apply {
-            putShort(query.txId)
-            // QR=1 (response), AA=1, RCODE=rcode
-            putShort((0x8400 or (rcode and 0x0F)).toShort())
-            putShort(0)  // QDCOUNT
-            putShort(0)  // ANCOUNT
-            putShort(0)  // NSCOUNT
-            putShort(0)  // ARCOUNT
-        }
+        val dnsResponse =
+            ByteBuffer.allocate(DNS_MIN_LENGTH).order(ByteOrder.BIG_ENDIAN).apply {
+                putShort(query.txId)
+                // QR=1 (response), AA=1, RCODE=rcode
+                putShort((0x8400 or (rcode and 0x0F)).toShort())
+                putShort(0) // QDCOUNT
+                putShort(0) // ANCOUNT
+                putShort(0) // NSCOUNT
+                putShort(0) // ARCOUNT
+            }
         val dnsBytes = dnsResponse.array()
         return wrapInIpUdp(query, dnsBytes)
     }
@@ -98,9 +104,10 @@ object DnsPacketParser {
      * @return New IP/UDP packet containing the supplied DNS payload.
      * @throws java.nio.BufferOverflowException If supplied address arrays exceed the allocated space.
      */
-    fun buildForwardedResponse(query: DnsPacket, dnsBytes: ByteArray): ByteArray {
-        return wrapInIpUdp(query, dnsBytes)
-    }
+    fun buildForwardedResponse(
+        query: DnsPacket,
+        dnsBytes: ByteArray,
+    ): ByteArray = wrapInIpUdp(query, dnsBytes)
 
     // ─── Private Helpers ──────────────────────────────────────────────────────
 
@@ -108,7 +115,11 @@ object DnsPacketParser {
      * Decodes a DNS wire-format name (labels) starting at [offset] within [buffer].
      * Handles compressed pointers (RFC 1035 §4.1.4) defensively.
      */
-    private fun decodeDnsName(buffer: ByteArray, offset: Int, end: Int): String? {
+    private fun decodeDnsName(
+        buffer: ByteArray,
+        offset: Int,
+        end: Int,
+    ): String? {
         val domainBuilder = StringBuilder(64)
         var position = offset
         var jumped = false
@@ -120,7 +131,7 @@ object DnsPacketParser {
             // Compression pointer: top two bits are 11
             if (labelLength and 0xC0 == 0xC0) {
                 if (position + 1 >= end) return null
-                if (jumpCount++ > 10) return null  // Guard against infinite loops
+                if (jumpCount++ > 10) return null // Guard against infinite loops
                 val pointerOffset = ((labelLength and 0x3F) shl 8) or (buffer[position + 1].toInt() and 0xFF)
                 if (!jumped) position += 2
                 position = pointerOffset
@@ -128,7 +139,7 @@ object DnsPacketParser {
                 continue
             }
 
-            if (labelLength == 0) break  // End of name
+            if (labelLength == 0) break // End of name
 
             position++
             if (position + labelLength > end) return null
@@ -149,28 +160,31 @@ object DnsPacketParser {
      * Wraps [dnsBytes] in a UDP + IP header for the given [query], swapping src/dst
      * so the packet flows back from the VPN to the requesting application.
      */
-    private fun wrapInIpUdp(query: DnsPacket, dnsBytes: ByteArray): ByteArray {
+    private fun wrapInIpUdp(
+        query: DnsPacket,
+        dnsBytes: ByteArray,
+    ): ByteArray {
         val udpLength = UDP_HEADER_LENGTH + dnsBytes.size
         val ipHeaderLength = if (query.isIpv6) IPV6_HEADER_LENGTH else IPV4_HEADER_LENGTH
         val packetBuffer = ByteBuffer.allocate(ipHeaderLength + udpLength).order(ByteOrder.BIG_ENDIAN)
 
         if (query.isIpv6) {
-            packetBuffer.putInt(0x60000000)           // Version + Traffic Class + Flow Label
+            packetBuffer.putInt(0x60000000) // Version + Traffic Class + Flow Label
             packetBuffer.putShort(udpLength.toShort()) // Payload Length
-            packetBuffer.put(17.toByte())              // Next Header = UDP
-            packetBuffer.put(64.toByte())              // Hop Limit
-            packetBuffer.put(query.dstIp)              // Swap: original dst → new src
-            packetBuffer.put(query.srcIp)              // Swap: original src → new dst
+            packetBuffer.put(17.toByte()) // Next Header = UDP
+            packetBuffer.put(64.toByte()) // Hop Limit
+            packetBuffer.put(query.dstIp) // Swap: original dst → new src
+            packetBuffer.put(query.srcIp) // Swap: original src → new dst
         } else {
-            packetBuffer.put(0x45.toByte())            // IPv4, IHL=5
+            packetBuffer.put(0x45.toByte()) // IPv4, IHL=5
             packetBuffer.put(0)
             packetBuffer.putShort((IPV4_HEADER_LENGTH + udpLength).toShort())
             packetBuffer.putShort(0)
-            packetBuffer.putShort(0x4000.toShort())    // DF flag
-            packetBuffer.put(64)                        // TTL
-            packetBuffer.put(17)                        // Protocol = UDP
-            packetBuffer.putShort(0)                    // Checksum (filled below)
-            packetBuffer.put(query.dstIp)              // Swap
+            packetBuffer.putShort(0x4000.toShort()) // DF flag
+            packetBuffer.put(64) // TTL
+            packetBuffer.put(17) // Protocol = UDP
+            packetBuffer.putShort(0) // Checksum (filled below)
+            packetBuffer.put(query.dstIp) // Swap
             packetBuffer.put(query.srcIp)
             // Compute IPv4 header checksum
             val checksum = ipv4Checksum(packetBuffer.array(), 0, IPV4_HEADER_LENGTH)
@@ -178,17 +192,21 @@ object DnsPacketParser {
         }
 
         // UDP header (swapped ports: response comes from port 53 back to query's srcPort)
-        packetBuffer.putShort(DNS_PORT.toShort())                 // UDP src = DNS port
-        packetBuffer.putShort(query.srcPort.toShort())      // UDP dst = original src
+        packetBuffer.putShort(DNS_PORT.toShort()) // UDP src = DNS port
+        packetBuffer.putShort(query.srcPort.toShort()) // UDP dst = original src
         packetBuffer.putShort(udpLength.toShort())
-        packetBuffer.putShort(0)                            // Checksum (optional for IPv4)
+        packetBuffer.putShort(0) // Checksum (optional for IPv4)
         packetBuffer.put(dnsBytes)
 
         return packetBuffer.array()
     }
 
     /** One's complement 16-bit checksum for IPv4 headers. */
-    private fun ipv4Checksum(data: ByteArray, offset: Int, length: Int): Short {
+    private fun ipv4Checksum(
+        data: ByteArray,
+        offset: Int,
+        length: Int,
+    ): Short {
         var sum = 0
         var i = offset
         while (i < offset + length - 1) {

@@ -18,7 +18,7 @@ data class SessionDomain(
     val domain: String,
     val count: Int = 1,
     val firstSeenEpochMs: Long = System.currentTimeMillis(),
-    val lastSeenEpochMs: Long = System.currentTimeMillis()
+    val lastSeenEpochMs: Long = System.currentTimeMillis(),
 )
 
 /**
@@ -33,7 +33,7 @@ data class RecordingSession(
     val targetPackage: String,
     val targetUid: Int,
     val startTimeEpochMs: Long = System.currentTimeMillis(),
-    val maxDurationMs: Long = 10 * 60 * 1000L // 10 minutes default
+    val maxDurationMs: Long = 10 * 60 * 1000L, // 10 minutes default
 ) {
     /**
      * Returns whether wall-clock elapsed time is strictly greater than the configured duration.
@@ -45,14 +45,15 @@ data class RecordingSession(
  * Owns one process-local recording session and readable domain aggregates.
  */
 class RecordingSessionManager private constructor() {
-
     private val _activeSession = MutableStateFlow<RecordingSession?>(null)
+
     /**
      * Current recording session, or null when stopped.
      */
     val activeSession: StateFlow<RecordingSession?> = _activeSession.asStateFlow()
 
     private val _domainsFlow = MutableStateFlow<List<SessionDomain>>(emptyList())
+
     /**
      * Latest domain aggregates sorted by descending observation count.
      */
@@ -69,7 +70,11 @@ class RecordingSessionManager private constructor() {
      * @return Newly active recording session.
      */
     @Synchronized
-    fun startSession(targetPackage: String, targetUid: Int, maxDurationMs: Long = 10 * 60 * 1000L): RecordingSession {
+    fun startSession(
+        targetPackage: String,
+        targetUid: Int,
+        maxDurationMs: Long = 10 * 60 * 1000L,
+    ): RecordingSession {
         sessionDomains.clear()
         _domainsFlow.value = emptyList()
         val session = RecordingSession(targetPackage, targetUid, System.currentTimeMillis(), maxDurationMs)
@@ -96,7 +101,10 @@ class RecordingSessionManager private constructor() {
      * @param uid Attributed Android UID; null is accepted even for a specific target.
      * @return Whether the observation was recorded; new hosts beyond the capacity check are rejected.
      */
-    fun recordDomain(domain: String, uid: Int?): Boolean {
+    fun recordDomain(
+        domain: String,
+        uid: Int?,
+    ): Boolean {
         val session = _activeSession.value ?: return false
         if (session.isExpired()) {
             stopSession()
@@ -138,9 +146,7 @@ class RecordingSessionManager private constructor() {
     /**
      * Returns the currently retained readable aggregates sorted by descending count.
      */
-    fun getRecordedDomains(): List<SessionDomain> {
-        return sessionDomains.values.sortedByDescending { it.count }
-    }
+    fun getRecordedDomains(): List<SessionDomain> = sessionDomains.values.sortedByDescending { it.count }
 
     /**
      * Shared recording instance and admission bound.
@@ -150,6 +156,7 @@ class RecordingSessionManager private constructor() {
          * Distinct-domain admission threshold for a recording session.
          */
         const val MAX_SESSION_DOMAINS = 500
+
         /**
          * Lazily initialized process recording coordinator.
          */

@@ -11,21 +11,24 @@ import kotlinx.coroutines.flow.asStateFlow
  * that a tunnel exists or that all device DNS traffic is covered.
  */
 object VpnStateHolder {
-
     /**
      * Lifecycle states that library engine callers can publish.
      */
     enum class State {
         /** No library engine operation is reported. */
         IDLE,
+
         /** A library engine startup is reported in progress. */
         STARTING,
+
         /** The caller reports the library engine running. */
         RUNNING,
+
         /** A library engine shutdown is reported in progress. */
         STOPPING,
+
         /** The caller reports a library engine error. */
-        ERROR
+        ERROR,
     }
 
     private val mutableState = MutableStateFlow(State.IDLE)
@@ -42,9 +45,10 @@ object VpnStateHolder {
      * and derive RUNNING status when ongoing updates are required.
      */
     val isActive: StateFlow<Boolean>
-        get() = MutableStateFlow(mutableState.value == State.RUNNING).also {
-            // Retain the existing snapshot semantics; this flow has no transition collector.
-        }
+        get() =
+            MutableStateFlow(mutableState.value == State.RUNNING).also {
+                // Retain the existing snapshot semantics; this flow has no transition collector.
+            }
 
     internal fun transitionTo(newState: State) {
         mutableState.value = newState

@@ -18,7 +18,6 @@ import java.io.StringReader
  * and zero-allocation off-heap lookups.
  */
 class RuleCompilerTest {
-
     /**
      * Temporary filesystem fixture isolated and cleaned up by JUnit.
      */
@@ -33,31 +32,31 @@ class RuleCompilerTest {
         // Adblock / uBlock syntax
         assertEquals(
             "googleads.g.doubleclick.net",
-            RuleCompiler.extractCleanDomain("||googleads.g.doubleclick.net^\$third-party")
+            RuleCompiler.extractCleanDomain("||googleads.g.doubleclick.net^\$third-party"),
         )
         assertEquals(
             "adservice.google.com",
-            RuleCompiler.extractCleanDomain("||adservice.google.com^")
+            RuleCompiler.extractCleanDomain("||adservice.google.com^"),
         )
 
         // Hosts syntax
         assertEquals(
             "pagead2.googlesyndication.com",
-            RuleCompiler.extractCleanDomain("0.0.0.0 pagead2.googlesyndication.com")
+            RuleCompiler.extractCleanDomain("0.0.0.0 pagead2.googlesyndication.com"),
         )
         assertEquals(
             "tracker.example.org",
-            RuleCompiler.extractCleanDomain("127.0.0.1 tracker.example.org # inline comment")
+            RuleCompiler.extractCleanDomain("127.0.0.1 tracker.example.org # inline comment"),
         )
         assertEquals(
             "ipv6tracker.com",
-            RuleCompiler.extractCleanDomain("::1 ipv6tracker.com")
+            RuleCompiler.extractCleanDomain("::1 ipv6tracker.com"),
         )
 
         // Plain domain syntax
         assertEquals(
             "analytics.yahoo.com",
-            RuleCompiler.extractCleanDomain("analytics.yahoo.com")
+            RuleCompiler.extractCleanDomain("analytics.yahoo.com"),
         )
 
         // Invalid, comments, cosmetic rules, and exceptions
@@ -98,21 +97,25 @@ class RuleCompilerTest {
      */
     @Test
     fun testCompileStreamsAndOffHeapEngineVerification() {
-        val rulesContent = """
+        val rulesContent =
+            """
             # Adblock syntax rule
             ||googleads.g.doubleclick.net^${'$'}third-party
             # Hosts syntax rule
             0.0.0.0 pagead2.googlesyndication.com
             # Extra test rule
             ||evil-tracker.com^
-        """.trimIndent()
+            """.trimIndent()
 
         val reader = BufferedReader(StringReader(rulesContent))
         val outputFile = File(tempFolder.root, "rules.bin")
 
         val count = RuleCompiler.compileStreamsToBinaryFile(listOf(reader), outputFile)
         assertTrue("Output file must exist", outputFile.exists())
-        assertTrue("Compiled rules count must include bootstrap domains", count >= 3 + RuleCompiler.DOH_BOOTSTRAP_DOMAINS.size)
+        assertTrue(
+            "Compiled rules count must include bootstrap domains",
+            count >= 3 + RuleCompiler.DOH_BOOTSTRAP_DOMAINS.size,
+        )
 
         val engine = OffHeapRuleEngine()
         engine.reloadFromFile(outputFile)
@@ -122,23 +125,23 @@ class RuleCompilerTest {
         // 1. Verify ||googleads.g.doubleclick.net^$third-party is blocked
         assertTrue(
             "googleads.g.doubleclick.net must be blocked",
-            engine.isDomainBlocked("googleads.g.doubleclick.net")
+            engine.isDomainBlocked("googleads.g.doubleclick.net"),
         )
 
         // 2. Verify 0.0.0.0 pagead2.googlesyndication.com is blocked
         assertTrue(
             "pagead2.googlesyndication.com must be blocked",
-            engine.isDomainBlocked("pagead2.googlesyndication.com")
+            engine.isDomainBlocked("pagead2.googlesyndication.com"),
         )
 
         // 3. Verify subdomain sub.pagead2.googlesyndication.com is blocked via parent walk
         assertTrue(
             "sub.pagead2.googlesyndication.com must be blocked",
-            engine.isDomainBlocked("sub.pagead2.googlesyndication.com")
+            engine.isDomainBlocked("sub.pagead2.googlesyndication.com"),
         )
         assertTrue(
             "deep.nested.sub.pagead2.googlesyndication.com must be blocked",
-            engine.isDomainBlocked("deep.nested.sub.pagead2.googlesyndication.com")
+            engine.isDomainBlocked("deep.nested.sub.pagead2.googlesyndication.com"),
         )
 
         // 4. Verify DoH bootstrap domains are blocked
@@ -149,11 +152,11 @@ class RuleCompilerTest {
         // 5. Verify legitimate domain is not blocked
         assertFalse(
             "google.com must not be blocked",
-            engine.isDomainBlocked("google.com")
+            engine.isDomainBlocked("google.com"),
         )
         assertFalse(
             "example.org must not be blocked",
-            engine.isDomainBlocked("example.org")
+            engine.isDomainBlocked("example.org"),
         )
     }
 }

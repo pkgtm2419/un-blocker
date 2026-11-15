@@ -10,7 +10,6 @@ import org.junit.Test
  * Regression coverage for vpn diagnostics.
  */
 class VpnDiagnosticsTest {
-
     /**
      * Resets the fixture state before each test to keep assertions independent.
      */
@@ -70,7 +69,7 @@ class VpnDiagnosticsTest {
         for (i in 1..250) {
             VpnDiagnostics.record(
                 code = VpnDiagnostics.FailureCode.PACKET_PROCESSING,
-                exceptionClass = "Error_$i"
+                exceptionClass = "Error_$i",
             )
         }
 
@@ -94,7 +93,7 @@ class VpnDiagnosticsTest {
             code = VpnDiagnostics.FailureCode.FORWARDING_REJECTED,
             exceptionClass = "java.util.concurrent.RejectedExecutionException",
             queueDepth = 64,
-            resolverCount = 2
+            resolverCount = 2,
         )
 
         val events = VpnDiagnostics.getRecentEvents()

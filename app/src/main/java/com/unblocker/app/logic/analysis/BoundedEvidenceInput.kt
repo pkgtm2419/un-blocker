@@ -13,14 +13,17 @@ internal object BoundedEvidenceInput {
      * @throws IllegalArgumentException If limit is nonpositive or a line exceeds it.
      * @throws java.io.IOException If reading fails.
      */
-    fun line(reader:Reader,limit:Int):String? {
-        require(limit>0)
-        val result=StringBuilder()
-        while(true) {
-            val c=reader.read()
-            if(c<0) return if(result.isEmpty()) null else result.toString().trimEnd('\r')
-            if(c==10) return result.toString().trimEnd('\r')
-            if(result.length>=limit) throw IllegalArgumentException("Oversized evidence line")
+    fun line(
+        reader: Reader,
+        limit: Int,
+    ): String? {
+        require(limit > 0)
+        val result = StringBuilder()
+        while (true) {
+            val c = reader.read()
+            if (c < 0) return if (result.isEmpty()) null else result.toString().trimEnd('\r')
+            if (c == 10) return result.toString().trimEnd('\r')
+            if (result.length >= limit) throw IllegalArgumentException("Oversized evidence line")
             result.append(c.toChar())
         }
     }

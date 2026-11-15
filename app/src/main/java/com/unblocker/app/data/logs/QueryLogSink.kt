@@ -45,7 +45,7 @@ object QueryLogSink {
      */
     enum class HistoryMode {
         AGGREGATE_ONLY,
-        RAW_HISTORY_OPT_IN
+        RAW_HISTORY_OPT_IN,
     }
 
     /**
@@ -56,12 +56,15 @@ object QueryLogSink {
          * The DAO clear operation completed.
          */
         data object Success : ClearResult
+
         /**
          * The history could not be cleared because storage was unavailable.
          *
          * @property reason Explanation of the unavailable storage.
          */
-        data class Failure(val reason: String) : ClearResult
+        data class Failure(
+            val reason: String,
+        ) : ClearResult
     }
 
     /**
@@ -78,7 +81,7 @@ object QueryLogSink {
         val decision: Int, // 0 = allowed, 1 = blocked
         val reason: Int,
         val ts: Long,
-        val generation: Long = 1L
+        val generation: Long = 1L,
     )
 
     private val queue = ArrayBlockingQueue<LogItem>(QUEUE_CAPACITY)
@@ -100,9 +103,10 @@ object QueryLogSink {
         dao = domainLogDao
         if (flushJob == null) {
             val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-            flushJob = scope.launch {
-                runFlushLoop()
-            }
+            flushJob =
+                scope.launch {
+                    runFlushLoop()
+                }
         }
     }
 
@@ -166,19 +170,25 @@ object QueryLogSink {
      * @param reason Filtering reason code associated with the decision.
      * @param tsMillis Observation timestamp in Unix epoch milliseconds.
      */
-    fun record(rawDomain: String, decision: Int, reason: Int, tsMillis: Long = System.currentTimeMillis()) {
+    fun record(
+        rawDomain: String,
+        decision: Int,
+        reason: Int,
+        tsMillis: Long = System.currentTimeMillis(),
+    ) {
         if (isLoggingPaused.get()) return
         val normalized = DomainName.normalize(rawDomain) ?: return
         if (normalized.length > MAX_DOMAIN_CHARACTERS) return
 
         val generation = currentGeneration.get()
-        val item = LogItem(
-            domain = normalized,
-            decision = decision,
-            reason = reason,
-            ts = tsMillis,
-            generation = generation
-        )
+        val item =
+            LogItem(
+                domain = normalized,
+                decision = decision,
+                reason = reason,
+                ts = tsMillis,
+                generation = generation,
+            )
         if (!queue.offer(item)) {
             // Queue full: evict oldest entry to prevent latency spikes on the network loop
             queue.poll()
@@ -199,15 +209,16 @@ object QueryLogSink {
      * @return Success after the DAO clear, or failure when the DAO has not been initialized.
      * @throws Exception If the DAO clear operation fails; database exceptions propagate to the caller.
      */
-    suspend fun clearHistoryAndBarrier(): ClearResult = withContext(Dispatchers.IO) {
-        flushMutex.withLock {
-            currentGeneration.incrementAndGet()
-            queue.clear()
-            val currentDao = dao ?: return@withLock ClearResult.Failure("DAO uninitialized")
-            currentDao.clearAll()
-            ClearResult.Success
+    suspend fun clearHistoryAndBarrier(): ClearResult =
+        withContext(Dispatchers.IO) {
+            flushMutex.withLock {
+                currentGeneration.incrementAndGet()
+                queue.clear()
+                val currentDao = dao ?: return@withLock ClearResult.Failure("DAO uninitialized")
+                currentDao.clearAll()
+                ClearResult.Success
+            }
         }
-    }
 
     /**
      * Clears history through the generation barrier, discarding the uninitialized-DAO result.
@@ -228,15 +239,16 @@ object QueryLogSink {
         } catch (e: Exception) {
             VpnDiagnostics.record(
                 code = VpnDiagnostics.FailureCode.DATABASE_LOG_ERROR,
-                exceptionClass = e::class.java.name
+                exceptionClass = e::class.java.name,
             )
         }
 
         while (true) {
             try {
-                val first = withContext(Dispatchers.IO) {
-                    queue.poll(FLUSH_INTERVAL_MS, TimeUnit.MILLISECONDS)
-                }
+                val first =
+                    withContext(Dispatchers.IO) {
+                        queue.poll(FLUSH_INTERVAL_MS, TimeUnit.MILLISECONDS)
+                    }
                 if (first != null) {
                     buffer.add(first)
                     queue.drainTo(buffer, BATCH_FLUSH_SIZE - 1)
@@ -258,7 +270,7 @@ object QueryLogSink {
                 // Protect worker loop and record database diagnostics safely
                 VpnDiagnostics.record(
                     code = VpnDiagnostics.FailureCode.DATABASE_LOG_ERROR,
-                    exceptionClass = e::class.java.name
+                    exceptionClass = e::class.java.name,
                 )
             }
         }
@@ -278,7 +290,7 @@ object QueryLogSink {
                 var allowed: Long = 0,
                 var latestTs: Long = 0,
                 var latestDecision: Int = 0,
-                var latestReason: Int = 0
+                var latestReason: Int = 0,
             )
 
             val aggregated = HashMap<String, DomainAggregation>()
@@ -299,17 +311,18 @@ object QueryLogSink {
                 }
             }
 
-            val statUpserts = aggregated.map { (domain, aggregation) ->
-                DomainStatUpsert(
-                    domain = domain,
-                    callDelta = aggregation.calls,
-                    blockedDelta = aggregation.blocked,
-                    allowedDelta = aggregation.allowed,
-                    ts = aggregation.latestTs,
-                    lastDecision = aggregation.latestDecision,
-                    lastReason = aggregation.latestReason
-                )
-            }
+            val statUpserts =
+                aggregated.map { (domain, aggregation) ->
+                    DomainStatUpsert(
+                        domain = domain,
+                        callDelta = aggregation.calls,
+                        blockedDelta = aggregation.blocked,
+                        allowedDelta = aggregation.allowed,
+                        ts = aggregation.latestTs,
+                        lastDecision = aggregation.latestDecision,
+                        lastReason = aggregation.latestReason,
+                    )
+                }
 
             currentDao.upsertStatsBatch(statUpserts)
             if (shouldStoreEvents && !events.isNullOrEmpty()) {

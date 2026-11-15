@@ -44,78 +44,87 @@ fun SkeuomorphicCard(
     highlightColor: Color? = null,
     shadowColor: Color? = null,
     isInset: Boolean = false,
-    content: @Composable ColumnScope.() -> Unit
+    content: @Composable ColumnScope.() -> Unit,
 ) {
     val isDark = isSystemInDarkTheme()
     val stateColors = LocalVpnStateColors.current
-    val actualHighlight = highlightColor ?: (if (isDark) stateColors.surfaceHighlight else Color.White.copy(alpha = 0.9f))
+    val actualHighlight =
+        highlightColor ?: (if (isDark) stateColors.surfaceHighlight else Color.White.copy(alpha = 0.9f))
     val actualShadow = shadowColor ?: (if (isDark) stateColors.surfaceShadow else Color(0xFFCBD5E1).copy(alpha = 0.7f))
 
-    val surfaceGradient = if (isDark) {
-        if (isInset) {
-            Brush.verticalGradient(
-                colors = listOf(
-                    Color(0xFF0F172A),
-                    Slate900
+    val surfaceGradient =
+        if (isDark) {
+            if (isInset) {
+                Brush.verticalGradient(
+                    colors =
+                        listOf(
+                            Color(0xFF0F172A),
+                            Slate900,
+                        ),
                 )
-            )
+            } else {
+                Brush.verticalGradient(
+                    colors =
+                        listOf(
+                            Slate800.copy(alpha = 0.95f),
+                            Slate900.copy(alpha = 0.98f),
+                        ),
+                )
+            }
         } else {
-            Brush.verticalGradient(
-                colors = listOf(
-                    Slate800.copy(alpha = 0.95f),
-                    Slate900.copy(alpha = 0.98f)
+            if (isInset) {
+                Brush.verticalGradient(
+                    colors =
+                        listOf(
+                            Color(0xFFF1F5F9),
+                            Color(0xFFE2E8F0),
+                        ),
                 )
-            )
+            } else {
+                Brush.verticalGradient(
+                    colors =
+                        listOf(
+                            Color.White,
+                            Color(0xFFF8FAFC),
+                        ),
+                )
+            }
         }
-    } else {
-        if (isInset) {
-            Brush.verticalGradient(
-                colors = listOf(
-                    Color(0xFFF1F5F9),
-                    Color(0xFFE2E8F0)
-                )
-            )
-        } else {
-            Brush.verticalGradient(
-                colors = listOf(
-                    Color.White,
-                    Color(0xFFF8FAFC)
-                )
-            )
-        }
-    }
 
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .shadow(
-                elevation = if (isInset) 1.dp else elevation,
-                shape = shape,
-                ambientColor = actualShadow,
-                spotColor = actualShadow
-            )
-            .clip(shape)
-            .background(surfaceGradient)
-            // Tactile dual-specular border (top-left specular rim, bottom shadow bevel)
-            .border(
-                width = 1.dp,
-                brush = Brush.verticalGradient(
-                    colors = if (isInset) {
-                        listOf(actualShadow, actualHighlight.copy(alpha = 0.2f))
-                    } else {
-                        listOf(actualHighlight, actualShadow)
-                    }
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .shadow(
+                    elevation = if (isInset) 1.dp else elevation,
+                    shape = shape,
+                    ambientColor = actualShadow,
+                    spotColor = actualShadow,
+                ).clip(shape)
+                .background(surfaceGradient)
+                // Tactile dual-specular border (top-left specular rim, bottom shadow bevel)
+                .border(
+                    width = 1.dp,
+                    brush =
+                        Brush.verticalGradient(
+                            colors =
+                                if (isInset) {
+                                    listOf(actualShadow, actualHighlight.copy(alpha = 0.2f))
+                                } else {
+                                    listOf(actualHighlight, actualShadow)
+                                },
+                        ),
+                    shape = shape,
                 ),
-                shape = shape
-            )
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 16.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
             CompositionLocalProvider(
-                LocalContentColor provides if (isDark) Color(0xFFF1F5F9) else MaterialTheme.colorScheme.onSurface
+                LocalContentColor provides if (isDark) Color(0xFFF1F5F9) else MaterialTheme.colorScheme.onSurface,
             ) {
                 content()
             }
@@ -138,7 +147,7 @@ fun SkeuomorphicTactileSurface(
     shape: Shape = RoundedCornerShape(16.dp),
     isPressed: Boolean = false,
     accentColor: Color = Color.Transparent,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     val isDark = isSystemInDarkTheme()
     val stateColors = LocalVpnStateColors.current
@@ -146,45 +155,53 @@ fun SkeuomorphicTactileSurface(
     val shadowColor = if (isDark) stateColors.surfaceShadow else Color(0xFF64748B).copy(alpha = 0.2f)
     val highlightColor = if (isDark) stateColors.surfaceHighlight else Color.White.copy(alpha = 0.9f)
 
-    val surfaceGradient = if (isDark) {
-        if (isPressed) {
-            listOf(Slate900, Slate800)
+    val surfaceGradient =
+        if (isDark) {
+            if (isPressed) {
+                listOf(Slate900, Slate800)
+            } else {
+                listOf(Slate800, Slate900)
+            }
         } else {
-            listOf(Slate800, Slate900)
+            if (isPressed) {
+                listOf(Color(0xFFE2E8F0), Color(0xFFF1F5F9))
+            } else {
+                listOf(Color.White, Color(0xFFF1F5F9))
+            }
         }
-    } else {
-        if (isPressed) {
-            listOf(Color(0xFFE2E8F0), Color(0xFFF1F5F9))
-        } else {
-            listOf(Color.White, Color(0xFFF1F5F9))
-        }
-    }
 
     Box(
-        modifier = modifier
-            .shadow(
-                elevation = elevation,
-                shape = shape,
-                ambientColor = shadowColor,
-                spotColor = shadowColor
-            )
-            .clip(shape)
-            .background(
-                brush = Brush.verticalGradient(colors = surfaceGradient)
-            )
-            .border(
-                width = 1.dp,
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        if (accentColor != Color.Transparent) accentColor.copy(alpha = 0.6f) else highlightColor,
-                        shadowColor
-                    )
+        modifier =
+            modifier
+                .shadow(
+                    elevation = elevation,
+                    shape = shape,
+                    ambientColor = shadowColor,
+                    spotColor = shadowColor,
+                ).clip(shape)
+                .background(
+                    brush = Brush.verticalGradient(colors = surfaceGradient),
+                ).border(
+                    width = 1.dp,
+                    brush =
+                        Brush.verticalGradient(
+                            colors =
+                                listOf(
+                                    if (accentColor !=
+                                        Color.Transparent
+                                    ) {
+                                        accentColor.copy(alpha = 0.6f)
+                                    } else {
+                                        highlightColor
+                                    },
+                                    shadowColor,
+                                ),
+                        ),
+                    shape = shape,
                 ),
-                shape = shape
-            )
     ) {
         CompositionLocalProvider(
-            LocalContentColor provides if (isDark) Color(0xFFF1F5F9) else MaterialTheme.colorScheme.onSurface
+            LocalContentColor provides if (isDark) Color(0xFFF1F5F9) else MaterialTheme.colorScheme.onSurface,
         ) {
             content()
         }

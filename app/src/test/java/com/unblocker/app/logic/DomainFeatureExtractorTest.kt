@@ -19,16 +19,17 @@ class DomainFeatureExtractorTest {
     @Test
     fun testRegistrableLabelMatchingPrevented() {
         // Domains where the token is part of the registrable domain or ccTLD, not the subdomain
-        val benignRegistrableDomains = listOf(
-            "ad.co.uk",
-            "ad.com",
-            "ads.net",
-            "track.org",
-            "analytics.com",
-            "banner.com",
-            "sponsor.org",
-            "pixel.com"
-        )
+        val benignRegistrableDomains =
+            listOf(
+                "ad.co.uk",
+                "ad.com",
+                "ads.net",
+                "track.org",
+                "analytics.com",
+                "banner.com",
+                "sponsor.org",
+                "pixel.com",
+            )
 
         for (domain in benignRegistrableDomains) {
             val features = extractor.extract(domain)
@@ -41,21 +42,22 @@ class DomainFeatureExtractorTest {
      */
     @Test
     fun testSubdomainTokensTriggerLexical() {
-        val trackerSubdomains = listOf(
-            "ad.example.com",
-            "ads.example.net",
-            "track.customer.org",
-            "tracker.service.com",
-            "analytics.vendor.com",
-            "adservice.cdn.com",
-            "adsystem.network.com",
-            "adtech.platform.org",
-            "pagead.host.com",
-            "rtb.exchange.com",
-            "ssp.adnetwork.com",
-            "dsp.bidder.com",
-            "sdk-api.telemetry.com"
-        )
+        val trackerSubdomains =
+            listOf(
+                "ad.example.com",
+                "ads.example.net",
+                "track.customer.org",
+                "tracker.service.com",
+                "analytics.vendor.com",
+                "adservice.cdn.com",
+                "adsystem.network.com",
+                "adtech.platform.org",
+                "pagead.host.com",
+                "rtb.exchange.com",
+                "ssp.adnetwork.com",
+                "dsp.bidder.com",
+                "sdk-api.telemetry.com",
+            )
 
         for (domain in trackerSubdomains) {
             val features = extractor.extract(domain)

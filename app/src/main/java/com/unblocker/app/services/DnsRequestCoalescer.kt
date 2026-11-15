@@ -16,7 +16,7 @@ internal data class CoalesceKey(
     val queryType: Short,
     val queryClass: Short,
     val isIpv6: Boolean,
-    val resolverEpoch: Long
+    val resolverEpoch: Long,
 )
 
 /**
@@ -25,9 +25,11 @@ internal data class CoalesceKey(
  * @param maxWaitersPerKey Maximum duplicate waiters in addition to the leader.
  */
 internal class DnsRequestCoalescer(
-    private val maxWaitersPerKey: Int = 32
+    private val maxWaitersPerKey: Int = 32,
 ) {
-    private class InFlight(val leaderQuery: DnsQuery) {
+    private class InFlight(
+        val leaderQuery: DnsQuery,
+    ) {
         val waiters = ArrayList<DnsQuery>()
     }
 
@@ -42,10 +44,12 @@ internal class DnsRequestCoalescer(
          * No matching resolution existed; the caller owns upstream work.
          */
         object Leader : JoinResult()
+
         /**
          * Query attached to an existing leader for later response delivery.
          */
         object Joined : JoinResult()
+
         /**
          * Duplicate waiter capacity was exhausted.
          */
@@ -59,18 +63,22 @@ internal class DnsRequestCoalescer(
      * @param query Query whose packet storage must remain valid until completion.
      * @return Leader, joined or overflow outcome.
      */
-    fun attachOrLead(key: CoalesceKey, query: DnsQuery): JoinResult = synchronized(lock) {
-        val existing = inFlight[key]
-        if (existing == null) {
-            inFlight[key] = InFlight(query)
-            return JoinResult.Leader
+    fun attachOrLead(
+        key: CoalesceKey,
+        query: DnsQuery,
+    ): JoinResult =
+        synchronized(lock) {
+            val existing = inFlight[key]
+            if (existing == null) {
+                inFlight[key] = InFlight(query)
+                return JoinResult.Leader
+            }
+            if (existing.waiters.size < maxWaitersPerKey) {
+                existing.waiters.add(query)
+                return JoinResult.Joined
+            }
+            return JoinResult.Overflow
         }
-        if (existing.waiters.size < maxWaitersPerKey) {
-            existing.waiters.add(query)
-            return JoinResult.Joined
-        }
-        return JoinResult.Overflow
-    }
 
     /**
      * Removes one resolution and transfers its queries to the caller for delivery.
@@ -78,13 +86,14 @@ internal class DnsRequestCoalescer(
      * @param key Identity of the completed resolution.
      * @return Leader followed by waiters, or an empty list when no resolution exists.
      */
-    fun complete(key: CoalesceKey): List<DnsQuery> = synchronized(lock) {
-        val flight = inFlight.remove(key) ?: return emptyList()
-        val all = ArrayList<DnsQuery>(flight.waiters.size + 1)
-        all.add(flight.leaderQuery)
-        all.addAll(flight.waiters)
-        return all
-    }
+    fun complete(key: CoalesceKey): List<DnsQuery> =
+        synchronized(lock) {
+            val flight = inFlight.remove(key) ?: return emptyList()
+            val all = ArrayList<DnsQuery>(flight.waiters.size + 1)
+            all.add(flight.leaderQuery)
+            all.addAll(flight.waiters)
+            return all
+        }
 
     /**
      * Number of distinct resolution keys currently tracked.
@@ -96,13 +105,14 @@ internal class DnsRequestCoalescer(
      *
      * @return All leaders and waiters transferred to the caller without delivering replies.
      */
-    fun clear(): List<DnsQuery> = synchronized(lock) {
-        val remaining = ArrayList<DnsQuery>()
-        for (flight in inFlight.values) {
-            remaining.add(flight.leaderQuery)
-            remaining.addAll(flight.waiters)
+    fun clear(): List<DnsQuery> =
+        synchronized(lock) {
+            val remaining = ArrayList<DnsQuery>()
+            for (flight in inFlight.values) {
+                remaining.add(flight.leaderQuery)
+                remaining.addAll(flight.waiters)
+            }
+            inFlight.clear()
+            return remaining
         }
-        inFlight.clear()
-        return remaining
-    }
 }

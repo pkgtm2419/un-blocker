@@ -14,7 +14,6 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class MlEngineModule {
-
     /**
      * Binds the on-device heuristic classifier.
      *
@@ -23,7 +22,5 @@ abstract class MlEngineModule {
      */
     @Binds
     @Singleton
-    abstract fun bindDomainClassifier(
-        impl: HeuristicDomainClassifier
-    ): DomainClassifier
+    abstract fun bindDomainClassifier(impl: HeuristicDomainClassifier): DomainClassifier
 }

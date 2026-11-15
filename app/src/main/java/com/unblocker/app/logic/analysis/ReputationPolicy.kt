@@ -5,9 +5,12 @@ package com.unblocker.app.logic.analysis
  *
  * @param store Private evidence store owning identifiers, expiry and persistence.
  */
-class ReputationPolicy(private val store: PrivateEvidenceStore) {
-    private val scorer=HeuristicScorer()
-    private val lastPositive = LinkedHashMap<String,Long>(16,.75f,true)
+class ReputationPolicy(
+    private val store: PrivateEvidenceStore,
+) {
+    private val scorer = HeuristicScorer()
+    private val lastPositive = LinkedHashMap<String, Long>(16, .75f, true)
+
     /**
      * Returns current evidence without recording an observation.
      *
@@ -15,10 +18,12 @@ class ReputationPolicy(private val store: PrivateEvidenceStore) {
      * @return Stored evidence, or an empty unknown record.
      */
     fun peek(domain: String) = store.get(domain) ?: ReputationEvidence()
+
     /**
      * Returns the number of currently confirmed, unexpired records.
      */
     fun confirmedCount() = store.confirmedCount()
+
     /**
      * Accumulates corroborated evidence in separated monotonic observation windows.
      *
@@ -27,31 +32,45 @@ class ReputationPolicy(private val store: PrivateEvidenceStore) {
      * @param now Monotonic observation time in milliseconds.
      * @return Previous or updated evidence; protected names yield a suppressed empty record.
      */
-    @Synchronized fun observe(domain: String, features: DomainFeatures, now: Long): ReputationEvidence {
+    @Synchronized fun observe(
+        domain: String,
+        features: DomainFeatures,
+        now: Long,
+    ): ReputationEvidence {
         if (NeverBlockPolicy.isNeverBlock(domain)) return ReputationEvidence(state = ReputationState.SUPPRESSED)
-        val old=peek(domain)
-        val scored=scorer.score(features)
+        val old = peek(domain)
+        val scored = scorer.score(features)
         if (scored.score < .65f) return old
-        val last=lastPositive[domain]
+        val last = lastPositive[domain]
         if (last != null && now < last) {
-            lastPositive[domain]=now
+            lastPositive[domain] = now
             return old
         }
-        if (last != null && now >= last && now-last < 60_000) return old
+        if (last != null && now >= last && now - last < 60_000) return old
         // A process restart has no monotonic history: first observation only starts a fresh window.
-        val windows=if (last == null && old.positiveWindows > 0) old.positiveWindows else
-            (old.positiveWindows+1).coerceAtMost(255)
+        val windows =
+            if (last == null && old.positiveWindows > 0) {
+                old.positiveWindows
+            } else {
+                (old.positiveWindows + 1).coerceAtMost(255)
+            }
         lastPositive[domain] = now
         val it = lastPositive.iterator()
         while (lastPositive.size > 2000 && it.hasNext()) {
             it.next()
             it.remove()
         }
-        val updated=old.copy(score=maxOf(old.score,scored.score),mask=old.mask or scored.mask,
-            positiveWindows=windows,dayBucket=store.currentBucket())
-        val state=if(updated.feedback == UserFeedback.ALLOW) ReputationState.SUPPRESSED else normalState(updated)
-        return updated.copy(state=state).also { store.put(domain,it) }
+        val updated =
+            old.copy(
+                score = maxOf(old.score, scored.score),
+                mask = old.mask or scored.mask,
+                positiveWindows = windows,
+                dayBucket = store.currentBucket(),
+            )
+        val state = if (updated.feedback == UserFeedback.ALLOW) ReputationState.SUPPRESSED else normalState(updated)
+        return updated.copy(state = state).also { store.put(domain, it) }
     }
+
     /**
      * Adds the trusted-alias bit and confirms evidence unless user feedback suppresses it.
      *
@@ -59,11 +78,23 @@ class ReputationPolicy(private val store: PrivateEvidenceStore) {
      * @return Updated evidence submitted to the store.
      */
     @Synchronized fun trustedAlias(domain: String): ReputationEvidence {
-        val old=peek(domain)
-        return old.copy(score=.98f,mask=old.mask or 16,dayBucket=store.currentBucket(),
-            state=if(old.feedback==UserFeedback.ALLOW) ReputationState.SUPPRESSED else ReputationState.CONFIRMED)
-            .also { store.put(domain,it) }
+        val old = peek(domain)
+        return old
+            .copy(
+                score = .98f,
+                mask = old.mask or 16,
+                dayBucket = store.currentBucket(),
+                state =
+                    if (old.feedback ==
+                        UserFeedback.ALLOW
+                    ) {
+                        ReputationState.SUPPRESSED
+                    } else {
+                        ReputationState.CONFIRMED
+                    },
+            ).also { store.put(domain, it) }
     }
+
     /**
      * Updates explicit feedback while retaining accumulated feature evidence.
      *
@@ -71,11 +102,20 @@ class ReputationPolicy(private val store: PrivateEvidenceStore) {
      * @param feedback Requested allow, block or absent intent.
      * @return Updated evidence submitted to the store.
      */
-    @Synchronized fun feedback(domain: String, feedback: UserFeedback): ReputationEvidence {
-        val old=peek(domain)
-        val state=if(feedback==UserFeedback.ALLOW) ReputationState.SUPPRESSED else normalState(old)
-        return old.copy(state=state,feedback=feedback,dayBucket=store.currentBucket()).also { store.put(domain,it) }
+    @Synchronized fun feedback(
+        domain: String,
+        feedback: UserFeedback,
+    ): ReputationEvidence {
+        val old = peek(domain)
+        val state = if (feedback == UserFeedback.ALLOW) ReputationState.SUPPRESSED else normalState(old)
+        return old
+            .copy(
+                state = state,
+                feedback = feedback,
+                dayBucket = store.currentBucket(),
+            ).also { store.put(domain, it) }
     }
+
     /**
      * Derives reputation state from accumulated evidence.
      */
@@ -86,11 +126,19 @@ class ReputationPolicy(private val store: PrivateEvidenceStore) {
          * @param r Evidence whose mask and positive-window count are inspected.
          * @return Confirmed, suspect, observing or unknown state.
          */
-        fun normalState(r: ReputationEvidence) = when {
-            r.mask and 16 != 0 || (r.positiveWindows >= 2 && r.mask and 1 != 0 && Integer.bitCount(r.mask and 15)>=2) -> ReputationState.CONFIRMED
-            r.positiveWindows > 0 -> ReputationState.SUSPECT
-            r.mask != 0 -> ReputationState.OBSERVING
-            else -> ReputationState.UNKNOWN
-        }
+        fun normalState(r: ReputationEvidence) =
+            when {
+                r.mask and 16 != 0 || (
+                    r.positiveWindows >= 2 && r.mask and 1 != 0 && Integer.bitCount(
+                        r.mask and 15,
+                    ) >= 2
+                ) -> ReputationState.CONFIRMED
+
+                r.positiveWindows > 0 -> ReputationState.SUSPECT
+
+                r.mask != 0 -> ReputationState.OBSERVING
+
+                else -> ReputationState.UNKNOWN
+            }
     }
 }

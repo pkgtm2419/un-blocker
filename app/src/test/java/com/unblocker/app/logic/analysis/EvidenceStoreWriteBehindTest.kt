@@ -6,8 +6,6 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
 import java.io.FileOutputStream
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 import javax.crypto.spec.SecretKeySpec
 import kotlin.system.measureNanoTime
 
@@ -15,7 +13,6 @@ import kotlin.system.measureNanoTime
  * Regression coverage for evidence store write behind.
  */
 class EvidenceStoreWriteBehindTest {
-
     /**
      * Temporary filesystem fixture isolated and cleaned up by JUnit.
      */
@@ -30,7 +27,8 @@ class EvidenceStoreWriteBehindTest {
     @Test
     fun burstOf10000EvidenceDomainsCompletesWithSubMillisecondLatency() {
         val file = File(temp.root, "burst-evidence")
-        val store = PrivateEvidenceStore(key(), file, capacity = 20_000, nowBucket = { 100L }, flushIntervalMs = 15_000L)
+        val store =
+            PrivateEvidenceStore(key(), file, capacity = 20_000, nowBucket = { 100L }, flushIntervalMs = 15_000L)
         val policy = ReputationPolicy(store)
 
         val count = 10_000
@@ -39,9 +37,10 @@ class EvidenceStoreWriteBehindTest {
 
         for (i in 0 until count) {
             val domain = "burst-tracker-$i.example.com"
-            val duration = measureNanoTime {
-                policy.observe(domain, features, now = 100_000L + i * 100L)
-            }
+            val duration =
+                measureNanoTime {
+                    policy.observe(domain, features, now = 100_000L + i * 100L)
+                }
             latenciesNs[i] = duration
         }
 
@@ -72,7 +71,7 @@ class EvidenceStoreWriteBehindTest {
         repeat(2_000) { i ->
             store.put(
                 "domain-$i.test",
-                ReputationEvidence(0.7f, ReputationState.SUSPECT, 3, 1, UserFeedback.NONE, 100L)
+                ReputationEvidence(0.7f, ReputationState.SUSPECT, 3, 1, UserFeedback.NONE, 100L),
             )
         }
 
@@ -94,7 +93,7 @@ class EvidenceStoreWriteBehindTest {
         repeat(5) { i ->
             store.put(
                 "safe-$i.test",
-                ReputationEvidence(0.8f, ReputationState.SUSPECT, 3, 1, UserFeedback.NONE, 100L)
+                ReputationEvidence(0.8f, ReputationState.SUSPECT, 3, 1, UserFeedback.NONE, 100L),
             )
         }
         store.flush()
@@ -113,7 +112,7 @@ class EvidenceStoreWriteBehindTest {
         // Ensure next write cleanly replaces
         recoveredStore.put(
             "new-safe.test",
-            ReputationEvidence(0.9f, ReputationState.SUSPECT, 3, 1, UserFeedback.NONE, 100L)
+            ReputationEvidence(0.9f, ReputationState.SUSPECT, 3, 1, UserFeedback.NONE, 100L),
         )
         recoveredStore.flush()
         recoveredStore.close()

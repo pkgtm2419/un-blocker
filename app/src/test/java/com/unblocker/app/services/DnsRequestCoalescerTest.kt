@@ -11,7 +11,6 @@ import org.junit.Test
  * Regression coverage for DNS request coalescer.
  */
 class DnsRequestCoalescerTest {
-
     private lateinit var coalescer: DnsRequestCoalescer
 
     /**
@@ -22,8 +21,12 @@ class DnsRequestCoalescerTest {
         coalescer = DnsRequestCoalescer(maxWaitersPerKey = 4)
     }
 
-    private fun makeQuery(domain: String, txId: Short, type: Short = DnsPacketUtil.TYPE_A): DnsQuery {
-        return DnsQuery(
+    private fun makeQuery(
+        domain: String,
+        txId: Short,
+        type: Short = DnsPacketUtil.TYPE_A,
+    ): DnsQuery =
+        DnsQuery(
             transactionId = txId,
             domain = domain,
             queryType = type,
@@ -34,9 +37,8 @@ class DnsRequestCoalescerTest {
             srcIp = byteArrayOf(10, 10, 0, 2),
             dstIp = byteArrayOf(10, 10, 0, 1),
             srcPort = 10000 + txId.toInt(),
-            dstPort = 53
+            dstPort = 53,
         )
-    }
 
     /**
      * Verifies that test first query becomes leader.
@@ -85,9 +87,18 @@ class DnsRequestCoalescerTest {
         val keyAaaa = CoalesceKey("example.com", DnsPacketUtil.TYPE_AAAA, DnsPacketUtil.CLASS_IN, false, 1L)
         val keyOther = CoalesceKey("google.com", DnsPacketUtil.TYPE_A, DnsPacketUtil.CLASS_IN, false, 1L)
 
-        assertEquals(DnsRequestCoalescer.JoinResult.Leader, coalescer.attachOrLead(keyA, makeQuery("example.com", 1, DnsPacketUtil.TYPE_A)))
-        assertEquals(DnsRequestCoalescer.JoinResult.Leader, coalescer.attachOrLead(keyAaaa, makeQuery("example.com", 2, DnsPacketUtil.TYPE_AAAA)))
-        assertEquals(DnsRequestCoalescer.JoinResult.Leader, coalescer.attachOrLead(keyOther, makeQuery("google.com", 3, DnsPacketUtil.TYPE_A)))
+        assertEquals(
+            DnsRequestCoalescer.JoinResult.Leader,
+            coalescer.attachOrLead(keyA, makeQuery("example.com", 1, DnsPacketUtil.TYPE_A)),
+        )
+        assertEquals(
+            DnsRequestCoalescer.JoinResult.Leader,
+            coalescer.attachOrLead(keyAaaa, makeQuery("example.com", 2, DnsPacketUtil.TYPE_AAAA)),
+        )
+        assertEquals(
+            DnsRequestCoalescer.JoinResult.Leader,
+            coalescer.attachOrLead(keyOther, makeQuery("google.com", 3, DnsPacketUtil.TYPE_A)),
+        )
 
         assertEquals(3, coalescer.activeInFlightCount)
     }
@@ -101,7 +112,10 @@ class DnsRequestCoalescerTest {
         assertEquals(DnsRequestCoalescer.JoinResult.Leader, coalescer.attachOrLead(key, makeQuery("capped.com", 0)))
 
         for (i in 1..4) {
-            assertEquals(DnsRequestCoalescer.JoinResult.Joined, coalescer.attachOrLead(key, makeQuery("capped.com", i.toShort())))
+            assertEquals(
+                DnsRequestCoalescer.JoinResult.Joined,
+                coalescer.attachOrLead(key, makeQuery("capped.com", i.toShort())),
+            )
         }
 
         val overflow = coalescer.attachOrLead(key, makeQuery("capped.com", 5))
@@ -124,7 +138,11 @@ class DnsRequestCoalescerTest {
         val completed = coalescer.complete(key)
         assertEquals(1, completed.size)
 
-        assertEquals("Subsequent query must become leader again", DnsRequestCoalescer.JoinResult.Leader, coalescer.attachOrLead(key, q2))
+        assertEquals(
+            "Subsequent query must become leader again",
+            DnsRequestCoalescer.JoinResult.Leader,
+            coalescer.attachOrLead(key, q2),
+        )
     }
 
     /**

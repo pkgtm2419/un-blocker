@@ -13,13 +13,16 @@ import org.junit.Test
  * Regression coverage for user rule action.
  */
 class UserRuleActionTest {
-
     private class FakeUserRuleGateway : UserRuleGateway {
         val rules = mutableMapOf<String, UserFeedback>()
 
-        override suspend fun set(domain: String, feedback: UserFeedback): RuleUpdateResult {
-            val normalized = DomainName.normalizeUserEntry(domain)
-                ?: return RuleUpdateResult.Failed("Invalid domain name: $domain")
+        override suspend fun set(
+            domain: String,
+            feedback: UserFeedback,
+        ): RuleUpdateResult {
+            val normalized =
+                DomainName.normalizeUserEntry(domain)
+                    ?: return RuleUpdateResult.Failed("Invalid domain name: $domain")
 
             if (feedback == UserFeedback.NONE) {
                 rules.remove(normalized)
@@ -29,9 +32,13 @@ class UserRuleActionTest {
             return RuleUpdateResult.Applied
         }
 
-        override suspend fun setWholeSite(domain: String, feedback: UserFeedback): RuleUpdateResult {
-            val normalized = DomainName.normalizeUserEntry(domain)
-                ?: return RuleUpdateResult.Failed("Invalid domain name: $domain")
+        override suspend fun setWholeSite(
+            domain: String,
+            feedback: UserFeedback,
+        ): RuleUpdateResult {
+            val normalized =
+                DomainName.normalizeUserEntry(domain)
+                    ?: return RuleUpdateResult.Failed("Invalid domain name: $domain")
 
             if (feedback == UserFeedback.NONE) {
                 rules.remove("subtree:$normalized")
@@ -42,16 +49,18 @@ class UserRuleActionTest {
         }
 
         override suspend fun protectDomain(domain: String): RuleUpdateResult {
-            val normalized = DomainName.normalizeUserEntry(domain)
-                ?: return RuleUpdateResult.Failed("Invalid domain name: $domain")
+            val normalized =
+                DomainName.normalizeUserEntry(domain)
+                    ?: return RuleUpdateResult.Failed("Invalid domain name: $domain")
 
             rules["protected:$normalized"] = UserFeedback.ALLOW
             return RuleUpdateResult.Applied
         }
 
         override suspend fun reset(domain: String): RuleUpdateResult {
-            val normalized = DomainName.normalizeUserEntry(domain)
-                ?: return RuleUpdateResult.Failed("Invalid domain name: $domain")
+            val normalized =
+                DomainName.normalizeUserEntry(domain)
+                    ?: return RuleUpdateResult.Failed("Invalid domain name: $domain")
 
             rules.remove(normalized)
             rules.remove("subtree:$normalized")
@@ -64,24 +73,25 @@ class UserRuleActionTest {
      * Verifies that fake gateway receives allow and block and rejects malformed.
      */
     @Test
-    fun fakeGatewayReceivesAllowAndBlockAndRejectsMalformed() = runBlocking {
-        val gateway = FakeUserRuleGateway()
+    fun fakeGatewayReceivesAllowAndBlockAndRejectsMalformed() =
+        runBlocking {
+            val gateway = FakeUserRuleGateway()
 
-        val allowResult = gateway.set("doubleclick.net", UserFeedback.ALLOW)
-        assertTrue(allowResult is RuleUpdateResult.Applied)
-        assertEquals(UserFeedback.ALLOW, gateway.rules["doubleclick.net"])
+            val allowResult = gateway.set("doubleclick.net", UserFeedback.ALLOW)
+            assertTrue(allowResult is RuleUpdateResult.Applied)
+            assertEquals(UserFeedback.ALLOW, gateway.rules["doubleclick.net"])
 
-        val blockResult = gateway.set("wikipedia.org", UserFeedback.BLOCK)
-        assertTrue(blockResult is RuleUpdateResult.Applied)
-        assertEquals(UserFeedback.BLOCK, gateway.rules["wikipedia.org"])
+            val blockResult = gateway.set("wikipedia.org", UserFeedback.BLOCK)
+            assertTrue(blockResult is RuleUpdateResult.Applied)
+            assertEquals(UserFeedback.BLOCK, gateway.rules["wikipedia.org"])
 
-        val blankResult = gateway.set("   ", UserFeedback.ALLOW)
-        assertTrue(blankResult is RuleUpdateResult.Failed)
+            val blankResult = gateway.set("   ", UserFeedback.ALLOW)
+            assertTrue(blankResult is RuleUpdateResult.Failed)
 
-        val malformedResult = gateway.set("invalid domain!#.com", UserFeedback.BLOCK)
-        assertTrue(malformedResult is RuleUpdateResult.Failed)
+            val malformedResult = gateway.set("invalid domain!#.com", UserFeedback.BLOCK)
+            assertTrue(malformedResult is RuleUpdateResult.Failed)
 
-        // Ensure no malformed rules mutated the map
-        assertEquals(2, gateway.rules.size)
-    }
+            // Ensure no malformed rules mutated the map
+            assertEquals(2, gateway.rules.size)
+        }
 }

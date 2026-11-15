@@ -19,7 +19,10 @@ object DomainName {
         if (labels.any { label ->
                 label.isEmpty() || label.length > 63 || label.first() == '-' || label.last() == '-' ||
                     label.any { it !in 'a'..'z' && it !in '0'..'9' && it != '-' && it != '_' }
-            }) return null
+            }
+        ) {
+            return null
+        }
 
         return domain
     }
@@ -33,11 +36,12 @@ object DomainName {
     fun normalizeUserEntry(raw: String): String? {
         val trimmed = raw.trim().trimEnd('.')
         if (trimmed.isEmpty() || trimmed.length > 253) return null
-        val ascii = try {
-            IDN.toASCII(trimmed, IDN.USE_STD3_ASCII_RULES)
-        } catch (_: Exception) {
-            return null
-        }
+        val ascii =
+            try {
+                IDN.toASCII(trimmed, IDN.USE_STD3_ASCII_RULES)
+            } catch (_: Exception) {
+                return null
+            }
         return normalize(ascii)
     }
 
@@ -49,16 +53,21 @@ object DomainName {
      * @param length Label length in bytes, from 1 through 63.
      * @return Lowercase label, or null for invalid bounds, characters or edge hyphens.
      */
-    fun canonicalWireLabel(packet: ByteArray, offset: Int, length: Int): String? {
+    fun canonicalWireLabel(
+        packet: ByteArray,
+        offset: Int,
+        length: Int,
+    ): String? {
         if (length !in 1..63 || offset < 0 || offset > packet.size - length) return null
         val chars = CharArray(length)
         for (index in 0 until length) {
             val value = packet[offset + index].toInt() and 0xff
-            chars[index] = when (value) {
-                in 'A'.code..'Z'.code -> (value + ('a'.code - 'A'.code)).toChar()
-                in 'a'.code..'z'.code, in '0'.code..'9'.code, '-'.code, '_'.code -> value.toChar()
-                else -> return null
-            }
+            chars[index] =
+                when (value) {
+                    in 'A'.code..'Z'.code -> (value + ('a'.code - 'A'.code)).toChar()
+                    in 'a'.code..'z'.code, in '0'.code..'9'.code, '-'.code, '_'.code -> value.toChar()
+                    else -> return null
+                }
         }
         if (chars.first() == '-' || chars.last() == '-') return null
         return String(chars)

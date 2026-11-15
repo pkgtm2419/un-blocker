@@ -29,12 +29,14 @@ object QuarantineList {
                                 val kind = RuleKind.valueOf(parts[0].trim().uppercase())
                                 val host = parts[1].trim().lowercase()
                                 quarantined.add(kind to host)
-                            } catch (_: Exception) {}
+                            } catch (_: Exception) {
+                            }
                         }
                     }
                 }
             }
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+        }
     }
 
     /**
@@ -44,9 +46,10 @@ object QuarantineList {
      * @param host Normalized rule hostname.
      * @return Whether the candidate pair is quarantined.
      */
-    fun contains(kind: RuleKind, host: String): Boolean {
-        return (kind to host) in quarantined
-    }
+    fun contains(
+        kind: RuleKind,
+        host: String,
+    ): Boolean = (kind to host) in quarantined
 
     /**
      * Adds a quarantine pair for tests.
@@ -55,7 +58,10 @@ object QuarantineList {
      * @param host Hostname stored without normalization.
      */
     @androidx.annotation.VisibleForTesting
-    fun addForTest(kind: RuleKind, host: String) {
+    fun addForTest(
+        kind: RuleKind,
+        host: String,
+    ) {
         quarantined.add(kind to host)
     }
 

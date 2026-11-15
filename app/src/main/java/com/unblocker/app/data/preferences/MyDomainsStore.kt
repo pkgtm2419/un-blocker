@@ -14,9 +14,12 @@ import java.util.Collections
  *
  * @param context Context used to access the private My domains preference file.
  */
-class MyDomainsStore(context: Context) {
+class MyDomainsStore(
+    context: Context,
+) {
     private val prefs = context.getSharedPreferences("my_domains_store", Context.MODE_PRIVATE)
     private val _domains = MutableStateFlow<Set<String>>(emptySet())
+
     /**
      * Current readable protected-site names as a read-only set snapshot.
      */
@@ -124,10 +127,9 @@ class MyDomainsStore(context: Context) {
          * @param context Context whose application context is retained.
          * @return Shared readable protected-site store.
          */
-        fun getInstance(context: Context): MyDomainsStore {
-            return INSTANCE ?: synchronized(this) {
+        fun getInstance(context: Context): MyDomainsStore =
+            INSTANCE ?: synchronized(this) {
                 INSTANCE ?: MyDomainsStore(context.applicationContext).also { INSTANCE = it }
             }
-        }
     }
 }

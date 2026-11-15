@@ -9,7 +9,6 @@ import org.junit.Test
  * Regression coverage for adult content detector.
  */
 class AdultContentDetectorTest {
-
     private lateinit var adultDetector: AdultContentDetector
 
     /**
@@ -119,9 +118,16 @@ class AdultContentDetectorTest {
      * Verifies that benign prefixes do not gain adult blocking authority.
      */
     @Test fun benignPrefixesDoNotGainAdultBlockingAuthority() {
-        for(domain in listOf("stripe.com","api.stripe.com","cambridge.org","camera.example.test",
-            "adultlearning.example.test","sexeducation.example.test","striped.example.test")) {
-            assertFalse("Benign prefix blocked: $domain",adultDetector.match(domain).blocked)
+        for (domain in listOf(
+            "stripe.com",
+            "api.stripe.com",
+            "cambridge.org",
+            "camera.example.test",
+            "adultlearning.example.test",
+            "sexeducation.example.test",
+            "striped.example.test",
+        )) {
+            assertFalse("Benign prefix blocked: $domain", adultDetector.match(domain).blocked)
         }
     }
 
@@ -130,25 +136,71 @@ class AdultContentDetectorTest {
      */
     @Test
     fun testMustAllowCorpusHasZeroFalsePositives() {
-        val mustAllow50Plus = listOf(
-            // UK / Global Universities (institutional & academic)
-            "cam.ac.uk", "www.cam.ac.uk", "oxford.ac.uk", "harvard.edu", "mit.edu",
-            "stanford.edu", "berkeley.edu", "yale.edu", "columbia.edu", "princeton.edu",
-            "cornell.edu", "ucla.edu", "imperial.ac.uk", "ucl.ac.uk", "kcl.ac.uk",
-            "ed.ac.uk", "manchester.ac.uk", "bristol.ac.uk", "warwick.ac.uk", "durham.ac.uk",
-            "essex.ac.uk", "sussex.ac.uk", "middlesex.edu", "cambridge.org",
-            // Government & Public Institutions
-            "adult.education.gov.au", "whitehouse.gov", "nih.gov", "cdc.gov", "fda.gov",
-            "who.int", "nhs.uk", "health.gov.au", "canada.ca", "gov.uk",
-            // Health & Education (non-pornographic)
-            "sexualhealth.org", "sex-ed.example.org", "adult-learning.org", "adulteducation.org",
-            "learnadults.com", "sexeducation.example.test", "adultlearning.example.test",
-            // Retail, Media, & Common Words
-            "stripe.com", "api.stripe.com", "stripes.com", "comic-strip.com", "strip-mall.example.com",
-            "adultswim.com", "sextant.com", "fap.rs", "camera.example.test", "striped.example.test",
-            "camp.org", "camping.com", "campus.edu", "camera-store.com", "webcam-drivers.com",
-            "sexton.com", "wessex.com"
-        )
+        val mustAllow50Plus =
+            listOf(
+                // UK / Global Universities (institutional & academic)
+                "cam.ac.uk",
+                "www.cam.ac.uk",
+                "oxford.ac.uk",
+                "harvard.edu",
+                "mit.edu",
+                "stanford.edu",
+                "berkeley.edu",
+                "yale.edu",
+                "columbia.edu",
+                "princeton.edu",
+                "cornell.edu",
+                "ucla.edu",
+                "imperial.ac.uk",
+                "ucl.ac.uk",
+                "kcl.ac.uk",
+                "ed.ac.uk",
+                "manchester.ac.uk",
+                "bristol.ac.uk",
+                "warwick.ac.uk",
+                "durham.ac.uk",
+                "essex.ac.uk",
+                "sussex.ac.uk",
+                "middlesex.edu",
+                "cambridge.org",
+                // Government & Public Institutions
+                "adult.education.gov.au",
+                "whitehouse.gov",
+                "nih.gov",
+                "cdc.gov",
+                "fda.gov",
+                "who.int",
+                "nhs.uk",
+                "health.gov.au",
+                "canada.ca",
+                "gov.uk",
+                // Health & Education (non-pornographic)
+                "sexualhealth.org",
+                "sex-ed.example.org",
+                "adult-learning.org",
+                "adulteducation.org",
+                "learnadults.com",
+                "sexeducation.example.test",
+                "adultlearning.example.test",
+                // Retail, Media, & Common Words
+                "stripe.com",
+                "api.stripe.com",
+                "stripes.com",
+                "comic-strip.com",
+                "strip-mall.example.com",
+                "adultswim.com",
+                "sextant.com",
+                "fap.rs",
+                "camera.example.test",
+                "striped.example.test",
+                "camp.org",
+                "camping.com",
+                "campus.edu",
+                "camera-store.com",
+                "webcam-drivers.com",
+                "sexton.com",
+                "wessex.com",
+            )
 
         assertTrue("Must-allow corpus must have >= 50 domains", mustAllow50Plus.size >= 50)
 

@@ -22,23 +22,19 @@ import androidx.room.PrimaryKey
     indices = [
         Index(value = ["timestamp"]),
         Index(value = ["domain"]),
-        Index(value = ["is_analyzed"])
-    ]
+        Index(value = ["is_analyzed"]),
+    ],
 )
 data class DnsLogEntity(
     @PrimaryKey(autoGenerate = true)
     @ColumnInfo(name = "id")
     val id: Long = 0,
-
     @ColumnInfo(name = "domain")
     val domain: String,
-
     @ColumnInfo(name = "timestamp")
     val timestamp: Long = System.currentTimeMillis(),
-
     @ColumnInfo(name = "is_blocked")
     val isBlocked: Boolean,
-
     @ColumnInfo(name = "is_analyzed", defaultValue = "0")
-    val isAnalyzed: Boolean = false
+    val isAnalyzed: Boolean = false,
 )

@@ -15,27 +15,34 @@ class AdaptiveBlockingEngineTest {
     @Test fun ageCannotChangeEvidenceThresholdOrClassification() {
         val learner = LocalNetworkLearner(isKnownTracker = { it == "app.adjust.com" })
         val engine = AdaptiveBlockingEngine(networkLearner = learner)
-        for(day in listOf(1,2,7,14,100)) {
-            assertEquals(.8f,engine.getCurrentPhase(day).confidenceThreshold,0f)
-            assertFalse(engine.evaluateDomain("metrics.school.test",day).isBlocked)
-            assertFalse(engine.evaluateDomain("github.com",day).isBlocked)
-            assertTrue(engine.evaluateDomain("app.adjust.com",day).isBlocked)
-            assertEquals(DecisionReason.STATIC_RULE,engine.evaluateDomain("app.adjust.com",day).reasonCode)
+        for (day in listOf(1, 2, 7, 14, 100)) {
+            assertEquals(.8f, engine.getCurrentPhase(day).confidenceThreshold, 0f)
+            assertFalse(engine.evaluateDomain("metrics.school.test", day).isBlocked)
+            assertFalse(engine.evaluateDomain("github.com", day).isBlocked)
+            assertTrue(engine.evaluateDomain("app.adjust.com", day).isBlocked)
+            assertEquals(DecisionReason.STATIC_RULE, engine.evaluateDomain("app.adjust.com", day).reasonCode)
         }
     }
+
     /**
      * Verifies that independent evidence confirms but single burst does not.
      */
     @Test fun independentEvidenceConfirmsButSingleBurstDoesNot() {
-        var now=0L
-        val learner=LocalNetworkLearner(clock={now})
-        val engine=AdaptiveBlockingEngine(networkLearner=learner)
-        repeat(8) { now+=50; assertFalse(engine.evaluateDomain("ads.example.test").isBlocked) }
-        now+=60_001
-        repeat(3) { now+=50; assertFalse(engine.evaluateDomain("ads.example.test").isBlocked) }
-        val confirmed=engine.evaluateDomain("ads.example.test")
+        var now = 0L
+        val learner = LocalNetworkLearner(clock = { now })
+        val engine = AdaptiveBlockingEngine(networkLearner = learner)
+        repeat(8) {
+            now += 50
+            assertFalse(engine.evaluateDomain("ads.example.test").isBlocked)
+        }
+        now += 60_001
+        repeat(3) {
+            now += 50
+            assertFalse(engine.evaluateDomain("ads.example.test").isBlocked)
+        }
+        val confirmed = engine.evaluateDomain("ads.example.test")
         assertTrue(confirmed.isBlocked)
-        assertEquals(BlockingCategory.TRACKER,confirmed.category)
-        assertEquals(DecisionReason.LEARNED_EVIDENCE,confirmed.reasonCode)
+        assertEquals(BlockingCategory.TRACKER, confirmed.category)
+        assertEquals(DecisionReason.LEARNED_EVIDENCE, confirmed.reasonCode)
     }
 }

@@ -24,32 +24,25 @@ import androidx.room.PrimaryKey
     tableName = "domain_stats",
     indices = [
         Index(value = ["last_seen"]),
-        Index(value = ["call_count"])
-    ]
+        Index(value = ["call_count"]),
+    ],
 )
 data class DomainStatEntity(
     @PrimaryKey
     @ColumnInfo(name = "domain")
     val domain: String,
-
     @ColumnInfo(name = "call_count")
     val callCount: Long,
-
     @ColumnInfo(name = "blocked_count")
     val blockedCount: Long,
-
     @ColumnInfo(name = "allowed_count")
     val allowedCount: Long,
-
     @ColumnInfo(name = "first_seen")
     val firstSeen: Long,
-
     @ColumnInfo(name = "last_seen")
     val lastSeen: Long,
-
     @ColumnInfo(name = "last_decision")
     val lastDecision: Int,
-
     @ColumnInfo(name = "last_reason")
-    val lastReason: Int
+    val lastReason: Int,
 )

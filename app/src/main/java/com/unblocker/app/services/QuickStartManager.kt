@@ -18,8 +18,9 @@ import java.util.concurrent.TimeUnit
  *
  * @param context Context reduced to its application context for retained operations.
  */
-class QuickStartManager(context: Context) {
-
+class QuickStartManager(
+    context: Context,
+) {
     private val appContext = context.applicationContext
     private val preferences = FilteringPreferences.getInstance(appContext)
 
@@ -37,19 +38,20 @@ class QuickStartManager(context: Context) {
      *
      * @return Asset configuration, or embedded defaults after a handled loading failure.
      */
-    fun loadDefaultConfiguration(): DefaultConfig {
-        return try {
+    fun loadDefaultConfiguration(): DefaultConfig =
+        try {
             appContext.assets.open("default_config.json").use { inputStream ->
                 val jsonString = BufferedReader(InputStreamReader(inputStream)).readText()
                 val json = JSONObject(jsonString)
                 val conf = json.getJSONObject("defaultConfig")
 
-                val defaultConfig = DefaultConfig(
-                    adBlockingEnabled = conf.optBoolean("adBlockingEnabled", true),
-                    adultContentBlockingEnabled = conf.optBoolean("adultContentBlockingEnabled", true),
-                    autoRestartOnBootEnabled = conf.optBoolean("autoRestartOnBootEnabled", true),
-                    healthCheckInterval = conf.optLong("healthCheckInterval", 21_600_000L)
-                )
+                val defaultConfig =
+                    DefaultConfig(
+                        adBlockingEnabled = conf.optBoolean("adBlockingEnabled", true),
+                        adultContentBlockingEnabled = conf.optBoolean("adultContentBlockingEnabled", true),
+                        autoRestartOnBootEnabled = conf.optBoolean("autoRestartOnBootEnabled", true),
+                        healthCheckInterval = conf.optLong("healthCheckInterval", 21_600_000L),
+                    )
 
                 preferences.loadDefaultConfigIfNeeded(defaultConfig)
                 defaultConfig
@@ -59,28 +61,24 @@ class QuickStartManager(context: Context) {
             preferences.loadDefaultConfigIfNeeded(fallback)
             fallback
         }
-    }
 
     /**
      * Returns whether Android VPN preparation requires no additional consent activity.
      */
-    fun hasVpnPermission(): Boolean {
-        return VpnService.prepare(appContext) == null
-    }
+    fun hasVpnPermission(): Boolean = VpnService.prepare(appContext) == null
 
     /**
      * Returns whether notification permission is granted, or true before Android 13.
      */
-    fun hasNotificationPermission(): Boolean {
-        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+    fun hasNotificationPermission(): Boolean =
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             androidx.core.content.ContextCompat.checkSelfPermission(
                 appContext,
-                android.Manifest.permission.POST_NOTIFICATIONS
+                android.Manifest.permission.POST_NOTIFICATIONS,
             ) == android.content.pm.PackageManager.PERMISSION_GRANTED
         } else {
             true
         }
-    }
 
     /**
      * Requests VPN startup after consent, enabling protection and advertising filtering.
@@ -130,17 +128,20 @@ class QuickStartManager(context: Context) {
             cancelHealthCheckWorker()
             return
         }
-        val intervalMinutes = preferences.healthCheckIntervalMinutes.value.toLong()
-            .coerceAtLeast(HealthCheckPolicy.DEFAULT_INTERVAL_MINUTES.toLong())
-        val workRequest = PeriodicWorkRequestBuilder<HealthCheckWorker>(
-            intervalMinutes,
-            TimeUnit.MINUTES
-        ).build()
+        val intervalMinutes =
+            preferences.healthCheckIntervalMinutes.value
+                .toLong()
+                .coerceAtLeast(HealthCheckPolicy.DEFAULT_INTERVAL_MINUTES.toLong())
+        val workRequest =
+            PeriodicWorkRequestBuilder<HealthCheckWorker>(
+                intervalMinutes,
+                TimeUnit.MINUTES,
+            ).build()
 
         WorkManager.getInstance(appContext).enqueueUniquePeriodicWork(
             HEALTH_WORK_NAME,
             ExistingPeriodicWorkPolicy.UPDATE,
-            workRequest
+            workRequest,
         )
     }
 
@@ -153,6 +154,7 @@ class QuickStartManager(context: Context) {
      */
     companion object {
         private const val HEALTH_WORK_NAME = "unblocker_health_check_work"
+
         @Volatile
         private var INSTANCE: QuickStartManager? = null
 
@@ -162,10 +164,9 @@ class QuickStartManager(context: Context) {
          * @param context Context supplying the application context.
          * @return Shared quick-start coordinator.
          */
-        fun getInstance(context: Context): QuickStartManager {
-            return INSTANCE ?: synchronized(this) {
+        fun getInstance(context: Context): QuickStartManager =
+            INSTANCE ?: synchronized(this) {
                 INSTANCE ?: QuickStartManager(context.applicationContext).also { INSTANCE = it }
             }
-        }
     }
 }

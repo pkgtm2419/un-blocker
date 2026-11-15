@@ -25,11 +25,10 @@ internal class TunResponseWriter(
     private val onWriteError: (Exception) -> Unit = { e ->
         VpnDiagnostics.record(
             code = VpnDiagnostics.FailureCode.TUN_WRITE_ERROR,
-            exceptionClass = e::class.java.name
+            exceptionClass = e::class.java.name,
         )
-    }
+    },
 ) : Closeable {
-
     private val queue = ArrayBlockingQueue<ByteArray>(queueCapacity)
     private val stopped = AtomicBoolean(false)
     private val _droppedPackets = AtomicLong(0)
@@ -39,34 +38,37 @@ internal class TunResponseWriter(
      * Number of packet arrays rejected because the queue was full.
      */
     val droppedPackets: Long get() = _droppedPackets.get()
+
     /**
      * Number of dequeued packets consumed successfully, including when outputStream is null.
      */
     val writtenPackets: Long get() = _writtenPackets.get()
+
     /**
      * Current number of queued packet arrays.
      */
     val queueSize: Int get() = queue.size
 
-    private val writerThread = Thread({
-        while (!stopped.get() && run.running.get()) {
-            try {
-                val packet = queue.poll(100, TimeUnit.MILLISECONDS) ?: continue
-                if (!run.running.get() || !session.owns(run.owner) || !session.active.value) {
+    private val writerThread =
+        Thread({
+            while (!stopped.get() && run.running.get()) {
+                try {
+                    val packet = queue.poll(100, TimeUnit.MILLISECONDS) ?: continue
+                    if (!run.running.get() || !session.owns(run.owner) || !session.active.value) {
+                        break
+                    }
+                    outputStream?.write(packet)
+                    _writtenPackets.incrementAndGet()
+                } catch (_: InterruptedException) {
                     break
+                } catch (e: Exception) {
+                    onWriteError(e)
                 }
-                outputStream?.write(packet)
-                _writtenPackets.incrementAndGet()
-            } catch (_: InterruptedException) {
-                break
-            } catch (e: Exception) {
-                onWriteError(e)
             }
+        }, "TunResponseWriter-${run.owner}").apply {
+            isDaemon = true
+            start()
         }
-    }, "TunResponseWriter-${run.owner}").apply {
-        isDaemon = true
-        start()
-    }
 
     /**
      * Attempts a nonblocking packet enqueue for a live owned session.
@@ -84,7 +86,7 @@ internal class TunResponseWriter(
             VpnDiagnostics.record(
                 code = VpnDiagnostics.FailureCode.TUN_WRITE_ERROR,
                 exceptionClass = "QueueBackpressureDrop",
-                queueDepth = queue.size
+                queueDepth = queue.size,
             )
         }
         return accepted

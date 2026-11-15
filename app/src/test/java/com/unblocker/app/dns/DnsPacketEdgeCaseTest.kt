@@ -19,7 +19,6 @@ import java.util.concurrent.TimeUnit
  * Regression coverage for DNS packet edge case.
  */
 class DnsPacketEdgeCaseTest {
-
     /**
      * Verifies that test parser rejects illegal DNS name characters.
      */
@@ -67,19 +66,20 @@ class DnsPacketEdgeCaseTest {
     fun testNegativeArraySizeVulnerabilityResolved() {
         // Construct a query where dnsLength is less than 12
         val corruptPacket = ByteArray(32)
-        val corruptQuery = DnsQuery(
-            transactionId = 1,
-            domain = "example.com",
-            queryType = 1,
-            queryClass = 1,
-            rawPacket = corruptPacket,
-            dnsOffset = 0,
-            dnsLength = 8, // dnsLength < 12
-            srcIp = ByteArray(4),
-            dstIp = ByteArray(4),
-            srcPort = 12345,
-            dstPort = 53
-        )
+        val corruptQuery =
+            DnsQuery(
+                transactionId = 1,
+                domain = "example.com",
+                queryType = 1,
+                queryClass = 1,
+                rawPacket = corruptPacket,
+                dnsOffset = 0,
+                dnsLength = 8, // dnsLength < 12
+                srcIp = ByteArray(4),
+                dstIp = ByteArray(4),
+                srcPort = 12345,
+                dstPort = 53,
+            )
         // Must not throw NegativeArraySizeException
         val resp = DnsPacketUtil.buildBlockedDnsResponsePacket(corruptQuery)
         assertNotNull("Response should be safely constructed without throwing", resp)
@@ -122,7 +122,7 @@ class DnsPacketEdgeCaseTest {
         assertEquals("Punycode domain entropy must be bypassed (0.0)", 0.0f, sig.entropy, 0.001f)
         assertFalse(
             "Punycode domain must not be flagged as DGA algorithmic domain",
-            sig.suspiciousPatterns.contains("High entropy DGA/algorithmic subdomain")
+            sig.suspiciousPatterns.contains("High entropy DGA/algorithmic subdomain"),
         )
     }
 
@@ -133,7 +133,9 @@ class DnsPacketEdgeCaseTest {
     fun testConcurrentLearnerLoadUnderExtremeThroughput() {
         val learner = LocalNetworkLearner()
         val executor = Executors.newFixedThreadPool(8)
-        val errorCount = java.util.concurrent.atomic.AtomicInteger(0)
+        val errorCount =
+            java.util.concurrent.atomic
+                .AtomicInteger(0)
 
         for (i in 0 until 1000) {
             executor.submit {
@@ -159,34 +161,37 @@ class DnsPacketEdgeCaseTest {
         val dnsLength = 12 + qnameLength + 4
         val udpLength = 8 + dnsLength
         val totalLength = 20 + udpLength
-        return ByteBuffer.allocate(totalLength).order(ByteOrder.BIG_ENDIAN).apply {
-            put(0x45.toByte())
-            put(0)
-            putShort(totalLength.toShort())
-            putShort(1)
-            putShort(0)
-            put(64)
-            put(17)
-            putShort(0)
-            put(byteArrayOf(10, 10, 0, 2))
-            put(byteArrayOf(10, 10, 0, 1))
-            putShort(45_678.toShort())
-            putShort(53)
-            putShort(udpLength.toShort())
-            putShort(0)
-            putShort(0x1234)
-            putShort(0x0100)
-            putShort(1)
-            putShort(0)
-            putShort(0)
-            putShort(0)
-            labels.forEach { label ->
-                put(label.length.toByte())
-                put(label.toByteArray(Charsets.US_ASCII))
-            }
-            put(0)
-            putShort(1)
-            putShort(1)
-        }.array()
+        return ByteBuffer
+            .allocate(totalLength)
+            .order(ByteOrder.BIG_ENDIAN)
+            .apply {
+                put(0x45.toByte())
+                put(0)
+                putShort(totalLength.toShort())
+                putShort(1)
+                putShort(0)
+                put(64)
+                put(17)
+                putShort(0)
+                put(byteArrayOf(10, 10, 0, 2))
+                put(byteArrayOf(10, 10, 0, 1))
+                putShort(45_678.toShort())
+                putShort(53)
+                putShort(udpLength.toShort())
+                putShort(0)
+                putShort(0x1234)
+                putShort(0x0100)
+                putShort(1)
+                putShort(0)
+                putShort(0)
+                putShort(0)
+                labels.forEach { label ->
+                    put(label.length.toByte())
+                    put(label.toByteArray(Charsets.US_ASCII))
+                }
+                put(0)
+                putShort(1)
+                putShort(1)
+            }.array()
     }
 }

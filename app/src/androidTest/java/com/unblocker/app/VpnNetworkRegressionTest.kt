@@ -2,9 +2,6 @@ package com.unblocker.app
 
 import android.content.Context
 import android.content.Intent
-import android.net.ConnectivityManager
-import android.net.LinkProperties
-import android.net.NetworkCapabilities
 import android.net.VpnService
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -31,11 +28,16 @@ class VpnNetworkRegressionTest {
 
     private fun shell(command: String) {
         instrumentation.uiAutomation.executeShellCommand(command).use {
-            android.os.ParcelFileDescriptor.AutoCloseInputStream(it).readBytes()
+            android.os.ParcelFileDescriptor
+                .AutoCloseInputStream(it)
+                .readBytes()
         }
     }
 
-    private fun awaitState(expected: ServiceStatus, timeoutMs: Long = 15_000L) {
+    private fun awaitState(
+        expected: ServiceStatus,
+        timeoutMs: Long = 15_000L,
+    ) {
         val deadline = System.currentTimeMillis() + timeoutMs
         while (UnblockerVpnService.session.status.value != expected && System.currentTimeMillis() < deadline) {
             Thread.sleep(50)
@@ -112,9 +114,10 @@ class VpnNetworkRegressionTest {
         UnblockerVpnService.start(context)
         awaitState(ServiceStatus.RUNNING)
 
-        val question = byteArrayOf(0x43, 0x21, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0) +
-            byteArrayOf(3) + "ads".toByteArray() + byteArrayOf(11) + "doubleclick".toByteArray() +
-            byteArrayOf(3) + "net".toByteArray() + byteArrayOf(0, 0, 1, 0, 1)
+        val question =
+            byteArrayOf(0x43, 0x21, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0) +
+                byteArrayOf(3) + "ads".toByteArray() + byteArrayOf(11) + "doubleclick".toByteArray() +
+                byteArrayOf(3) + "net".toByteArray() + byteArrayOf(0, 0, 1, 0, 1)
 
         DatagramSocket().use { socket ->
             socket.soTimeout = 5000

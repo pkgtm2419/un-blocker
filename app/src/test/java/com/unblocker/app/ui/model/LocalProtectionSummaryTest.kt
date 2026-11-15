@@ -8,18 +8,18 @@ import org.junit.Test
  * Regression coverage for local protection summary.
  */
 class LocalProtectionSummaryTest {
-
     /**
      * Verifies that default summary has zero counts and null timestamps.
      */
     @Test
     fun defaultSummaryHasZeroCountsAndNullTimestamps() {
-        val summary = LocalProtectionSummary(
-            dnsQueries = 0L,
-            blockedDnsQueries = 0L,
-            firstObservedMs = null,
-            lastObservedMs = null
-        )
+        val summary =
+            LocalProtectionSummary(
+                dnsQueries = 0L,
+                blockedDnsQueries = 0L,
+                firstObservedMs = null,
+                lastObservedMs = null,
+            )
         assertEquals(0L, summary.dnsQueries)
         assertEquals(0L, summary.blockedDnsQueries)
         assertNull(summary.firstObservedMs)
@@ -32,12 +32,13 @@ class LocalProtectionSummaryTest {
     @Test
     fun populatedSummaryRetainsAccurateCounts() {
         val now = 1700000000000L
-        val summary = LocalProtectionSummary(
-            dnsQueries = 1500L,
-            blockedDnsQueries = 450L,
-            firstObservedMs = now - 86400000L,
-            lastObservedMs = now
-        )
+        val summary =
+            LocalProtectionSummary(
+                dnsQueries = 1500L,
+                blockedDnsQueries = 450L,
+                firstObservedMs = now - 86400000L,
+                lastObservedMs = now,
+            )
         assertEquals(1500L, summary.dnsQueries)
         assertEquals(450L, summary.blockedDnsQueries)
         assertEquals(now - 86400000L, summary.firstObservedMs)

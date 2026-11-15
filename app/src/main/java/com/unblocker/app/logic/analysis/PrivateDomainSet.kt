@@ -19,19 +19,23 @@ import javax.crypto.SecretKey
 class PrivateDomainSet(
     private val key: SecretKey,
     private val file: File? = null,
-    private val capacity: Int = DEFAULT_CAPACITY
+    private val capacity: Int = DEFAULT_CAPACITY,
 ) {
     private val identifiers = LinkedHashSet<String>()
     private val header = "v1:${identifier("unblocker-key-check")}"
 
     init {
         require(capacity > 0)
-        if (file?.isFile == true) runCatching {
-            file!!.bufferedReader().use { reader ->
-                if (reader.readLine() == header) {
-                    reader.lineSequence().take(capacity)
-                        .filter { it.matches(IDENTIFIER_PATTERN) }
-                        .forEach(identifiers::add)
+        if (file?.isFile == true) {
+            runCatching {
+                file!!.bufferedReader().use { reader ->
+                    if (reader.readLine() == header) {
+                        reader
+                            .lineSequence()
+                            .take(capacity)
+                            .filter { it.matches(IDENTIFIER_PATTERN) }
+                            .forEach(identifiers::add)
+                    }
                 }
             }
         }
@@ -165,7 +169,12 @@ class PrivateDomainSet(
                 writer.append(header).append('\n')
                 identifiers.forEach { id -> writer.append(id).append('\n') }
             }
-            Files.move(temp.toPath(), file.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+            Files.move(
+                temp.toPath(),
+                file.toPath(),
+                StandardCopyOption.ATOMIC_MOVE,
+                StandardCopyOption.REPLACE_EXISTING,
+            )
         } finally {
             if (temp.exists()) temp.delete()
         }

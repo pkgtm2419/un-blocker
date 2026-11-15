@@ -7,7 +7,7 @@ import com.unblocker.app.logic.rules.RuleKind
  */
 enum class BlockingAction {
     BLOCK,
-    ALLOW
+    ALLOW,
 }
 
 /**
@@ -18,7 +18,7 @@ enum class BlockingCategory {
     TRACKER,
     ADULT_CONTENT,
     CUSTOM,
-    NORMAL
+    NORMAL,
 }
 
 /**
@@ -38,7 +38,7 @@ enum class DecisionReason {
     NO_MATCH,
     ENGINE_ERROR,
     SUGGESTED,
-    INVALID
+    INVALID,
 }
 
 /**
@@ -63,7 +63,7 @@ data class BlockingDecision(
     val reasonCode: DecisionReason = DecisionReason.ALLOWED,
     val ruleValue: String? = null,
     val ruleKind: RuleKind? = null,
-    val sourceId: Int? = null
+    val sourceId: Int? = null,
 ) {
     /**
      * Whether the action is BLOCK.
@@ -81,14 +81,16 @@ data class BlockingDecision(
          * @param confidence Confidence retained without clamping.
          * @return New allowed decision stamped with the current wall-clock time.
          */
-        fun allow(reason: String = "Allowed normal traffic", confidence: Float = 1.0f): BlockingDecision {
-            return BlockingDecision(
+        fun allow(
+            reason: String = "Allowed normal traffic",
+            confidence: Float = 1.0f,
+        ): BlockingDecision =
+            BlockingDecision(
                 action = BlockingAction.ALLOW,
                 reason = reason,
                 confidence = confidence,
-                category = BlockingCategory.NORMAL
+                category = BlockingCategory.NORMAL,
             )
-        }
 
         /**
          * Creates a blocked decision with default metadata.
@@ -101,14 +103,13 @@ data class BlockingDecision(
         fun block(
             reason: String,
             confidence: Float,
-            category: BlockingCategory = BlockingCategory.AD
-        ): BlockingDecision {
-            return BlockingDecision(
+            category: BlockingCategory = BlockingCategory.AD,
+        ): BlockingDecision =
+            BlockingDecision(
                 action = BlockingAction.BLOCK,
                 reason = reason,
                 confidence = confidence,
-                category = category
+                category = category,
             )
-        }
     }
 }

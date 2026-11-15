@@ -5,13 +5,11 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.ByteArrayOutputStream
-import java.io.StringWriter
 
 /**
  * Regression coverage for CSV writer.
  */
 class CsvWriterTest {
-
     /**
      * Verifies that test escape cell standard.
      */
@@ -39,28 +37,29 @@ class CsvWriterTest {
      */
     @Test
     fun testDomainExporterOutputsValidCsv() {
-        val stats = listOf(
-            DomainStatEntity(
-                domain = "example.com",
-                callCount = 10,
-                blockedCount = 0,
-                allowedCount = 10,
-                firstSeen = 1700000000000L,
-                lastSeen = 1700001000000L,
-                lastDecision = 0,
-                lastReason = 0
-            ),
-            DomainStatEntity(
-                domain = "tracker.com",
-                callCount = 5,
-                blockedCount = 5,
-                allowedCount = 0,
-                firstSeen = 1700000000000L,
-                lastSeen = 1700002000000L,
-                lastDecision = 1,
-                lastReason = 1
+        val stats =
+            listOf(
+                DomainStatEntity(
+                    domain = "example.com",
+                    callCount = 10,
+                    blockedCount = 0,
+                    allowedCount = 10,
+                    firstSeen = 1700000000000L,
+                    lastSeen = 1700001000000L,
+                    lastDecision = 0,
+                    lastReason = 0,
+                ),
+                DomainStatEntity(
+                    domain = "tracker.com",
+                    callCount = 5,
+                    blockedCount = 5,
+                    allowedCount = 0,
+                    firstSeen = 1700000000000L,
+                    lastSeen = 1700002000000L,
+                    lastDecision = 1,
+                    lastReason = 1,
+                ),
             )
-        )
 
         val output = ByteArrayOutputStream()
         val count = DomainExporter.exportToCsv(stats, output)

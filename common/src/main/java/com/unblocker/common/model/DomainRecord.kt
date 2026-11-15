@@ -10,5 +10,5 @@ package com.unblocker.common.model
 data class DomainRecord(
     val domain: String,
     val confidenceScore: Float = 1.0f,
-    val ruleSource: RuleSource = RuleSource.STATIC
+    val ruleSource: RuleSource = RuleSource.STATIC,
 )

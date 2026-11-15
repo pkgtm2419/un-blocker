@@ -14,11 +14,11 @@ import java.util.Locale
  * Parsing is syntax normalization, not the active app's complete blocklist admission policy.
  */
 object RuleCompiler {
-
     /**
      * Initial FNV-1a 64-bit hash state, represented as a signed Long.
      */
     const val FNV64_OFFSET_BASIS: Long = -0x340d631b7bdddcdbL // 0xcbf29ce484222325L
+
     /**
      * FNV-1a multiplier; Long overflow intentionally wraps the hash arithmetic.
      */
@@ -27,13 +27,14 @@ object RuleCompiler {
     /**
      * Domain keys always seeded by this compiler; their presence does not guarantee DoH coverage.
      */
-    val DOH_BOOTSTRAP_DOMAINS: List<String> = listOf(
-        "use-application-dns.net",
-        "dns.google",
-        "cloudflare-dns.com",
-        "dns.quad9.net",
-        "bootstrapDomain.opendns.com"
-    )
+    val DOH_BOOTSTRAP_DOMAINS: List<String> =
+        listOf(
+            "use-application-dns.net",
+            "dns.google",
+            "cloudflare-dns.com",
+            "dns.quad9.net",
+            "bootstrapDomain.opendns.com",
+        )
 
     private const val BUFFER_CAPACITY = 64 * 1024 // 64 KB direct buffer
 
@@ -56,11 +57,12 @@ object RuleCompiler {
         if (trimmed.contains("##") || trimmed.contains("#@#")) return null
 
         // Strip inline comments (#...)
-        val lineWithoutComment = if (trimmed.contains('#')) {
-            trimmed.substringBefore('#').trim()
-        } else {
-            trimmed
-        }
+        val lineWithoutComment =
+            if (trimmed.contains('#')) {
+                trimmed.substringBefore('#').trim()
+            } else {
+                trimmed
+            }
         if (lineWithoutComment.isEmpty()) return null
 
         var candidate = lineWithoutComment
@@ -103,7 +105,9 @@ object RuleCompiler {
         // Validate character set (RFC 1035 / DNS valid characters: a-z, 0-9, ., -, _)
         for (i in 0 until domain.length) {
             val character = domain[i]
-            if (character !in 'a'..'z' && character !in '0'..'9' && character != '.' && character != '-' && character != '_') {
+            if (character !in 'a'..'z' && character !in '0'..'9' && character != '.' && character != '-' &&
+                character != '_'
+            ) {
                 return null
             }
         }
@@ -122,7 +126,11 @@ object RuleCompiler {
      * @return Signed Long representation of the 64-bit hash.
      * @throws IllegalArgumentException If the range is reversed, negative, or exceeds [domain].
      */
-    fun fnv1a64(domain: CharSequence, start: Int = 0, end: Int = domain.length): Long {
+    fun fnv1a64(
+        domain: CharSequence,
+        start: Int = 0,
+        end: Int = domain.length,
+    ): Long {
         require(start in 0..end && end <= domain.length) {
             "Invalid bounds: start=$start, end=$end, length=${domain.length}"
         }
@@ -146,7 +154,10 @@ object RuleCompiler {
      * @return Number of unique hash entries written.
      * @throws java.io.IOException If reading or writing the index fails.
      */
-    fun compileStreamsToBinaryFile(readers: List<BufferedReader>, outputFile: File): Int {
+    fun compileStreamsToBinaryFile(
+        readers: List<BufferedReader>,
+        outputFile: File,
+    ): Int {
         var hashes = LongArray(262_144)
         var count = 0
 

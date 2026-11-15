@@ -27,7 +27,7 @@ data class DomainStatUpsert(
     val allowedDelta: Long,
     val ts: Long,
     val lastDecision: Int,
-    val lastReason: Int
+    val lastReason: Int,
 )
 
 /**
@@ -44,7 +44,7 @@ data class DomainLogAggregate(
     val totalCalls: Long,
     val totalBlocked: Long,
     val firstObserved: Long?,
-    val lastObserved: Long?
+    val lastObserved: Long?,
 )
 
 /**
@@ -52,7 +52,6 @@ data class DomainLogAggregate(
  */
 @Dao
 interface DomainLogDao {
-
     /**
      * Adds counters to an existing domain or inserts its first aggregate row.
      *
@@ -66,7 +65,8 @@ interface DomainLogDao {
      * @param lastDecision Latest decision code, conventionally 0 allowed or 1 blocked.
      * @param lastReason Latest app-defined reason code.
      */
-    @Query("""
+    @Query(
+        """
         INSERT INTO domain_stats (domain, call_count, blocked_count, allowed_count, first_seen, last_seen, last_decision, last_reason)
         VALUES (:domain, :callDelta, :blockedDelta, :allowedDelta, :ts, :ts, :lastDecision, :lastReason)
         ON CONFLICT(domain) DO UPDATE SET
@@ -76,7 +76,8 @@ interface DomainLogDao {
             last_seen = :ts,
             last_decision = :lastDecision,
             last_reason = :lastReason
-    """)
+    """,
+    )
     suspend fun upsertStat(
         domain: String,
         callDelta: Long,
@@ -84,7 +85,7 @@ interface DomainLogDao {
         allowedDelta: Long,
         ts: Long,
         lastDecision: Int,
-        lastReason: Int
+        lastReason: Int,
     )
 
     /**
@@ -102,7 +103,7 @@ interface DomainLogDao {
                 allowedDelta = stat.allowedDelta,
                 ts = stat.ts,
                 lastDecision = stat.lastDecision,
-                lastReason = stat.lastReason
+                lastReason = stat.lastReason,
             )
         }
     }
@@ -123,17 +124,19 @@ interface DomainLogDao {
      * @param limit Maximum rows requested from SQLite.
      * @return Matching aggregates updated when the table changes.
      */
-    @Query("""
+    @Query(
+        """
         SELECT * FROM domain_stats
         WHERE (:filter = 0 OR (:filter = 1 AND blocked_count > 0) OR (:filter = 2 AND allowed_count > 0))
           AND (:query IS NULL OR domain LIKE :query || '%')
         ORDER BY call_count DESC
         LIMIT :limit
-    """)
+    """,
+    )
     fun getDomainStatsByCallsFlow(
         filter: Int,
         query: String?,
-        limit: Int = 200
+        limit: Int = 200,
     ): Flow<List<DomainStatEntity>>
 
     /**
@@ -144,17 +147,19 @@ interface DomainLogDao {
      * @param limit Maximum rows requested from SQLite.
      * @return Matching aggregates updated when the table changes.
      */
-    @Query("""
+    @Query(
+        """
         SELECT * FROM domain_stats
         WHERE (:filter = 0 OR (:filter = 1 AND blocked_count > 0) OR (:filter = 2 AND allowed_count > 0))
           AND (:query IS NULL OR domain LIKE :query || '%')
         ORDER BY last_seen DESC
         LIMIT :limit
-    """)
+    """,
+    )
     fun getDomainStatsByRecentFlow(
         filter: Int,
         query: String?,
-        limit: Int = 200
+        limit: Int = 200,
     ): Flow<List<DomainStatEntity>>
 
     /**
@@ -170,17 +175,21 @@ interface DomainLogDao {
         filter: Int, // 0 = all, 1 = blocked, 2 = allowed
         query: String?,
         sortByCalls: Int, // 1 = sort by call_count, 0 = sort by last_seen
-        limit: Int = 200
+        limit: Int = 200,
     ): Flow<List<DomainStatEntity>> =
-        if (sortByCalls == 1) getDomainStatsByCallsFlow(filter, query, limit)
-        else getDomainStatsByRecentFlow(filter, query, limit)
+        if (sortByCalls == 1) {
+            getDomainStatsByCallsFlow(filter, query, limit)
+        } else {
+            getDomainStatsByRecentFlow(filter, query, limit)
+        }
 
     /**
      * Observes counts and observation bounds across all domains.
      *
      * @return Summary with zero counts and null times for an empty table.
      */
-    @Query("""
+    @Query(
+        """
         SELECT
             COUNT(*) AS totalDomains,
             COALESCE(SUM(call_count), 0) AS totalCalls,
@@ -188,7 +197,8 @@ interface DomainLogDao {
             MIN(first_seen) AS firstObserved,
             MAX(last_seen) AS lastObserved
         FROM domain_stats
-    """)
+    """,
+    )
     fun getAggregateStatsFlow(): Flow<DomainLogAggregate>
 
     /**
@@ -199,7 +209,10 @@ interface DomainLogDao {
      * @return Events ordered by descending observation time.
      */
     @Query("SELECT * FROM domain_events WHERE domain = :domain ORDER BY ts DESC LIMIT :limit")
-    suspend fun getEventsForDomain(domain: String, limit: Int = 50): List<DomainEventEntity>
+    suspend fun getEventsForDomain(
+        domain: String,
+        limit: Int = 50,
+    ): List<DomainEventEntity>
 
     /**
      * Reads every aggregate for caller-controlled export.
@@ -278,7 +291,9 @@ interface DomainLogDao {
      *
      * @param globalCap Maximum domain rows retained by this maintenance call.
      */
-    @Query("DELETE FROM domain_stats WHERE domain NOT IN (SELECT domain FROM domain_stats ORDER BY last_seen DESC LIMIT :globalCap)")
+    @Query(
+        "DELETE FROM domain_stats WHERE domain NOT IN (SELECT domain FROM domain_stats ORDER BY last_seen DESC LIMIT :globalCap)",
+    )
     suspend fun pruneOldestStatsBeyondCap(globalCap: Int = 10_000)
 
     /**

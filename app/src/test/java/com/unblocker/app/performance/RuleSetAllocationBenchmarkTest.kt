@@ -3,7 +3,6 @@ package com.unblocker.app.performance
 import com.unblocker.app.domain.model.BlockingCategory
 import com.unblocker.app.logic.rules.*
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 
@@ -11,21 +10,21 @@ import org.junit.Test
  * Regression coverage for rule set allocation benchmark.
  */
 class RuleSetAllocationBenchmarkTest {
-
     /**
      * Verifies that benchmark rule set matching correctness and efficiency.
      */
     @Test
     fun benchmarkRuleSetMatchingCorrectnessAndEfficiency() {
-        val rules = listOf(
-            DnsRule(RuleAction.BLOCK, RuleKind.SUFFIX, "doubleclick.net", BlockingCategory.AD, 1),
-            DnsRule(RuleAction.ALLOW, RuleKind.EXACT, "ad.doubleclick.net", BlockingCategory.AD, 10),
-            DnsRule(RuleAction.BLOCK, RuleKind.WILDCARD, "wildcard.example.com", BlockingCategory.AD, 1),
-            DnsRule(RuleAction.BLOCK, RuleKind.EXACT, "exact.example.com", BlockingCategory.AD, 1),
-            DnsRule(RuleAction.ALLOW, RuleKind.SUFFIX, "allowed-suffix.org", BlockingCategory.AD, 10),
-            DnsRule(RuleAction.BLOCK, RuleKind.SUFFIX, "blocked-parent.org", BlockingCategory.AD, 1),
-            DnsRule(RuleAction.ALLOW, RuleKind.EXACT, "sub.blocked-parent.org", BlockingCategory.AD, 10)
-        )
+        val rules =
+            listOf(
+                DnsRule(RuleAction.BLOCK, RuleKind.SUFFIX, "doubleclick.net", BlockingCategory.AD, 1),
+                DnsRule(RuleAction.ALLOW, RuleKind.EXACT, "ad.doubleclick.net", BlockingCategory.AD, 10),
+                DnsRule(RuleAction.BLOCK, RuleKind.WILDCARD, "wildcard.example.com", BlockingCategory.AD, 1),
+                DnsRule(RuleAction.BLOCK, RuleKind.EXACT, "exact.example.com", BlockingCategory.AD, 1),
+                DnsRule(RuleAction.ALLOW, RuleKind.SUFFIX, "allowed-suffix.org", BlockingCategory.AD, 10),
+                DnsRule(RuleAction.BLOCK, RuleKind.SUFFIX, "blocked-parent.org", BlockingCategory.AD, 1),
+                DnsRule(RuleAction.ALLOW, RuleKind.EXACT, "sub.blocked-parent.org", BlockingCategory.AD, 10),
+            )
 
         val ruleSet = CompiledRuleSet(rules).toRuleSet()
 
@@ -40,14 +39,15 @@ class RuleSetAllocationBenchmarkTest {
         assertNull(ruleSet.match("benign.example.net"))
 
         // Throughput check: 10,000 matches execute swiftly
-        val queries = listOf(
-            "sub.doubleclick.net",
-            "ad.doubleclick.net",
-            "benign.example.net",
-            "deep.sub.wildcard.example.com",
-            "blocked-parent.org",
-            "sub.blocked-parent.org"
-        )
+        val queries =
+            listOf(
+                "sub.doubleclick.net",
+                "ad.doubleclick.net",
+                "benign.example.net",
+                "deep.sub.wildcard.example.com",
+                "blocked-parent.org",
+                "sub.blocked-parent.org",
+            )
         val start = System.currentTimeMillis()
         for (i in 0 until 10_000) {
             val q = queries[i % queries.size]

@@ -12,5 +12,5 @@ data class LocalProtectionSummary(
     val dnsQueries: Long,
     val blockedDnsQueries: Long,
     val firstObservedMs: Long?,
-    val lastObservedMs: Long?
+    val lastObservedMs: Long?,
 )

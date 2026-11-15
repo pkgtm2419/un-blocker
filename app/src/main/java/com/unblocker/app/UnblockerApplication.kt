@@ -13,8 +13,9 @@ import javax.inject.Inject
  * Initializes application policy, logging, preferences and background-work dependencies.
  */
 @HiltAndroidApp
-class UnblockerApplication : Application(), Configuration.Provider {
-
+class UnblockerApplication :
+    Application(),
+    Configuration.Provider {
     /**
      * Hilt worker factory used by WorkManager configuration.
      */
@@ -49,20 +50,25 @@ class UnblockerApplication : Application(), Configuration.Provider {
      * WorkManager configuration using the injected Hilt worker factory.
      */
     override val workManagerConfiguration: Configuration
-        get() = Configuration.Builder()
-            .setWorkerFactory(workerFactory)
-            .build()
+        get() =
+            Configuration
+                .Builder()
+                .setWorkerFactory(workerFactory)
+                .build()
 
     /**
      * Loads protection policy, initializes logging/settings and launches legacy-rule migration.
      */
     override fun onCreate() {
         super.onCreate()
-        com.unblocker.app.logic.analysis.NeverBlockPolicy.load(this)
-        com.unblocker.app.data.logs.QueryLogSink.init(domainLogDao)
+        com.unblocker.app.logic.analysis.NeverBlockPolicy
+            .load(this)
+        com.unblocker.app.data.logs.QueryLogSink
+            .init(domainLogDao)
 
         preferences = FilteringPreferences.getInstance(this)
-        com.unblocker.app.data.logs.QueryLogSink.setLoggingPaused(preferences.isQueryLoggingPaused.value)
+        com.unblocker.app.data.logs.QueryLogSink
+            .setLoggingPaused(preferences.isQueryLoggingPaused.value)
         quickStartManager = QuickStartManager.getInstance(this)
         quickStartManager.loadDefaultConfiguration()
 

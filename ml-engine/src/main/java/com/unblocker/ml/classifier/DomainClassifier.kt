@@ -4,7 +4,6 @@ package com.unblocker.ml.classifier
  * On-device domain scoring boundary used by the separate library batch-analysis worker.
  */
 interface DomainClassifier {
-
     /**
      * Scores whether a domain resembles advertising or tracking infrastructure.
      *

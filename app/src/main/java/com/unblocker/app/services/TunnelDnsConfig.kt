@@ -10,14 +10,17 @@ object TunnelDnsConfig {
      * IPv4 address assigned to the local tunnel interface.
      */
     const val IPV4_CLIENT = "10.111.222.1"
+
     /**
      * Synthetic IPv4 resolver endpoint routed into the tunnel.
      */
     const val IPV4_DNS = "10.111.222.2"
+
     /**
      * IPv6 address assigned to the local tunnel interface.
      */
     const val IPV6_CLIENT = "fd00:1:fd00:1:fd00:1:fd00:1"
+
     /**
      * Synthetic IPv6 resolver endpoint routed into the tunnel.
      */
@@ -26,7 +29,7 @@ object TunnelDnsConfig {
     private val addresses: Set<InetAddress> by lazy {
         setOf(
             InetAddress.getByName(IPV4_DNS),
-            InetAddress.getByName(IPV6_DNS)
+            InetAddress.getByName(IPV6_DNS),
         )
     }
 

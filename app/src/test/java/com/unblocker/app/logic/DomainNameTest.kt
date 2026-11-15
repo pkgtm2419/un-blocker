@@ -21,18 +21,19 @@ class DomainNameTest {
      * Verifies that rejects non DNS and malformed inputs.
      */
     @Test fun rejectsNonDnsAndMalformedInputs() {
-        val invalid = listOf(
-            "https://ads.example.com",
-            "ads.example.com:443",
-            "ads..example.com",
-            "-ads.example.com",
-            "ads-.example.com",
-            "ads/example.com",
-            "ads\u0000.example.com",
-            "💀.example.com",
-            "${"a".repeat(64)}.example.com",
-            "${"a".repeat(250)}.com"
-        )
+        val invalid =
+            listOf(
+                "https://ads.example.com",
+                "ads.example.com:443",
+                "ads..example.com",
+                "-ads.example.com",
+                "ads-.example.com",
+                "ads/example.com",
+                "ads\u0000.example.com",
+                "💀.example.com",
+                "${"a".repeat(64)}.example.com",
+                "${"a".repeat(250)}.com",
+            )
 
         invalid.forEach { value -> assertNull(value, DomainName.normalize(value)) }
     }

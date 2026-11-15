@@ -22,9 +22,12 @@ class PrivateReputationStore(
     private val key: SecretKey,
     private val file: File? = null,
     private val capacity: Int = DEFAULT_CAPACITY,
-    private val nowMillis: () -> Long = System::currentTimeMillis
+    private val nowMillis: () -> Long = System::currentTimeMillis,
 ) {
-    private data class Reputation(val score: Float, val confirmedAtMillis: Long)
+    private data class Reputation(
+        val score: Float,
+        val confirmedAtMillis: Long,
+    )
 
     private val records = LinkedHashMap<String, Reputation>()
     private val keyCheck = identifier("unblocker-key-check")
@@ -33,21 +36,27 @@ class PrivateReputationStore(
 
     init {
         require(capacity > 0)
-        if (file?.isFile == true) runCatching {
-            val loadedAt = nowMillis()
-            file!!.bufferedReader().use { reader ->
-                val storedHeader = reader.readLine()
-                if (storedHeader == header || storedHeader == legacyHeader) {
-                    reader.lineSequence().take(capacity).forEach { line ->
-                        val parts = line.split(':')
-                        val score = parts.getOrNull(1)?.toFloatOrNull()
-                        val confirmedAt = if (storedHeader == header) {
-                            parts.getOrNull(2)?.toLongOrNull()?.coerceAtMost(loadedAt)
-                        } else loadedAt
-                        val expectedParts = if (storedHeader == header) 3 else 2
-                        if (parts.size == expectedParts && parts[0].matches(IDENTIFIER_PATTERN) &&
-                            valid(score) && confirmedAt != null && confirmedAt >= 0L) {
-                            records[parts[0]] = Reputation(score!!, confirmedAt)
+        if (file?.isFile == true) {
+            runCatching {
+                val loadedAt = nowMillis()
+                file!!.bufferedReader().use { reader ->
+                    val storedHeader = reader.readLine()
+                    if (storedHeader == header || storedHeader == legacyHeader) {
+                        reader.lineSequence().take(capacity).forEach { line ->
+                            val parts = line.split(':')
+                            val score = parts.getOrNull(1)?.toFloatOrNull()
+                            val confirmedAt =
+                                if (storedHeader == header) {
+                                    parts.getOrNull(2)?.toLongOrNull()?.coerceAtMost(loadedAt)
+                                } else {
+                                    loadedAt
+                                }
+                            val expectedParts = if (storedHeader == header) 3 else 2
+                            if (parts.size == expectedParts && parts[0].matches(IDENTIFIER_PATTERN) &&
+                                valid(score) && confirmedAt != null && confirmedAt >= 0L
+                            ) {
+                                records[parts[0]] = Reputation(score!!, confirmedAt)
+                            }
                         }
                     }
                 }
@@ -58,8 +67,14 @@ class PrivateReputationStore(
     private fun identifier(domain: String): String {
         val mac = Mac.getInstance("HmacSHA256")
         mac.init(key)
-        return mac.doFinal(domain.trim().trimEnd('.').lowercase(Locale.ROOT).toByteArray(Charsets.UTF_8))
-            .joinToString("") { "%02x".format(it.toInt() and 255) }
+        return mac
+            .doFinal(
+                domain
+                    .trim()
+                    .trimEnd('.')
+                    .lowercase(Locale.ROOT)
+                    .toByteArray(Charsets.UTF_8),
+            ).joinToString("") { "%02x".format(it.toInt() and 255) }
     }
 
     /**
@@ -68,9 +83,11 @@ class PrivateReputationStore(
      * @param domain Hostname canonicalized for hashing.
      * @return Decayed score, or null when missing or lookup fails.
      */
-    @Synchronized fun get(domain: String): Float? = runCatching {
-        records[identifier(domain)]?.let { decayedScore(it, nowMillis()) }
-    }.getOrNull()
+    @Synchronized fun get(domain: String): Float? =
+        runCatching {
+            records[identifier(domain)]?.let { decayedScore(it, nowMillis()) }
+        }.getOrNull()
+
     /**
      * Returns the retained record count without removing records whose scores have decayed.
      */
@@ -83,7 +100,10 @@ class PrivateReputationStore(
      * @param score Finite value from zero through one; invalid values are ignored.
      * Hashing and persistence failures are suppressed.
      */
-    @Synchronized fun put(domain: String, score: Float) {
+    @Synchronized fun put(
+        domain: String,
+        score: Float,
+    ) {
         if (domain.isBlank() || !valid(score)) return
         // Keystore can become temporarily unavailable after successful initialization.
         val id = runCatching { identifier(domain) }.getOrNull() ?: return
@@ -113,15 +133,17 @@ class PrivateReputationStore(
      */
     @Synchronized fun migrate(legacy: File) {
         if (!legacy.exists()) return
-        legacy.useLines { lines -> lines.forEach { line ->
-            val parts = line.trim().split(':')
-            val domain = parts.firstOrNull().orEmpty()
-            val score = if (parts.size == 1) 0.85f else parts.getOrNull(1)?.toFloatOrNull()
-            if (domain.length <= 253 && domain.contains('.') && !domain.startsWith('#') && valid(score)) {
-                records[identifier(domain)] = Reputation(score!!, nowMillis())
-                trim()
+        legacy.useLines { lines ->
+            lines.forEach { line ->
+                val parts = line.trim().split(':')
+                val domain = parts.firstOrNull().orEmpty()
+                val score = if (parts.size == 1) 0.85f else parts.getOrNull(1)?.toFloatOrNull()
+                if (domain.length <= 253 && domain.contains('.') && !domain.startsWith('#') && valid(score)) {
+                    records[identifier(domain)] = Reputation(score!!, nowMillis())
+                    trim()
+                }
             }
-        } }
+        }
         save()
         check(legacy.delete()) { "Legacy learning cleanup failed" }
     }
@@ -134,23 +156,37 @@ class PrivateReputationStore(
         val destination = file ?: return
         destination.parentFile?.mkdirs()
         val temporary = File(destination.parentFile, "${destination.name}.tmp")
-        val snapshot = buildString {
-            append(header).append('\n')
-            records.forEach { (id, reputation) ->
-                append(id).append(':').append(reputation.score).append(':')
-                    .append(reputation.confirmedAtMillis).append('\n')
+        val snapshot =
+            buildString {
+                append(header).append('\n')
+                records.forEach { (id, reputation) ->
+                    append(id)
+                        .append(':')
+                        .append(reputation.score)
+                        .append(':')
+                        .append(reputation.confirmedAtMillis)
+                        .append('\n')
+                }
             }
-        }
         try {
             FileOutputStream(temporary).use { output ->
                 output.write(snapshot.toByteArray(Charsets.UTF_8))
             }
-            Files.move(temporary.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING,
-                StandardCopyOption.ATOMIC_MOVE)
-        } finally { temporary.delete() }
+            Files.move(
+                temporary.toPath(),
+                destination.toPath(),
+                StandardCopyOption.REPLACE_EXISTING,
+                StandardCopyOption.ATOMIC_MOVE,
+            )
+        } finally {
+            temporary.delete()
+        }
     }
 
-    private fun decayedScore(reputation: Reputation, now: Long): Float {
+    private fun decayedScore(
+        reputation: Reputation,
+        now: Long,
+    ): Float {
         val elapsedWeeks = ((now - reputation.confirmedAtMillis).coerceAtLeast(0L) / WEEK_MILLIS).toInt()
         return (reputation.score * DECAY_PER_WEEK.toDouble().pow(elapsedWeeks.toDouble())).toFloat()
     }

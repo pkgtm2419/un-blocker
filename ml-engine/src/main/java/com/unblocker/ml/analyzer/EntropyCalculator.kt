@@ -8,7 +8,6 @@ import kotlin.math.ln
  * Entropy is one feature; high entropy alone does not establish that a domain is a tracker.
  */
 object EntropyCalculator {
-
     /**
      * Calculates Shannon entropy in bits from character frequencies.
      *
@@ -21,10 +20,11 @@ object EntropyCalculator {
         val frequencies = input.groupingBy { it }.eachCount()
         val length = input.length.toDouble()
 
-        val entropy = frequencies.values.sumOf { count ->
-            val probability = count.toDouble() / length
-            -probability * ln(probability) / ln(2.0)
-        }
+        val entropy =
+            frequencies.values.sumOf { count ->
+                val probability = count.toDouble() / length
+                -probability * ln(probability) / ln(2.0)
+            }
 
         return entropy.toFloat()
     }
@@ -35,10 +35,11 @@ object EntropyCalculator {
      * @param entropy Shannon entropy in bits.
      * @return 0.85 above 3.4, 0.65 above 3.1, 0.35 above 2.8, or zero otherwise.
      */
-    fun toSignal(entropy: Float): Float = when {
-        entropy > 3.4f -> 0.85f
-        entropy > 3.1f -> 0.65f
-        entropy > 2.8f -> 0.35f
-        else           -> 0.0f
-    }
+    fun toSignal(entropy: Float): Float =
+        when {
+            entropy > 3.4f -> 0.85f
+            entropy > 3.1f -> 0.65f
+            entropy > 2.8f -> 0.35f
+            else -> 0.0f
+        }
 }

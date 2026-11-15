@@ -1,19 +1,21 @@
 package com.unblocker.app.dns
 
 import com.unblocker.app.logic.dns.DnsPacketUtil
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 /**
  * Regression coverage for DNS servfail response.
  */
 class DnsServfailResponseTest {
-
-    private fun buildSyntheticQueryPacket(txId: Short, domain: String): ByteArray {
+    private fun buildSyntheticQueryPacket(
+        txId: Short,
+        domain: String,
+    ): ByteArray {
         val domainParts = domain.split(".")
         val qnameBytes = ByteBuffer.allocate(domain.length + 2)
         for (part in domainParts) {
@@ -129,11 +131,14 @@ class DnsServfailResponseTest {
         val garbage = byteArrayOf(1, 2, 3, 4)
         assertNull(DnsPacketUtil.buildServfailWireResponse(garbage))
 
-        val badQdCount = ByteBuffer.allocate(16).order(ByteOrder.BIG_ENDIAN)
-            .putShort(1)
-            .putShort(0)
-            .putShort(2.toShort()) // qdCount != 1
-            .array()
+        val badQdCount =
+            ByteBuffer
+                .allocate(16)
+                .order(ByteOrder.BIG_ENDIAN)
+                .putShort(1)
+                .putShort(0)
+                .putShort(2.toShort()) // qdCount != 1
+                .array()
         assertNull(DnsPacketUtil.buildServfailWireResponse(badQdCount))
     }
 }

@@ -10,7 +10,6 @@ import org.junit.Test
  * Regression coverage for ad detector.
  */
 class AdDetectorTest {
-
     private lateinit var adDetector: AdDetector
 
     /**

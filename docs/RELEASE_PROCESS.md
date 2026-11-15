@@ -4,7 +4,7 @@
 
 ## Release gates
 
-**Current workflow caveat:** `.github/workflows/release.yml` falls back to stable test secrets when release secrets are absent, builds `assembleReleaseTest`, copies that output to the release APK path, and permits test-certificate verification in its fallback branch. Release policy selection still labels a `v*` tag as production. Therefore the intended gates below are not evidence that the existing workflow enforces production-only signing. This documentation change preserves the workflow; a separate fix and artifact verification are required. See R14 in [reconciliation](REPO_RECONCILIATION.md).
+**Enforced signing policy (R14 resolved):** `.github/workflows/release.yml` strictly enforces production signing requirements for `v*` tags. If release keystore secrets or the `UB_RELEASE_SIGNER_SHA256` digest variable are not configured, the workflow fails closed during preflight checks without attempting test-key fallback. The production APK is built via `assembleRelease` and verified to be non-debuggable and signed by the pinned production key before and after publish. Test tags (`test-v*`) build `assembleDebug` using test keys.
 
 1. Release scope and version match Gradle `versionCode/versionName`, signed release tag and documented release notes. Do not copy stale README version strings.
 2. Full JVM tests, Python compiler tests, lint (note existing lint suppression), instrumentation on relevant Android APIs, ABI/R8 release-smoke checks and nonbinary/secret gates.

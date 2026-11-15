@@ -2,7 +2,6 @@ package com.unblocker.app.services
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -12,7 +11,6 @@ import org.junit.Test
  * Regression coverage for recording session manager.
  */
 class RecordingSessionManagerTest {
-
     private lateinit var manager: RecordingSessionManager
 
     /**

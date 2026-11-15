@@ -22,6 +22,7 @@ class VpnSessionStateTest {
         assertTrue(state.established(current))
         assertTrue(state.active.value)
     }
+
     /**
      * Verifies that only established session reports running.
      */
@@ -69,10 +70,14 @@ class VpnSessionStateTest {
      * Verifies that boot requires all three conditions.
      */
     @Test fun bootRequiresAllThreeConditions() {
-        for (restart in listOf(false, true)) for (enabled in listOf(false, true)) {
-            for (permission in listOf(false, true)) {
-                assertEquals(restart && enabled && permission,
-                    BootPolicy.shouldStart(restart, enabled, permission))
+        for (restart in listOf(false, true)) {
+            for (enabled in listOf(false, true)) {
+                for (permission in listOf(false, true)) {
+                    assertEquals(
+                        restart && enabled && permission,
+                        BootPolicy.shouldStart(restart, enabled, permission),
+                    )
+                }
             }
         }
     }

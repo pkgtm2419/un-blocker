@@ -4,10 +4,12 @@ package com.unblocker.app.logic.analysis
  * Stages of local evidence accumulation and suppression.
  */
 enum class ReputationState { UNKNOWN, OBSERVING, SUSPECT, CONFIRMED, SUPPRESSED }
+
 /**
  * Explicit allow/block intent, or absence of user feedback.
  */
 enum class UserFeedback { NONE, ALLOW, BLOCK }
+
 /**
  * Persistable coarse evidence for an opaque hostname identifier.
  *
@@ -24,11 +26,12 @@ data class ReputationEvidence(
     val mask: Int = 0,
     val positiveWindows: Int = 0,
     val feedback: UserFeedback = UserFeedback.NONE,
-    val dayBucket: Long = 0
+    val dayBucket: Long = 0,
 ) {
     /**
      * Whether feedback or evidence confirms blocking, with ALLOW feedback taking precedence.
      */
-    val confirmed: Boolean get() = feedback != UserFeedback.ALLOW &&
-        (feedback == UserFeedback.BLOCK || state == ReputationState.CONFIRMED)
+    val confirmed: Boolean get() =
+        feedback != UserFeedback.ALLOW &&
+            (feedback == UserFeedback.BLOCK || state == ReputationState.CONFIRMED)
 }

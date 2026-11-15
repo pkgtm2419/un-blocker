@@ -29,20 +29,25 @@ import org.junit.Test
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class RuleRecoveryFlowTest {
-
     private val testDispatcher = StandardTestDispatcher()
 
     private class FakeUserRuleGateway : UserRuleGateway {
         val rules = mutableMapOf<String, UserFeedback>()
         var shouldFail = false
 
-        override suspend fun set(domain: String, feedback: UserFeedback): RuleUpdateResult {
+        override suspend fun set(
+            domain: String,
+            feedback: UserFeedback,
+        ): RuleUpdateResult {
             if (shouldFail) return RuleUpdateResult.Failed("Disk write error")
             rules[domain] = feedback
             return RuleUpdateResult.Applied
         }
 
-        override suspend fun setWholeSite(domain: String, feedback: UserFeedback): RuleUpdateResult {
+        override suspend fun setWholeSite(
+            domain: String,
+            feedback: UserFeedback,
+        ): RuleUpdateResult {
             if (shouldFail) return RuleUpdateResult.Failed("Disk write error")
             rules["subtree:$domain"] = feedback
             return RuleUpdateResult.Applied
@@ -71,24 +76,66 @@ class RuleRecoveryFlowTest {
     }
 
     private class DummyDomainLogDao : DomainLogDao {
-        override suspend fun upsertStat(domain: String, callDelta: Long, blockedDelta: Long, allowedDelta: Long, ts: Long, lastDecision: Int, lastReason: Int) {}
+        override suspend fun upsertStat(
+            domain: String,
+            callDelta: Long,
+            blockedDelta: Long,
+            allowedDelta: Long,
+            ts: Long,
+            lastDecision: Int,
+            lastReason: Int,
+        ) {}
+
         override suspend fun insertEvents(events: List<DomainEventEntity>) {}
-        override fun getDomainStatsFlow(filter: Int, query: String?, sortByCalls: Int, limit: Int): Flow<List<DomainStatEntity>> = emptyFlow()
-        override fun getDomainStatsByCallsFlow(filter: Int, query: String?, limit: Int): Flow<List<DomainStatEntity>> = emptyFlow()
-        override fun getDomainStatsByRecentFlow(filter: Int, query: String?, limit: Int): Flow<List<DomainStatEntity>> = emptyFlow()
+
+        override fun getDomainStatsFlow(
+            filter: Int,
+            query: String?,
+            sortByCalls: Int,
+            limit: Int,
+        ): Flow<List<DomainStatEntity>> = emptyFlow()
+
+        override fun getDomainStatsByCallsFlow(
+            filter: Int,
+            query: String?,
+            limit: Int,
+        ): Flow<List<DomainStatEntity>> = emptyFlow()
+
+        override fun getDomainStatsByRecentFlow(
+            filter: Int,
+            query: String?,
+            limit: Int,
+        ): Flow<List<DomainStatEntity>> = emptyFlow()
+
         override fun getAggregateStatsFlow(): Flow<com.unblocker.data.db.dao.DomainLogAggregate> = emptyFlow()
-        override suspend fun getEventsForDomain(domain: String, limit: Int): List<DomainEventEntity> = emptyList()
+
+        override suspend fun getEventsForDomain(
+            domain: String,
+            limit: Int,
+        ): List<DomainEventEntity> = emptyList()
+
         override suspend fun getAllStatsForExport(): List<DomainStatEntity> = emptyList()
+
         override fun getTotalDomainsCountFlow(): Flow<Long> = emptyFlow()
+
         override fun getTotalCallsCountFlow(): Flow<Long> = emptyFlow()
+
         override fun getTotalBlockedCountFlow(): Flow<Long> = emptyFlow()
+
         override fun getFirstObservedTimeFlow(): Flow<Long?> = emptyFlow()
+
         override fun getLastObservedTimeFlow(): Flow<Long?> = emptyFlow()
+
         override suspend fun pruneEventsOlderThan(cutoffTimestamp: Long) {}
+
         override suspend fun pruneOldestEventsBeyondCap(globalCap: Int) {}
+
         override suspend fun pruneStatsOlderThan(cutoffTimestamp: Long) {}
+
         override suspend fun pruneOldestStatsBeyondCap(globalCap: Int) {}
+
         override suspend fun clearEvents() {}
+
         override suspend fun clearStats() {}
     }
 
@@ -112,49 +159,52 @@ class RuleRecoveryFlowTest {
      * Verifies that test allow domain applies feedback and emits message.
      */
     @Test
-    fun testAllowDomainAppliesFeedbackAndEmitsMessage() = runTest(testDispatcher) {
-        val gateway = FakeUserRuleGateway()
-        val dao = DummyDomainLogDao()
-        val prefs = FakeFilteringPreferenceStore()
-        val viewModel = LogViewModel(dao, gateway, prefs)
+    fun testAllowDomainAppliesFeedbackAndEmitsMessage() =
+        runTest(testDispatcher) {
+            val gateway = FakeUserRuleGateway()
+            val dao = DummyDomainLogDao()
+            val prefs = FakeFilteringPreferenceStore()
+            val viewModel = LogViewModel(dao, gateway, prefs)
 
-        viewModel.allowDomain("example.com")
-        advanceUntilIdle()
+            viewModel.allowDomain("example.com")
+            advanceUntilIdle()
 
-        assertEquals(UserFeedback.ALLOW, gateway.rules["example.com"])
-        assertEquals("Allowed: example.com", viewModel.userMessage.value)
-    }
+            assertEquals(UserFeedback.ALLOW, gateway.rules["example.com"])
+            assertEquals("Allowed: example.com", viewModel.userMessage.value)
+        }
 
     /**
      * Verifies that test block domain applies feedback and emits message.
      */
     @Test
-    fun testBlockDomainAppliesFeedbackAndEmitsMessage() = runTest(testDispatcher) {
-        val gateway = FakeUserRuleGateway()
-        val dao = DummyDomainLogDao()
-        val prefs = FakeFilteringPreferenceStore()
-        val viewModel = LogViewModel(dao, gateway, prefs)
+    fun testBlockDomainAppliesFeedbackAndEmitsMessage() =
+        runTest(testDispatcher) {
+            val gateway = FakeUserRuleGateway()
+            val dao = DummyDomainLogDao()
+            val prefs = FakeFilteringPreferenceStore()
+            val viewModel = LogViewModel(dao, gateway, prefs)
 
-        viewModel.blockDomain("tracker.adnetwork.com")
-        advanceUntilIdle()
+            viewModel.blockDomain("tracker.adnetwork.com")
+            advanceUntilIdle()
 
-        assertEquals(UserFeedback.BLOCK, gateway.rules["tracker.adnetwork.com"])
-        assertEquals("Blocked: tracker.adnetwork.com", viewModel.userMessage.value)
-    }
+            assertEquals(UserFeedback.BLOCK, gateway.rules["tracker.adnetwork.com"])
+            assertEquals("Blocked: tracker.adnetwork.com", viewModel.userMessage.value)
+        }
 
     /**
      * Verifies that test failed rule update surfaces error message.
      */
     @Test
-    fun testFailedRuleUpdateSurfacesErrorMessage() = runTest(testDispatcher) {
-        val gateway = FakeUserRuleGateway().apply { shouldFail = true }
-        val dao = DummyDomainLogDao()
-        val prefs = FakeFilteringPreferenceStore()
-        val viewModel = LogViewModel(dao, gateway, prefs)
+    fun testFailedRuleUpdateSurfacesErrorMessage() =
+        runTest(testDispatcher) {
+            val gateway = FakeUserRuleGateway().apply { shouldFail = true }
+            val dao = DummyDomainLogDao()
+            val prefs = FakeFilteringPreferenceStore()
+            val viewModel = LogViewModel(dao, gateway, prefs)
 
-        viewModel.allowDomain("example.com")
-        advanceUntilIdle()
+            viewModel.allowDomain("example.com")
+            advanceUntilIdle()
 
-        assertEquals("Failed: Disk write error", viewModel.userMessage.value)
-    }
+            assertEquals("Failed: Disk write error", viewModel.userMessage.value)
+        }
 }

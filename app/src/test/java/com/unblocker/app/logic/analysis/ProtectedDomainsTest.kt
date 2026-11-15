@@ -9,20 +9,21 @@ import org.junit.Test
  * Regression coverage for protected domains.
  */
 class ProtectedDomainsTest {
-
     private val psl = PublicSuffixRules.fallback
-    private val builtIn = setOf(
-        "google.com",
-        "youtube.com",
-        "docs.google.com"
-    )
+    private val builtIn =
+        setOf(
+            "google.com",
+            "youtube.com",
+            "docs.google.com",
+        )
     private val myDomains = setOf("mybank.com", "myuniversity.edu")
 
-    private val protectedDomains = DefaultProtectedDomains(
-        builtIn = builtIn,
-        myDomains = myDomains,
-        psl = psl
-    )
+    private val protectedDomains =
+        DefaultProtectedDomains(
+            builtIn = builtIn,
+            myDomains = myDomains,
+            psl = psl,
+        )
 
     /**
      * Verifies that test built in protection.

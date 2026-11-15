@@ -6,7 +6,10 @@ package com.unblocker.app.services
  * @property domain Hostname supplied to the evaluator.
  * @property shouldBlock Expected blocking result.
  */
-data class BlockingRegressionCase(val domain: String, val shouldBlock: Boolean)
+data class BlockingRegressionCase(
+    val domain: String,
+    val shouldBlock: Boolean,
+)
 
 /**
  * Counts from a local synthetic smoke check.
@@ -14,7 +17,10 @@ data class BlockingRegressionCase(val domain: String, val shouldBlock: Boolean)
  * @property passed Number of matching expectations.
  * @property total Number of evaluated cases.
  */
-data class BlockingRegressionResult(val passed: Int, val total: Int) {
+data class BlockingRegressionResult(
+    val passed: Int,
+    val total: Int,
+) {
     /**
      * Percentage of cases passed; zero total produces NaN when passed is also zero.
      */
@@ -27,7 +33,9 @@ data class BlockingRegressionResult(val passed: Int, val total: Int) {
  * @param cases Nonempty synthetic expectations.
  * @throws IllegalArgumentException If cases is empty.
  */
-class BlockingRegressionCheck(private val cases: List<BlockingRegressionCase>) {
+class BlockingRegressionCheck(
+    private val cases: List<BlockingRegressionCase>,
+) {
     init {
         require(cases.isNotEmpty())
     }

@@ -1,9 +1,7 @@
 package com.unblocker.app.ui.components
 
-import android.content.Context
 import android.content.Intent
 import android.provider.Settings
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -14,19 +12,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -35,13 +27,8 @@ import androidx.compose.ui.unit.sp
 import com.unblocker.app.services.ServiceStatus
 import com.unblocker.app.services.TunnelDnsConfig
 import com.unblocker.app.ui.motion.FluidVisibility
-import com.unblocker.app.ui.motion.rememberBreathingPulse
 import com.unblocker.app.ui.theme.AllowedGreen
 import com.unblocker.app.ui.theme.LocalVpnStateColors
-import com.unblocker.app.ui.theme.Slate400
-import com.unblocker.app.ui.theme.Slate700
-import com.unblocker.app.ui.theme.Slate800
-import com.unblocker.app.ui.theme.Slate900
 
 /**
  * Renders an expandable status panel inferred from service state and Private DNS inputs.
@@ -61,49 +48,53 @@ fun AgentStatusPanel(
     isPrivateDnsActive: Boolean,
     privateDnsServerName: String?,
     modifier: Modifier = Modifier,
-    onOpenSettings: () -> Unit = {}
+    onOpenSettings: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val isDark = isSystemInDarkTheme()
     val stateColors = LocalVpnStateColors.current
     var isExpanded by remember { mutableStateOf(false) }
     val isRunning = serviceStatus == ServiceStatus.RUNNING
-    val protectionState = remember(serviceStatus, isPrivateDnsActive) {
-        com.unblocker.app.ui.model.ProtectionUiStateMapper.from(
-            status = serviceStatus,
-            privateDnsActive = isPrivateDnsActive,
-            resolverAvailable = true
-        )
-    }
+    val protectionState =
+        remember(serviceStatus, isPrivateDnsActive) {
+            com.unblocker.app.ui.model.ProtectionUiStateMapper.from(
+                status = serviceStatus,
+                privateDnsActive = isPrivateDnsActive,
+                resolverAvailable = true,
+            )
+        }
 
     SkeuomorphicCard(
-        modifier = modifier
-            .fillMaxWidth()
-            .widthIn(max = 420.dp)
-            .animateContentSize(animationSpec = tween(220)),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .widthIn(max = 420.dp)
+                .animateContentSize(animationSpec = tween(220)),
         shape = RoundedCornerShape(20.dp),
-        elevation = 4.dp
+        elevation = 4.dp,
     ) {
         // Compact Status Header (always visible, clickable to toggle diagnostics)
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { isExpanded = !isExpanded },
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { isExpanded = !isExpanded },
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             ) {
                 // Stepped pulse indicator pip
                 Box(
-                    modifier = Modifier
-                        .size(10.dp)
-                        .background(
-                            color = stateColors.coreAccent,
-                            shape = CircleShape
-                        )
+                    modifier =
+                        Modifier
+                            .size(10.dp)
+                            .background(
+                                color = stateColors.coreAccent,
+                                shape = CircleShape,
+                            ),
                 )
 
                 Spacer(modifier = Modifier.width(10.dp))
@@ -116,26 +107,27 @@ fun AgentStatusPanel(
                             fontWeight = FontWeight.Bold,
                             fontFamily = FontFamily.Monospace,
                             letterSpacing = 1.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Surface(
                             shape = RoundedCornerShape(6.dp),
-                            color = stateColors.badgeBackground
+                            color = stateColors.badgeBackground,
                         ) {
                             Text(
-                                text = when (serviceStatus) {
-                                    ServiceStatus.RUNNING -> if (isPrivateDnsActive) "LIMITED" else "ACTIVE"
-                                    ServiceStatus.STARTING -> "STARTING"
-                                    ServiceStatus.STOPPING -> "STOPPING"
-                                    ServiceStatus.ERROR -> "FAULT"
-                                    ServiceStatus.STOPPED -> "STANDBY"
-                                },
+                                text =
+                                    when (serviceStatus) {
+                                        ServiceStatus.RUNNING -> if (isPrivateDnsActive) "LIMITED" else "ACTIVE"
+                                        ServiceStatus.STARTING -> "STARTING"
+                                        ServiceStatus.STOPPING -> "STOPPING"
+                                        ServiceStatus.ERROR -> "FAULT"
+                                        ServiceStatus.STOPPED -> "STANDBY"
+                                    },
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 fontFamily = FontFamily.Monospace,
                                 color = stateColors.badgeTextColor,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             )
                         }
                     }
@@ -143,28 +135,29 @@ fun AgentStatusPanel(
                     Spacer(modifier = Modifier.height(2.dp))
 
                     Text(
-                        text = when (protectionState.status) {
-                            ServiceStatus.RUNNING -> if (isPrivateDnsActive) protectionState.label else "Protected (standard DNS)"
-                            ServiceStatus.STARTING -> protectionState.label
-                            ServiceStatus.STOPPING -> "Stopping"
-                            ServiceStatus.ERROR -> protectionState.label
-                            ServiceStatus.STOPPED -> protectionState.label
-                        },
+                        text =
+                            when (protectionState.status) {
+                                ServiceStatus.RUNNING -> if (isPrivateDnsActive) protectionState.label else "Protected (standard DNS)"
+                                ServiceStatus.STARTING -> protectionState.label
+                                ServiceStatus.STOPPING -> "Stopping"
+                                ServiceStatus.ERROR -> protectionState.label
+                                ServiceStatus.STOPPED -> protectionState.label
+                            },
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
             }
 
             IconButton(
                 onClick = onOpenSettings,
-                modifier = Modifier.size(32.dp)
+                modifier = Modifier.size(32.dp),
             ) {
                 Icon(
                     imageVector = Icons.Default.Settings,
                     contentDescription = "Extensions & Filter Settings",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -172,13 +165,14 @@ fun AgentStatusPanel(
         // Expanded Multi-Stage Workflow Diagnostics
         FluidVisibility(visible = isExpanded) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp)
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp),
             ) {
                 HorizontalDivider(
                     color = MaterialTheme.colorScheme.outlineVariant,
-                    modifier = Modifier.padding(bottom = 12.dp)
+                    modifier = Modifier.padding(bottom = 12.dp),
                 )
 
                 Text(
@@ -187,7 +181,7 @@ fun AgentStatusPanel(
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Monospace,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    letterSpacing = 0.8.sp
+                    letterSpacing = 0.8.sp,
                 )
 
                 Spacer(modifier = Modifier.height(10.dp))
@@ -198,7 +192,7 @@ fun AgentStatusPanel(
                     title = "VPN TUNNEL INTERFACE",
                     detail = if (isRunning) "Bound to ${TunnelDnsConfig.IPV4_DNS}:53 & ${TunnelDnsConfig.IPV6_DNS}:53" else "Offline (0 packet flows)",
                     isSuccess = isRunning,
-                    isWarning = false
+                    isWarning = false,
                 )
 
                 // Step 2: Content Filter Engine
@@ -207,7 +201,7 @@ fun AgentStatusPanel(
                     title = "CONTENT FILTER CORE",
                     detail = if (isRunning) "RuleSet compiled (Ad + Adult heuristics active)" else "Standby",
                     isSuccess = isRunning,
-                    isWarning = false
+                    isWarning = false,
                 )
 
                 // Step 3: Upstream DNS Gateway
@@ -216,7 +210,7 @@ fun AgentStatusPanel(
                     title = "UPSTREAM DNS GATEWAY",
                     detail = if (isPrivateDnsActive) "Encrypted Private DNS active ($privateDnsServerName)" else "Delegating to configured system resolvers",
                     isSuccess = isRunning && !isPrivateDnsActive,
-                    isWarning = isPrivateDnsActive
+                    isWarning = isPrivateDnsActive,
                 )
 
                 // Step 4: Evidence Learner
@@ -225,7 +219,7 @@ fun AgentStatusPanel(
                     title = "LOCAL EVIDENCE LEARNER",
                     detail = "Hardware Keystore HMAC • Zero remote telemetry",
                     isSuccess = true,
-                    isWarning = false
+                    isWarning = false,
                 )
 
                 // Private DNS Warning & Settings Shortcut if active
@@ -234,18 +228,22 @@ fun AgentStatusPanel(
                     Surface(
                         shape = RoundedCornerShape(12.dp),
                         color = if (isDark) Color(0xFF451A03) else Color(0xFFFFFBEB),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, if (isDark) Color(0xFFD97706) else Color(0xFFF59E0B)),
-                        modifier = Modifier.fillMaxWidth()
+                        border =
+                            androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                if (isDark) Color(0xFFD97706) else Color(0xFFF59E0B),
+                            ),
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
                         Row(
                             modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Warning,
                                 contentDescription = null,
                                 tint = if (isDark) Color(0xFFFBBF24) else Color(0xFFB45309),
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(18.dp),
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Column(modifier = Modifier.weight(1f)) {
@@ -253,28 +251,30 @@ fun AgentStatusPanel(
                                     text = "Private DNS mode active",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (isDark) Color(0xFFFDE68A) else Color(0xFF92400E)
+                                    color = if (isDark) Color(0xFFFDE68A) else Color(0xFF92400E),
                                 )
                                 Text(
                                     text = "Android may send queries over DoT bypassing local filter.",
                                     fontSize = 11.sp,
-                                    color = if (isDark) Color(0xFFFDE68A).copy(alpha = 0.8f) else Color(0xFFB45309)
+                                    color = if (isDark) Color(0xFFFDE68A).copy(alpha = 0.8f) else Color(0xFFB45309),
                                 )
                             }
                             TextButton(
                                 onClick = {
                                     runCatching {
-                                        context.startActivity(Intent(Settings.ACTION_WIRELESS_SETTINGS).apply {
-                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                        })
+                                        context.startActivity(
+                                            Intent(Settings.ACTION_WIRELESS_SETTINGS).apply {
+                                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                            },
+                                        )
                                     }
-                                }
+                                },
                             ) {
                                 Text(
                                     text = "Fix",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (isDark) Color(0xFFFBBF24) else Color(0xFFB45309)
+                                    color = if (isDark) Color(0xFFFBBF24) else Color(0xFFB45309),
                                 )
                             }
                         }
@@ -291,21 +291,22 @@ private fun PipelineStepRow(
     title: String,
     detail: String,
     isSuccess: Boolean,
-    isWarning: Boolean
+    isWarning: Boolean,
 ) {
     val isDark = isSystemInDarkTheme()
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = stepNumber,
             fontSize = 11.sp,
             fontFamily = FontFamily.Monospace,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.width(24.dp)
+            modifier = Modifier.width(24.dp),
         )
 
         Column(modifier = Modifier.weight(1f)) {
@@ -314,26 +315,35 @@ private fun PipelineStepRow(
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.Monospace,
-                color = if (isWarning) (if (isDark) Color(0xFFFBBF24) else Color(0xFFB45309)) else if (isSuccess) (if (isDark) AllowedGreen else Color(0xFF047857)) else MaterialTheme.colorScheme.onSurfaceVariant
+                color =
+                    if (isWarning) {
+                        (if (isDark) Color(0xFFFBBF24) else Color(0xFFB45309))
+                    } else if (isSuccess) {
+                        (if (isDark) AllowedGreen else Color(0xFF047857))
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
             )
             Text(
                 text = detail,
                 fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
 
         Box(
-            modifier = Modifier
-                .size(7.dp)
-                .background(
-                    color = when {
-                        isWarning -> if (isDark) Color(0xFFFBBF24) else Color(0xFFB45309)
-                        isSuccess -> if (isDark) AllowedGreen else Color(0xFF047857)
-                        else -> MaterialTheme.colorScheme.outlineVariant
-                    },
-                    shape = CircleShape
-                )
+            modifier =
+                Modifier
+                    .size(7.dp)
+                    .background(
+                        color =
+                            when {
+                                isWarning -> if (isDark) Color(0xFFFBBF24) else Color(0xFFB45309)
+                                isSuccess -> if (isDark) AllowedGreen else Color(0xFF047857)
+                                else -> MaterialTheme.colorScheme.outlineVariant
+                            },
+                        shape = CircleShape,
+                    ),
         )
     }
 }

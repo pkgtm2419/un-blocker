@@ -6,8 +6,8 @@ import androidx.room.TypeConverters
 import com.unblocker.data.db.converter.DateConverters
 import com.unblocker.data.db.dao.BlockRuleDao
 import com.unblocker.data.db.dao.DnsLogDao
-import com.unblocker.data.db.dao.WhitelistDao
 import com.unblocker.data.db.dao.DomainLogDao
+import com.unblocker.data.db.dao.WhitelistDao
 import com.unblocker.data.db.entity.BlockRuleEntity
 import com.unblocker.data.db.entity.DnsLogEntity
 import com.unblocker.data.db.entity.DomainEventEntity
@@ -23,32 +23,34 @@ import com.unblocker.data.db.entity.WhitelistEntity
         BlockRuleEntity::class,
         WhitelistEntity::class,
         DomainStatEntity::class,
-        DomainEventEntity::class
+        DomainEventEntity::class,
     ],
     version = 2,
-    exportSchema = true
+    exportSchema = true,
 )
 @TypeConverters(DateConverters::class)
 abstract class UnblockerDatabase : RoomDatabase() {
-
     /**
      * Accesses legacy DNS logs.
      *
      * @return DAO owned by this database instance.
      */
     abstract fun dnsLogDao(): DnsLogDao
+
     /**
      * Accesses domain aggregates and events.
      *
      * @return DAO owned by this database instance.
      */
     abstract fun domainLogDao(): DomainLogDao
+
     /**
      * Accesses block rules.
      *
      * @return DAO owned by this database instance.
      */
     abstract fun blockRuleDao(): BlockRuleDao
+
     /**
      * Accesses readable allow entries.
      *

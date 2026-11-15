@@ -28,12 +28,15 @@ sealed interface RuleUpdateState {
      * No downloaded-rule failure is currently reported.
      */
     data object Ready : RuleUpdateState
+
     /**
      * A downloaded list could not be installed.
      *
      * @property reason User-facing download or admission failure explanation.
      */
-    data class Failed(val reason: String) : RuleUpdateState
+    data class Failed(
+        val reason: String,
+    ) : RuleUpdateState
 }
 
 /**
@@ -41,8 +44,9 @@ sealed interface RuleUpdateState {
  *
  * @param context Application context used for assets and private extension storage.
  */
-class ExtensionRepository private constructor(private val context: Context) {
-
+class ExtensionRepository private constructor(
+    private val context: Context,
+) {
     private val prefs: SharedPreferences =
         context.getSharedPreferences("extension_preferences", Context.MODE_PRIVATE)
 
@@ -50,24 +54,28 @@ class ExtensionRepository private constructor(private val context: Context) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     private val _extensions = MutableStateFlow<List<ExtensionFilter>>(emptyList())
+
     /**
      * Current catalog entries, including enabled state and cached download metadata.
      */
     val extensions: StateFlow<List<ExtensionFilter>> = _extensions.asStateFlow()
 
     private val _autoUpdateEnabled = MutableStateFlow(prefs.getBoolean(KEY_AUTO_UPDATE, false))
+
     /**
      * Persisted preference for periodic extension updates.
      */
     val autoUpdateEnabled: StateFlow<Boolean> = _autoUpdateEnabled.asStateFlow()
 
     private val _isUpdating = MutableStateFlow(false)
+
     /**
      * Whether an update operation is currently in progress.
      */
     val isUpdating: StateFlow<Boolean> = _isUpdating.asStateFlow()
 
     private val _ruleUpdateState = MutableStateFlow<RuleUpdateState>(RuleUpdateState.Ready)
+
     /**
      * Last reported list download or admission state.
      */
@@ -103,10 +111,14 @@ class ExtensionRepository private constructor(private val context: Context) {
      * @param id Catalog identifier to update.
      * @param enabled Whether the entry should contribute cached rules.
      */
-    fun toggleExtension(id: String, enabled: Boolean) {
-        val updated = _extensions.value.map {
-            if (it.id == id) it.copy(isEnabled = enabled) else it
-        }
+    fun toggleExtension(
+        id: String,
+        enabled: Boolean,
+    ) {
+        val updated =
+            _extensions.value.map {
+                if (it.id == id) it.copy(isEnabled = enabled) else it
+            }
         _extensions.value = updated
         persistExtensions(updated)
         reloadActiveRulesAsync()
@@ -130,20 +142,24 @@ class ExtensionRepository private constructor(private val context: Context) {
      * @param name Display name supplied by the user.
      * @param url List URL saved for a subsequent update attempt.
      */
-    fun addCustomFilter(name: String, url: String) {
+    fun addCustomFilter(
+        name: String,
+        url: String,
+    ) {
         val id = "custom_" + System.currentTimeMillis()
-        val customFilter = ExtensionFilter(
-            id = id,
-            name = name,
-            url = url,
-            filterCount = 0,
-            sizeBytes = 0L,
-            lastUpdatedEpochMs = System.currentTimeMillis(),
-            isEnabled = true,
-            isCustom = true,
-            category = FilterCategories.CUSTOM,
-            description = "User custom domain rules and exceptions"
-        )
+        val customFilter =
+            ExtensionFilter(
+                id = id,
+                name = name,
+                url = url,
+                filterCount = 0,
+                sizeBytes = 0L,
+                lastUpdatedEpochMs = System.currentTimeMillis(),
+                isEnabled = true,
+                isCustom = true,
+                category = FilterCategories.CUSTOM,
+                description = "User custom domain rules and exceptions",
+            )
         val updated = listOf(customFilter) + _extensions.value
         _extensions.value = updated
         persistExtensions(updated)
@@ -210,39 +226,41 @@ class ExtensionRepository private constructor(private val context: Context) {
      *
      * @return Number of successful downloads, or a failure if the enclosing update operation fails.
      */
-    suspend fun updateAll(): Result<Int> = withContext(Dispatchers.IO) {
-        _isUpdating.value = true
-        var successCount = 0
-        try {
-            val currentList = _extensions.value
-            val updatedList = currentList.toMutableList()
+    suspend fun updateAll(): Result<Int> =
+        withContext(Dispatchers.IO) {
+            _isUpdating.value = true
+            var successCount = 0
+            try {
+                val currentList = _extensions.value
+                val updatedList = currentList.toMutableList()
 
-            for (i in updatedList.indices) {
-                val ext = updatedList[i]
-                if (ext.url.isBlank()) continue
+                for (i in updatedList.indices) {
+                    val ext = updatedList[i]
+                    if (ext.url.isBlank()) continue
 
-                val result = downloadAndSaveFilter(ext)
-                if (result.isSuccess) {
-                    val (count, size) = result.getOrThrow()
-                    updatedList[i] = ext.copy(
-                        filterCount = count,
-                        sizeBytes = size,
-                        lastUpdatedEpochMs = System.currentTimeMillis()
-                    )
-                    successCount++
+                    val result = downloadAndSaveFilter(ext)
+                    if (result.isSuccess) {
+                        val (count, size) = result.getOrThrow()
+                        updatedList[i] =
+                            ext.copy(
+                                filterCount = count,
+                                sizeBytes = size,
+                                lastUpdatedEpochMs = System.currentTimeMillis(),
+                            )
+                        successCount++
+                    }
                 }
-            }
 
-            _extensions.value = updatedList
-            persistExtensions(updatedList)
-            reloadActiveRules()
-            Result.success(successCount)
-        } catch (e: Exception) {
-            Result.failure(e)
-        } finally {
-            _isUpdating.value = false
+                _extensions.value = updatedList
+                persistExtensions(updatedList)
+                reloadActiveRules()
+                Result.success(successCount)
+            } catch (e: Exception) {
+                Result.failure(e)
+            } finally {
+                _isUpdating.value = false
+            }
         }
-    }
 
     /**
      * Downloads one entry and publishes updated metadata and active rules on success.
@@ -250,65 +268,73 @@ class ExtensionRepository private constructor(private val context: Context) {
      * @param id Catalog identifier to update.
      * @return Success containing true, or a failure for missing, invalid, or rejected entries.
      */
-    suspend fun updateExtension(id: String): Result<Boolean> = withContext(Dispatchers.IO) {
-        _isUpdating.value = true
-        try {
-            val currentList = _extensions.value.toMutableList()
-            val index = currentList.indexOfFirst { it.id == id }
-            if (index == -1) return@withContext Result.failure(IllegalArgumentException("Extension not found"))
+    suspend fun updateExtension(id: String): Result<Boolean> =
+        withContext(Dispatchers.IO) {
+            _isUpdating.value = true
+            try {
+                val currentList = _extensions.value.toMutableList()
+                val index = currentList.indexOfFirst { it.id == id }
+                if (index == -1) return@withContext Result.failure(IllegalArgumentException("Extension not found"))
 
-            val ext = currentList[index]
-            if (ext.url.isBlank()) return@withContext Result.failure(IllegalArgumentException("URL is blank"))
+                val ext = currentList[index]
+                if (ext.url.isBlank()) return@withContext Result.failure(IllegalArgumentException("URL is blank"))
 
-            val result = downloadAndSaveFilter(ext)
-            if (result.isSuccess) {
-                val (count, size) = result.getOrThrow()
-                currentList[index] = ext.copy(
-                    filterCount = count,
-                    sizeBytes = size,
-                    lastUpdatedEpochMs = System.currentTimeMillis()
-                )
-                _extensions.value = currentList
-                persistExtensions(currentList)
-                reloadActiveRules()
-                Result.success(true)
-            } else {
-                Result.failure(result.exceptionOrNull() ?: Exception("Download failed"))
+                val result = downloadAndSaveFilter(ext)
+                if (result.isSuccess) {
+                    val (count, size) = result.getOrThrow()
+                    currentList[index] =
+                        ext.copy(
+                            filterCount = count,
+                            sizeBytes = size,
+                            lastUpdatedEpochMs = System.currentTimeMillis(),
+                        )
+                    _extensions.value = currentList
+                    persistExtensions(currentList)
+                    reloadActiveRules()
+                    Result.success(true)
+                } else {
+                    Result.failure(result.exceptionOrNull() ?: Exception("Download failed"))
+                }
+            } finally {
+                _isUpdating.value = false
             }
-        } finally {
-            _isUpdating.value = false
         }
-    }
 
     private suspend fun downloadAndSaveFilter(ext: ExtensionFilter): Result<Pair<Int, Long>> {
         val targetFile = File(extensionsDir, "${ext.id}.rules")
-        val url = runCatching { URL(ext.url) }.getOrElse {
-            val msg = "Invalid URL: ${ext.url}"
-            _ruleUpdateState.value = RuleUpdateState.Failed(msg)
-            return Result.failure(IllegalArgumentException(msg))
-        }
+        val url =
+            runCatching { URL(ext.url) }.getOrElse {
+                val msg = "Invalid URL: ${ext.url}"
+                _ruleUpdateState.value = RuleUpdateState.Failed(msg)
+                return Result.failure(IllegalArgumentException(msg))
+            }
 
         return when (val downloadResult = BoundedFilterDownloader.DEFAULT.download(url, targetFile)) {
             is DownloadResult.Success -> {
                 _ruleUpdateState.value = RuleUpdateState.Ready
                 Result.success(Pair(downloadResult.validRuleCount, downloadResult.bytesRead))
             }
+
             is DownloadResult.TooLarge -> {
                 _ruleUpdateState.value = RuleUpdateState.Failed(downloadResult.message)
                 Result.failure(IllegalStateException(downloadResult.message))
             }
+
             is DownloadResult.InvalidSource -> {
                 _ruleUpdateState.value = RuleUpdateState.Failed(downloadResult.message)
                 Result.failure(IllegalArgumentException(downloadResult.message))
             }
+
             is DownloadResult.HttpFailure -> {
                 _ruleUpdateState.value = RuleUpdateState.Failed(downloadResult.message)
                 Result.failure(java.io.IOException(downloadResult.message))
             }
+
             is DownloadResult.InvalidRules -> {
                 _ruleUpdateState.value = RuleUpdateState.Failed(downloadResult.message)
                 Result.failure(IllegalStateException(downloadResult.message))
             }
+
             is DownloadResult.NetworkFailure -> {
                 _ruleUpdateState.value = RuleUpdateState.Failed(downloadResult.message)
                 Result.failure(java.io.IOException(downloadResult.message))
@@ -340,10 +366,8 @@ class ExtensionRepository private constructor(private val context: Context) {
         }
     }
 
-
-
-    private fun loadBundledManifestWithVersion(): Pair<Int, List<ExtensionFilter>> {
-        return runCatching {
+    private fun loadBundledManifestWithVersion(): Pair<Int, List<ExtensionFilter>> =
+        runCatching {
             context.assets.open("extensions/extensions_manifest.json").reader().use { reader ->
                 val jsonObject = JSONObject(reader.readText())
                 val version = jsonObject.optInt("version", 1)
@@ -362,34 +386,46 @@ class ExtensionRepository private constructor(private val context: Context) {
                             isEnabled = obj.optBoolean("enabled", true),
                             isCustom = obj.optBoolean("custom", false),
                             syntax = obj.optString("syntax", "rules"),
-                            category = obj.optString("category", if (obj.optBoolean("custom", false)) FilterCategories.CUSTOM else FilterCategories.PRIVACY),
+                            category =
+                                obj.optString(
+                                    "category",
+                                    if (obj.optBoolean(
+                                            "custom",
+                                            false,
+                                        )
+                                    ) {
+                                        FilterCategories.CUSTOM
+                                    } else {
+                                        FilterCategories.PRIVACY
+                                    },
+                                ),
                             description = obj.optString("description", ""),
-                            browserOnly = obj.optBoolean("browserOnly", false)
-                        )
+                            browserOnly = obj.optBoolean("browserOnly", false),
+                        ),
                     )
                 }
                 Pair(version, result)
             }
         }.getOrDefault(Pair(1, emptyList()))
-    }
 
     private fun persistExtensions(list: List<ExtensionFilter>) {
         val array = JSONArray()
         for (item in list) {
-            val obj = JSONObject().apply {
-                put("id", item.id)
-                put("name", item.name)
-                put("url", item.url)
-                put("filterCount", item.filterCount)
-                put("sizeBytes", item.sizeBytes)
-                put("lastUpdated", item.lastUpdatedEpochMs)
-                put("enabled", item.isEnabled)
-                put("custom", item.isCustom)
-                put("syntax", item.syntax)
-                put("category", item.category)
-                put("description", item.description)
-                put("browserOnly", item.browserOnly)
-            }
+            val obj =
+                JSONObject().apply {
+                    put("id", item.id)
+                    put("name", item.name)
+                    put("url", item.url)
+                    put("filterCount", item.filterCount)
+                    put("sizeBytes", item.sizeBytes)
+                    put("lastUpdated", item.lastUpdatedEpochMs)
+                    put("enabled", item.isEnabled)
+                    put("custom", item.isCustom)
+                    put("syntax", item.syntax)
+                    put("category", item.category)
+                    put("description", item.description)
+                    put("browserOnly", item.browserOnly)
+                }
             array.put(obj)
         }
         prefs.edit().putString(KEY_EXTENSIONS_JSON, array.toString()).apply()
@@ -411,10 +447,14 @@ class ExtensionRepository private constructor(private val context: Context) {
                     isEnabled = obj.optBoolean("enabled", true),
                     isCustom = obj.optBoolean("custom", false),
                     syntax = obj.optString("syntax", "rules"),
-                    category = obj.optString("category", if (obj.optBoolean("custom", false)) FilterCategories.CUSTOM else FilterCategories.PRIVACY),
+                    category =
+                        obj.optString(
+                            "category",
+                            if (obj.optBoolean("custom", false)) FilterCategories.CUSTOM else FilterCategories.PRIVACY,
+                        ),
                     description = obj.optString("description", ""),
-                    browserOnly = obj.optBoolean("browserOnly", false)
-                )
+                    browserOnly = obj.optBoolean("browserOnly", false),
+                ),
             )
         }
         return result
@@ -428,6 +468,7 @@ class ExtensionRepository private constructor(private val context: Context) {
          * Preference key holding serialized extension metadata.
          */
         const val KEY_EXTENSIONS_JSON = "key_extensions_json"
+
         /**
          * Preference key holding the last incorporated bundled catalog version.
          */
@@ -443,31 +484,41 @@ class ExtensionRepository private constructor(private val context: Context) {
          */
         fun migrateExtensions(
             savedList: List<ExtensionFilter>,
-            bundledList: List<ExtensionFilter>
+            bundledList: List<ExtensionFilter>,
         ): List<ExtensionFilter> {
             val bundledIds = bundledList.map { it.id }.toSet()
             val customFilters = savedList.filter { it.isCustom && it.id !in bundledIds }
             val savedMap = savedList.associateBy { it.id }
 
-            val mergedBundled = bundledList.map { bundled ->
-                val saved = savedMap[bundled.id]
-                    ?: if (bundled.id == "oisd_small") savedMap["oisd_abp_full"] else null
-                if (saved != null) {
-                    val isEnabled = if (bundled.browserOnly && !bundled.isEnabled) {
-                        false
+            val mergedBundled =
+                bundledList.map { bundled ->
+                    val saved =
+                        savedMap[bundled.id]
+                            ?: if (bundled.id == "oisd_small") savedMap["oisd_abp_full"] else null
+                    if (saved != null) {
+                        val isEnabled =
+                            if (bundled.browserOnly && !bundled.isEnabled) {
+                                false
+                            } else {
+                                saved.isEnabled
+                            }
+                        bundled.copy(
+                            isEnabled = isEnabled,
+                            filterCount = if (saved.filterCount > 0) saved.filterCount else bundled.filterCount,
+                            sizeBytes = if (saved.sizeBytes > 0) saved.sizeBytes else bundled.sizeBytes,
+                            lastUpdatedEpochMs =
+                                if (saved.lastUpdatedEpochMs >
+                                    0
+                                ) {
+                                    saved.lastUpdatedEpochMs
+                                } else {
+                                    bundled.lastUpdatedEpochMs
+                                },
+                        )
                     } else {
-                        saved.isEnabled
+                        bundled
                     }
-                    bundled.copy(
-                        isEnabled = isEnabled,
-                        filterCount = if (saved.filterCount > 0) saved.filterCount else bundled.filterCount,
-                        sizeBytes = if (saved.sizeBytes > 0) saved.sizeBytes else bundled.sizeBytes,
-                        lastUpdatedEpochMs = if (saved.lastUpdatedEpochMs > 0) saved.lastUpdatedEpochMs else bundled.lastUpdatedEpochMs
-                    )
-                } else {
-                    bundled
                 }
-            }
 
             return customFilters + mergedBundled
         }
@@ -481,10 +532,9 @@ class ExtensionRepository private constructor(private val context: Context) {
          * @param context Context whose application context is retained.
          * @return Shared extension repository.
          */
-        fun getInstance(context: Context): ExtensionRepository {
-            return INSTANCE ?: synchronized(this) {
+        fun getInstance(context: Context): ExtensionRepository =
+            INSTANCE ?: synchronized(this) {
                 INSTANCE ?: ExtensionRepository(context.applicationContext).also { INSTANCE = it }
             }
-        }
     }
 }

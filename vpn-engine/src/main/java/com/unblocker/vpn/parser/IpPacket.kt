@@ -1,6 +1,5 @@
 package com.unblocker.vpn.parser
 
-
 /**
  * Parsed IP metadata with directly retained address arrays.
  *
@@ -17,7 +16,7 @@ data class IpPacket(
     val protocol: Int,
     val srcIp: ByteArray,
     val dstIp: ByteArray,
-    val ipHeaderLength: Int
+    val ipHeaderLength: Int,
 ) {
     /**
      * IP header parsing entry point and protocol constants.
@@ -36,7 +35,10 @@ data class IpPacket(
          * @return Header metadata, or null for unsupported versions or rejected lengths.
          * @throws IndexOutOfBoundsException If declared bounds permit access outside the array.
          */
-        fun parse(buffer: ByteArray, length: Int): IpPacket? {
+        fun parse(
+            buffer: ByteArray,
+            length: Int,
+        ): IpPacket? {
             if (length < 20) return null
             val version = (buffer[0].toInt() shr 4) and 0x0F
 
@@ -47,7 +49,10 @@ data class IpPacket(
             }
         }
 
-        private fun parseIpv4(buffer: ByteArray, length: Int): IpPacket? {
+        private fun parseIpv4(
+            buffer: ByteArray,
+            length: Int,
+        ): IpPacket? {
             val headerLength = (buffer[0].toInt() and 0x0F) * 4
             if (headerLength < 20 || length < headerLength + 8) return null
             val protocol = buffer[9].toInt() and 0xFF
@@ -58,11 +63,14 @@ data class IpPacket(
                 protocol = protocol,
                 srcIp = srcIp,
                 dstIp = dstIp,
-                ipHeaderLength = headerLength
+                ipHeaderLength = headerLength,
             )
         }
 
-        private fun parseIpv6(buffer: ByteArray, length: Int): IpPacket? {
+        private fun parseIpv6(
+            buffer: ByteArray,
+            length: Int,
+        ): IpPacket? {
             if (length < 40 + 8) return null
             // Walk extension headers to find the final protocol
             var nextHeader = buffer[6].toInt() and 0xFF
@@ -81,7 +89,7 @@ data class IpPacket(
                 protocol = nextHeader,
                 srcIp = srcIp,
                 dstIp = dstIp,
-                ipHeaderLength = offset
+                ipHeaderLength = offset,
             )
         }
     }

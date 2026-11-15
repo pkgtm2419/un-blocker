@@ -46,21 +46,22 @@ import com.unblocker.app.ui.settings.SettingsScreen
 @Composable
 fun MainScreen(
     preferences: FilteringPreferences,
-    quickStartManager: QuickStartManager
+    quickStartManager: QuickStartManager,
 ) {
     val context = LocalContext.current
 
     // Launcher for Android System VPN Permission Consent
-    val vpnPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            preferences.setAdBlockingEnabled(true)
-            quickStartManager.startBlockingServices(onPermissionRequired = {})
-        } else {
-            preferences.setProtectionEnabled(false)
+    val vpnPermissionLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult(),
+        ) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                preferences.setAdBlockingEnabled(true)
+                quickStartManager.startBlockingServices(onPermissionRequired = {})
+            } else {
+                preferences.setProtectionEnabled(false)
+            }
         }
-    }
 
     val launchVpn = {
         val vpnIntent = VpnService.prepare(context)
@@ -73,17 +74,20 @@ fun MainScreen(
     }
 
     // Optional Notification Permission on Android 13+ (API 33+)
-    val notificationPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { _ ->
-        launchVpn()
-    }
+    val notificationPermissionLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission(),
+        ) { _ ->
+            launchVpn()
+        }
 
     val requestPermissionsAndStart = {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             androidx.core.content.ContextCompat.checkSelfPermission(
-                context, android.Manifest.permission.POST_NOTIFICATIONS
-            ) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                context,
+                android.Manifest.permission.POST_NOTIFICATIONS,
+            ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
             notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
         } else {
             launchVpn()
@@ -92,14 +96,15 @@ fun MainScreen(
 
     var isExtensionsOpen by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableStateOf(0) }
-    val navItems = remember {
-        listOf(
-            NavItem(title = "Home", icon = Icons.Filled.Security),
-            NavItem(title = "Learn", icon = Icons.Filled.Apps),
-            NavItem(title = "Logs", icon = Icons.AutoMirrored.Filled.List),
-            NavItem(title = "Settings", icon = Icons.Filled.Settings)
-        )
-    }
+    val navItems =
+        remember {
+            listOf(
+                NavItem(title = "Home", icon = Icons.Filled.Security),
+                NavItem(title = "Learn", icon = Icons.Filled.Apps),
+                NavItem(title = "Logs", icon = Icons.AutoMirrored.Filled.List),
+                NavItem(title = "Settings", icon = Icons.Filled.Settings),
+            )
+        }
 
     val navBarBottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val contentPadding = PaddingValues(bottom = 64.dp + 16.dp + navBarBottomInset)
@@ -110,7 +115,7 @@ fun MainScreen(
 
     if (isExtensionsOpen) {
         ExtensionsScreen(
-            onNavigateBack = { isExtensionsOpen = false }
+            onNavigateBack = { isExtensionsOpen = false },
         )
     } else {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -123,26 +128,29 @@ fun MainScreen(
                             onRequestVpnPermission = requestPermissionsAndStart,
                             contentPadding = contentPadding,
                             onOpenSettings = { selectedTab = 3 },
-                            onNavigateToLogs = { selectedTab = 2 }
+                            onNavigateToLogs = { selectedTab = 2 },
                         )
                     }
+
                     1 -> {
                         LearnAppScreen(
                             onNavigateBack = { selectedTab = 0 },
-                            contentPadding = contentPadding
+                            contentPadding = contentPadding,
                         )
                     }
+
                     2 -> {
                         LogViewerScreen(
-                            contentPadding = contentPadding
+                            contentPadding = contentPadding,
                         )
                     }
+
                     else -> {
                         SettingsScreen(
                             preferences = preferences,
                             quickStartManager = quickStartManager,
                             onNavigateToExtensions = { isExtensionsOpen = true },
-                            contentPadding = contentPadding
+                            contentPadding = contentPadding,
                         )
                     }
                 }
@@ -152,7 +160,7 @@ fun MainScreen(
                 items = navItems,
                 selectedItem = selectedTab,
                 onItemSelected = { selectedTab = it },
-                modifier = Modifier.align(Alignment.BottomCenter)
+                modifier = Modifier.align(Alignment.BottomCenter),
             )
         }
     }

@@ -12,38 +12,47 @@ object FilterCategories {
      * Category label selecting all extension entries.
      */
     const val ALL = "All"
+
     /**
      * Category label selecting the recommended subset.
      */
     const val RECOMMENDED = "Recommended"
+
     /**
      * Category label for consolidated DNS lists.
      */
     const val MASTER_DNS = "Master DNS"
+
     /**
      * Category label for mobile and device-vendor lists.
      */
     const val MOBILE_OEM = "Mobile & OEM"
+
     /**
      * Category label for security lists.
      */
     const val SECURITY = "Security"
+
     /**
      * Category label for parental filtering lists.
      */
     const val PARENTAL = "Parental"
+
     /**
      * Category label for connected-device lists.
      */
     const val SMART_DEVICES = "Smart Devices"
+
     /**
      * Category label for privacy lists.
      */
     const val PRIVACY = "Privacy"
+
     /**
      * Category label for region-specific lists.
      */
     const val REGIONAL = "Regional"
+
     /**
      * Category label for user-created lists.
      */
@@ -52,17 +61,18 @@ object FilterCategories {
     /**
      * Ordered category tabs offered by the extension catalog, excluding the custom-only label.
      */
-    val ALL_CATEGORIES = listOf(
-        ALL,
-        RECOMMENDED,
-        MASTER_DNS,
-        MOBILE_OEM,
-        SECURITY,
-        PARENTAL,
-        SMART_DEVICES,
-        PRIVACY,
-        REGIONAL
-    )
+    val ALL_CATEGORIES =
+        listOf(
+            ALL,
+            RECOMMENDED,
+            MASTER_DNS,
+            MOBILE_OEM,
+            SECURITY,
+            PARENTAL,
+            SMART_DEVICES,
+            PRIVACY,
+            REGIONAL,
+        )
 }
 
 /**
@@ -93,7 +103,7 @@ data class ExtensionFilter(
     val syntax: String = "rules",
     val category: String = FilterCategories.PRIVACY,
     val description: String = "",
-    val browserOnly: Boolean = false
+    val browserOnly: Boolean = false,
 ) {
     /**
      * Formats the recorded size with binary conversion and B, KB, or MB display labels.
@@ -106,7 +116,7 @@ data class ExtensionFilter(
         }
         val kibibytes = sizeBytes / 1024.0
         return if (kibibytes < 1.0) {
-            "${sizeBytes}.0B"
+            "$sizeBytes.0B"
         } else if (kibibytes < 1024.0) {
             String.format(Locale.US, "%.1fKB", kibibytes)
         } else {

@@ -2,20 +2,22 @@ package com.unblocker.app.dns
 
 import com.unblocker.app.logic.dns.DnsPacketUtil
 import com.unblocker.app.logic.dns.toForwardingRequest
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 /**
  * Regression coverage for forwarding DNS request.
  */
 class ForwardingDnsRequestTest {
-
-    private fun buildSyntheticQueryBuffer(txId: Short, domain: String): ByteArray {
+    private fun buildSyntheticQueryBuffer(
+        txId: Short,
+        domain: String,
+    ): ByteArray {
         val domainParts = domain.split(".")
         val qnameBytes = ByteBuffer.allocate(domain.length + 2)
         for (part in domainParts) {

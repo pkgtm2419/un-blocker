@@ -14,6 +14,7 @@ interface ProtectedDomains {
      * @return Whether the implementation protects that hostname.
      */
     fun isProtected(host: String): Boolean
+
     /**
      * Tests whether a proposed rule intersects protected names.
      *
@@ -21,7 +22,10 @@ interface ProtectedDomains {
      * @param host Root hostname of the candidate rule.
      * @return Whether the rule would cover protected infrastructure or user-selected domains.
      */
-    fun ruleWouldBlockProtected(kind: RuleKind, host: String): Boolean
+    fun ruleWouldBlockProtected(
+        kind: RuleKind,
+        host: String,
+    ): Boolean
 
     /**
      * Default built-in protection policy.
@@ -44,9 +48,8 @@ interface ProtectedDomains {
 class DefaultProtectedDomains(
     private val builtInSupplier: () -> Set<String> = { NeverBlockPolicy.getProtectedHosts() },
     private val myDomainsSupplier: () -> Set<String> = { emptySet() },
-    private val psl: PublicSuffixRules = PublicSuffixRules.fallback
+    private val psl: PublicSuffixRules = PublicSuffixRules.fallback,
 ) : ProtectedDomains {
-
     /**
      * Builds protection from fixed input sets.
      *
@@ -57,7 +60,7 @@ class DefaultProtectedDomains(
     constructor(
         builtIn: Set<String>,
         myDomains: Set<String> = emptySet(),
-        psl: PublicSuffixRules = PublicSuffixRules.fallback
+        psl: PublicSuffixRules = PublicSuffixRules.fallback,
     ) : this({ builtIn }, { myDomains }, psl)
 
     /**
@@ -69,7 +72,9 @@ class DefaultProtectedDomains(
     override fun isProtected(host: String): Boolean {
         val normalized = DomainName.normalize(host) ?: return false
         val builtIn = builtInSupplier()
-        if (builtIn.contains(normalized) || (normalized.startsWith("www.") && builtIn.contains(normalized.removePrefix("www.")))) {
+        if (builtIn.contains(normalized) ||
+            (normalized.startsWith("www.") && builtIn.contains(normalized.removePrefix("www.")))
+        ) {
             return true
         }
         val myDomains = myDomainsSupplier()
@@ -89,25 +94,39 @@ class DefaultProtectedDomains(
      * @param host Rule hostname to normalize.
      * @return Whether coverage intersects protection; invalid names return false.
      */
-    override fun ruleWouldBlockProtected(kind: RuleKind, host: String): Boolean {
+    override fun ruleWouldBlockProtected(
+        kind: RuleKind,
+        host: String,
+    ): Boolean {
         val normalized = DomainName.normalize(host) ?: return false
         val builtIn = builtInSupplier()
         for (protectedHost in builtIn) {
-            val matches = when (kind) {
-                RuleKind.EXACT -> protectedHost == normalized
-                RuleKind.SUFFIX -> protectedHost == normalized || protectedHost.endsWith(".$normalized")
-                RuleKind.WILDCARD -> protectedHost.endsWith(".$normalized")
-            }
+            val matches =
+                when (kind) {
+                    RuleKind.EXACT -> protectedHost == normalized
+                    RuleKind.SUFFIX -> protectedHost == normalized || protectedHost.endsWith(".$normalized")
+                    RuleKind.WILDCARD -> protectedHost.endsWith(".$normalized")
+                }
             if (matches) return true
         }
 
         val myDomains = myDomainsSupplier()
         for (myDomain in myDomains) {
-            val matches = when (kind) {
-                RuleKind.EXACT -> myDomain == normalized
-                RuleKind.SUFFIX -> myDomain == normalized || myDomain.endsWith(".$normalized") || normalized.endsWith(".$myDomain")
-                RuleKind.WILDCARD -> myDomain.endsWith(".$normalized") || normalized.endsWith(".$myDomain")
-            }
+            val matches =
+                when (kind) {
+                    RuleKind.EXACT -> {
+                        myDomain == normalized
+                    }
+
+                    RuleKind.SUFFIX -> {
+                        myDomain == normalized || myDomain.endsWith(".$normalized") ||
+                            normalized.endsWith(".$myDomain")
+                    }
+
+                    RuleKind.WILDCARD -> {
+                        myDomain.endsWith(".$normalized") || normalized.endsWith(".$myDomain")
+                    }
+                }
             if (matches) return true
         }
 

@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 enum class BlockingMode {
     SMART,
-    APPROVED_ONLY
+    APPROVED_ONLY,
 }
 
 /**
@@ -22,7 +22,7 @@ enum class BlockingMode {
 enum class FilteringTier {
     BASIC,
     OPTIMAL,
-    COMPLETE
+    COMPLETE,
 }
 
 /**
@@ -33,6 +33,7 @@ interface FilteringPreferenceStore {
      * Whether capture of new local query log entries is paused.
      */
     val isQueryLoggingPaused: StateFlow<Boolean>
+
     /**
      * Persists the local query logging pause flag.
      *
@@ -46,36 +47,47 @@ interface FilteringPreferenceStore {
  *
  * @param context Context used to access the application-private preference file.
  */
-class FilteringPreferences(context: Context) : FilteringPreferenceStore {
-
+class FilteringPreferences(
+    context: Context,
+) : FilteringPreferenceStore {
     private val prefs: SharedPreferences =
         context.getSharedPreferences("unblocker_preferences", Context.MODE_PRIVATE)
 
     private val _adBlockingEnabled = MutableStateFlow(prefs.getBoolean(KEY_AD_BLOCKING, true))
+
     /**
      * Whether ad and tracking rule evaluation is enabled.
      */
     val adBlockingEnabled: StateFlow<Boolean> = _adBlockingEnabled.asStateFlow()
 
     private val _adultBlockingEnabled = MutableStateFlow(prefs.getBoolean(KEY_ADULT_BLOCKING, true))
+
     /**
      * Whether the independent adult-domain filtering policy is enabled.
      */
     val adultBlockingEnabled: StateFlow<Boolean> = _adultBlockingEnabled.asStateFlow()
 
     private val _serviceRunning = MutableStateFlow(prefs.getBoolean(KEY_SERVICE_RUNNING, false))
+
     /**
      * Last persisted service-running flag; it is not a live tunnel health signal.
      */
     val serviceRunning: StateFlow<Boolean> = _serviceRunning.asStateFlow()
 
     // User intent is separate from the ephemeral service/process state.
-    private val _protectionEnabled = MutableStateFlow(prefs.getBoolean(KEY_PROTECTION_ENABLED,
-        prefs.getBoolean(KEY_SERVICE_RUNNING, false) && prefs.getBoolean(KEY_AD_BLOCKING, true)).also {
-        if (!prefs.contains(KEY_PROTECTION_ENABLED)) {
-            prefs.edit().putBoolean(KEY_PROTECTION_ENABLED, it).apply()
-        }
-    })
+    private val _protectionEnabled =
+        MutableStateFlow(
+            prefs
+                .getBoolean(
+                    KEY_PROTECTION_ENABLED,
+                    prefs.getBoolean(KEY_SERVICE_RUNNING, false) && prefs.getBoolean(KEY_AD_BLOCKING, true),
+                ).also {
+                    if (!prefs.contains(KEY_PROTECTION_ENABLED)) {
+                        prefs.edit().putBoolean(KEY_PROTECTION_ENABLED, it).apply()
+                    }
+                },
+        )
+
     /**
      * Persisted user intent to enable protection, separate from current service state.
      */
@@ -92,53 +104,65 @@ class FilteringPreferences(context: Context) : FilteringPreferenceStore {
     }
 
     private val _autoRestartOnBoot = MutableStateFlow(prefs.getBoolean(KEY_AUTO_BOOT, true))
+
     /**
      * Whether protection restart is requested after device boot.
      */
     val autoRestartOnBoot: StateFlow<Boolean> = _autoRestartOnBoot.asStateFlow()
 
-    private val _healthCheckIntervalMinutes = MutableStateFlow(
-        prefs.getInt(KEY_HEALTH_CHECK_INTERVAL, HealthCheckPolicy.DEFAULT_INTERVAL_MINUTES)
-            .coerceAtLeast(HealthCheckPolicy.DEFAULT_INTERVAL_MINUTES).also { interval ->
-                if (prefs.getInt(KEY_HEALTH_CHECK_INTERVAL, interval) != interval) {
-                    prefs.edit().putInt(KEY_HEALTH_CHECK_INTERVAL, interval).apply()
-                }
-            }
-    )
+    private val _healthCheckIntervalMinutes =
+        MutableStateFlow(
+            prefs
+                .getInt(KEY_HEALTH_CHECK_INTERVAL, HealthCheckPolicy.DEFAULT_INTERVAL_MINUTES)
+                .coerceAtLeast(HealthCheckPolicy.DEFAULT_INTERVAL_MINUTES)
+                .also { interval ->
+                    if (prefs.getInt(KEY_HEALTH_CHECK_INTERVAL, interval) != interval) {
+                        prefs.edit().putInt(KEY_HEALTH_CHECK_INTERVAL, interval).apply()
+                    }
+                },
+        )
+
     /**
      * Persisted health-check interval in minutes, clamped to the policy minimum.
      */
     val healthCheckIntervalMinutes: StateFlow<Int> = _healthCheckIntervalMinutes.asStateFlow()
 
     private val _lastHealthCheckTime = MutableStateFlow(prefs.getLong(KEY_LAST_HEALTH_CHECK, 0L))
+
     /**
      * Last health-check timestamp in Unix epoch milliseconds; zero means unset.
      */
     val lastHealthCheckTime: StateFlow<Long> = _lastHealthCheckTime.asStateFlow()
 
-    private val _learningStartTime = MutableStateFlow(
-        prefs.getLong(KEY_LEARNING_START_TIME, 0L).let {
-            if (it == 0L) {
-                val now = System.currentTimeMillis()
-                prefs.edit().putLong(KEY_LEARNING_START_TIME, now).apply()
-                now
-            } else {
-                it
-            }
-        }
-    )
+    private val _learningStartTime =
+        MutableStateFlow(
+            prefs.getLong(KEY_LEARNING_START_TIME, 0L).let {
+                if (it == 0L) {
+                    val now = System.currentTimeMillis()
+                    prefs.edit().putLong(KEY_LEARNING_START_TIME, now).apply()
+                    now
+                } else {
+                    it
+                }
+            },
+        )
+
     /**
      * Start timestamp of the current learning period in Unix epoch milliseconds.
      */
     val learningStartTime: StateFlow<Long> = _learningStartTime.asStateFlow()
 
-    private val _blockingMode = MutableStateFlow(
-        try {
-            BlockingMode.valueOf(prefs.getString(KEY_BLOCKING_MODE, BlockingMode.SMART.name) ?: BlockingMode.SMART.name)
-        } catch (_: Exception) {
-            BlockingMode.SMART
-        }
-    )
+    private val _blockingMode =
+        MutableStateFlow(
+            try {
+                BlockingMode.valueOf(
+                    prefs.getString(KEY_BLOCKING_MODE, BlockingMode.SMART.name) ?: BlockingMode.SMART.name,
+                )
+            } catch (_: Exception) {
+                BlockingMode.SMART
+            },
+        )
+
     /**
      * Current persisted domain policy mode.
      */
@@ -154,13 +178,17 @@ class FilteringPreferences(context: Context) : FilteringPreferenceStore {
         _blockingMode.value = mode
     }
 
-    private val _filteringTier = MutableStateFlow(
-        try {
-            FilteringTier.valueOf(prefs.getString(KEY_FILTERING_TIER, FilteringTier.OPTIMAL.name) ?: FilteringTier.OPTIMAL.name)
-        } catch (_: Exception) {
-            FilteringTier.OPTIMAL
-        }
-    )
+    private val _filteringTier =
+        MutableStateFlow(
+            try {
+                FilteringTier.valueOf(
+                    prefs.getString(KEY_FILTERING_TIER, FilteringTier.OPTIMAL.name) ?: FilteringTier.OPTIMAL.name,
+                )
+            } catch (_: Exception) {
+                FilteringTier.OPTIMAL
+            },
+        )
+
     /**
      * Current persisted filtering tier.
      */
@@ -177,6 +205,7 @@ class FilteringPreferences(context: Context) : FilteringPreferenceStore {
     }
 
     private val _pausedUntil = MutableStateFlow(prefs.getLong(KEY_PAUSED_UNTIL, 0L))
+
     /**
      * Protection pause expiry in Unix epoch milliseconds; zero means no requested pause.
      */
@@ -209,6 +238,7 @@ class FilteringPreferences(context: Context) : FilteringPreferenceStore {
     fun isPaused(): Boolean = System.currentTimeMillis() < _pausedUntil.value
 
     private val _blockAnalyticsBreakage = MutableStateFlow(prefs.getBoolean(KEY_BLOCK_ANALYTICS_BREAKAGE, true))
+
     /**
      * Persisted preference controlling analytics blocking despite possible app breakage.
      */
@@ -325,26 +355,33 @@ class FilteringPreferences(context: Context) : FilteringPreferenceStore {
      */
     fun loadDefaultConfigIfNeeded(defaultConfig: DefaultConfig) {
         if (!prefs.contains(KEY_INITIALIZED)) {
-            prefs.edit()
+            prefs
+                .edit()
                 .putBoolean(KEY_INITIALIZED, true)
                 .putBoolean(KEY_AD_BLOCKING, defaultConfig.adBlockingEnabled)
                 .putBoolean(KEY_ADULT_BLOCKING, defaultConfig.adultContentBlockingEnabled)
                 .putBoolean(KEY_AUTO_BOOT, defaultConfig.autoRestartOnBootEnabled)
-                .putInt(KEY_HEALTH_CHECK_INTERVAL, (defaultConfig.healthCheckInterval / 60000).toInt()
-                    .coerceAtLeast(HealthCheckPolicy.DEFAULT_INTERVAL_MINUTES))
-                .putString(KEY_BLOCKING_MODE, BlockingMode.SMART.name)
+                .putInt(
+                    KEY_HEALTH_CHECK_INTERVAL,
+                    (defaultConfig.healthCheckInterval / 60000)
+                        .toInt()
+                        .coerceAtLeast(HealthCheckPolicy.DEFAULT_INTERVAL_MINUTES),
+                ).putString(KEY_BLOCKING_MODE, BlockingMode.SMART.name)
                 .apply()
 
             _adBlockingEnabled.value = defaultConfig.adBlockingEnabled
             _adultBlockingEnabled.value = defaultConfig.adultContentBlockingEnabled
             _autoRestartOnBoot.value = defaultConfig.autoRestartOnBootEnabled
-            _healthCheckIntervalMinutes.value = (defaultConfig.healthCheckInterval / 60000).toInt()
-                .coerceAtLeast(HealthCheckPolicy.DEFAULT_INTERVAL_MINUTES)
+            _healthCheckIntervalMinutes.value =
+                (defaultConfig.healthCheckInterval / 60000)
+                    .toInt()
+                    .coerceAtLeast(HealthCheckPolicy.DEFAULT_INTERVAL_MINUTES)
             _blockingMode.value = BlockingMode.SMART
         }
     }
 
     private val _isQueryLoggingPaused = MutableStateFlow(prefs.getBoolean(KEY_QUERY_LOGGING_PAUSED, false))
+
     /**
      * Persisted pause flag for capture of new local query log entries.
      */
@@ -388,10 +425,9 @@ class FilteringPreferences(context: Context) : FilteringPreferenceStore {
          * @param context Context whose application context is retained.
          * @return Shared filtering preferences.
          */
-        fun getInstance(context: Context): FilteringPreferences {
-            return INSTANCE ?: synchronized(this) {
+        fun getInstance(context: Context): FilteringPreferences =
+            INSTANCE ?: synchronized(this) {
                 INSTANCE ?: FilteringPreferences(context.applicationContext).also { INSTANCE = it }
             }
-        }
     }
 }

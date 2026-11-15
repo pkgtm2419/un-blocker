@@ -29,7 +29,7 @@ class TcpDnsResponder(
     private val maxBufferSize: Int = 65536,
     private val idleTimeoutMillis: Long = 5000L,
     private val localIpv4Dns: ByteArray = IPV4_DNS,
-    private val localIpv6Dns: ByteArray = IPV6_DNS
+    private val localIpv6Dns: ByteArray = IPV6_DNS,
 ) {
     private val connections = HashMap<TcpConnectionKey, TcpConnection>()
     private val lock = Any()
@@ -43,18 +43,22 @@ class TcpDnsResponder(
          * TCP FIN control-bit mask.
          */
         const val FLAG_FIN = 0x01
+
         /**
          * TCP SYN control-bit mask.
          */
         const val FLAG_SYN = 0x02
+
         /**
          * TCP RST control-bit mask.
          */
         const val FLAG_RST = 0x04
+
         /**
          * TCP PSH control-bit mask.
          */
         const val FLAG_PSH = 0x08
+
         /**
          * TCP ACK control-bit mask.
          */
@@ -64,36 +68,144 @@ class TcpDnsResponder(
          * Shared synthetic IPv4 DNS address bytes; callers must not mutate the array.
          */
         val IPV4_DNS: ByteArray by lazy { InetAddress.getByName(TunnelDnsConfig.IPV4_DNS).address }
+
         /**
          * Shared synthetic IPv6 DNS address bytes; callers must not mutate the array.
          */
         val IPV6_DNS: ByteArray by lazy { InetAddress.getByName(TunnelDnsConfig.IPV6_DNS).address }
 
-        private val TRAPPED_IPV4_BYTES: List<ByteArray> = listOf(
-            byteArrayOf(8, 8, 8, 8),
-            byteArrayOf(8, 8, 4, 4),
-            byteArrayOf(1, 1, 1, 1),
-            byteArrayOf(1, 0, 0, 1),
-            byteArrayOf(9, 9, 9, 9),
-            byteArrayOf(9, 9, 9, 10),
-            byteArrayOf(208.toByte(), 67.toByte(), 222.toByte(), 222.toByte()),
-            byteArrayOf(208.toByte(), 67.toByte(), 220.toByte(), 220.toByte()),
-            byteArrayOf(94.toByte(), 140.toByte(), 14.toByte(), 14.toByte()),
-            byteArrayOf(94.toByte(), 140.toByte(), 15.toByte(), 15.toByte()),
-            byteArrayOf(76, 76, 2, 0),
-            byteArrayOf(76, 76, 10, 0)
-        )
+        private val TRAPPED_IPV4_BYTES: List<ByteArray> =
+            listOf(
+                byteArrayOf(8, 8, 8, 8),
+                byteArrayOf(8, 8, 4, 4),
+                byteArrayOf(1, 1, 1, 1),
+                byteArrayOf(1, 0, 0, 1),
+                byteArrayOf(9, 9, 9, 9),
+                byteArrayOf(9, 9, 9, 10),
+                byteArrayOf(208.toByte(), 67.toByte(), 222.toByte(), 222.toByte()),
+                byteArrayOf(208.toByte(), 67.toByte(), 220.toByte(), 220.toByte()),
+                byteArrayOf(94.toByte(), 140.toByte(), 14.toByte(), 14.toByte()),
+                byteArrayOf(94.toByte(), 140.toByte(), 15.toByte(), 15.toByte()),
+                byteArrayOf(76, 76, 2, 0),
+                byteArrayOf(76, 76, 10, 0),
+            )
 
-        private val TRAPPED_IPV6_BYTES: List<ByteArray> = listOf(
-            byteArrayOf(0x20.toByte(), 0x01.toByte(), 0x48.toByte(), 0x60.toByte(), 0x48.toByte(), 0x60.toByte(), 0, 0, 0, 0, 0, 0, 0, 0, 0x88.toByte(), 0x88.toByte()),
-            byteArrayOf(0x20.toByte(), 0x01.toByte(), 0x48.toByte(), 0x60.toByte(), 0x48.toByte(), 0x60.toByte(), 0, 0, 0, 0, 0, 0, 0, 0, 0x88.toByte(), 0x44.toByte()),
-            byteArrayOf(0x26.toByte(), 0x06.toByte(), 0x47.toByte(), 0x00.toByte(), 0x47.toByte(), 0x00.toByte(), 0, 0, 0, 0, 0, 0, 0, 0, 0x11.toByte(), 0x11.toByte()),
-            byteArrayOf(0x26.toByte(), 0x06.toByte(), 0x47.toByte(), 0x00.toByte(), 0x47.toByte(), 0x00.toByte(), 0, 0, 0, 0, 0, 0, 0, 0, 0x10.toByte(), 0x01.toByte()),
-            byteArrayOf(0x26.toByte(), 0x20.toByte(), 0x00.toByte(), 0xfe.toByte(), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x00.toByte(), 0xfe.toByte()),
-            byteArrayOf(0x26.toByte(), 0x20.toByte(), 0x00.toByte(), 0xfe.toByte(), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x00.toByte(), 0x09.toByte())
-        )
+        private val TRAPPED_IPV6_BYTES: List<ByteArray> =
+            listOf(
+                byteArrayOf(
+                    0x20.toByte(),
+                    0x01.toByte(),
+                    0x48.toByte(),
+                    0x60.toByte(),
+                    0x48.toByte(),
+                    0x60.toByte(),
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0x88.toByte(),
+                    0x88.toByte(),
+                ),
+                byteArrayOf(
+                    0x20.toByte(),
+                    0x01.toByte(),
+                    0x48.toByte(),
+                    0x60.toByte(),
+                    0x48.toByte(),
+                    0x60.toByte(),
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0x88.toByte(),
+                    0x44.toByte(),
+                ),
+                byteArrayOf(
+                    0x26.toByte(),
+                    0x06.toByte(),
+                    0x47.toByte(),
+                    0x00.toByte(),
+                    0x47.toByte(),
+                    0x00.toByte(),
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0x11.toByte(),
+                    0x11.toByte(),
+                ),
+                byteArrayOf(
+                    0x26.toByte(),
+                    0x06.toByte(),
+                    0x47.toByte(),
+                    0x00.toByte(),
+                    0x47.toByte(),
+                    0x00.toByte(),
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0x10.toByte(),
+                    0x01.toByte(),
+                ),
+                byteArrayOf(
+                    0x26.toByte(),
+                    0x20.toByte(),
+                    0x00.toByte(),
+                    0xfe.toByte(),
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0x00.toByte(),
+                    0xfe.toByte(),
+                ),
+                byteArrayOf(
+                    0x26.toByte(),
+                    0x20.toByte(),
+                    0x00.toByte(),
+                    0xfe.toByte(),
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0x00.toByte(),
+                    0x09.toByte(),
+                ),
+            )
 
-        internal fun isTrappedPublicDns(dstIp: ByteArray, isIpv6: Boolean): Boolean {
+        internal fun isTrappedPublicDns(
+            dstIp: ByteArray,
+            isIpv6: Boolean,
+        ): Boolean {
             val list = if (isIpv6) TRAPPED_IPV6_BYTES else TRAPPED_IPV4_BYTES
             for (trapped in list) {
                 if (dstIp.contentEquals(trapped)) return true
@@ -108,7 +220,10 @@ class TcpDnsResponder(
      * @property ip Client address bytes, retained without copying and requiring stable contents.
      * @property port Client TCP port.
      */
-    class TcpConnectionKey(val ip: ByteArray, val port: Int) {
+    class TcpConnectionKey(
+        val ip: ByteArray,
+        val port: Int,
+    ) {
         /**
          * Compares client port and address bytes by content.
          *
@@ -123,12 +238,11 @@ class TcpDnsResponder(
             if (!ip.contentEquals(other.ip)) return false
             return true
         }
+
         /**
          * Returns a content-based address and port hash consistent with equals.
          */
-        override fun hashCode(): Int {
-            return 31 * ip.contentHashCode() + port
-        }
+        override fun hashCode(): Int = 31 * ip.contentHashCode() + port
     }
 
     private class TcpConnection(
@@ -141,7 +255,7 @@ class TcpDnsResponder(
         var lastActivityTime: Long,
         val creationOrder: Long = 0L,
         val buffer: ByteArrayOutputStream = ByteArrayOutputStream(),
-        var queryAnswered: Boolean = false
+        var queryAnswered: Boolean = false,
     ) {
         enum class State { SYN_RECEIVED, ESTABLISHED, CLOSED }
     }
@@ -154,7 +268,10 @@ class TcpDnsResponder(
      * @return Whether this responder consumed the packet, including dropped segments and emitted resets.
      * @throws IndexOutOfBoundsException If supplied packet bounds are inconsistent.
      */
-    fun processPacket(packet: ByteArray, length: Int): Boolean {
+    fun processPacket(
+        packet: ByteArray,
+        length: Int,
+    ): Boolean {
         if (length < 20) return false
 
         val isIpv6 = (packet[0].toInt() and 0xF0) == 0x60
@@ -164,51 +281,56 @@ class TcpDnsResponder(
             val fragOffset = ((packet[6].toInt() and 0x1F) shl 8) or (packet[7].toInt() and 0xFF)
             if (fragOffset != 0) return false
         }
-        val (tcpOffset, srcIp, dstIp) = if (isIpv6) {
-            if (length < 60) return false // 40 IP + 20 TCP
-            var offset = 40
-            var nextHeader = packet[6].toInt() and 255
-            while (nextHeader in setOf(0, 43, 60, 44)) {
-                if (offset + 2 > length) return false
-                val extLen = when (nextHeader) {
-                    44 -> 8
-                    else -> ((packet[offset + 1].toInt() and 255) + 1) * 8
+        val (tcpOffset, srcIp, dstIp) =
+            if (isIpv6) {
+                if (length < 60) return false // 40 IP + 20 TCP
+                var offset = 40
+                var nextHeader = packet[6].toInt() and 255
+                while (nextHeader in setOf(0, 43, 60, 44)) {
+                    if (offset + 2 > length) return false
+                    val extLen =
+                        when (nextHeader) {
+                            44 -> 8
+                            else -> ((packet[offset + 1].toInt() and 255) + 1) * 8
+                        }
+                    if (offset + extLen + 20 > length) return false
+                    nextHeader = packet[offset].toInt() and 255
+                    offset += extLen
                 }
-                if (offset + extLen + 20 > length) return false
-                nextHeader = packet[offset].toInt() and 255
-                offset += extLen
+                if (nextHeader != 6) return false // Protocol 6 = TCP
+                val src = ByteArray(16) { packet[8 + it] }
+                val dst = ByteArray(16) { packet[24 + it] }
+                Triple(offset, src, dst)
+            } else {
+                val ihl = (packet[0].toInt() and 0x0F) * 4
+                if (ihl < 20 || length < ihl + 20) return false
+                if (packet[9].toInt() and 0xFF != 6) return false // Protocol 6 = TCP
+                val src = ByteArray(4) { packet[12 + it] }
+                val dst = ByteArray(4) { packet[16 + it] }
+                Triple(ihl, src, dst)
             }
-            if (nextHeader != 6) return false // Protocol 6 = TCP
-            val src = ByteArray(16) { packet[8 + it] }
-            val dst = ByteArray(16) { packet[24 + it] }
-            Triple(offset, src, dst)
-        } else {
-            val ihl = (packet[0].toInt() and 0x0F) * 4
-            if (ihl < 20 || length < ihl + 20) return false
-            if (packet[9].toInt() and 0xFF != 6) return false // Protocol 6 = TCP
-            val src = ByteArray(4) { packet[12 + it] }
-            val dst = ByteArray(4) { packet[16 + it] }
-            Triple(ihl, src, dst)
-        }
 
         // Validate local destination address
-        val isLocalTunnelIp = if (isIpv6) {
-            dstIp.contentEquals(localIpv6Dns) || isTrappedPublicDns(dstIp, isIpv6 = true)
-        } else {
-            dstIp.contentEquals(localIpv4Dns) || isTrappedPublicDns(dstIp, isIpv6 = false)
-        }
+        val isLocalTunnelIp =
+            if (isIpv6) {
+                dstIp.contentEquals(localIpv6Dns) || isTrappedPublicDns(dstIp, isIpv6 = true)
+            } else {
+                dstIp.contentEquals(localIpv4Dns) || isTrappedPublicDns(dstIp, isIpv6 = false)
+            }
         if (!isLocalTunnelIp) return false
 
         val dstPort = ((packet[tcpOffset + 2].toInt() and 0xFF) shl 8) or (packet[tcpOffset + 3].toInt() and 0xFF)
         val srcPort = ((packet[tcpOffset].toInt() and 0xFF) shl 8) or (packet[tcpOffset + 1].toInt() and 0xFF)
-        val seqNum = ((packet[tcpOffset + 4].toLong() and 0xFF) shl 24) or
-            ((packet[tcpOffset + 5].toLong() and 0xFF) shl 16) or
-            ((packet[tcpOffset + 6].toLong() and 0xFF) shl 8) or
-            (packet[tcpOffset + 7].toLong() and 0xFF)
-        val ackNum = ((packet[tcpOffset + 8].toLong() and 0xFF) shl 24) or
-            ((packet[tcpOffset + 9].toLong() and 0xFF) shl 16) or
-            ((packet[tcpOffset + 10].toLong() and 0xFF) shl 8) or
-            (packet[tcpOffset + 11].toLong() and 0xFF)
+        val seqNum =
+            ((packet[tcpOffset + 4].toLong() and 0xFF) shl 24) or
+                ((packet[tcpOffset + 5].toLong() and 0xFF) shl 16) or
+                ((packet[tcpOffset + 6].toLong() and 0xFF) shl 8) or
+                (packet[tcpOffset + 7].toLong() and 0xFF)
+        val ackNum =
+            ((packet[tcpOffset + 8].toLong() and 0xFF) shl 24) or
+                ((packet[tcpOffset + 9].toLong() and 0xFF) shl 16) or
+                ((packet[tcpOffset + 10].toLong() and 0xFF) shl 8) or
+                (packet[tcpOffset + 11].toLong() and 0xFF)
 
         val dataOffset = (packet[tcpOffset + 12].toInt() and 0xF0) shr 4
         val tcpHeaderLen = dataOffset * 4
@@ -221,11 +343,22 @@ class TcpDnsResponder(
         if (dstPort != 53) {
             // R-4: TCP to tunnel IP on non-DNS port (e.g. DoT 853) gets fast RST|ACK
             if ((flags and FLAG_RST) == 0) {
-                val rstPkt = if ((flags and FLAG_ACK) != 0) {
-                    buildTcpPacket(isIpv6, dstIp, srcIp, dstPort, srcPort, ackNum, 0, FLAG_RST, null)
-                } else {
-                    buildTcpPacket(isIpv6, dstIp, srcIp, dstPort, srcPort, 0, (seqNum + payloadLen.coerceAtLeast(1)) and 0xFFFFFFFFL, FLAG_RST or FLAG_ACK, null)
-                }
+                val rstPkt =
+                    if ((flags and FLAG_ACK) != 0) {
+                        buildTcpPacket(isIpv6, dstIp, srcIp, dstPort, srcPort, ackNum, 0, FLAG_RST, null)
+                    } else {
+                        buildTcpPacket(
+                            isIpv6,
+                            dstIp,
+                            srcIp,
+                            dstPort,
+                            srcPort,
+                            0,
+                            (seqNum + payloadLen.coerceAtLeast(1)) and 0xFFFFFFFFL,
+                            FLAG_RST or FLAG_ACK,
+                            null,
+                        )
+                    }
                 emit(listOf(rstPkt))
             }
             return true
@@ -254,18 +387,21 @@ class TcpDnsResponder(
             if ((flags and FLAG_SYN) != 0 && (flags and FLAG_ACK) == 0) {
                 if (connections.containsKey(key)) {
                     val existing = connections[key]!!
-                    if (existing.state == TcpConnection.State.SYN_RECEIVED && existing.clientSeq == ((seqNum + 1) and 0xFFFFFFFFL)) {
-                        val synAck = buildTcpPacket(
-                            isIpv6 = isIpv6,
-                            srcIp = dstIp,
-                            dstIp = srcIp,
-                            srcPort = 53,
-                            dstPort = srcPort,
-                            seqNum = (existing.serverSeq - 1) and 0xFFFFFFFFL,
-                            ackNum = existing.clientSeq,
-                            flags = FLAG_SYN or FLAG_ACK,
-                            payload = null
-                        )
+                    if (existing.state == TcpConnection.State.SYN_RECEIVED &&
+                        existing.clientSeq == ((seqNum + 1) and 0xFFFFFFFFL)
+                    ) {
+                        val synAck =
+                            buildTcpPacket(
+                                isIpv6 = isIpv6,
+                                srcIp = dstIp,
+                                dstIp = srcIp,
+                                srcPort = 53,
+                                dstPort = srcPort,
+                                seqNum = (existing.serverSeq - 1) and 0xFFFFFFFFL,
+                                ackNum = existing.clientSeq,
+                                flags = FLAG_SYN or FLAG_ACK,
+                                payload = null,
+                            )
                         emit(listOf(synAck))
                         return true
                     }
@@ -286,7 +422,8 @@ class TcpDnsResponder(
                             oldestIsSynReceived = true
                         } else if (isSyn == oldestIsSynReceived) {
                             if (cVal.lastActivityTime < oldestTime ||
-                                (cVal.lastActivityTime == oldestTime && cVal.creationOrder < oldestOrder)) {
+                                (cVal.lastActivityTime == oldestTime && cVal.creationOrder < oldestOrder)
+                            ) {
                                 oldestTime = cVal.lastActivityTime
                                 oldestOrder = cVal.creationOrder
                                 oldestKey = cKey
@@ -298,28 +435,30 @@ class TcpDnsResponder(
                     }
                 }
                 val serverIsn = Random.nextLong(0, 0xFFFFFFFFL)
-                val conn = TcpConnection(
-                    key = key,
-                    srcIp = srcIp,
-                    dstIp = dstIp,
-                    state = TcpConnection.State.SYN_RECEIVED,
-                    clientSeq = (seqNum + 1) and 0xFFFFFFFFL,
-                    serverSeq = (serverIsn + 1) and 0xFFFFFFFFL,
-                    lastActivityTime = now,
-                    creationOrder = connectionSequence++
-                )
+                val conn =
+                    TcpConnection(
+                        key = key,
+                        srcIp = srcIp,
+                        dstIp = dstIp,
+                        state = TcpConnection.State.SYN_RECEIVED,
+                        clientSeq = (seqNum + 1) and 0xFFFFFFFFL,
+                        serverSeq = (serverIsn + 1) and 0xFFFFFFFFL,
+                        lastActivityTime = now,
+                        creationOrder = connectionSequence++,
+                    )
                 connections[key] = conn
-                val synAck = buildTcpPacket(
-                    isIpv6 = isIpv6,
-                    srcIp = dstIp,
-                    dstIp = srcIp,
-                    srcPort = 53,
-                    dstPort = srcPort,
-                    seqNum = serverIsn,
-                    ackNum = conn.clientSeq,
-                    flags = FLAG_SYN or FLAG_ACK,
-                    payload = null
-                )
+                val synAck =
+                    buildTcpPacket(
+                        isIpv6 = isIpv6,
+                        srcIp = dstIp,
+                        dstIp = srcIp,
+                        srcPort = 53,
+                        dstPort = srcPort,
+                        seqNum = serverIsn,
+                        ackNum = conn.clientSeq,
+                        flags = FLAG_SYN or FLAG_ACK,
+                        payload = null,
+                    )
                 emit(listOf(synAck))
                 return true
             }
@@ -327,11 +466,22 @@ class TcpDnsResponder(
             val conn = connections[key]
             if (conn == null) {
                 // Non-SYN packet on unknown connection: send RST
-                val rstAck = if ((flags and FLAG_ACK) == 0) {
-                    buildTcpPacket(isIpv6, dstIp, srcIp, 53, srcPort, 0, (seqNum + payloadLen.coerceAtLeast(1)) and 0xFFFFFFFFL, FLAG_RST or FLAG_ACK, null)
-                } else {
-                    buildTcpPacket(isIpv6, dstIp, srcIp, 53, srcPort, ackNum, 0, FLAG_RST, null)
-                }
+                val rstAck =
+                    if ((flags and FLAG_ACK) == 0) {
+                        buildTcpPacket(
+                            isIpv6,
+                            dstIp,
+                            srcIp,
+                            53,
+                            srcPort,
+                            0,
+                            (seqNum + payloadLen.coerceAtLeast(1)) and 0xFFFFFFFFL,
+                            FLAG_RST or FLAG_ACK,
+                            null,
+                        )
+                    } else {
+                        buildTcpPacket(isIpv6, dstIp, srcIp, 53, srcPort, ackNum, 0, FLAG_RST, null)
+                    }
                 emit(listOf(rstAck))
                 return true
             }
@@ -346,17 +496,18 @@ class TcpDnsResponder(
             // Handle FIN
             if ((flags and FLAG_FIN) != 0) {
                 conn.clientSeq = (conn.clientSeq + 1) and 0xFFFFFFFFL
-                val finAck = buildTcpPacket(
-                    isIpv6 = isIpv6,
-                    srcIp = dstIp,
-                    dstIp = srcIp,
-                    srcPort = 53,
-                    dstPort = srcPort,
-                    seqNum = conn.serverSeq,
-                    ackNum = conn.clientSeq,
-                    flags = FLAG_FIN or FLAG_ACK,
-                    payload = null
-                )
+                val finAck =
+                    buildTcpPacket(
+                        isIpv6 = isIpv6,
+                        srcIp = dstIp,
+                        dstIp = srcIp,
+                        srcPort = 53,
+                        dstPort = srcPort,
+                        seqNum = conn.serverSeq,
+                        ackNum = conn.clientSeq,
+                        flags = FLAG_FIN or FLAG_ACK,
+                        payload = null,
+                    )
                 connections.remove(key)
                 emit(listOf(finAck))
                 return true
@@ -376,7 +527,21 @@ class TcpDnsResponder(
                 if (conn.buffer.size() + payloadLen > maxBufferSize) {
                     // Buffer bound exceeded: send RST and close
                     connections.remove(key)
-                    emit(listOf(buildTcpPacket(isIpv6, dstIp, srcIp, 53, srcPort, conn.serverSeq, conn.clientSeq, FLAG_RST or FLAG_ACK, null)))
+                    emit(
+                        listOf(
+                            buildTcpPacket(
+                                isIpv6,
+                                dstIp,
+                                srcIp,
+                                53,
+                                srcPort,
+                                conn.serverSeq,
+                                conn.clientSeq,
+                                FLAG_RST or FLAG_ACK,
+                                null,
+                            ),
+                        ),
+                    )
                     return true
                 }
 
@@ -389,36 +554,40 @@ class TcpDnsResponder(
                     if (bufBytes.size >= 2 + queryLen) {
                         val dnsQueryBytes = bufBytes.copyOfRange(2, 2 + queryLen)
                         conn.queryAnswered = true
-                        
+
                         // Emit bare ACK immediately for the buffered query payload
-                        val bareAck = buildTcpPacket(
-                            isIpv6 = isIpv6,
-                            srcIp = dstIp,
-                            dstIp = srcIp,
-                            srcPort = 53,
-                            dstPort = srcPort,
-                            seqNum = conn.serverSeq,
-                            ackNum = conn.clientSeq,
-                            flags = FLAG_ACK,
-                            payload = null
-                        )
+                        val bareAck =
+                            buildTcpPacket(
+                                isIpv6 = isIpv6,
+                                srcIp = dstIp,
+                                dstIp = srcIp,
+                                srcPort = 53,
+                                dstPort = srcPort,
+                                seqNum = conn.serverSeq,
+                                ackNum = conn.clientSeq,
+                                flags = FLAG_ACK,
+                                payload = null,
+                            )
                         responses.add(bareAck)
                         emit(responses.toList())
                         responses.clear()
-                        
+
                         val savedSeq = conn.serverSeq
-                        
+
                         try {
                             executor.execute {
-                                val dnsResponse = try {
-                                    queryResolver(dnsQueryBytes, isIpv6, srcIp)
-                                } catch (e: Exception) {
-                                    null
-                                }
-                                
+                                val dnsResponse =
+                                    try {
+                                        queryResolver(dnsQueryBytes, isIpv6, srcIp)
+                                    } catch (e: Exception) {
+                                        null
+                                    }
+
                                 synchronized(lock) {
                                     val currentConn = connections[key]
-                                    if (currentConn != null && currentConn.serverSeq == savedSeq && currentConn.state != TcpConnection.State.CLOSED) {
+                                    if (currentConn != null && currentConn.serverSeq == savedSeq &&
+                                        currentConn.state != TcpConnection.State.CLOSED
+                                    ) {
                                         if (dnsResponse != null) {
                                             val respLen = dnsResponse.size
                                             val respPayload = ByteArray(2 + respLen)
@@ -435,18 +604,20 @@ class TcpDnsResponder(
                                                 val chunk = respPayload.copyOfRange(offset, offset + chunkLen)
                                                 val isLast = offset + chunkLen == respPayload.size
                                                 val flagsOut = if (isLast) FLAG_PSH or FLAG_ACK else FLAG_ACK
-                                                val p = buildTcpPacket(
-                                                    isIpv6 = isIpv6,
-                                                    srcIp = dstIp,
-                                                    dstIp = srcIp,
-                                                    srcPort = 53,
-                                                    dstPort = srcPort,
-                                                    seqNum = currentConn.serverSeq,
-                                                    ackNum = currentConn.clientSeq,
-                                                    flags = flagsOut,
-                                                    payload = chunk
-                                                )
-                                                currentConn.serverSeq = (currentConn.serverSeq + chunkLen) and 0xFFFFFFFFL
+                                                val p =
+                                                    buildTcpPacket(
+                                                        isIpv6 = isIpv6,
+                                                        srcIp = dstIp,
+                                                        dstIp = srcIp,
+                                                        srcPort = 53,
+                                                        dstPort = srcPort,
+                                                        seqNum = currentConn.serverSeq,
+                                                        ackNum = currentConn.clientSeq,
+                                                        flags = flagsOut,
+                                                        payload = chunk,
+                                                    )
+                                                currentConn.serverSeq =
+                                                    (currentConn.serverSeq + chunkLen) and 0xFFFFFFFFL
                                                 outPackets.add(p)
                                                 offset += chunkLen
                                             }
@@ -486,7 +657,7 @@ class TcpDnsResponder(
         seqNum: Long,
         ackNum: Long,
         flags: Int,
-        payload: ByteArray?
+        payload: ByteArray?,
     ): ByteArray {
         val payloadLen = payload?.size ?: 0
         val tcpSegmentLen = 20 + payloadLen
@@ -532,11 +703,12 @@ class TcpDnsResponder(
             buf.put(payload)
         }
 
-        val checksum = if (isIpv6) {
-            InternetChecksum.tcpIpv6(srcIp, dstIp, buf.array(), tcpOffset, tcpSegmentLen)
-        } else {
-            InternetChecksum.tcpIpv4(srcIp, dstIp, buf.array(), tcpOffset, tcpSegmentLen)
-        }
+        val checksum =
+            if (isIpv6) {
+                InternetChecksum.tcpIpv6(srcIp, dstIp, buf.array(), tcpOffset, tcpSegmentLen)
+            } else {
+                InternetChecksum.tcpIpv4(srcIp, dstIp, buf.array(), tcpOffset, tcpSegmentLen)
+            }
         buf.putShort(tcpOffset + 16, checksum)
 
         return buf.array()

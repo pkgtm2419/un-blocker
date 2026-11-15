@@ -18,7 +18,7 @@ data class DnsPacket(
     val srcIp: ByteArray = ByteArray(4),
     val dstIp: ByteArray = ByteArray(4),
     val srcPort: Int = 0,
-    val txId: Short = 0
+    val txId: Short = 0,
 ) {
     /**
      * Compares metadata using address array contents.

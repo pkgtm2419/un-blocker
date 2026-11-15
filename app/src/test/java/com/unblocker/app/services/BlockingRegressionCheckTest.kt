@@ -11,12 +11,13 @@ class BlockingRegressionCheckTest {
      * Verifies that evaluates both blocked and allowed expectations.
      */
     @Test fun evaluatesBothBlockedAndAllowedExpectations() {
-        val cases = listOf(
-            BlockingRegressionCase("ads.example", shouldBlock = true),
-            BlockingRegressionCase("tracker.example", shouldBlock = true),
-            BlockingRegressionCase("bank.example", shouldBlock = false),
-            BlockingRegressionCase("docs.example", shouldBlock = false)
-        )
+        val cases =
+            listOf(
+                BlockingRegressionCase("ads.example", shouldBlock = true),
+                BlockingRegressionCase("tracker.example", shouldBlock = true),
+                BlockingRegressionCase("bank.example", shouldBlock = false),
+                BlockingRegressionCase("docs.example", shouldBlock = false),
+            )
         val blocked = setOf("ads.example", "tracker.example")
 
         val result = BlockingRegressionCheck(cases).evaluate { it in blocked }
@@ -30,10 +31,11 @@ class BlockingRegressionCheckTest {
      * Verifies that reports failures as regression rate not effectiveness.
      */
     @Test fun reportsFailuresAsRegressionRateNotEffectiveness() {
-        val cases = listOf(
-            BlockingRegressionCase("ads.example", shouldBlock = true),
-            BlockingRegressionCase("bank.example", shouldBlock = false)
-        )
+        val cases =
+            listOf(
+                BlockingRegressionCase("ads.example", shouldBlock = true),
+                BlockingRegressionCase("bank.example", shouldBlock = false),
+            )
 
         val result = BlockingRegressionCheck(cases).evaluate { false }
 

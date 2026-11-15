@@ -8,7 +8,8 @@ enum class ProtectionCoverage {
     FULL_SYSTEM_DNS,
     LIMITED_PRIVATE_DNS,
     UNKNOWN_RESOLVER,
-    OFF;
+    OFF,
+    ;
 
     /**
      * Derives coverage indicators from current service and Android resolver state.
@@ -25,12 +26,13 @@ enum class ProtectionCoverage {
         fun compute(
             status: ServiceStatus,
             isPrivateDnsActive: Boolean,
-            hasUsableResolvers: Boolean
-        ): ProtectionCoverage = when {
-            status != ServiceStatus.RUNNING -> OFF
-            isPrivateDnsActive -> LIMITED_PRIVATE_DNS
-            hasUsableResolvers -> FULL_SYSTEM_DNS
-            else -> UNKNOWN_RESOLVER
-        }
+            hasUsableResolvers: Boolean,
+        ): ProtectionCoverage =
+            when {
+                status != ServiceStatus.RUNNING -> OFF
+                isPrivateDnsActive -> LIMITED_PRIVATE_DNS
+                hasUsableResolvers -> FULL_SYSTEM_DNS
+                else -> UNKNOWN_RESOLVER
+            }
     }
 }

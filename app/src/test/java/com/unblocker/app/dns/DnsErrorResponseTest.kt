@@ -1,19 +1,22 @@
 package com.unblocker.app.dns
 
 import com.unblocker.app.logic.dns.DnsPacketUtil
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 /**
  * Regression coverage for DNS error response.
  */
 class DnsErrorResponseTest {
-
-    private fun buildSyntheticUdpPacket(txId: Short, flags: Short, payload: ByteArray): ByteArray {
+    private fun buildSyntheticUdpPacket(
+        txId: Short,
+        flags: Short,
+        payload: ByteArray,
+    ): ByteArray {
         val udpLength = 8 + payload.size
         val totalLength = 20 + udpLength
         val buf = ByteBuffer.allocate(totalLength).order(ByteOrder.BIG_ENDIAN)
@@ -44,14 +47,17 @@ class DnsErrorResponseTest {
     @Test
     fun testIntactHeaderInvalidBodyReturnsFormerr() {
         // 12-byte DNS header with qdCount = 5 (invalid/unsupported), txId = 0x4321
-        val dnsHeader = ByteBuffer.allocate(12).order(ByteOrder.BIG_ENDIAN)
-            .putShort(0x4321.toShort())
-            .putShort(0x0100.toShort()) // Query with RD=1, opcode=0
-            .putShort(5.toShort()) // qdCount = 5
-            .putShort(0)
-            .putShort(0)
-            .putShort(0)
-            .array()
+        val dnsHeader =
+            ByteBuffer
+                .allocate(12)
+                .order(ByteOrder.BIG_ENDIAN)
+                .putShort(0x4321.toShort())
+                .putShort(0x0100.toShort()) // Query with RD=1, opcode=0
+                .putShort(5.toShort()) // qdCount = 5
+                .putShort(0)
+                .putShort(0)
+                .putShort(0)
+                .array()
 
         val packet = buildSyntheticUdpPacket(0x4321.toShort(), 0x0100.toShort(), dnsHeader)
         val query = DnsPacketUtil.parseIpPacket(packet, packet.size)
@@ -76,14 +82,17 @@ class DnsErrorResponseTest {
     fun testNonZeroOpcodeReturnsNotImp() {
         // DNS header with opcode = 2 (STATUS), txId = 0x5555
         val flags = (2 shl 11).toShort()
-        val dnsHeader = ByteBuffer.allocate(12).order(ByteOrder.BIG_ENDIAN)
-            .putShort(0x5555.toShort())
-            .putShort(flags)
-            .putShort(1)
-            .putShort(0)
-            .putShort(0)
-            .putShort(0)
-            .array()
+        val dnsHeader =
+            ByteBuffer
+                .allocate(12)
+                .order(ByteOrder.BIG_ENDIAN)
+                .putShort(0x5555.toShort())
+                .putShort(flags)
+                .putShort(1)
+                .putShort(0)
+                .putShort(0)
+                .putShort(0)
+                .array()
 
         val packet = buildSyntheticUdpPacket(0x5555.toShort(), flags, dnsHeader)
         val errResp = DnsPacketUtil.buildErrorResponseIfApplicable(packet, packet.size)

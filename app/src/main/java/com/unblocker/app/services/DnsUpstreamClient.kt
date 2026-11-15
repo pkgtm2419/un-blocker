@@ -1,7 +1,7 @@
 package com.unblocker.app.services
 
-import com.unblocker.app.logic.dns.DnsQuery
 import com.unblocker.app.logic.dns.DnsPacketUtil
+import com.unblocker.app.logic.dns.DnsQuery
 import com.unblocker.app.logic.dns.DnsResponseMetadata
 import com.unblocker.app.logic.dns.DnsResponseValidator
 import java.io.DataInputStream
@@ -20,7 +20,7 @@ import java.net.Socket
  */
 internal data class ValidatedDnsResponse(
     val bytes: ByteArray,
-    val metadata: DnsResponseMetadata
+    val metadata: DnsResponseMetadata,
 )
 
 /**
@@ -44,7 +44,7 @@ internal class DnsUpstreamClient(
     private val tcpConnectTimeoutMillis: Int = 750,
     private val tcpReadTimeoutMillis: Int = 750,
     private val maxDnsMessageBytes: Int = 0xffff,
-    private val txIdGenerator: () -> Short = { secureRandom.nextInt(0x10000).toShort() }
+    private val txIdGenerator: () -> Short = { secureRandom.nextInt(0x10000).toShort() },
 ) {
     /**
      * Process-shared secure randomness for upstream transaction identifiers.
@@ -77,7 +77,10 @@ internal class DnsUpstreamClient(
         query: DnsQuery,
         dnsPayload: ByteArray,
         resolvers: List<InetAddress>,
-        outboundGuard: ((()->Unit)->Boolean) = { action -> action();true }
+        outboundGuard: ((() -> Unit) -> Boolean) = { action ->
+            action()
+            true
+        },
     ): ValidatedDnsResponse? {
         if (!run.running.get() || dnsPayload.isEmpty() || dnsPayload.size > 0xffff || resolvers.isEmpty()) return null
         if (dnsPayload.size < 12) return null
@@ -91,9 +94,10 @@ internal class DnsUpstreamClient(
         val upstreamQuery = query.copy(transactionId = upstreamTxId)
 
         // Prioritize last known responsive resolver to eliminate redundant timeout delays
-        val orderedResolvers = preferredResolver?.let { pref ->
-            if (pref in resolvers) listOf(pref) + resolvers.filter { it != pref } else resolvers
-        } ?: resolvers
+        val orderedResolvers =
+            preferredResolver?.let { pref ->
+                if (pref in resolvers) listOf(pref) + resolvers.filter { it != pref } else resolvers
+            } ?: resolvers
 
         for (resolver in orderedResolvers) {
             if (!run.running.get() || Thread.currentThread().isInterrupted) return null
@@ -103,7 +107,8 @@ internal class DnsUpstreamClient(
                     preferredResolver = resolver
                     return restoreClientTxId(udpResponse, query.transactionId)
                 }
-                val tcpResponse = resolveTcp(run, upstreamQuery, upstreamPayload, resolver, responseLimit, outboundGuard)
+                val tcpResponse =
+                    resolveTcp(run, upstreamQuery, upstreamPayload, resolver, responseLimit, outboundGuard)
                 if (tcpResponse != null) {
                     preferredResolver = resolver
                     return restoreClientTxId(tcpResponse, query.transactionId)
@@ -117,7 +122,10 @@ internal class DnsUpstreamClient(
         return null
     }
 
-    private fun restoreClientTxId(response: ValidatedDnsResponse, clientTxId: Short): ValidatedDnsResponse {
+    private fun restoreClientTxId(
+        response: ValidatedDnsResponse,
+        clientTxId: Short,
+    ): ValidatedDnsResponse {
         val clientTxIdInt = clientTxId.toInt() and 0xffff
         val restoredBytes = response.bytes.clone()
         if (restoredBytes.size >= 2) {
@@ -141,17 +149,25 @@ internal class DnsUpstreamClient(
         dnsPayload: ByteArray,
         resolver: InetAddress,
         responseLimit: Int,
-        outboundGuard: ((()->Unit)->Boolean)
+        outboundGuard: ((() -> Unit) -> Boolean),
     ): ValidatedDnsResponse? {
-        val socket = try { DatagramSocket() } catch (_: Exception) { return null }
+        val socket =
+            try {
+                DatagramSocket()
+            } catch (_: Exception) {
+                return null
+            }
         if (!run.register(socket)) return null
         return try {
             if (!run.running.get() || !protectDatagramSocket(socket)) return null
             socket.soTimeout = udpTimeoutMillis
             if (!outboundGuard {
-                socket.connect(resolver, port)
-                socket.send(DatagramPacket(dnsPayload, dnsPayload.size, resolver, port))
-            }) return null
+                    socket.connect(resolver, port)
+                    socket.send(DatagramPacket(dnsPayload, dnsPayload.size, resolver, port))
+                }
+            ) {
+                return null
+            }
 
             val buffer = ByteArray(responseLimit)
             val incoming = DatagramPacket(buffer, buffer.size)
@@ -173,7 +189,7 @@ internal class DnsUpstreamClient(
         dnsPayload: ByteArray,
         resolver: InetAddress,
         responseLimit: Int,
-        outboundGuard: ((()->Unit)->Boolean)
+        outboundGuard: ((() -> Unit) -> Boolean),
     ): ValidatedDnsResponse? {
         val socket = Socket()
         if (!run.register(socket)) return null
@@ -181,15 +197,21 @@ internal class DnsUpstreamClient(
             if (!run.running.get() || !protectTcpSocket(socket)) return null
             socket.soTimeout = tcpReadTimeoutMillis
             if (!outboundGuard {
-                socket.connect(InetSocketAddress(resolver, port), tcpConnectTimeoutMillis)
-            }) return null
-            if (!outboundGuard {
-                DataOutputStream(socket.getOutputStream()).apply {
-                    writeShort(dnsPayload.size)
-                    write(dnsPayload)
-                    flush()
+                    socket.connect(InetSocketAddress(resolver, port), tcpConnectTimeoutMillis)
                 }
-            }) return null
+            ) {
+                return null
+            }
+            if (!outboundGuard {
+                    DataOutputStream(socket.getOutputStream()).apply {
+                        writeShort(dnsPayload.size)
+                        write(dnsPayload)
+                        flush()
+                    }
+                }
+            ) {
+                return null
+            }
 
             val input = DataInputStream(socket.getInputStream())
             val responseLength = input.readUnsignedShort()

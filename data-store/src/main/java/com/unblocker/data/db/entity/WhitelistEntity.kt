@@ -18,7 +18,6 @@ data class WhitelistEntity(
     @PrimaryKey
     @ColumnInfo(name = "domain")
     val domain: String,
-
     @ColumnInfo(name = "added_at")
-    val addedAt: Long = System.currentTimeMillis()
+    val addedAt: Long = System.currentTimeMillis(),
 )

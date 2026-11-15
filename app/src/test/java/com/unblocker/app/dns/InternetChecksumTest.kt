@@ -54,12 +54,15 @@ class InternetChecksumTest {
         val dst = byteArrayOf(10, 10, 0, 1)
         val tcp = ByteArray(20) { 0 }
         // src port 12345 (0x3039), dst port 53 (0x0035), seq 1, ack 0, header len 20 (5 << 4 = 0x50), SYN (0x02), win 65535 (0xffff)
-        tcp[0] = 0x30; tcp[1] = 0x39
-        tcp[2] = 0x00; tcp[3] = 0x35
+        tcp[0] = 0x30
+        tcp[1] = 0x39
+        tcp[2] = 0x00
+        tcp[3] = 0x35
         tcp[7] = 0x01
         tcp[12] = 0x50
         tcp[13] = 0x02
-        tcp[14] = 0xff.toByte(); tcp[15] = 0xff.toByte()
+        tcp[14] = 0xff.toByte()
+        tcp[15] = 0xff.toByte()
 
         val checksum = InternetChecksum.tcpIpv4(src, dst, tcp, 0, tcp.size)
         // Verify checksum verifies to 0 when placed into segment
@@ -76,12 +79,15 @@ class InternetChecksumTest {
         val src = ByteArray(16) { 0x01 }
         val dst = ByteArray(16) { 0x02 }
         val tcp = ByteArray(20) { 0 }
-        tcp[0] = 0x30; tcp[1] = 0x39
-        tcp[2] = 0x00; tcp[3] = 0x35
+        tcp[0] = 0x30
+        tcp[1] = 0x39
+        tcp[2] = 0x00
+        tcp[3] = 0x35
         tcp[7] = 0x01
         tcp[12] = 0x50
         tcp[13] = 0x02
-        tcp[14] = 0xff.toByte(); tcp[15] = 0xff.toByte()
+        tcp[14] = 0xff.toByte()
+        tcp[15] = 0xff.toByte()
 
         val checksum = InternetChecksum.tcpIpv6(src, dst, tcp, 0, tcp.size)
         tcp[16] = ((checksum.toInt() ushr 8) and 0xff).toByte()

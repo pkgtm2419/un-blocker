@@ -19,7 +19,6 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object DataStoreModule {
-
     /**
      * Builds the singleton database with explicit non-destructive migrations.
      *
@@ -28,13 +27,15 @@ object DataStoreModule {
      */
     @Provides
     @Singleton
-    fun provideDatabase(@ApplicationContext context: Context): UnblockerDatabase =
-        Room.databaseBuilder(
-            context,
-            UnblockerDatabase::class.java,
-            UnblockerDatabase.DATABASE_NAME
-        )
-            .setJournalMode(androidx.room.RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
+    fun provideDatabase(
+        @ApplicationContext context: Context,
+    ): UnblockerDatabase =
+        Room
+            .databaseBuilder(
+                context,
+                UnblockerDatabase::class.java,
+                UnblockerDatabase.DATABASE_NAME,
+            ).setJournalMode(androidx.room.RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
             .addMigrations(*com.unblocker.data.db.migration.UnblockerMigrations.ALL)
             .build()
 

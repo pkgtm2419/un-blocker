@@ -30,20 +30,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import kotlinx.coroutines.launch
 import com.unblocker.app.ui.components.HaikeiAtmosphericBackground
 import com.unblocker.app.ui.components.SkeuomorphicCard
 import com.unblocker.app.ui.theme.AdBlockedRed
 import com.unblocker.app.ui.theme.AllowedGreen
-import com.unblocker.app.ui.theme.Slate100
-import com.unblocker.app.ui.theme.Slate300
-import com.unblocker.app.ui.theme.Slate400
-import com.unblocker.app.ui.theme.Slate700
-import com.unblocker.app.ui.theme.Slate800
-import com.unblocker.app.ui.theme.Slate900
-import com.unblocker.app.ui.theme.TealAccent
 import com.unblocker.data.db.entity.DomainEventEntity
 import com.unblocker.data.db.entity.DomainStatEntity
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -57,7 +50,7 @@ import java.util.Locale
 @Composable
 fun LogViewerScreen(
     contentPadding: PaddingValues = PaddingValues(0.dp),
-    viewModel: LogViewModel = hiltViewModel()
+    viewModel: LogViewModel = hiltViewModel(),
 ) {
     val domainStats by viewModel.domainStats.collectAsState()
     val filter by viewModel.filter.collectAsState()
@@ -76,21 +69,24 @@ fun LogViewerScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    val exportLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-        contract = androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/csv")
-    ) { uri ->
-        if (uri != null) {
-            coroutineScope.launch {
-                try {
-                    context.contentResolver.openOutputStream(uri)?.use { os ->
-                        viewModel.exportLogsToCsv(os)
+    val exportLauncher =
+        androidx.activity.compose.rememberLauncherForActivityResult(
+            contract =
+                androidx.activity.result.contract.ActivityResultContracts
+                    .CreateDocument("text/csv"),
+        ) { uri ->
+            if (uri != null) {
+                coroutineScope.launch {
+                    try {
+                        context.contentResolver.openOutputStream(uri)?.use { os ->
+                            viewModel.exportLogsToCsv(os)
+                        }
+                    } catch (e: Exception) {
+                        snackbarHostState.showSnackbar("Export failed: ${e.message}")
                     }
-                } catch (e: Exception) {
-                    snackbarHostState.showSnackbar("Export failed: ${e.message}")
                 }
             }
         }
-    }
 
     LaunchedEffect(userMessage) {
         userMessage?.let { msg ->
@@ -105,13 +101,17 @@ fun LogViewerScreen(
         AlertDialog(
             onDismissRequest = { showClearConfirmDialog = false },
             title = { Text("Clear All History?") },
-            text = { Text("This will permanently remove all intercepted domain statistics and timestamped event records.") },
+            text = {
+                Text(
+                    "This will permanently remove all intercepted domain statistics and timestamped event records.",
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
                         viewModel.clearAllLogs()
                         showClearConfirmDialog = false
-                    }
+                    },
                 ) {
                     Text("Clear", color = MaterialTheme.colorScheme.error)
                 }
@@ -120,7 +120,7 @@ fun LogViewerScreen(
                 TextButton(onClick = { showClearConfirmDialog = false }) {
                     Text("Cancel")
                 }
-            }
+            },
         )
     }
 
@@ -129,313 +129,389 @@ fun LogViewerScreen(
     HaikeiAtmosphericBackground {
         Box(modifier = Modifier.fillMaxSize()) {
             LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                start = 16.dp,
-                end = 16.dp,
-                top = statusBarPadding + 16.dp,
-                bottom = contentPadding.calculateBottomPadding() + 80.dp
-            ),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            // Skeuomorphic Header Card
-            item {
-                SkeuomorphicCard(
-                    shape = RoundedCornerShape(24.dp),
-                    elevation = 6.dp
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier.fillMaxSize(),
+                contentPadding =
+                    PaddingValues(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = statusBarPadding + 16.dp,
+                        bottom = contentPadding.calculateBottomPadding() + 80.dp,
+                    ),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                // Skeuomorphic Header Card
+                item {
+                    SkeuomorphicCard(
+                        shape = RoundedCornerShape(24.dp),
+                        elevation = 6.dp,
                     ) {
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(end = 12.dp)
-                        ) {
-                            Text(
-                                text = "Connection Logs",
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                letterSpacing = 0.5.sp
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = "$totalDomains domains • $totalCalls queries • $totalBlocked blocked",
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Surface(
-                                shape = CircleShape,
-                                color = if (isLoggingPaused) Color(0x33EF4444) else MaterialTheme.colorScheme.surfaceVariant,
-                                border = BorderStroke(1.dp, if (isLoggingPaused) Color(0x66EF4444) else MaterialTheme.colorScheme.outlineVariant),
-                                modifier = Modifier.size(42.dp)
+                            Column(
+                                modifier =
+                                    Modifier
+                                        .weight(1f)
+                                        .padding(end = 12.dp),
                             ) {
-                                IconButton(
-                                    onClick = { viewModel.toggleLoggingPaused() },
-                                    modifier = Modifier.fillMaxSize()
-                                ) {
-                                    Icon(
-                                        imageVector = if (isLoggingPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
-                                        contentDescription = if (isLoggingPaused) "Resume Logging" else "Pause Logging",
-                                        tint = if (isLoggingPaused) Color(0xFFEF4444) else MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
+                                Text(
+                                    text = "Connection Logs",
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    letterSpacing = 0.5.sp,
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "$totalDomains domains • $totalCalls queries • $totalBlocked blocked",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
-                            Surface(
-                                shape = CircleShape,
-                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                                modifier = Modifier.size(42.dp)
+
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                IconButton(
-                                    onClick = {
-                                        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-                                        exportLauncher.launch("unblocker_export_$timestamp.csv")
-                                    },
-                                    modifier = Modifier.fillMaxSize()
+                                Surface(
+                                    shape = CircleShape,
+                                    color =
+                                        if (isLoggingPaused) {
+                                            Color(
+                                                0x33EF4444,
+                                            )
+                                        } else {
+                                            MaterialTheme.colorScheme.surfaceVariant
+                                        },
+                                    border =
+                                        BorderStroke(
+                                            1.dp,
+                                            if (isLoggingPaused) {
+                                                Color(
+                                                    0x66EF4444,
+                                                )
+                                            } else {
+                                                MaterialTheme.colorScheme.outlineVariant
+                                            },
+                                        ),
+                                    modifier = Modifier.size(42.dp),
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Download,
-                                        contentDescription = "Export CSV",
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(20.dp)
-                                    )
+                                    IconButton(
+                                        onClick = { viewModel.toggleLoggingPaused() },
+                                        modifier = Modifier.fillMaxSize(),
+                                    ) {
+                                        Icon(
+                                            imageVector = if (isLoggingPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
+                                            contentDescription = if (isLoggingPaused) "Resume Logging" else "Pause Logging",
+                                            tint =
+                                                if (isLoggingPaused) {
+                                                    Color(
+                                                        0xFFEF4444,
+                                                    )
+                                                } else {
+                                                    MaterialTheme.colorScheme.primary
+                                                },
+                                            modifier = Modifier.size(20.dp),
+                                        )
+                                    }
                                 }
-                            }
-                            Surface(
-                                shape = CircleShape,
-                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                                modifier = Modifier.size(42.dp)
-                            ) {
-                                IconButton(
-                                    onClick = { showClearConfirmDialog = true },
-                                    modifier = Modifier.fillMaxSize()
+                                Surface(
+                                    shape = CircleShape,
+                                    color = MaterialTheme.colorScheme.surfaceVariant,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                    modifier = Modifier.size(42.dp),
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.DeleteSweep,
-                                        contentDescription = "Clear History",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(20.dp)
-                                    )
+                                    IconButton(
+                                        onClick = {
+                                            val timestamp =
+                                                SimpleDateFormat(
+                                                    "yyyyMMdd_HHmmss",
+                                                    Locale.US,
+                                                ).format(Date())
+                                            exportLauncher.launch("unblocker_export_$timestamp.csv")
+                                        },
+                                        modifier = Modifier.fillMaxSize(),
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Download,
+                                            contentDescription = "Export CSV",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp),
+                                        )
+                                    }
+                                }
+                                Surface(
+                                    shape = CircleShape,
+                                    color = MaterialTheme.colorScheme.surfaceVariant,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                    modifier = Modifier.size(42.dp),
+                                ) {
+                                    IconButton(
+                                        onClick = { showClearConfirmDialog = true },
+                                        modifier = Modifier.fillMaxSize(),
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.DeleteSweep,
+                                            contentDescription = "Clear History",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(20.dp),
+                                        )
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    ) {
-                        Text(
-                            text = "Local Protection Summary: ${summary.dnsQueries} total queries (${summary.blockedDnsQueries} blocked). Counts reflect local DNS name resolution requests, not advertisements removed or network bytes saved.",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(10.dp)
-                        )
-                    }
-
-                    if (isLoggingPaused) {
-                        val isDark = isSystemInDarkTheme()
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = if (isDark) Color(0x26EF4444) else Color(0xFFFEE2E2),
-                            border = BorderStroke(1.dp, if (isDark) Color(0x66EF4444) else Color(0xFFFCA5A5))
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Pause,
-                                    contentDescription = null,
-                                    tint = if (isDark) Color(0xFFF87171) else Color(0xFFDC2626),
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Logging is currently paused",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = if (isDark) Color(0xFFFCA5A5) else Color(0xFF991B1B),
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Skeuomorphic Search and Filters Card
-            item {
-                SkeuomorphicCard(
-                    shape = RoundedCornerShape(22.dp),
-                    elevation = 4.dp
-                ) {
-                    // Search Bar
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { viewModel.setSearchQuery(it) },
-                        placeholder = { Text("Search domains…", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-                        trailingIcon = {
-                            if (searchQuery.isNotEmpty()) {
-                                IconButton(onClick = { viewModel.setSearchQuery("") }) {
-                                    Icon(Icons.Default.Clear, contentDescription = "Clear search", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
-                        },
-                        singleLine = true,
-                        shape = CircleShape,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            focusedLeadingIconColor = MaterialTheme.colorScheme.primary,
-                            unfocusedLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            focusedTrailingIconColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                            cursorColor = MaterialTheme.colorScheme.primary
-                        )
-                    )
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    // Filter & Sort Row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            FilterChip(
-                                selected = filter == LogFilter.ALL,
-                                onClick = { viewModel.setFilter(LogFilter.ALL) },
-                                label = { Text("All") },
-                                shape = CircleShape,
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                ),
-                                border = FilterChipDefaults.filterChipBorder(
-                                    enabled = true,
-                                    selected = filter == LogFilter.ALL,
-                                    borderColor = if (filter == LogFilter.ALL) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
-                                )
-                            )
-                            FilterChip(
-                                selected = filter == LogFilter.BLOCKED,
-                                onClick = { viewModel.setFilter(LogFilter.BLOCKED) },
-                                label = { Text("Blocked") },
-                                shape = CircleShape,
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = AdBlockedRed.copy(alpha = 0.25f),
-                                    selectedLabelColor = AdBlockedRed,
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                ),
-                                border = FilterChipDefaults.filterChipBorder(
-                                    enabled = true,
-                                    selected = filter == LogFilter.BLOCKED,
-                                    borderColor = if (filter == LogFilter.BLOCKED) AdBlockedRed else MaterialTheme.colorScheme.outlineVariant
-                                )
-                            )
-                            FilterChip(
-                                selected = filter == LogFilter.ALLOWED,
-                                onClick = { viewModel.setFilter(LogFilter.ALLOWED) },
-                                label = { Text("Allowed") },
-                                shape = CircleShape,
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = AllowedGreen.copy(alpha = 0.25f),
-                                    selectedLabelColor = AllowedGreen,
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                ),
-                                border = FilterChipDefaults.filterChipBorder(
-                                    enabled = true,
-                                    selected = filter == LogFilter.ALLOWED,
-                                    borderColor = if (filter == LogFilter.ALLOWED) AllowedGreen else MaterialTheme.colorScheme.outlineVariant
-                                )
-                            )
-                        }
-
-                        // Sort toggle button
-                        TextButton(
-                            onClick = {
-                                viewModel.setSort(
-                                    if (sort == LogSort.RECENT) LogSort.MOST_CALLS else LogSort.RECENT
-                                )
-                            }
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                         ) {
                             Text(
-                                text = if (sort == LogSort.RECENT) "Sort: Recent" else "Sort: Most calls",
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 12.sp
+                                text = "Local Protection Summary: ${summary.dnsQueries} total queries (${summary.blockedDnsQueries} blocked). Counts reflect local DNS name resolution requests, not advertisements removed or network bytes saved.",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(10.dp),
                             )
+                        }
+
+                        if (isLoggingPaused) {
+                            val isDark = isSystemInDarkTheme()
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isDark) Color(0x26EF4444) else Color(0xFFFEE2E2),
+                                border = BorderStroke(1.dp, if (isDark) Color(0x66EF4444) else Color(0xFFFCA5A5)),
+                            ) {
+                                Row(
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Pause,
+                                        contentDescription = null,
+                                        tint = if (isDark) Color(0xFFF87171) else Color(0xFFDC2626),
+                                        modifier = Modifier.size(16.dp),
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Logging is currently paused",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = if (isDark) Color(0xFFFCA5A5) else Color(0xFF991B1B),
+                                        fontWeight = FontWeight.SemiBold,
+                                    )
+                                }
+                            }
                         }
                     }
                 }
-            }
 
-            // Domain List Rows
-            if (domainStats.isEmpty()) {
+                // Skeuomorphic Search and Filters Card
                 item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 48.dp),
-                        contentAlignment = Alignment.Center
+                    SkeuomorphicCard(
+                        shape = RoundedCornerShape(22.dp),
+                        elevation = 4.dp,
                     ) {
-                        Text(
-                            text = if (searchQuery.isEmpty()) "No connections logged yet" else "No matching domains found",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        // Search Bar
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { viewModel.setSearchQuery(it) },
+                            placeholder = {
+                                Text(
+                                    "Search domains…",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Search,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            },
+                            trailingIcon = {
+                                if (searchQuery.isNotEmpty()) {
+                                    IconButton(onClick = { viewModel.setSearchQuery("") }) {
+                                        Icon(
+                                            Icons.Default.Clear,
+                                            contentDescription = "Clear search",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
+                            },
+                            singleLine = true,
+                            shape = CircleShape,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors =
+                                OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                    focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    focusedLeadingIconColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    focusedTrailingIconColor = MaterialTheme.colorScheme.onSurface,
+                                    unfocusedTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                                    cursorColor = MaterialTheme.colorScheme.primary,
+                                ),
+                        )
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // Filter & Sort Row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                FilterChip(
+                                    selected = filter == LogFilter.ALL,
+                                    onClick = { viewModel.setFilter(LogFilter.ALL) },
+                                    label = { Text("All") },
+                                    shape = CircleShape,
+                                    colors =
+                                        FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        ),
+                                    border =
+                                        FilterChipDefaults.filterChipBorder(
+                                            enabled = true,
+                                            selected = filter == LogFilter.ALL,
+                                            borderColor =
+                                                if (filter ==
+                                                    LogFilter.ALL
+                                                ) {
+                                                    MaterialTheme.colorScheme.primary
+                                                } else {
+                                                    MaterialTheme.colorScheme.outlineVariant
+                                                },
+                                        ),
+                                )
+                                FilterChip(
+                                    selected = filter == LogFilter.BLOCKED,
+                                    onClick = { viewModel.setFilter(LogFilter.BLOCKED) },
+                                    label = { Text("Blocked") },
+                                    shape = CircleShape,
+                                    colors =
+                                        FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = AdBlockedRed.copy(alpha = 0.25f),
+                                            selectedLabelColor = AdBlockedRed,
+                                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        ),
+                                    border =
+                                        FilterChipDefaults.filterChipBorder(
+                                            enabled = true,
+                                            selected = filter == LogFilter.BLOCKED,
+                                            borderColor =
+                                                if (filter ==
+                                                    LogFilter.BLOCKED
+                                                ) {
+                                                    AdBlockedRed
+                                                } else {
+                                                    MaterialTheme.colorScheme.outlineVariant
+                                                },
+                                        ),
+                                )
+                                FilterChip(
+                                    selected = filter == LogFilter.ALLOWED,
+                                    onClick = { viewModel.setFilter(LogFilter.ALLOWED) },
+                                    label = { Text("Allowed") },
+                                    shape = CircleShape,
+                                    colors =
+                                        FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = AllowedGreen.copy(alpha = 0.25f),
+                                            selectedLabelColor = AllowedGreen,
+                                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        ),
+                                    border =
+                                        FilterChipDefaults.filterChipBorder(
+                                            enabled = true,
+                                            selected = filter == LogFilter.ALLOWED,
+                                            borderColor =
+                                                if (filter ==
+                                                    LogFilter.ALLOWED
+                                                ) {
+                                                    AllowedGreen
+                                                } else {
+                                                    MaterialTheme.colorScheme.outlineVariant
+                                                },
+                                        ),
+                                )
+                            }
+
+                            // Sort toggle button
+                            TextButton(
+                                onClick = {
+                                    viewModel.setSort(
+                                        if (sort == LogSort.RECENT) LogSort.MOST_CALLS else LogSort.RECENT,
+                                    )
+                                },
+                            ) {
+                                Text(
+                                    text = if (sort == LogSort.RECENT) "Sort: Recent" else "Sort: Most calls",
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 12.sp,
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Domain List Rows
+                if (domainStats.isEmpty()) {
+                    item {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 48.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = if (searchQuery.isEmpty()) "No connections logged yet" else "No matching domains found",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                } else {
+                    items(domainStats.take(150), key = { it.domain }) { stat ->
+                        DomainStatCard(
+                            stat = stat,
+                            isExpanded = expandedDomain == stat.domain,
+                            events = if (expandedDomain == stat.domain) domainEvents else emptyList(),
+                            onToggleExpand = { viewModel.toggleExpandDomain(stat.domain) },
+                            onAllow = { viewModel.allowDomain(stat.domain) },
+                            onBlock = { viewModel.blockDomain(stat.domain) },
+                            onReset = { viewModel.resetDomain(stat.domain) },
                         )
                     }
                 }
-            } else {
-                items(domainStats.take(150), key = { it.domain }) { stat ->
-                    DomainStatCard(
-                        stat = stat,
-                        isExpanded = expandedDomain == stat.domain,
-                        events = if (expandedDomain == stat.domain) domainEvents else emptyList(),
-                        onToggleExpand = { viewModel.toggleExpandDomain(stat.domain) },
-                        onAllow = { viewModel.allowDomain(stat.domain) },
-                        onBlock = { viewModel.blockDomain(stat.domain) },
-                        onReset = { viewModel.resetDomain(stat.domain) }
-                    )
-                }
             }
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = contentPadding.calculateBottomPadding() + 16.dp),
+            )
         }
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = contentPadding.calculateBottomPadding() + 16.dp)
-        )
     }
-}
 }
 
 /**
@@ -457,28 +533,31 @@ fun DomainStatCard(
     onToggleExpand: () -> Unit,
     onAllow: () -> Unit,
     onBlock: () -> Unit,
-    onReset: () -> Unit = {}
+    onReset: () -> Unit = {},
 ) {
-    val relativeTime = remember(stat.lastSeen) {
-        formatRelativeTime(stat.lastSeen)
-    }
+    val relativeTime =
+        remember(stat.lastSeen) {
+            formatRelativeTime(stat.lastSeen)
+        }
 
     SkeuomorphicCard(
         shape = RoundedCornerShape(20.dp),
         elevation = 3.dp,
-        modifier = Modifier
-            .fillMaxWidth()
-            .animateContentSize(animationSpec = tween(200))
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .animateContentSize(animationSpec = tween(200)),
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onToggleExpand() }
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { onToggleExpand() },
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -487,13 +566,13 @@ fun DomainStatCard(
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = "${stat.callCount} calls • ${stat.blockedCount} blocked • $relativeTime",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
 
@@ -503,7 +582,7 @@ fun DomainStatCard(
                     Icon(
                         imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                         contentDescription = if (isExpanded) "Collapse" else "Expand",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -511,20 +590,21 @@ fun DomainStatCard(
             // Expanded Detail Section
             AnimatedVisibility(visible = isExpanded) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 16.dp)
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp),
                 ) {
                     HorizontalDivider(
                         modifier = Modifier.padding(bottom = 12.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant
+                        color = MaterialTheme.colorScheme.outlineVariant,
                     )
 
                     Text(
                         text = "Recent Activity (Latest 50)",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -533,7 +613,7 @@ fun DomainStatCard(
                         Text(
                             text = "Aggregated statistics: ${stat.callCount} total queries (${stat.blockedCount} blocked). Query events are summarized for maximum privacy.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     } else {
                         val timeFormat = remember { SimpleDateFormat("HH:mm:ss", Locale.getDefault()) }
@@ -544,23 +624,26 @@ fun DomainStatCard(
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                                    verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Text(
-                                        text = "${dateFormat.format(Date(event.ts))} ${timeFormat.format(Date(event.ts))}",
+                                        text = "${dateFormat.format(
+                                            Date(event.ts),
+                                        )} ${timeFormat.format(Date(event.ts))}",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                     val isDark = isSystemInDarkTheme()
                                     Text(
                                         text = if (event.decision == 1) "BLOCKED" else "ALLOWED",
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (event.decision == 1) {
-                                            if (isDark) AdBlockedRed else Color(0xFFDC2626)
-                                        } else {
-                                            if (isDark) AllowedGreen else Color(0xFF047857)
-                                        }
+                                        color =
+                                            if (event.decision == 1) {
+                                                if (isDark) AdBlockedRed else Color(0xFFDC2626)
+                                            } else {
+                                                if (isDark) AllowedGreen else Color(0xFF047857)
+                                            },
                                     )
                                 }
                             }
@@ -574,11 +657,11 @@ fun DomainStatCard(
                     val allowColor = if (isDark) AllowedGreen else Color(0xFF047857)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
+                        horizontalArrangement = Arrangement.End,
                     ) {
                         TextButton(
                             onClick = onReset,
-                            modifier = Modifier.padding(end = 6.dp)
+                            modifier = Modifier.padding(end = 6.dp),
                         ) {
                             Text("Reset", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
@@ -586,14 +669,14 @@ fun DomainStatCard(
                             onClick = onAllow,
                             shape = CircleShape,
                             border = BorderStroke(1.dp, allowColor),
-                            modifier = Modifier.padding(end = 8.dp)
+                            modifier = Modifier.padding(end = 8.dp),
                         ) {
                             Text("Always Allow", color = allowColor)
                         }
                         Button(
                             onClick = onBlock,
                             shape = CircleShape,
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                         ) {
                             Text("Block Domain", color = Color.White)
                         }
@@ -611,37 +694,49 @@ fun DomainStatCard(
  * @param allowedCount Number of allowed observations; both zero render the allowed label.
  */
 @Composable
-fun StatusChip(blockedCount: Long, allowedCount: Long) {
+fun StatusChip(
+    blockedCount: Long,
+    allowedCount: Long,
+) {
     val isDark = isSystemInDarkTheme()
-    val (label, backgroundColor, textColor) = when {
-        blockedCount > 0 && allowedCount > 0 -> Triple(
-            "Mixed",
-            if (isDark) Color(0x33F59E0B) else Color(0xFFFEF3C7),
-            if (isDark) Color(0xFFFBBF24) else Color(0xFFB45309)
-        )
-        blockedCount > 0 -> Triple(
-            "Blocked",
-            if (isDark) Color(0x33EF4444) else Color(0xFFFEE2E2),
-            if (isDark) Color(0xFFF87171) else Color(0xFFDC2626)
-        )
-        else -> Triple(
-            "Allowed",
-            if (isDark) Color(0x3310B981) else Color(0xFFD1FAE5),
-            if (isDark) AllowedGreen else Color(0xFF047857)
-        )
-    }
+    val (label, backgroundColor, textColor) =
+        when {
+            blockedCount > 0 && allowedCount > 0 -> {
+                Triple(
+                    "Mixed",
+                    if (isDark) Color(0x33F59E0B) else Color(0xFFFEF3C7),
+                    if (isDark) Color(0xFFFBBF24) else Color(0xFFB45309),
+                )
+            }
+
+            blockedCount > 0 -> {
+                Triple(
+                    "Blocked",
+                    if (isDark) Color(0x33EF4444) else Color(0xFFFEE2E2),
+                    if (isDark) Color(0xFFF87171) else Color(0xFFDC2626),
+                )
+            }
+
+            else -> {
+                Triple(
+                    "Allowed",
+                    if (isDark) Color(0x3310B981) else Color(0xFFD1FAE5),
+                    if (isDark) AllowedGreen else Color(0xFF047857),
+                )
+            }
+        }
 
     Surface(
         shape = CircleShape,
         color = backgroundColor,
-        border = BorderStroke(1.dp, if (isDark) textColor.copy(alpha = 0.4f) else textColor.copy(alpha = 0.25f))
+        border = BorderStroke(1.dp, if (isDark) textColor.copy(alpha = 0.4f) else textColor.copy(alpha = 0.25f)),
     ) {
         Text(
             text = label,
             color = textColor,
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
         )
     }
 }

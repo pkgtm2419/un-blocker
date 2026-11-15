@@ -12,15 +12,15 @@ import androidx.work.WorkerParameters
  */
 class HealthCheckWorker(
     context: Context,
-    workerParams: WorkerParameters
+    workerParams: WorkerParameters,
 ) : CoroutineWorker(context, workerParams) {
-
     /**
      * Returns success when protection is disabled or checking completes, otherwise requests a retry.
      */
     override suspend fun doWork(): Result {
-        val preferences = com.unblocker.app.data.preferences.FilteringPreferences
-            .getInstance(applicationContext)
+        val preferences =
+            com.unblocker.app.data.preferences.FilteringPreferences
+                .getInstance(applicationContext)
         if (!HealthCheckPolicy.shouldRun(preferences.protectionEnabled.value)) {
             return Result.success()
         }

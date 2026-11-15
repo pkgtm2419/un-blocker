@@ -12,14 +12,18 @@ class PackedMatcherTest {
      * Verifies that equivalent across seeded hits misses and boundary cases.
      */
     @Test fun equivalentAcrossSeededHitsMissesAndBoundaryCases() {
-        val lines=(0..999).map { "||host$it.test^" } + listOf("@@||good.host1.test^", "exact.test", "*.wild.test")
-        val rules=CompiledRuleSet(lines.map { RuleParser.parse(it)!! })
-        val baseline=DnsRuleEngine(rules)
-        val packed=rules.toRuleSet()
-        (lines.mapNotNull { RuleParser.parse(it)?.value } + (0..999).flatMap {
-            listOf("a.host$it.test", "nothost$it.test", "host$it.test.evil") } +
-            listOf("GOOD.HOST1.TEST.", "a.good.host1.test", "a.wild.test", "wild.test", "a.exact.test")).forEach {
-            assertEquals(it,baseline.match(it),packed.match(it))
+        val lines = (0..999).map { "||host$it.test^" } + listOf("@@||good.host1.test^", "exact.test", "*.wild.test")
+        val rules = CompiledRuleSet(lines.map { RuleParser.parse(it)!! })
+        val baseline = DnsRuleEngine(rules)
+        val packed = rules.toRuleSet()
+        (
+            lines.mapNotNull { RuleParser.parse(it)?.value } +
+                (0..999).flatMap {
+                    listOf("a.host$it.test", "nothost$it.test", "host$it.test.evil")
+                } +
+                listOf("GOOD.HOST1.TEST.", "a.good.host1.test", "a.wild.test", "wild.test", "a.exact.test")
+        ).forEach {
+            assertEquals(it, baseline.match(it), packed.match(it))
         }
     }
 }

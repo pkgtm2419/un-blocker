@@ -20,7 +20,6 @@ import org.junit.Test
  * Regression coverage for decide blocking use case.
  */
 class DecideBlockingUseCaseTest {
-
     private lateinit var useCase: DecideBlockingUseCase
     private var adEnabled = true
     private var adultEnabled = true
@@ -35,34 +34,38 @@ class DecideBlockingUseCaseTest {
      */
     @Before
     fun setup() {
-        val adDetector = AdDetector(context = null).apply {
-            addDomain("doubleclick.net")
-            addDomain("adservice.google.com")
-            addDomain("track.mybank.com")
-        }
-        val adultDetector = AdultContentDetector(context = null).apply {
-            addDomain("pornhub.com")
-            addDomain("xvideos.com")
-        }
+        val adDetector =
+            AdDetector(context = null).apply {
+                addDomain("doubleclick.net")
+                addDomain("adservice.google.com")
+                addDomain("track.mybank.com")
+            }
+        val adultDetector =
+            AdultContentDetector(context = null).apply {
+                addDomain("pornhub.com")
+                addDomain("xvideos.com")
+            }
         val learner = LocalNetworkLearner()
         val adaptiveEngine = AdaptiveBlockingEngine(preferences = null, networkLearner = learner)
-        val protectedDomains = DefaultProtectedDomains(
-            builtIn = setOf("google.com", "duckduckgo.com"),
-            myDomains = myDomains
-        )
+        val protectedDomains =
+            DefaultProtectedDomains(
+                builtIn = setOf("google.com", "duckduckgo.com"),
+                myDomains = myDomains,
+            )
 
-        useCase = DecideBlockingUseCase(
-            adDetector = adDetector,
-            adultContentDetector = adultDetector,
-            adaptiveBlockingEngine = adaptiveEngine,
-            isAllowlisted = { it in allowlistedDomains },
-            isBlocklisted = { it in blocklistedDomains },
-            isAdBlockingEnabled = { adEnabled },
-            isAdultBlockingEnabled = { adultEnabled },
-            isPaused = { paused },
-            blockingMode = { mode },
-            protectedDomains = protectedDomains
-        )
+        useCase =
+            DecideBlockingUseCase(
+                adDetector = adDetector,
+                adultContentDetector = adultDetector,
+                adaptiveBlockingEngine = adaptiveEngine,
+                isAllowlisted = { it in allowlistedDomains },
+                isBlocklisted = { it in blocklistedDomains },
+                isAdBlockingEnabled = { adEnabled },
+                isAdultBlockingEnabled = { adultEnabled },
+                isPaused = { paused },
+                blockingMode = { mode },
+                protectedDomains = protectedDomains,
+            )
     }
 
     /**
@@ -167,7 +170,7 @@ class DecideBlockingUseCaseTest {
     @Test
     fun testPrimaryDomainInNeverBlockCannotBeBlockedByAdRules() {
         com.unblocker.app.logic.analysis.NeverBlockPolicy.injectForTest(
-            setOf("duckduckgo.com", "google.com")
+            setOf("duckduckgo.com", "google.com"),
         )
         adEnabled = true
         val decision = useCase("duckduckgo.com")
@@ -234,20 +237,26 @@ class DecideBlockingUseCaseTest {
      */
     @Test
     fun testOffHeapRuleEngineIntegration() {
-        val tempFile = java.io.File.createTempFile("rules_test", ".bin").apply { deleteOnExit() }
+        val tempFile =
+            java.io.File
+                .createTempFile("rules_test", ".bin")
+                .apply { deleteOnExit() }
         val reader = java.io.BufferedReader(java.io.StringReader("||custom-tracker.com^\n0.0.0.0 bad-actor.xyz"))
-        com.unblocker.data.cache.RuleCompiler.compileStreamsToBinaryFile(listOf(reader), tempFile)
+        com.unblocker.data.cache.RuleCompiler
+            .compileStreamsToBinaryFile(listOf(reader), tempFile)
 
-        val offHeapEngine = com.unblocker.data.cache.OffHeapRuleEngine().apply {
-            reloadFromFile(tempFile)
-        }
+        val offHeapEngine =
+            com.unblocker.data.cache.OffHeapRuleEngine().apply {
+                reloadFromFile(tempFile)
+            }
         val customDetector = AdDetector(context = null, offHeapRuleEngine = offHeapEngine)
-        val customUseCase = DecideBlockingUseCase(
-            adDetector = customDetector,
-            adultContentDetector = AdultContentDetector(context = null),
-            adaptiveBlockingEngine = AdaptiveBlockingEngine(null, LocalNetworkLearner()),
-            isAdBlockingEnabled = { true }
-        )
+        val customUseCase =
+            DecideBlockingUseCase(
+                adDetector = customDetector,
+                adultContentDetector = AdultContentDetector(context = null),
+                adaptiveBlockingEngine = AdaptiveBlockingEngine(null, LocalNetworkLearner()),
+                isAdBlockingEnabled = { true },
+            )
 
         val directDecision = customUseCase("custom-tracker.com")
         assertTrue("Domain from OffHeapRuleEngine must be blocked", directDecision.isBlocked)
@@ -290,17 +299,19 @@ class DecideBlockingUseCaseTest {
     @Test
     fun testBasicTierPreservesRewardAndShoppingRedirects() {
         var currentTier = com.unblocker.app.data.preferences.FilteringTier.BASIC
-        val adDetector = AdDetector(context = null).apply {
-            addDomain("doubleclick.net")
-            addDomain("googleadservices.com")
-            addDomain("reward.unityads.unity3d.com")
-        }
-        val tieredUseCase = DecideBlockingUseCase(
-            adDetector = adDetector,
-            adultContentDetector = AdultContentDetector(context = null),
-            adaptiveBlockingEngine = AdaptiveBlockingEngine(null, LocalNetworkLearner()),
-            filteringTier = { currentTier }
-        )
+        val adDetector =
+            AdDetector(context = null).apply {
+                addDomain("doubleclick.net")
+                addDomain("googleadservices.com")
+                addDomain("reward.unityads.unity3d.com")
+            }
+        val tieredUseCase =
+            DecideBlockingUseCase(
+                adDetector = adDetector,
+                adultContentDetector = AdultContentDetector(context = null),
+                adaptiveBlockingEngine = AdaptiveBlockingEngine(null, LocalNetworkLearner()),
+                filteringTier = { currentTier },
+            )
 
         // In BASIC mode, reward and shopping redirects are preserved
         val shoppingDecision = tieredUseCase("googleadservices.com")

@@ -11,7 +11,6 @@ import org.junit.Test
  * Regression coverage for private DNS detection.
  */
 class PrivateDnsDetectionTest {
-
     /**
      * Resets the fixture state before each test to keep assertions independent.
      */

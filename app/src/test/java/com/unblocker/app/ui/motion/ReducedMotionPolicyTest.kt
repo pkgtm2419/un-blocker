@@ -9,7 +9,6 @@ import org.junit.Test
  * Regression coverage for reduced motion policy.
  */
 class ReducedMotionPolicyTest {
-
     /**
      * Verifies that reduced motion disabled by default when scale is one.
      */

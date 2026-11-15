@@ -1,6 +1,5 @@
 package com.unblocker.vpn.parser
 
-
 /**
  * Parsed UDP ports and payload range within an enclosing packet.
  *
@@ -13,7 +12,7 @@ data class UdpPacket(
     val srcPort: Int,
     val dstPort: Int,
     val payloadOffset: Int,
-    val payloadLength: Int
+    val payloadLength: Int,
 ) {
     /**
      * Whether the destination port is 53; this alone does not validate the DNS payload.
@@ -39,7 +38,11 @@ data class UdpPacket(
          * @return Header metadata, or null when declared lengths cannot contain the datagram.
          * @throws IndexOutOfBoundsException If caller bounds permit access outside the supplied array.
          */
-        fun parse(buffer: ByteArray, offset: Int, totalLength: Int): UdpPacket? {
+        fun parse(
+            buffer: ByteArray,
+            offset: Int,
+            totalLength: Int,
+        ): UdpPacket? {
             if (offset + UDP_HEADER_SIZE > totalLength) return null
             val srcPort = ((buffer[offset].toInt() and 0xFF) shl 8) or (buffer[offset + 1].toInt() and 0xFF)
             val dstPort = ((buffer[offset + 2].toInt() and 0xFF) shl 8) or (buffer[offset + 3].toInt() and 0xFF)

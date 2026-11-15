@@ -1,10 +1,8 @@
 package com.unblocker.app.services
 
-import com.unblocker.app.logic.dns.DnsPacketUtil
 import com.unblocker.app.logic.dns.DnsQuery
 import com.unblocker.app.logic.dns.TcpDnsResponder
 import com.unblocker.vpn.builder.TrappedDnsServers
-import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -17,7 +15,6 @@ import java.io.DataOutputStream
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
-import java.net.ServerSocket
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
@@ -45,30 +42,32 @@ class DnsUpstreamClientSecurityTest {
                 buildResponseForQuery(req)
             }
 
-            val client = DnsUpstreamClient(
-                protectDatagramSocket = { true },
-                protectTcpSocket = { true },
-                port = server.port,
-                udpTimeoutMillis = 500,
-                tcpConnectTimeoutMillis = 500,
-                tcpReadTimeoutMillis = 500,
-                txIdGenerator = { upstreamTxId }
-            )
+            val client =
+                DnsUpstreamClient(
+                    protectDatagramSocket = { true },
+                    protectTcpSocket = { true },
+                    port = server.port,
+                    udpTimeoutMillis = 500,
+                    tcpConnectTimeoutMillis = 500,
+                    tcpReadTimeoutMillis = 500,
+                    txIdGenerator = { upstreamTxId },
+                )
 
             val queryBytes = buildDnsQueryPayload("secure.example", clientTxId.toInt())
-            val query = DnsQuery(
-                transactionId = clientTxId,
-                domain = "secure.example",
-                queryType = 1,
-                queryClass = 1,
-                rawPacket = queryBytes,
-                dnsOffset = 0,
-                dnsLength = queryBytes.size,
-                srcIp = byteArrayOf(10, 10, 0, 2),
-                dstIp = byteArrayOf(10, 10, 0, 1),
-                srcPort = 53000,
-                dstPort = 53
-            )
+            val query =
+                DnsQuery(
+                    transactionId = clientTxId,
+                    domain = "secure.example",
+                    queryType = 1,
+                    queryClass = 1,
+                    rawPacket = queryBytes,
+                    dnsOffset = 0,
+                    dnsLength = queryBytes.size,
+                    srcIp = byteArrayOf(10, 10, 0, 2),
+                    dstIp = byteArrayOf(10, 10, 0, 1),
+                    srcPort = 53000,
+                    dstPort = 53,
+                )
 
             val run = TunnelRun(1)
             try {
@@ -79,7 +78,8 @@ class DnsUpstreamClientSecurityTest {
                 assertEquals(upstreamTxId.toInt() and 0xffff, capturedUpstreamTxId.get())
 
                 // 2. Response bytes returned to caller had client's TxID restored
-                val returnedTxId = ((response!!.bytes[0].toInt() and 0xFF) shl 8) or (response.bytes[1].toInt() and 0xFF)
+                val returnedTxId =
+                    ((response!!.bytes[0].toInt() and 0xFF) shl 8) or (response.bytes[1].toInt() and 0xFF)
                 assertEquals(clientTxId.toInt() and 0xffff, returnedTxId)
 
                 // 3. Metadata transaction ID matched client's TxID
@@ -108,30 +108,32 @@ class DnsUpstreamClientSecurityTest {
                 resp
             }
 
-            val client = DnsUpstreamClient(
-                protectDatagramSocket = { true },
-                protectTcpSocket = { true },
-                port = server.port,
-                udpTimeoutMillis = 500,
-                tcpConnectTimeoutMillis = 500,
-                tcpReadTimeoutMillis = 500,
-                txIdGenerator = { upstreamTxId }
-            )
+            val client =
+                DnsUpstreamClient(
+                    protectDatagramSocket = { true },
+                    protectTcpSocket = { true },
+                    port = server.port,
+                    udpTimeoutMillis = 500,
+                    tcpConnectTimeoutMillis = 500,
+                    tcpReadTimeoutMillis = 500,
+                    txIdGenerator = { upstreamTxId },
+                )
 
             val queryBytes = buildDnsQueryPayload("spoof.example", clientTxId.toInt())
-            val query = DnsQuery(
-                transactionId = clientTxId,
-                domain = "spoof.example",
-                queryType = 1,
-                queryClass = 1,
-                rawPacket = queryBytes,
-                dnsOffset = 0,
-                dnsLength = queryBytes.size,
-                srcIp = byteArrayOf(10, 10, 0, 2),
-                dstIp = byteArrayOf(10, 10, 0, 1),
-                srcPort = 53000,
-                dstPort = 53
-            )
+            val query =
+                DnsQuery(
+                    transactionId = clientTxId,
+                    domain = "spoof.example",
+                    queryType = 1,
+                    queryClass = 1,
+                    rawPacket = queryBytes,
+                    dnsOffset = 0,
+                    dnsLength = queryBytes.size,
+                    srcIp = byteArrayOf(10, 10, 0, 2),
+                    dstIp = byteArrayOf(10, 10, 0, 1),
+                    srcPort = 53000,
+                    dstPort = 53,
+                )
 
             val run = TunnelRun(1)
             try {
@@ -164,7 +166,10 @@ class DnsUpstreamClientSecurityTest {
         assertTrue(TrappedDnsServers.IPV6_TRAPPED.contains("2001:4860:4860::8888"))
     }
 
-    private fun buildDnsQueryPayload(domain: String, txId: Int): ByteArray {
+    private fun buildDnsQueryPayload(
+        domain: String,
+        txId: Int,
+    ): ByteArray {
         val bos = ByteArrayOutputStream()
         DataOutputStream(bos).use { out ->
             out.writeShort(txId)
@@ -191,8 +196,8 @@ class DnsUpstreamClientSecurityTest {
             // Copy TxID from query
             out.write(queryBytes, 0, 2)
             out.writeShort(0x8180) // Flags: standard response, no error
-            out.writeShort(1)      // 1 question
-            out.writeShort(1)      // 1 answer
+            out.writeShort(1) // 1 question
+            out.writeShort(1) // 1 answer
             out.writeShort(0)
             out.writeShort(0)
             // Copy question section
@@ -209,19 +214,22 @@ class DnsUpstreamClientSecurityTest {
         return bos.toByteArray()
     }
 
-    private class TestEchoDnsServer(address: InetAddress) : Closeable {
+    private class TestEchoDnsServer(
+        address: InetAddress,
+    ) : Closeable {
         private val executor = Executors.newCachedThreadPool()
         private val udpServer = DatagramSocket(0, address)
         val port: Int = udpServer.localPort
 
-        fun serveUdpEcho(handler: (ByteArray) -> ByteArray): Future<*> = executor.submit {
-            val buf = ByteArray(4096)
-            val packet = DatagramPacket(buf, buf.size)
-            udpServer.receive(packet)
-            val request = packet.data.copyOf(packet.length)
-            val reply = handler(request)
-            udpServer.send(DatagramPacket(reply, reply.size, packet.address, packet.port))
-        }
+        fun serveUdpEcho(handler: (ByteArray) -> ByteArray): Future<*> =
+            executor.submit {
+                val buf = ByteArray(4096)
+                val packet = DatagramPacket(buf, buf.size)
+                udpServer.receive(packet)
+                val request = packet.data.copyOf(packet.length)
+                val reply = handler(request)
+                udpServer.send(DatagramPacket(reply, reply.size, packet.address, packet.port))
+            }
 
         override fun close() {
             udpServer.close()

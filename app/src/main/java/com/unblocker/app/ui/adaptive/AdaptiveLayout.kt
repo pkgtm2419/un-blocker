@@ -13,7 +13,7 @@ import androidx.compose.ui.unit.dp
 enum class WindowWidthClass {
     COMPACT,
     MEDIUM,
-    EXPANDED
+    EXPANDED,
 }
 
 /**
@@ -28,20 +28,21 @@ data class WindowDimensions(
     val widthClass: WindowWidthClass,
     val maxWidth: Dp,
     val maxHeight: Dp,
-    val isLandscape: Boolean
+    val isLandscape: Boolean,
 )
 
 /**
  * Adaptive window snapshot for descendants; defaults to a compact 360 dp by 640 dp window.
  */
-val LocalWindowDimensions = compositionLocalOf {
-    WindowDimensions(
-        widthClass = WindowWidthClass.COMPACT,
-        maxWidth = 360.dp,
-        maxHeight = 640.dp,
-        isLandscape = false
-    )
-}
+val LocalWindowDimensions =
+    compositionLocalOf {
+        WindowDimensions(
+            widthClass = WindowWidthClass.COMPACT,
+            maxWidth = 360.dp,
+            maxHeight = 640.dp,
+            isLandscape = false,
+        )
+    }
 
 /**
  * Provides dimensions derived from the current layout constraints to its descendants.
@@ -49,26 +50,26 @@ val LocalWindowDimensions = compositionLocalOf {
  * @param content Content that can read [LocalWindowDimensions].
  */
 @Composable
-fun ProvideAdaptiveWindow(
-    content: @Composable () -> Unit
-) {
+fun ProvideAdaptiveWindow(content: @Composable () -> Unit) {
     BoxWithConstraints {
         val width = maxWidth
         val height = maxHeight
         val isLandscape = width > height
 
-        val widthClass = when {
-            width < 600.dp -> WindowWidthClass.COMPACT
-            width < 840.dp -> WindowWidthClass.MEDIUM
-            else -> WindowWidthClass.EXPANDED
-        }
+        val widthClass =
+            when {
+                width < 600.dp -> WindowWidthClass.COMPACT
+                width < 840.dp -> WindowWidthClass.MEDIUM
+                else -> WindowWidthClass.EXPANDED
+            }
 
-        val dimensions = WindowDimensions(
-            widthClass = widthClass,
-            maxWidth = width,
-            maxHeight = height,
-            isLandscape = isLandscape
-        )
+        val dimensions =
+            WindowDimensions(
+                widthClass = widthClass,
+                maxWidth = width,
+                maxHeight = height,
+                isLandscape = isLandscape,
+            )
 
         CompositionLocalProvider(LocalWindowDimensions provides dimensions) {
             content()

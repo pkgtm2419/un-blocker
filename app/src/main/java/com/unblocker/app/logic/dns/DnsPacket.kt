@@ -1,7 +1,6 @@
 package com.unblocker.app.logic.dns
 
 import com.unblocker.app.logic.DomainName
-import java.net.InetAddress
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -45,7 +44,7 @@ data class DnsQuery(
     val hasEdns: Boolean = false,
     val ednsFlags: Int = 0,
     val cacheVariant: String = "",
-    val cacheAllowed: Boolean = true
+    val cacheAllowed: Boolean = true,
 ) {
     /**
      * Compares only transaction ID and canonical domain, excluding transport and packet bytes.
@@ -78,7 +77,7 @@ data class DnsQuery(
  */
 data class ForwardingDnsRequest(
     val query: DnsQuery,
-    val dnsPayload: ByteArray
+    val dnsPayload: ByteArray,
 )
 
 /**
@@ -97,15 +96,16 @@ fun DnsQuery.toForwardingRequest(): ForwardingDnsRequest {
  * Parses standard DNS queries and builds local IPv4/IPv6 UDP DNS responses.
  */
 object DnsPacketUtil {
-
     /**
      * DNS A record type wire value.
      */
     const val TYPE_A: Short = 1
+
     /**
      * DNS AAAA record type wire value.
      */
     const val TYPE_AAAA: Short = 28
+
     /**
      * DNS Internet class wire value.
      */
@@ -117,8 +117,7 @@ object DnsPacketUtil {
      * @param query Query determining IPv4 versus IPv6 overhead.
      * @return Maximum DNS body length in bytes, excluding IP and UDP headers.
      */
-    fun maxDnsPayloadLength(query: DnsQuery): Int =
-        if (query.isIpv6) 0xffff - 8 else 0xffff - 20 - 8
+    fun maxDnsPayloadLength(query: DnsQuery): Int = if (query.isIpv6) 0xffff - 8 else 0xffff - 20 - 8
 
     /**
      * Reads the minimum positive answer TTL from a structurally valid successful response.
@@ -127,8 +126,12 @@ object DnsPacketUtil {
      * @param length Available body length in bytes.
      * @return Minimum answer TTL in seconds, or null for invalid, truncated, unsuccessful or zero-TTL responses.
      */
-    fun minCacheTtlSeconds(payload: ByteArray, length: Int = payload.size): Long? =
-        DnsResponseValidator.parseMetadata(payload, length)
+    fun minCacheTtlSeconds(
+        payload: ByteArray,
+        length: Int = payload.size,
+    ): Long? =
+        DnsResponseValidator
+            .parseMetadata(payload, length)
             ?.takeIf { !it.truncated && it.rcode == 0 }
             ?.minPositiveTtlSeconds
 
@@ -139,7 +142,10 @@ object DnsPacketUtil {
      * @param length Number of available IP packet bytes.
      * @return Parsed query, or null for unsupported transport, malformed bounds or invalid DNS syntax.
      */
-    fun parseIpPacket(packet: ByteArray, length: Int): DnsQuery? {
+    fun parseIpPacket(
+        packet: ByteArray,
+        length: Int,
+    ): DnsQuery? {
         if (length < 28 || length > packet.size) return null
 
         val versionAndIhl = packet[0].toInt() and 0xFF
@@ -147,42 +153,48 @@ object DnsPacketUtil {
         val isIpv6 = (version == 6)
         if (version != 4 && version != 6) return null
 
-        val (udpOffset, srcIp, dstIp) = if (isIpv6) {
-            if (length < 48) return null // 40 IPv6 + 8 UDP
-            if (u16(packet,4) == 0 || 40 + u16(packet,4) != length) return null
-            var nextHeader = packet[6].toInt() and 0xFF
-            var offset = 40
-            var hops = 0
-            while (nextHeader != 17) {
-                if (hops++ >= 8 || offset + 8 > length) return null
-                val extensionLength = when (nextHeader) {
-                    0,43,60 -> {
-                        if (nextHeader == 0 && offset != 40) return null
-                        ((packet[offset+1].toInt() and 255)+1)*8
-                    }
-                    44 -> {
-                        if (packet[offset+1].toInt() != 0 || u16(packet,offset+2) != 0) return null
-                        8 // Atomic fragments only; no reassembly or fragmented transport.
-                    }
-                    else -> return null
+        val (udpOffset, srcIp, dstIp) =
+            if (isIpv6) {
+                if (length < 48) return null // 40 IPv6 + 8 UDP
+                if (u16(packet, 4) == 0 || 40 + u16(packet, 4) != length) return null
+                var nextHeader = packet[6].toInt() and 0xFF
+                var offset = 40
+                var hops = 0
+                while (nextHeader != 17) {
+                    if (hops++ >= 8 || offset + 8 > length) return null
+                    val extensionLength =
+                        when (nextHeader) {
+                            0, 43, 60 -> {
+                                if (nextHeader == 0 && offset != 40) return null
+                                ((packet[offset + 1].toInt() and 255) + 1) * 8
+                            }
+
+                            44 -> {
+                                if (packet[offset + 1].toInt() != 0 || u16(packet, offset + 2) != 0) return null
+                                8 // Atomic fragments only; no reassembly or fragmented transport.
+                            }
+
+                            else -> {
+                                return null
+                            }
+                        }
+                    if (offset + extensionLength + 8 > length) return null
+                    nextHeader = packet[offset].toInt() and 255
+                    offset += extensionLength
                 }
-                if (offset + extensionLength + 8 > length) return null
-                nextHeader = packet[offset].toInt() and 255
-                offset += extensionLength
+                val src = ByteArray(16) { packet[8 + it] }
+                val dst = ByteArray(16) { packet[24 + it] }
+                Triple(offset, src, dst)
+            } else {
+                val ihl = (versionAndIhl and 0x0F) * 4
+                if (ihl < 20 || length < ihl + 8) return null // RFC 791 requires min IPv4 IHL of 5 (20 bytes)
+                if (u16(packet, 2) != length || u16(packet, 6) and 0xbfff != 0) return null
+                val protocol = packet[9].toInt() and 0xFF
+                if (protocol != 17) return null // Protocol 17 = UDP
+                val src = ByteArray(4) { packet[12 + it] }
+                val dst = ByteArray(4) { packet[16 + it] }
+                Triple(ihl, src, dst)
             }
-            val src = ByteArray(16) { packet[8 + it] }
-            val dst = ByteArray(16) { packet[24 + it] }
-            Triple(offset, src, dst)
-        } else {
-            val ihl = (versionAndIhl and 0x0F) * 4
-            if (ihl < 20 || length < ihl + 8) return null // RFC 791 requires min IPv4 IHL of 5 (20 bytes)
-            if (u16(packet,2) != length || u16(packet,6) and 0xbfff != 0) return null
-            val protocol = packet[9].toInt() and 0xFF
-            if (protocol != 17) return null // Protocol 17 = UDP
-            val src = ByteArray(4) { packet[12 + it] }
-            val dst = ByteArray(4) { packet[16 + it] }
-            Triple(ihl, src, dst)
-        }
 
         val srcPort = ((packet[udpOffset].toInt() and 0xFF) shl 8) or (packet[udpOffset + 1].toInt() and 0xFF)
         val dstPort = ((packet[udpOffset + 2].toInt() and 0xFF) shl 8) or (packet[udpOffset + 3].toInt() and 0xFF)
@@ -203,7 +215,7 @@ object DnsPacketUtil {
         if (!isQuery || flags and 0x7800 != 0) return null
 
         val qdCount = ((packet[dnsOffset + 4].toInt() and 0xFF) shl 8 or (packet[dnsOffset + 5].toInt() and 0xFF))
-        if (qdCount != 1 || u16(packet,dnsOffset+6) != 0 || u16(packet,dnsOffset+8) != 0) return null
+        if (qdCount != 1 || u16(packet, dnsOffset + 6) != 0 || u16(packet, dnsOffset + 8) != 0) return null
 
         // Parse QNAME
         var pos = dnsOffset + 12
@@ -231,28 +243,39 @@ object DnsPacketUtil {
         val qClass = ((packet[pos + 2].toInt() and 0xFF) shl 8 or (packet[pos + 3].toInt() and 0xFF)).toShort()
 
         pos += 4
-        val additional = u16(packet,dnsOffset+10)
+        val additional = u16(packet, dnsOffset + 10)
         var hasEdns = false
         var udpLimit = 512
         var ednsFlags = 0
         var optionKey = "none"
         var cacheAllowed = true
         if (additional == 1) {
-            if (pos+11>dnsEnd || packet[pos].toInt()!=0 || u16(packet,pos+1)!=41 ||
-                packet[pos+5].toInt()!=0 || packet[pos+6].toInt()!=0) return null
-            val dataSize = u16(packet,pos+9)
-            if (pos+11+dataSize != dnsEnd || !validEdnsOptions(packet,pos+11,dnsEnd)) return null
-            hasEdns=true
-            udpLimit=u16(packet,pos+3).coerceAtLeast(512)
-            ednsFlags=u16(packet,pos+7)
-            cacheAllowed=dataSize<=256
-            optionKey=if(cacheAllowed) "edns:$ednsFlags:" + (pos+11 until dnsEnd).joinToString("") {
-                val byte=packet[it].toInt() and 255
-                "0123456789abcdef"[byte ushr 4].toString()+"0123456789abcdef"[byte and 15]
-            } else "uncacheable"
-            pos=dnsEnd
-        } else if(additional!=0) return null
-        if(pos!=dnsEnd) return null
+            if (pos + 11 > dnsEnd || packet[pos].toInt() != 0 || u16(packet, pos + 1) != 41 ||
+                packet[pos + 5].toInt() != 0 || packet[pos + 6].toInt() != 0
+            ) {
+                return null
+            }
+            val dataSize = u16(packet, pos + 9)
+            if (pos + 11 + dataSize != dnsEnd || !validEdnsOptions(packet, pos + 11, dnsEnd)) return null
+            hasEdns = true
+            udpLimit = u16(packet, pos + 3).coerceAtLeast(512)
+            ednsFlags = u16(packet, pos + 7)
+            cacheAllowed = dataSize <= 256
+            optionKey =
+                if (cacheAllowed) {
+                    "edns:$ednsFlags:" +
+                        (pos + 11 until dnsEnd).joinToString("") {
+                            val byte = packet[it].toInt() and 255
+                            "0123456789abcdef"[byte ushr 4].toString() + "0123456789abcdef"[byte and 15]
+                        }
+                } else {
+                    "uncacheable"
+                }
+            pos = dnsEnd
+        } else if (additional != 0) {
+            return null
+        }
+        if (pos != dnsEnd) return null
 
         val domain = DomainName.normalize(domainBuilder.toString()) ?: return null
 
@@ -273,7 +296,7 @@ object DnsPacketUtil {
             udpPayloadLimit = udpLimit,
             ednsFlags = ednsFlags,
             cacheVariant = "$flags:$optionKey",
-            cacheAllowed = cacheAllowed
+            cacheAllowed = cacheAllowed,
         )
     }
 
@@ -291,9 +314,18 @@ object DnsPacketUtil {
 
         // DNS Response Body
         val questionBytes = extractQuestionSection(query.rawPacket, query.dnsOffset, query.dnsLength)
-        val answerRecordLength = if (isDoHCanary) 0 else if (isA) 16 else if (isAaaa) 28 else 0
+        val answerRecordLength =
+            if (isDoHCanary) {
+                0
+            } else if (isA) {
+                16
+            } else if (isAaaa) {
+                28
+            } else {
+                0
+            }
 
-        val opt = if(query.hasEdns) minimalOpt(query) else byteArrayOf()
+        val opt = if (query.hasEdns) minimalOpt(query) else byteArrayOf()
         val dnsResponseSize = 12 + questionBytes.size + answerRecordLength + opt.size
         val dnsFlags = if (isDoHCanary) 0x8583.toShort() else 0x8580.toShort() // NXDOMAIN (3) or NoError (0)
         val dnsResponse = ByteBuffer.allocate(dnsResponseSize).order(ByteOrder.BIG_ENDIAN)
@@ -302,7 +334,7 @@ object DnsPacketUtil {
         dnsResponse.putShort(1.toShort())
         dnsResponse.putShort((if (answerRecordLength > 0) 1 else 0).toShort())
         dnsResponse.putShort(0.toShort())
-        dnsResponse.putShort((if(query.hasEdns) 1 else 0).toShort())
+        dnsResponse.putShort((if (query.hasEdns) 1 else 0).toShort())
         dnsResponse.put(questionBytes)
 
         if (!isDoHCanary && isA) {
@@ -422,7 +454,16 @@ object DnsPacketUtil {
         val isA = qType == TYPE_A
         val isAaaa = qType == TYPE_AAAA
 
-        val answerRecordLength = if (isDoHCanary) 0 else if (isA) 16 else if (isAaaa) 28 else 0
+        val answerRecordLength =
+            if (isDoHCanary) {
+                0
+            } else if (isA) {
+                16
+            } else if (isAaaa) {
+                28
+            } else {
+                0
+            }
         val dnsResponseSize = 12 + questionBytes.size + answerRecordLength
         val dnsFlags = if (isDoHCanary) 0x8583.toShort() else 0x8580.toShort()
 
@@ -463,7 +504,11 @@ object DnsPacketUtil {
      * @param clientIp Client address bytes retained in the query.
      * @return Query with compatibility transport placeholders, or null when question parsing fails.
      */
-    fun parseWireQuery(dnsWire: ByteArray, isIpv6: Boolean, clientIp: ByteArray): DnsQuery? {
+    fun parseWireQuery(
+        dnsWire: ByteArray,
+        isIpv6: Boolean,
+        clientIp: ByteArray,
+    ): DnsQuery? {
         if (dnsWire.size < 12) return null
         val txId = ((dnsWire[0].toInt() and 0xFF) shl 8 or (dnsWire[1].toInt() and 0xFF)).toShort()
         val flags = ((dnsWire[2].toInt() and 0xFF) shl 8 or (dnsWire[3].toInt() and 0xFF))
@@ -491,7 +536,29 @@ object DnsPacketUtil {
         pos += 4
 
         val domain = DomainName.normalize(domainBuilder.toString()) ?: return null
-        val dstIp = if (isIpv6) byteArrayOf(0xfd.toByte(), 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1) else byteArrayOf(10, 10, 0, 1)
+        val dstIp =
+            if (isIpv6) {
+                byteArrayOf(
+                    0xfd.toByte(),
+                    0,
+                    0,
+                    1,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    1,
+                )
+            } else {
+                byteArrayOf(10, 10, 0, 1)
+            }
 
         return DnsQuery(
             transactionId = txId,
@@ -510,7 +577,7 @@ object DnsPacketUtil {
             udpPayloadLimit = 65535,
             ednsFlags = 0,
             cacheVariant = "$flags:tcp",
-            cacheAllowed = true
+            cacheAllowed = true,
         )
     }
 
@@ -522,43 +589,75 @@ object DnsPacketUtil {
      * @return Complete IPv4/IPv6 UDP reply packet.
      * @throws IllegalArgumentException If response envelope lengths or query address sizes are invalid.
      */
-    fun wrapClientResponse(query:DnsQuery,bytes:ByteArray):ByteArray {
-        val limit=minOf(query.udpPayloadLimit.coerceAtLeast(512),maxDnsPayloadLength(query))
-        if(bytes.size<=limit) {
-            val txBytes = if (bytes.size >= 2 && (bytes[0] != (query.transactionId.toInt() ushr 8).toByte() || bytes[1] != query.transactionId.toByte())) {
-                val cloned = bytes.clone()
-                cloned[0] = (query.transactionId.toInt() ushr 8).toByte()
-                cloned[1] = query.transactionId.toByte()
-                cloned
-            } else bytes
-            return wrapDnsResponseInIpUdp(query,txBytes,txBytes.size)
+    fun wrapClientResponse(
+        query: DnsQuery,
+        bytes: ByteArray,
+    ): ByteArray {
+        val limit = minOf(query.udpPayloadLimit.coerceAtLeast(512), maxDnsPayloadLength(query))
+        if (bytes.size <= limit) {
+            val txBytes =
+                if (bytes.size >= 2 &&
+                    (
+                        bytes[0] != (query.transactionId.toInt() ushr 8).toByte() ||
+                            bytes[1] != query.transactionId.toByte()
+                    )
+                ) {
+                    val cloned = bytes.clone()
+                    cloned[0] = (query.transactionId.toInt() ushr 8).toByte()
+                    cloned[1] = query.transactionId.toByte()
+                    cloned
+                } else {
+                    bytes
+                }
+            return wrapDnsResponseInIpUdp(query, txBytes, txBytes.size)
         }
-        require(bytes.size>=12)
-        val question=extractQuestionSection(query.rawPacket,query.dnsOffset,query.dnsLength)
-        val opt=if(query.hasEdns) minimalOpt(query) else byteArrayOf()
-        val truncated=ByteBuffer.allocate(12+question.size+opt.size).order(ByteOrder.BIG_ENDIAN)
+        require(bytes.size >= 12)
+        val question = extractQuestionSection(query.rawPacket, query.dnsOffset, query.dnsLength)
+        val opt = if (query.hasEdns) minimalOpt(query) else byteArrayOf()
+        val truncated = ByteBuffer.allocate(12 + question.size + opt.size).order(ByteOrder.BIG_ENDIAN)
         truncated.putShort(query.transactionId)
-        truncated.putShort(((u16(bytes,2) or 0x8200) and 0xffdf).toShort()) // Clear AD on synthetic TC.
-        truncated.putShort(1);truncated.putShort(0);truncated.putShort(0)
-        truncated.putShort((if(query.hasEdns)1 else 0).toShort());truncated.put(question);truncated.put(opt)
-        return wrapDnsResponseInIpUdp(query,truncated.array(),truncated.capacity())
+        truncated.putShort(((u16(bytes, 2) or 0x8200) and 0xffdf).toShort()) // Clear AD on synthetic TC.
+        truncated.putShort(1)
+        truncated.putShort(0)
+        truncated.putShort(0)
+        truncated.putShort((if (query.hasEdns) 1 else 0).toShort())
+        truncated.put(question)
+        truncated.put(opt)
+        return wrapDnsResponseInIpUdp(query, truncated.array(), truncated.capacity())
     }
-    private fun minimalOpt(query:DnsQuery):ByteArray = ByteBuffer.allocate(11).order(ByteOrder.BIG_ENDIAN).apply {
-        put(0);putShort(41);putShort(minOf(query.udpPayloadLimit,maxDnsPayloadLength(query)).toShort())
-        putInt(query.ednsFlags and 0x8000);putShort(0)
-    }.array()
-    internal fun validEdnsOptions(bytes:ByteArray,start:Int,end:Int):Boolean {
-        var p=start
-        while(p<end) {
-            if(p+4>end) return false
-            val size=u16(bytes,p+2)
-            p+=4
-            if(p+size>end) return false
-            p+=size
+
+    private fun minimalOpt(query: DnsQuery): ByteArray =
+        ByteBuffer
+            .allocate(11)
+            .order(ByteOrder.BIG_ENDIAN)
+            .apply {
+                put(0)
+                putShort(41)
+                putShort(minOf(query.udpPayloadLimit, maxDnsPayloadLength(query)).toShort())
+                putInt(query.ednsFlags and 0x8000)
+                putShort(0)
+            }.array()
+
+    internal fun validEdnsOptions(
+        bytes: ByteArray,
+        start: Int,
+        end: Int,
+    ): Boolean {
+        var p = start
+        while (p < end) {
+            if (p + 4 > end) return false
+            val size = u16(bytes, p + 2)
+            p += 4
+            if (p + size > end) return false
+            p += size
         }
-        return p==end
+        return p == end
     }
-    private fun u16(bytes:ByteArray,p:Int)=((bytes[p].toInt() and 255) shl 8) or (bytes[p+1].toInt() and 255)
+
+    private fun u16(
+        bytes: ByteArray,
+        p: Int,
+    ) = ((bytes[p].toInt() and 255) shl 8) or (bytes[p + 1].toInt() and 255)
 
     /**
      * Wraps DNS bytes in a reply envelope with swapped client/resolver addresses and ports.
@@ -569,7 +668,11 @@ object DnsPacketUtil {
      * @return Complete packet with IPv4 header checksum or IPv6 UDP checksum.
      * @throws IllegalArgumentException If lengths exceed protocol bounds or address sizes mismatch the IP version.
      */
-    fun wrapDnsResponseInIpUdp(query: DnsQuery, dnsBytes: ByteArray, dnsLength: Int): ByteArray {
+    fun wrapDnsResponseInIpUdp(
+        query: DnsQuery,
+        dnsBytes: ByteArray,
+        dnsLength: Int,
+    ): ByteArray {
         require(dnsLength >= 0 && dnsLength <= dnsBytes.size)
         require(dnsLength <= maxDnsPayloadLength(query))
         val udpLength = 8 + dnsLength
@@ -608,19 +711,24 @@ object DnsPacketUtil {
         packet.put(dnsBytes, 0, dnsLength)
 
         if (query.isIpv6) {
-            val checksum = InternetChecksum.udpIpv6(
-                source = query.dstIp,
-                destination = query.srcIp,
-                udpSegment = packet.array(),
-                offset = 40,
-                length = udpLength
-            )
+            val checksum =
+                InternetChecksum.udpIpv6(
+                    source = query.dstIp,
+                    destination = query.srcIp,
+                    udpSegment = packet.array(),
+                    offset = 40,
+                    length = udpLength,
+                )
             packet.putShort(46, checksum)
         }
         return packet.array()
     }
 
-    private fun extractQuestionSection(packet: ByteArray, dnsOffset: Int, dnsLength: Int): ByteArray {
+    private fun extractQuestionSection(
+        packet: ByteArray,
+        dnsOffset: Int,
+        dnsLength: Int,
+    ): ByteArray {
         if (dnsLength < 12) return ByteArray(0)
         val qStart = dnsOffset + 12
         var pos = qStart
@@ -657,35 +765,40 @@ object DnsPacketUtil {
      * @return Complete reply packet, or null when inapplicable, too short or rate-limited.
      * @throws IndexOutOfBoundsException If supplied bounds are inconsistent with packet storage.
      */
-    fun buildErrorResponseIfApplicable(packet: ByteArray, length: Int): ByteArray? {
+    fun buildErrorResponseIfApplicable(
+        packet: ByteArray,
+        length: Int,
+    ): ByteArray? {
         if (length < 28) return null
         val isIpv6 = (packet[0].toInt() and 0xF0) == 0x60
-        val (udpOffset, srcIp, dstIp) = if (isIpv6) {
-            if (length < 48) return null
-            var offset = 40
-            var nextHeader = packet[6].toInt() and 255
-            while (nextHeader in setOf(0, 43, 60, 44)) {
-                if (offset + 2 > length) return null
-                val extLen = when (nextHeader) {
-                    44 -> 8
-                    else -> ((packet[offset + 1].toInt() and 255) + 1) * 8
+        val (udpOffset, srcIp, dstIp) =
+            if (isIpv6) {
+                if (length < 48) return null
+                var offset = 40
+                var nextHeader = packet[6].toInt() and 255
+                while (nextHeader in setOf(0, 43, 60, 44)) {
+                    if (offset + 2 > length) return null
+                    val extLen =
+                        when (nextHeader) {
+                            44 -> 8
+                            else -> ((packet[offset + 1].toInt() and 255) + 1) * 8
+                        }
+                    if (offset + extLen + 8 > length) return null
+                    nextHeader = packet[offset].toInt() and 255
+                    offset += extLen
                 }
-                if (offset + extLen + 8 > length) return null
-                nextHeader = packet[offset].toInt() and 255
-                offset += extLen
+                if (nextHeader != 17) return null
+                val src = ByteArray(16) { packet[8 + it] }
+                val dst = ByteArray(16) { packet[24 + it] }
+                Triple(offset, src, dst)
+            } else {
+                val ihl = (packet[0].toInt() and 0x0F) * 4
+                if (ihl < 20 || length < ihl + 8) return null
+                if (packet[9].toInt() and 0xFF != 17) return null
+                val src = ByteArray(4) { packet[12 + it] }
+                val dst = ByteArray(4) { packet[16 + it] }
+                Triple(ihl, src, dst)
             }
-            if (nextHeader != 17) return null
-            val src = ByteArray(16) { packet[8 + it] }
-            val dst = ByteArray(16) { packet[24 + it] }
-            Triple(offset, src, dst)
-        } else {
-            val ihl = (packet[0].toInt() and 0x0F) * 4
-            if (ihl < 20 || length < ihl + 8) return null
-            if (packet[9].toInt() and 0xFF != 17) return null
-            val src = ByteArray(4) { packet[12 + it] }
-            val dst = ByteArray(4) { packet[16 + it] }
-            Triple(ihl, src, dst)
-        }
 
         val dstPort = ((packet[udpOffset + 2].toInt() and 0xFF) shl 8) or (packet[udpOffset + 3].toInt() and 0xFF)
         if (dstPort != 53) return null
@@ -760,17 +873,17 @@ object DnsPacketUtil {
         packetOut.put(dnsBytes)
 
         if (isIpv6) {
-            val checksum = InternetChecksum.udpIpv6(
-                source = dstIp,
-                destination = srcIp,
-                udpSegment = packetOut.array(),
-                offset = 40,
-                length = respUdpLength
-            )
+            val checksum =
+                InternetChecksum.udpIpv6(
+                    source = dstIp,
+                    destination = srcIp,
+                    udpSegment = packetOut.array(),
+                    offset = 40,
+                    length = respUdpLength,
+                )
             packetOut.putShort(46, checksum)
         }
 
         return packetOut.array()
     }
-
 }

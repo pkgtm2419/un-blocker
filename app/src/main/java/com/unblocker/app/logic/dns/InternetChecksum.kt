@@ -11,7 +11,11 @@ object InternetChecksum {
      * @return Checksum wire bits as a Short, without normalizing a zero result.
      * @throws IllegalArgumentException If the selected range is empty or outside packet.
      */
-    fun ipv4Header(packet: ByteArray, offset: Int, length: Int): Short {
+    fun ipv4Header(
+        packet: ByteArray,
+        offset: Int,
+        length: Int,
+    ): Short {
         require(offset >= 0 && length > 0 && offset <= packet.size - length)
         return finish(sumBytes(packet, offset, length), normalizeZero = false)
     }
@@ -32,7 +36,7 @@ object InternetChecksum {
         destination: ByteArray,
         udpSegment: ByteArray,
         offset: Int,
-        length: Int
+        length: Int,
     ): Short {
         require(source.size == 16 && destination.size == 16)
         require(length in 8..0xffff && offset >= 0 && offset <= udpSegment.size - length)
@@ -64,7 +68,7 @@ object InternetChecksum {
         destination: ByteArray,
         tcpSegment: ByteArray,
         offset: Int,
-        length: Int
+        length: Int,
     ): Short {
         require(source.size == 4 && destination.size == 4)
         require(length in 20..0xffff && offset >= 0 && offset <= tcpSegment.size - length)
@@ -94,7 +98,7 @@ object InternetChecksum {
         destination: ByteArray,
         tcpSegment: ByteArray,
         offset: Int,
-        length: Int
+        length: Int,
     ): Short {
         require(source.size == 16 && destination.size == 16)
         require(length in 20..0xffff && offset >= 0 && offset <= tcpSegment.size - length)
@@ -110,16 +114,25 @@ object InternetChecksum {
         return finish(sum, normalizeZero = true)
     }
 
-    private fun sumBytes(bytes: ByteArray, offset: Int, length: Int): Long =
-        addBytes(0L, bytes, offset, length)
+    private fun sumBytes(
+        bytes: ByteArray,
+        offset: Int,
+        length: Int,
+    ): Long = addBytes(0L, bytes, offset, length)
 
-    private fun addBytes(initial: Long, bytes: ByteArray, offset: Int, length: Int): Long {
+    private fun addBytes(
+        initial: Long,
+        bytes: ByteArray,
+        offset: Int,
+        length: Int,
+    ): Long {
         var sum = initial
         var position = offset
         val end = offset + length
         while (position + 1 < end) {
-            val word = ((bytes[position].toInt() and 0xff) shl 8) or
-                (bytes[position + 1].toInt() and 0xff)
+            val word =
+                ((bytes[position].toInt() and 0xff) shl 8) or
+                    (bytes[position + 1].toInt() and 0xff)
             sum = addWord(sum, word)
             position += 2
         }
@@ -127,13 +140,19 @@ object InternetChecksum {
         return sum
     }
 
-    private fun addWord(initial: Long, word: Int): Long {
+    private fun addWord(
+        initial: Long,
+        word: Int,
+    ): Long {
         var sum = initial + (word and 0xffff)
         while (sum > 0xffff) sum = (sum and 0xffff) + (sum ushr 16)
         return sum
     }
 
-    private fun finish(initial: Long, normalizeZero: Boolean): Short {
+    private fun finish(
+        initial: Long,
+        normalizeZero: Boolean,
+    ): Short {
         var sum = initial
         while (sum > 0xffff) sum = (sum and 0xffff) + (sum ushr 16)
         val checksum = sum.toInt().inv() and 0xffff

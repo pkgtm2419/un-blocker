@@ -24,7 +24,7 @@ data class DnsResponseMetadata(
     val rcode: Int,
     val aliases: List<String>,
     val minPositiveTtlSeconds: Long?,
-    val ttlOffsets: List<Int> = emptyList()
+    val ttlOffsets: List<Int> = emptyList(),
 )
 
 /**
@@ -43,7 +43,11 @@ object DnsResponseValidator {
      * @param query Expected upstream query identity.
      * @return Response metadata, or null for invalid structure or mismatched identity.
      */
-    fun parseAndValidate(payload: ByteArray, length: Int, query: DnsQuery): DnsResponseMetadata? {
+    fun parseAndValidate(
+        payload: ByteArray,
+        length: Int,
+        query: DnsQuery,
+    ): DnsResponseMetadata? {
         val metadata = parseMetadata(payload, length) ?: return null
         if (metadata.transactionId != (query.transactionId.toInt() and 0xffff)) return null
         if (metadata.questionName != query.domain) return null
@@ -59,7 +63,10 @@ object DnsResponseValidator {
      * @param length Available body length in bytes.
      * @return Parsed metadata, or null for invalid bounds, structure or alias chains.
      */
-    internal fun parseMetadata(payload: ByteArray, length: Int): DnsResponseMetadata? {
+    internal fun parseMetadata(
+        payload: ByteArray,
+        length: Int,
+    ): DnsResponseMetadata? {
         if (length !in DNS_HEADER_LENGTH..payload.size) return null
         val flags = u16(payload, 2)
         if (flags and 0x8000 == 0 || flags and 0x7800 != 0) return null
@@ -84,7 +91,7 @@ object DnsResponseValidator {
                 truncated = true,
                 rcode = flags and 0x000f,
                 aliases = emptyList(),
-                minPositiveTtlSeconds = null
+                minPositiveTtlSeconds = null,
             )
         }
 
@@ -109,31 +116,38 @@ object DnsResponseValidator {
             if (type != 41) ttlOffsets += position + 4
             if (type == 41) {
                 if (recordIndex < answerCount + authorityCount || optSeen || recordName.name.isNotEmpty() ||
-                    payload[position+5].toInt()!=0 || !DnsPacketUtil.validEdnsOptions(payload,dataOffset,dataEnd)) return null
-                optSeen=true
-                extendedRcode=payload[position+4].toInt() and 255
+                    payload[position + 5].toInt() != 0 ||
+                    !DnsPacketUtil.validEdnsOptions(payload, dataOffset, dataEnd)
+                ) {
+                    return null
+                }
+                optSeen = true
+                extendedRcode = payload[position + 4].toInt() and 255
             }
             var bindingTarget: String? = null
             if (type == 64 || type == 65) {
                 if (dataLength < 3) return null
-                val priority=u16(payload,dataOffset)
-                val target=decodeName(payload,dataOffset+2,dataEnd,allowCompression=false) ?: return null
-                var parameter=target.nextOffset
-                var lastKey=-1
-                while(parameter<dataEnd) {
-                    if(parameter+4>dataEnd) return null
-                    val key=u16(payload,parameter)
-                    val size=u16(payload,parameter+2)
-                    if(key<=lastKey || parameter+4+size>dataEnd) return null
-                    lastKey=key
-                    parameter+=4+size
+                val priority = u16(payload, dataOffset)
+                val target = decodeName(payload, dataOffset + 2, dataEnd, allowCompression = false) ?: return null
+                var parameter = target.nextOffset
+                var lastKey = -1
+                while (parameter < dataEnd) {
+                    if (parameter + 4 > dataEnd) return null
+                    val key = u16(payload, parameter)
+                    val size = u16(payload, parameter + 2)
+                    if (key <= lastKey || parameter + 4 + size > dataEnd) return null
+                    lastKey = key
+                    parameter += 4 + size
                 }
-                if(priority==0 && target.name.isNotEmpty() && type==questionType) bindingTarget=target.name
+                if (priority == 0 && target.name.isNotEmpty() && type == questionType) bindingTarget = target.name
             }
 
             if (recordIndex < answerCount) {
-                if (ttl == 0L) hasZeroAnswerTtl = true
-                else minimumTtl = minimumTtl?.coerceAtMost(ttl) ?: ttl
+                if (ttl == 0L) {
+                    hasZeroAnswerTtl = true
+                } else {
+                    minimumTtl = minimumTtl?.coerceAtMost(ttl) ?: ttl
+                }
                 if (type == TYPE_CNAME) {
                     val alias = decodeName(payload, dataOffset, length) ?: return null
                     if (alias.nextOffset != dataEnd || alias.name.isEmpty()) return null
@@ -144,8 +158,8 @@ object DnsResponseValidator {
                 }
             }
             if (recordIndex < answerCount && bindingTarget != null && recordClass == questionClass) {
-                val old=edges.put(recordName.name,bindingTarget)
-                if(old!=null && old!=bindingTarget) return null
+                val old = edges.put(recordName.name, bindingTarget)
+                if (old != null && old != bindingTarget) return null
             }
             position = dataEnd
         }
@@ -171,13 +185,21 @@ object DnsResponseValidator {
             rcode = (extendedRcode shl 4) or (flags and 0x000f),
             aliases = aliases,
             minPositiveTtlSeconds = if (hasZeroAnswerTtl) null else minimumTtl,
-            ttlOffsets = ttlOffsets
+            ttlOffsets = ttlOffsets,
         )
     }
 
-    private data class DecodedName(val name: String, val nextOffset: Int)
+    private data class DecodedName(
+        val name: String,
+        val nextOffset: Int,
+    )
 
-    private fun decodeName(payload: ByteArray, start: Int, end: Int, allowCompression: Boolean = true): DecodedName? {
+    private fun decodeName(
+        payload: ByteArray,
+        start: Int,
+        end: Int,
+        allowCompression: Boolean = true,
+    ): DecodedName? {
         if (start !in 0 until end) return null
         val labels = mutableListOf<String>()
         val visitedPointers = mutableSetOf<Int>()
@@ -193,19 +215,28 @@ object DnsResponseValidator {
                     if (nextOffset < 0) nextOffset = position + 1
                     return DecodedName(labels.joinToString("."), nextOffset)
                 }
+
                 labelLength and 0xc0 == 0xc0 -> {
                     if (!allowCompression) return null
                     if (position + 1 >= end) return null
-                    val pointer = ((labelLength and 0x3f) shl 8) or
-                        (payload[position + 1].toInt() and 0xff)
+                    val pointer =
+                        ((labelLength and 0x3f) shl 8) or
+                            (payload[position + 1].toInt() and 0xff)
                     if (pointer >= end || !visitedPointers.add(pointer)) return null
                     pointerHops++
                     if (pointerHops > MAX_POINTER_HOPS) return null
                     if (nextOffset < 0) nextOffset = position + 2
                     position = pointer
                 }
-                labelLength and 0xc0 != 0 || labelLength > 63 -> return null
-                position + 1 + labelLength > end -> return null
+
+                labelLength and 0xc0 != 0 || labelLength > 63 -> {
+                    return null
+                }
+
+                position + 1 + labelLength > end -> {
+                    return null
+                }
+
                 else -> {
                     val label = DomainName.canonicalWireLabel(payload, position + 1, labelLength) ?: return null
                     expandedLength += labelLength + if (labels.isEmpty()) 0 else 1
@@ -218,10 +249,15 @@ object DnsResponseValidator {
         return null
     }
 
-    private fun u16(payload: ByteArray, offset: Int): Int =
-        ((payload[offset].toInt() and 0xff) shl 8) or (payload[offset + 1].toInt() and 0xff)
+    private fun u16(
+        payload: ByteArray,
+        offset: Int,
+    ): Int = ((payload[offset].toInt() and 0xff) shl 8) or (payload[offset + 1].toInt() and 0xff)
 
-    private fun u32(payload: ByteArray, offset: Int): Long =
+    private fun u32(
+        payload: ByteArray,
+        offset: Int,
+    ): Long =
         ((payload[offset].toLong() and 0xff) shl 24) or
             ((payload[offset + 1].toLong() and 0xff) shl 16) or
             ((payload[offset + 2].toLong() and 0xff) shl 8) or

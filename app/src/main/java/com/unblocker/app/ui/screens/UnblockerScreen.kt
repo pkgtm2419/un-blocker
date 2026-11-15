@@ -53,7 +53,6 @@ import com.unblocker.app.ui.motion.rememberBreathingPulse
 import com.unblocker.app.ui.theme.AdultBlockedPurple
 import com.unblocker.app.ui.theme.LocalVpnStateColors
 import com.unblocker.app.ui.theme.Slate400
-import com.unblocker.app.ui.theme.Slate700
 import com.unblocker.app.ui.theme.Slate800
 import com.unblocker.app.ui.theme.TealAccent
 import com.unblocker.app.ui.theme.rememberVpnStateColors
@@ -75,7 +74,7 @@ fun UnblockerScreen(
     onRequestVpnPermission: () -> Unit,
     contentPadding: PaddingValues = PaddingValues(0.dp),
     onOpenSettings: () -> Unit = {},
-    onNavigateToLogs: () -> Unit = {}
+    onNavigateToLogs: () -> Unit = {},
 ) {
     val dimensions = LocalWindowDimensions.current
     val haptic = LocalHapticFeedback.current
@@ -87,29 +86,32 @@ fun UnblockerScreen(
     val adultBlockingEnabled by preferences.adultBlockingEnabled.collectAsState()
 
     // Dynamic state-reactive colors
-    val stateColors = rememberVpnStateColors(
-        serviceStatus = serviceStatus,
-        isDarkTheme = isDark
-    )
+    val stateColors =
+        rememberVpnStateColors(
+            serviceStatus = serviceStatus,
+            isDarkTheme = isDark,
+        )
 
     // Breathing pulse motion primitive: active only when protection is running
-    val pulseGlowScale = rememberBreathingPulse(
-        enabled = isRunning,
-        minScale = 0.96f,
-        maxScale = 1.08f,
-        durationMillis = 1800
-    )
+    val pulseGlowScale =
+        rememberBreathingPulse(
+            enabled = isRunning,
+            minScale = 0.96f,
+            maxScale = 1.08f,
+            durationMillis = 1800,
+        )
 
     // Press interaction state and physics-based spring bounce
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val pressScale by animateFloatAsState(
         targetValue = if (isPressed) 0.92f else 1.0f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMediumLow
-        ),
-        label = "pressScale"
+        animationSpec =
+            spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessMediumLow,
+            ),
+        label = "pressScale",
     )
 
     val buttonSize = if (dimensions.widthClass == WindowWidthClass.COMPACT) 320.dp else 360.dp
@@ -127,7 +129,7 @@ fun UnblockerScreen(
             animProgress.snapTo(0f)
             animProgress.animateTo(
                 targetValue = 1f,
-                animationSpec = tween(durationMillis = 750, easing = FastOutSlowInEasing)
+                animationSpec = tween(durationMillis = 750, easing = FastOutSlowInEasing),
             )
         }
     }
@@ -138,72 +140,73 @@ fun UnblockerScreen(
     CompositionLocalProvider(LocalVpnStateColors provides stateColors) {
         HaikeiAtmosphericBackground {
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .windowInsetsPadding(WindowInsets.safeDrawing)
-                    .padding(
-                        horizontal = if (dimensions.widthClass == WindowWidthClass.COMPACT) 24.dp else 48.dp,
-                        vertical = 24.dp
-                    )
-                    .padding(bottom = contentPadding.calculateBottomPadding() + 64.dp),
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .windowInsetsPadding(WindowInsets.safeDrawing)
+                        .padding(
+                            horizontal = if (dimensions.widthClass == WindowWidthClass.COMPACT) 24.dp else 48.dp,
+                            vertical = 24.dp,
+                        ).padding(bottom = contentPadding.calculateBottomPadding() + 64.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                verticalArrangement = Arrangement.Center,
             ) {
-
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // CENTRAL HERO: SHIELD LOGO START/STOP BUTTON
                 Box(
                     contentAlignment = Alignment.Center,
-                    modifier = Modifier.size(outerGlowSize)
+                    modifier = Modifier.size(outerGlowSize),
                 ) {
                     // Ambient atmospheric breathing aura
                     Box(
-                        modifier = Modifier
-                            .size(outerGlowSize)
-                            .graphicsLayer {
-                                val glowScale = if (isRunning) pulseGlowScale else 1.0f
-                                scaleX = glowScale
-                                scaleY = glowScale
-                            }
-                            .background(
-                                brush = Brush.radialGradient(
-                                    colors = listOf(
-                                        stateColors.glowColor,
-                                        Color.Transparent
-                                    )
+                        modifier =
+                            Modifier
+                                .size(outerGlowSize)
+                                .graphicsLayer {
+                                    val glowScale = if (isRunning) pulseGlowScale else 1.0f
+                                    scaleX = glowScale
+                                    scaleY = glowScale
+                                }.background(
+                                    brush =
+                                        Brush.radialGradient(
+                                            colors =
+                                                listOf(
+                                                    stateColors.glowColor,
+                                                    Color.Transparent,
+                                                ),
+                                        ),
+                                    shape = CircleShape,
                                 ),
-                                shape = CircleShape
-                            )
                     )
 
                     // Interactive shield logo container without background border/card
                     Box(
                         contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .size(buttonSize)
-                            .graphicsLayer {
-                                scaleX = pressScale
-                                scaleY = pressScale
-                            }
-                            .clickable(
-                                interactionSource = interactionSource,
-                                indication = ripple(bounded = false, radius = buttonSize / 2),
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    if (isRunning) {
-                                        preferences.setProtectionEnabled(false)
-                                        quickStartManager.stopBlockingServices()
-                                    } else {
-                                        onRequestVpnPermission()
-                                    }
-                                }
-                            )
+                        modifier =
+                            Modifier
+                                .size(buttonSize)
+                                .graphicsLayer {
+                                    scaleX = pressScale
+                                    scaleY = pressScale
+                                }.clickable(
+                                    interactionSource = interactionSource,
+                                    indication = ripple(bounded = false, radius = buttonSize / 2),
+                                    onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        if (isRunning) {
+                                            preferences.setProtectionEnabled(false)
+                                            quickStartManager.stopBlockingServices()
+                                        } else {
+                                            onRequestVpnPermission()
+                                        }
+                                    },
+                                ),
                     ) {
                         // Dynamic state-reactive logo with outward radial color animation
                         Canvas(
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier.fillMaxSize(),
                         ) {
                             val maxWaveRadius = size.minDimension * 0.44f
                             val progress = animProgress.value
@@ -221,14 +224,15 @@ fun UnblockerScreen(
                                 val currentRadius = progress * maxWaveRadius
                                 if (currentRadius > 0f) {
                                     // 2. Target status image clipped to outward expanding circular wave from center
-                                    val clipPath = Path().apply {
-                                        addOval(
-                                            Rect(
-                                                center = center,
-                                                radius = currentRadius
+                                    val clipPath =
+                                        Path().apply {
+                                            addOval(
+                                                Rect(
+                                                    center = center,
+                                                    radius = currentRadius,
+                                                ),
                                             )
-                                        )
-                                    }
+                                        }
                                     clipPath(clipPath) {
                                         with(currentPainter) {
                                             draw(size = size)
@@ -236,26 +240,29 @@ fun UnblockerScreen(
                                     }
 
                                     // 3. Glowing energy wavefront expanding from center -> circle -> lines
-                                    val waveColor = when (currentRenderStatus) {
-                                        ServiceStatus.RUNNING -> TealAccent
-                                        ServiceStatus.STARTING, ServiceStatus.STOPPING -> Color(0xFFFFB703)
-                                        else -> Slate400
-                                    }
+                                    val waveColor =
+                                        when (currentRenderStatus) {
+                                            ServiceStatus.RUNNING -> TealAccent
+                                            ServiceStatus.STARTING, ServiceStatus.STOPPING -> Color(0xFFFFB703)
+                                            else -> Slate400
+                                        }
 
                                     val waveAlpha = (1f - (progress * 0.35f)).coerceIn(0f, 1f)
                                     drawCircle(
-                                        brush = Brush.radialGradient(
-                                            colors = listOf(
-                                                Color.Transparent,
-                                                waveColor.copy(alpha = 0.65f * waveAlpha),
-                                                waveColor.copy(alpha = 0.25f * waveAlpha),
-                                                Color.Transparent
+                                        brush =
+                                            Brush.radialGradient(
+                                                colors =
+                                                    listOf(
+                                                        Color.Transparent,
+                                                        waveColor.copy(alpha = 0.65f * waveAlpha),
+                                                        waveColor.copy(alpha = 0.25f * waveAlpha),
+                                                        Color.Transparent,
+                                                    ),
+                                                center = center,
+                                                radius = (currentRadius + 14.dp.toPx()).coerceAtLeast(1f),
                                             ),
-                                            center = center,
-                                            radius = (currentRadius + 14.dp.toPx()).coerceAtLeast(1f)
-                                        ),
                                         radius = currentRadius + 10.dp.toPx(),
-                                        center = center
+                                        center = center,
                                     )
 
                                     // Crisp bright leading edge ring
@@ -263,7 +270,7 @@ fun UnblockerScreen(
                                         color = waveColor.copy(alpha = 0.85f * waveAlpha),
                                         radius = currentRadius,
                                         center = center,
-                                        style = Stroke(width = 2.5.dp.toPx())
+                                        style = Stroke(width = 2.5.dp.toPx()),
                                     )
                                 }
                             }
@@ -276,12 +283,12 @@ fun UnblockerScreen(
                 // 3. BELOW LOGO: ONLY THE 18+ CONTENT TOGGLE
                 SkeuomorphicCard(
                     modifier = Modifier.widthIn(max = 420.dp),
-                    shape = RoundedCornerShape(20.dp)
+                    shape = RoundedCornerShape(20.dp),
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -289,13 +296,13 @@ fun UnblockerScreen(
                                     text = "Block 18+ Content",
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),
                                     color = AdultBlockedPurple.copy(alpha = 0.18f),
-                                    border = BorderStroke(1.dp, AdultBlockedPurple.copy(alpha = 0.35f))
+                                    border = BorderStroke(1.dp, AdultBlockedPurple.copy(alpha = 0.35f)),
                                 ) {
                                     Text(
                                         text = "Adult",
@@ -303,7 +310,7 @@ fun UnblockerScreen(
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.SemiBold,
                                         color = AdultBlockedPurple,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                     )
                                 }
                             }
@@ -311,7 +318,7 @@ fun UnblockerScreen(
                             Text(
                                 text = "Filter adult websites & explicit domains",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
 
@@ -323,24 +330,24 @@ fun UnblockerScreen(
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 preferences.setAdultBlockingEnabled(enable)
                             },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
-                                checkedTrackColor = AdultBlockedPurple,
-                                uncheckedThumbColor = if (isDark) Slate400 else Color(0xFF64748B),
-                                uncheckedTrackColor = if (isDark) Slate800 else Color(0xFFE2E8F0)
-                            )
+                            colors =
+                                SwitchDefaults.colors(
+                                    checkedThumbColor = Color.White,
+                                    checkedTrackColor = AdultBlockedPurple,
+                                    uncheckedThumbColor = if (isDark) Slate400 else Color(0xFF64748B),
+                                    uncheckedTrackColor = if (isDark) Slate800 else Color(0xFFE2E8F0),
+                                ),
                         )
                     }
                 }
-
             }
         }
     }
 }
 
-private fun getLogoResForStatus(status: ServiceStatus): Int = when (status) {
-    ServiceStatus.RUNNING -> com.unblocker.app.R.drawable.app_logo
-    ServiceStatus.STARTING, ServiceStatus.STOPPING -> com.unblocker.app.R.drawable.app_logo_amber
-    else -> com.unblocker.app.R.drawable.app_logo_off
-}
-
+private fun getLogoResForStatus(status: ServiceStatus): Int =
+    when (status) {
+        ServiceStatus.RUNNING -> com.unblocker.app.R.drawable.app_logo
+        ServiceStatus.STARTING, ServiceStatus.STOPPING -> com.unblocker.app.R.drawable.app_logo_amber
+        else -> com.unblocker.app.R.drawable.app_logo_off
+    }

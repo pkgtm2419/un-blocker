@@ -23,99 +23,120 @@ import com.unblocker.app.ui.theme.LocalVpnStateColors
 @Composable
 fun HaikeiAtmosphericBackground(
     modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     val stateColors = LocalVpnStateColors.current
     val baseBackground = MaterialTheme.colorScheme.background
 
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .drawWithCache {
-                val width = size.width
-                val height = size.height
+        modifier =
+            modifier
+                .fillMaxSize()
+                .drawWithCache {
+                    val width = size.width
+                    val height = size.height
 
-                val wavePath1 = Path().apply {
-                    moveTo(0f, 0f)
-                    lineTo(0f, height * 0.28f)
-                    cubicTo(
-                        width * 0.25f, height * 0.38f,
-                        width * 0.55f, height * 0.18f,
-                        width, height * 0.32f
-                    )
-                    lineTo(width, 0f)
-                    close()
-                }
-                val brush1 = Brush.verticalGradient(
-                    colors = listOf(
-                        stateColors.waveAccent.copy(alpha = 0.6f),
-                        stateColors.waveAccent.copy(alpha = 0.05f)
-                    ),
-                    startY = 0f,
-                    endY = height * 0.38f
-                )
+                    val wavePath1 =
+                        Path().apply {
+                            moveTo(0f, 0f)
+                            lineTo(0f, height * 0.28f)
+                            cubicTo(
+                                width * 0.25f,
+                                height * 0.38f,
+                                width * 0.55f,
+                                height * 0.18f,
+                                width,
+                                height * 0.32f,
+                            )
+                            lineTo(width, 0f)
+                            close()
+                        }
+                    val brush1 =
+                        Brush.verticalGradient(
+                            colors =
+                                listOf(
+                                    stateColors.waveAccent.copy(alpha = 0.6f),
+                                    stateColors.waveAccent.copy(alpha = 0.05f),
+                                ),
+                            startY = 0f,
+                            endY = height * 0.38f,
+                        )
 
-                val wavePath2 = Path().apply {
-                    moveTo(0f, 0f)
-                    lineTo(0f, height * 0.16f)
-                    cubicTo(
-                        width * 0.35f, height * 0.08f,
-                        width * 0.70f, height * 0.24f,
-                        width, height * 0.12f
-                    )
-                    lineTo(width, 0f)
-                    close()
-                }
-                val brush2 = Brush.horizontalGradient(
-                    colors = listOf(
-                        stateColors.waveAccent.copy(alpha = 0.4f),
-                        stateColors.waveAccent.copy(alpha = 0.1f)
-                    )
-                )
+                    val wavePath2 =
+                        Path().apply {
+                            moveTo(0f, 0f)
+                            lineTo(0f, height * 0.16f)
+                            cubicTo(
+                                width * 0.35f,
+                                height * 0.08f,
+                                width * 0.70f,
+                                height * 0.24f,
+                                width,
+                                height * 0.12f,
+                            )
+                            lineTo(width, 0f)
+                            close()
+                        }
+                    val brush2 =
+                        Brush.horizontalGradient(
+                            colors =
+                                listOf(
+                                    stateColors.waveAccent.copy(alpha = 0.4f),
+                                    stateColors.waveAccent.copy(alpha = 0.1f),
+                                ),
+                        )
 
-                val centerHaloY = height * 0.38f
-                val haloBrush = Brush.radialGradient(
-                    colors = listOf(
-                        stateColors.glowColor.copy(alpha = 0.22f),
-                        stateColors.waveAccent.copy(alpha = 0.08f),
-                        Color.Transparent
-                    ),
-                    center = Offset(width * 0.5f, centerHaloY),
-                    radius = width * 0.55f
-                )
+                    val centerHaloY = height * 0.38f
+                    val haloBrush =
+                        Brush.radialGradient(
+                            colors =
+                                listOf(
+                                    stateColors.glowColor.copy(alpha = 0.22f),
+                                    stateColors.waveAccent.copy(alpha = 0.08f),
+                                    Color.Transparent,
+                                ),
+                            center = Offset(width * 0.5f, centerHaloY),
+                            radius = width * 0.55f,
+                        )
 
-                val bottomWave = Path().apply {
-                    moveTo(0f, height)
-                    lineTo(0f, height * 0.88f)
-                    cubicTo(
-                        width * 0.30f, height * 0.82f,
-                        width * 0.65f, height * 0.94f,
-                        width, height * 0.86f
-                    )
-                    lineTo(width, height)
-                    close()
-                }
-                val brushBottom = Brush.verticalGradient(
-                    colors = listOf(
-                        Color.Transparent,
-                        stateColors.waveAccent.copy(alpha = 0.35f)
-                    ),
-                    startY = height * 0.82f,
-                    endY = height
-                )
+                    val bottomWave =
+                        Path().apply {
+                            moveTo(0f, height)
+                            lineTo(0f, height * 0.88f)
+                            cubicTo(
+                                width * 0.30f,
+                                height * 0.82f,
+                                width * 0.65f,
+                                height * 0.94f,
+                                width,
+                                height * 0.86f,
+                            )
+                            lineTo(width, height)
+                            close()
+                        }
+                    val brushBottom =
+                        Brush.verticalGradient(
+                            colors =
+                                listOf(
+                                    Color.Transparent,
+                                    stateColors.waveAccent.copy(alpha = 0.35f),
+                                ),
+                            startY = height * 0.82f,
+                            endY = height,
+                        )
 
-                onDrawBehind {
-                    drawRect(color = baseBackground)
-                    drawPath(path = wavePath1, brush = brush1)
-                    drawPath(path = wavePath2, brush = brush2)
-                    drawCircle(
-                        brush = haloBrush,
-                        radius = width * 0.55f,
-                        center = Offset(width * 0.5f, centerHaloY)
-                    )
-                    drawPath(path = bottomWave, brush = brushBottom)
-                }
-            }
+                    onDrawBehind {
+                        drawRect(color = baseBackground)
+                        drawPath(path = wavePath1, brush = brush1)
+                        drawPath(path = wavePath2, brush = brush2)
+                        drawCircle(
+                            brush = haloBrush,
+                            radius = width * 0.55f,
+                            center = Offset(width * 0.5f, centerHaloY),
+                        )
+                        drawPath(path = bottomWave, brush = brushBottom)
+                    }
+                },
     ) {
         content()
     }

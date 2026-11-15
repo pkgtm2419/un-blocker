@@ -7,13 +7,40 @@ import kotlin.math.ln
  *
  * @param suffixes Public suffix context used to isolate subdomain labels.
  */
-class DomainFeatureExtractor(private val suffixes: PublicSuffixRules) {
-    private val tokens = setOf(
-        "ad", "ads", "track", "tracker", "tracking", "telemetry", "pixel",
-        "beacon", "analytics", "metrics", "banner", "affiliate", "sponsor", "adserver", "bidder",
-        "adservice", "adsystem", "adtech", "pagead", "rtb", "ssp", "dsp", "sdk-api",
-        "adclick", "adlog", "adcounter", "popunder", "statcounter"
-    )
+class DomainFeatureExtractor(
+    private val suffixes: PublicSuffixRules,
+) {
+    private val tokens =
+        setOf(
+            "ad",
+            "ads",
+            "track",
+            "tracker",
+            "tracking",
+            "telemetry",
+            "pixel",
+            "beacon",
+            "analytics",
+            "metrics",
+            "banner",
+            "affiliate",
+            "sponsor",
+            "adserver",
+            "bidder",
+            "adservice",
+            "adsystem",
+            "adtech",
+            "pagead",
+            "rtb",
+            "ssp",
+            "dsp",
+            "sdk-api",
+            "adclick",
+            "adlog",
+            "adcounter",
+            "popunder",
+            "statcounter",
+        )
 
     /**
      * Extracts lexical, entropy, cadence and structural signals.
@@ -22,20 +49,40 @@ class DomainFeatureExtractor(private val suffixes: PublicSuffixRules) {
      * @param cadence Caller-provided cadence signal, copied without clamping.
      * @return Features; names longer than 253 characters produce all-zero features.
      */
-    fun extract(domain: String, cadence: Float = 0f): DomainFeatures {
+    fun extract(
+        domain: String,
+        cadence: Float = 0f,
+    ): DomainFeatures {
         if (domain.length > 253) return DomainFeatures(0f, 0f, 0f, 0f)
         val subdomain = suffixes.subdomain(domain)
-        val lexical = if (subdomain.isNotEmpty() &&
-            subdomain.split('.', '_').flatMap { listOf(it) + it.split('-') }.any { it in tokens }) .8f else 0f
-        return DomainFeatures(lexical, entropy(subdomain), cadence,
-            if (subdomain.count { it == '.' } >= 3 && lexical > 0) .65f else 0f)
+        val lexical =
+            if (subdomain.isNotEmpty() &&
+                subdomain.split('.', '_').flatMap { listOf(it) + it.split('-') }.any { it in tokens }
+            ) {
+                .8f
+            } else {
+                0f
+            }
+        return DomainFeatures(
+            lexical,
+            entropy(subdomain),
+            cadence,
+            if (subdomain.count { it == '.' } >= 3 && lexical > 0) .65f else 0f,
+        )
     }
+
     private fun entropy(value: String): Float {
         if (value.length < 6 || value.contains("xn--")) return 0f
-        val entropy = value.groupingBy { it }.eachCount().values.sumOf {
-            val p = it.toDouble()/value.length
-            -p * ln(p)/ln(2.0)
+        val entropy =
+            value.groupingBy { it }.eachCount().values.sumOf {
+                val p = it.toDouble() / value.length
+                -p * ln(p) / ln(2.0)
+            }
+        return when {
+            entropy > 3.4 -> .85f
+            entropy > 3.1 -> .65f
+            entropy > 2.8 -> .35f
+            else -> 0f
         }
-        return when { entropy > 3.4 -> .85f; entropy > 3.1 -> .65f; entropy > 2.8 -> .35f; else -> 0f }
     }
 }

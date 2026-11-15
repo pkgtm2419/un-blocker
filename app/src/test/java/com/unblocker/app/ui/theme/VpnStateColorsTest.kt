@@ -11,24 +11,24 @@ import org.junit.Test
  * Regression coverage for vpn state colors.
  */
 class VpnStateColorsTest {
-
     /**
      * Verifies that test vpn state colors data class integrity.
      */
     @Test
     fun testVpnStateColorsDataClassIntegrity() {
-        val colors = VpnStateColors(
-            coreAccent = AllowedGreen,
-            coreGradientStart = Color(0xFF064E3B),
-            coreGradientEnd = Slate900,
-            glowColor = AllowedGreen.copy(alpha = 0.35f),
-            surfaceHighlight = Color.White.copy(alpha = 0.12f),
-            surfaceShadow = Color.Black.copy(alpha = 0.5f),
-            badgeBackground = AllowedGreenBg,
-            badgeTextColor = AllowedGreen,
-            waveAccent = AllowedGreen.copy(alpha = 0.08f),
-            statusText = AllowedGreen
-        )
+        val colors =
+            VpnStateColors(
+                coreAccent = AllowedGreen,
+                coreGradientStart = Color(0xFF064E3B),
+                coreGradientEnd = Slate900,
+                glowColor = AllowedGreen.copy(alpha = 0.35f),
+                surfaceHighlight = Color.White.copy(alpha = 0.12f),
+                surfaceShadow = Color.Black.copy(alpha = 0.5f),
+                badgeBackground = AllowedGreenBg,
+                badgeTextColor = AllowedGreen,
+                waveAccent = AllowedGreen.copy(alpha = 0.08f),
+                statusText = AllowedGreen,
+            )
 
         assertNotNull(colors)
         assertEquals(AllowedGreen, colors.coreAccent)

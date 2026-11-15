@@ -11,7 +11,6 @@ import org.junit.Test
  * Regression coverage for local network learner.
  */
 class LocalNetworkLearnerTest {
-
     private lateinit var learner: LocalNetworkLearner
 
     /**
@@ -28,8 +27,8 @@ class LocalNetworkLearnerTest {
     @Test
     fun testLexicalTokenDetection() {
         listOf("ads.example.com", "pixel.tracker.net", "telemetry.vendor.org", "adserver.metrics.io").forEach {
-            assertTrue(learner.evaluateLexical(it)>.5f)
-            assertFalse("Lexical evidence alone cannot confirm",learner.isAdOrTracker(it))
+            assertTrue(learner.evaluateLexical(it) > .5f)
+            assertFalse("Lexical evidence alone cannot confirm", learner.isAdOrTracker(it))
         }
     }
 
@@ -78,7 +77,10 @@ class LocalNetworkLearnerTest {
         assertFalse("www.youtube.com should not be flagged", learner.isAdOrTracker("www.youtube.com"))
         assertFalse("m.youtube.com should not be flagged", learner.isAdOrTracker("m.youtube.com"))
         assertFalse("googlevideo.com should not be flagged", learner.isAdOrTracker("googlevideo.com"))
-        assertFalse("rr1---sn-4g5ednle.googlevideo.com should not be flagged", learner.isAdOrTracker("rr1---sn-4g5ednle.googlevideo.com"))
+        assertFalse(
+            "rr1---sn-4g5ednle.googlevideo.com should not be flagged",
+            learner.isAdOrTracker("rr1---sn-4g5ednle.googlevideo.com"),
+        )
         assertFalse("i.ytimg.com should not be flagged", learner.isAdOrTracker("i.ytimg.com"))
 
         // Explicit ad subdomains MUST still be blocked

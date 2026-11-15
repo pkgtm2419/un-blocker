@@ -11,16 +11,16 @@ import java.util.Locale
  * Exports readable local domain aggregates as UTF-8 CSV with escaped cells.
  */
 object DomainExporter {
-
-    private val HEADERS = listOf(
-        "Domain",
-        "LastDecision",
-        "TotalQueries",
-        "BlockedQueries",
-        "AllowedQueries",
-        "FirstSeen",
-        "LastSeen"
-    )
+    private val HEADERS =
+        listOf(
+            "Domain",
+            "LastDecision",
+            "TotalQueries",
+            "BlockedQueries",
+            "AllowedQueries",
+            "FirstSeen",
+            "LastSeen",
+        )
 
     /**
      * Writes aggregate rows with a header, then flushes and closes the supplied stream.
@@ -32,7 +32,10 @@ object DomainExporter {
      * @return Number of data rows written, excluding the header.
      * @throws java.io.IOException If writing, flushing, or closing the stream fails.
      */
-    fun exportToCsv(stats: List<DomainStatEntity>, outputStream: OutputStream): Int {
+    fun exportToCsv(
+        stats: List<DomainStatEntity>,
+        outputStream: OutputStream,
+    ): Int {
         val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
         OutputStreamWriter(outputStream, Charsets.UTF_8).use { writer ->
             CsvWriter.writeRow(writer, HEADERS)
@@ -40,15 +43,16 @@ object DomainExporter {
                 val decisionLabel = if (stat.lastDecision == 1) "BLOCKED" else "ALLOWED"
                 val firstSeenText = dateFormat.format(Date(stat.firstSeen))
                 val lastSeenText = dateFormat.format(Date(stat.lastSeen))
-                val row = listOf(
-                    stat.domain,
-                    decisionLabel,
-                    stat.callCount.toString(),
-                    stat.blockedCount.toString(),
-                    stat.allowedCount.toString(),
-                    firstSeenText,
-                    lastSeenText
-                )
+                val row =
+                    listOf(
+                        stat.domain,
+                        decisionLabel,
+                        stat.callCount.toString(),
+                        stat.blockedCount.toString(),
+                        stat.allowedCount.toString(),
+                        firstSeenText,
+                        lastSeenText,
+                    )
                 CsvWriter.writeRow(writer, row)
             }
             writer.flush()

@@ -1,20 +1,19 @@
 package com.unblocker.app.services
 
-import java.io.ByteArrayOutputStream
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.io.ByteArrayOutputStream
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 /**
  * Regression coverage for tun response writer.
  */
 class TunResponseWriterTest {
-
     /**
      * Resets the fixture state before each test to keep assertions independent.
      */
@@ -83,13 +82,14 @@ class TunResponseWriterTest {
         val run = TunnelRun(owner)
 
         // Stalled stream to simulate extreme backpressure
-        val blockedStream = object : ByteArrayOutputStream() {
-            override fun write(b: ByteArray) {
-                // Sleep to simulate very slow TUN sink
-                Thread.sleep(500)
-                super.write(b)
+        val blockedStream =
+            object : ByteArrayOutputStream() {
+                override fun write(b: ByteArray) {
+                    // Sleep to simulate very slow TUN sink
+                    Thread.sleep(500)
+                    super.write(b)
+                }
             }
-        }
 
         val smallCapacity = 10
         val writer = TunResponseWriter(run, session, blockedStream, queueCapacity = smallCapacity)

@@ -15,7 +15,11 @@ interface RuleAdmission {
      * @param host Normalized hostname.
      * @return Skip reason, or null when admitted.
      */
-    fun check(action: RuleAction, kind: RuleKind, host: String): SkipReason?
+    fun check(
+        action: RuleAction,
+        kind: RuleKind,
+        host: String,
+    ): SkipReason?
 }
 
 /**
@@ -26,7 +30,7 @@ interface RuleAdmission {
  */
 class DefaultRuleAdmission(
     private val psl: PublicSuffixRules = PublicSuffixRules.fallback,
-    private val protected: ProtectedDomains = ProtectedDomains.DEFAULT
+    private val protected: ProtectedDomains = ProtectedDomains.DEFAULT,
 ) : RuleAdmission {
     /**
      * Applies IP, single-label, suffix, protected-host and quarantine gates in order.
@@ -36,12 +40,20 @@ class DefaultRuleAdmission(
      * @param host Normalized hostname.
      * @return First skip reason, or null when admitted.
      */
-    override fun check(action: RuleAction, kind: RuleKind, host: String): SkipReason? {
+    override fun check(
+        action: RuleAction,
+        kind: RuleKind,
+        host: String,
+    ): SkipReason? {
         if (host.all { it.isDigit() || it == '.' } || host.contains(':')) return SkipReason.IP_LITERAL
-        if (!host.contains('.')) return SkipReason.SINGLE_LABEL                 // 'com', 'localhost'
-        if (psl.isPublicSuffix(host)) return SkipReason.PUBLIC_SUFFIX           // 'co.uk', 'github.io', 'blogspot.com'
-        if (action == RuleAction.BLOCK && protected.ruleWouldBlockProtected(kind, host)) return SkipReason.PROTECTED_HOST
-        if (QuarantineList.contains(kind, host)) return SkipReason.QUARANTINED  // asset rule-quarantine.txt
+        if (!host.contains('.')) return SkipReason.SINGLE_LABEL // 'com', 'localhost'
+        if (psl.isPublicSuffix(host)) return SkipReason.PUBLIC_SUFFIX // 'co.uk', 'github.io', 'blogspot.com'
+        if (action == RuleAction.BLOCK &&
+            protected.ruleWouldBlockProtected(kind, host)
+        ) {
+            return SkipReason.PROTECTED_HOST
+        }
+        if (QuarantineList.contains(kind, host)) return SkipReason.QUARANTINED // asset rule-quarantine.txt
         return null
     }
 }

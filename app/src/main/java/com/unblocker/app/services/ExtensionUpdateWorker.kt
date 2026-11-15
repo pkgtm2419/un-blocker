@@ -19,9 +19,8 @@ import java.util.concurrent.TimeUnit
  */
 class ExtensionUpdateWorker(
     appContext: Context,
-    workerParams: WorkerParameters
+    workerParams: WorkerParameters,
 ) : CoroutineWorker(appContext, workerParams) {
-
     /**
      * Returns success when disabled or updates succeed, otherwise requests a retry.
      */
@@ -54,19 +53,23 @@ class ExtensionUpdateWorker(
          * @param context Context used to obtain WorkManager; actual execution timing is system-managed.
          */
         fun schedule(context: Context) {
-            val constraints = Constraints.Builder()
-                .setRequiredNetworkType(NetworkType.UNMETERED)
-                .setRequiresBatteryNotLow(true)
-                .build()
+            val constraints =
+                Constraints
+                    .Builder()
+                    .setRequiredNetworkType(NetworkType.UNMETERED)
+                    .setRequiresBatteryNotLow(true)
+                    .build()
 
-            val request = PeriodicWorkRequestBuilder<ExtensionUpdateWorker>(
-                24, TimeUnit.HOURS
-            ).setConstraints(constraints).build()
+            val request =
+                PeriodicWorkRequestBuilder<ExtensionUpdateWorker>(
+                    24,
+                    TimeUnit.HOURS,
+                ).setConstraints(constraints).build()
 
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                 WORK_NAME,
                 ExistingPeriodicWorkPolicy.UPDATE,
-                request
+                request,
             )
         }
 

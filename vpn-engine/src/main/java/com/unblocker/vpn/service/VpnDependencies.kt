@@ -18,7 +18,10 @@ interface VpnDependencies {
      * @param domain Readable queried domain.
      * @param blocked Blocking decision associated with the observation.
      */
-    suspend fun logDnsRequest(domain: String, blocked: Boolean)
+    suspend fun logDnsRequest(
+        domain: String,
+        blocked: Boolean,
+    )
 
     /**
      * Initializes the implementation-specific filter before it is used.

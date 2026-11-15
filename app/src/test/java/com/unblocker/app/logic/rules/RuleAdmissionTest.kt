@@ -10,14 +10,14 @@ import org.junit.Test
  * Regression coverage for rule admission.
  */
 class RuleAdmissionTest {
-
     private val psl = PublicSuffixRules.fallback
-    private val protectedHosts = setOf(
-        "google.com",
-        "www.google.com",
-        "youtube.com",
-        "www.youtube.com"
-    )
+    private val protectedHosts =
+        setOf(
+            "google.com",
+            "www.google.com",
+            "youtube.com",
+            "www.youtube.com",
+        )
     private val protected = DefaultProtectedDomains(builtIn = protectedHosts, psl = psl)
     private val admission = DefaultRuleAdmission(psl = psl, protected = protected)
 
@@ -78,7 +78,7 @@ class RuleAdmissionTest {
 
         assertEquals(
             SkipReason.QUARANTINED,
-            admission.check(RuleAction.BLOCK, RuleKind.SUFFIX, "quarantined-tracker.com")
+            admission.check(RuleAction.BLOCK, RuleKind.SUFFIX, "quarantined-tracker.com"),
         )
 
         QuarantineList.clearForTest()

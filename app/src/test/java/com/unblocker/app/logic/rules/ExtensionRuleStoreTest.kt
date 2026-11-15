@@ -1,6 +1,5 @@
 package com.unblocker.app.logic.rules
 
-import com.unblocker.app.domain.model.BlockingCategory
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -12,7 +11,6 @@ import org.junit.Test
  * Regression coverage for extension rule store.
  */
 class ExtensionRuleStoreTest {
-
     /**
      * Releases test resources and restores shared state after each test.
      */

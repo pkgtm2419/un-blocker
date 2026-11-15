@@ -34,6 +34,7 @@ Versioning follows the `versionName` / `versionCode` declared in `app/build.grad
 
 ### Fixed
 
+- Release signing security: hardened `.github/workflows/release.yml` so production `v*` releases fail closed if production secrets or signer pins are missing, completely eliminating test-keystore and test-cert fallback (R14).
 - Filter syntax safety: rejected request-scoped options (`$script`, `$image`, `$3p`, `$doc`) in `RuleLineParser` to avoid turning sub-resource filters into blanket DNS blocks (R12).
 - Filter matching accuracy: separated `allowWildcard` set in `ExtensionRuleStore` so wildcard exception rules (`@@*.example.com`) only unblock strict subdomains without unblocking the apex host (R13).
 - Hardened Android Lint gate in `app/build.gradle.kts` (`abortOnError = true`, `ignoreWarnings = false`) to enforce zero-error build quality (R07).

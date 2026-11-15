@@ -7,10 +7,13 @@ import com.unblocker.app.logic.DomainName
  *
  * @param ruleSet Rules to index by action, scope and hostname.
  */
-class DnsRuleEngine(ruleSet: CompiledRuleSet) {
-    private val indexes = ruleSet.rules.groupBy { it.action }.mapValues { (_, rules) ->
-        rules.groupBy { it.kind }.mapValues { (_, typed) -> typed.associateBy { it.value } }
-    }
+class DnsRuleEngine(
+    ruleSet: CompiledRuleSet,
+) {
+    private val indexes =
+        ruleSet.rules.groupBy { it.action }.mapValues { (_, rules) ->
+            rules.groupBy { it.kind }.mapValues { (_, typed) -> typed.associateBy { it.value } }
+        }
 
     /**
      * Checks exact hosts before progressively broader suffix and wildcard matches.

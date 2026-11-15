@@ -9,20 +9,27 @@ import java.net.IDN
  * @param lines PSL-format exact, wildcard and exception entries.
  * @throws IllegalArgumentException If an entry cannot be converted to ASCII.
  */
-class PublicSuffixRules(lines: Sequence<String>) {
+class PublicSuffixRules(
+    lines: Sequence<String>,
+) {
     private val exact = HashSet<String>()
     private val wildcard = HashSet<String>()
     private val exceptions = HashSet<String>()
 
     init {
         lines.map { it.trim() }.filter { it.isNotEmpty() && !it.startsWith("//") }.forEach { raw ->
-            val target = when {
-                raw.startsWith('!') -> exceptions
-                raw.startsWith("*.") -> wildcard
-                else -> exact
-            }
-            val value = raw.removePrefix("!").removePrefix("*.").split('.')
-                .joinToString(".") { IDN.toASCII(it, IDN.ALLOW_UNASSIGNED).lowercase(java.util.Locale.ROOT) }
+            val target =
+                when {
+                    raw.startsWith('!') -> exceptions
+                    raw.startsWith("*.") -> wildcard
+                    else -> exact
+                }
+            val value =
+                raw
+                    .removePrefix("!")
+                    .removePrefix("*.")
+                    .split('.')
+                    .joinToString(".") { IDN.toASCII(it, IDN.ALLOW_UNASSIGNED).lowercase(java.util.Locale.ROOT) }
             target.add(value)
         }
     }
@@ -85,7 +92,11 @@ class PublicSuffixRules(lines: Sequence<String>) {
         /**
          * Small embedded suffix context for tests and callers without Android assets.
          */
-        val fallback = PublicSuffixRules("com\nnet\norg\nco.uk\ncom.au\nco.in\nblogspot.com\ngithub.io\n*.ck\n!www.ck".lineSequence())
+        val fallback =
+            PublicSuffixRules(
+                "com\nnet\norg\nco.uk\ncom.au\nco.in\nblogspot.com\ngithub.io\n*.ck\n!www.ck".lineSequence(),
+            )
+
         /**
          * Loads packaged public suffix rules, using fallback only when context is null.
          *
@@ -93,7 +104,15 @@ class PublicSuffixRules(lines: Sequence<String>) {
          * @return Parsed suffix context.
          * @throws java.io.IOException If opening or reading the asset fails.
          */
-        fun from(context: android.content.Context?): PublicSuffixRules = if (context == null) fallback else
-            context.assets.open("public_suffix_list.dat").bufferedReader().use { PublicSuffixRules(it.lineSequence()) }
+        fun from(context: android.content.Context?): PublicSuffixRules =
+            if (context == null) {
+                fallback
+            } else {
+                context.assets
+                    .open(
+                        "public_suffix_list.dat",
+                    ).bufferedReader()
+                    .use { PublicSuffixRules(it.lineSequence()) }
+            }
     }
 }

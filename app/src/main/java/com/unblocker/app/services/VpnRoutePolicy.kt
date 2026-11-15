@@ -9,8 +9,9 @@ object VpnRoutePolicy {
     /**
      * Returns only synthetic DNS endpoint host routes with IPv4 /32 and IPv6 /128 prefixes.
      */
-    fun hostRoutes(): List<Pair<String, Int>> = listOf(
-        TunnelDnsConfig.IPV4_DNS to 32,
-        TunnelDnsConfig.IPV6_DNS to 128
-    )
+    fun hostRoutes(): List<Pair<String, Int>> =
+        listOf(
+            TunnelDnsConfig.IPV4_DNS to 32,
+            TunnelDnsConfig.IPV6_DNS to 128,
+        )
 }

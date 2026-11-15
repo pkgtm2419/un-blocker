@@ -10,12 +10,15 @@ sealed interface RuleUpdateResult {
      * The requested update completed without a reported persistence failure.
      */
     data object Applied : RuleUpdateResult
+
     /**
      * The update was rejected or could not be saved.
      *
      * @property reason User-facing explanation of the failure.
      */
-    data class Failed(val reason: String) : RuleUpdateResult
+    data class Failed(
+        val reason: String,
+    ) : RuleUpdateResult
 }
 
 /**
@@ -29,7 +32,11 @@ interface UserRuleGateway {
      * @param feedback Allow, block, or remove the override.
      * @return Whether validation and persistence succeeded.
      */
-    suspend fun set(domain: String, feedback: UserFeedback): RuleUpdateResult
+    suspend fun set(
+        domain: String,
+        feedback: UserFeedback,
+    ): RuleUpdateResult
+
     /**
      * Updates an override for a registrable site and its descendants.
      *
@@ -37,7 +44,11 @@ interface UserRuleGateway {
      * @param feedback Allow, block, or remove the site override.
      * @return Whether validation and persistence succeeded.
      */
-    suspend fun setWholeSite(domain: String, feedback: UserFeedback): RuleUpdateResult
+    suspend fun setWholeSite(
+        domain: String,
+        feedback: UserFeedback,
+    ): RuleUpdateResult
+
     /**
      * Adds a site to the separate My domains protection list.
      *
@@ -45,6 +56,7 @@ interface UserRuleGateway {
      * @return Whether the site was added.
      */
     suspend fun protectDomain(domain: String): RuleUpdateResult
+
     /**
      * Removes exact and site overrides and related protected-site entries.
      *

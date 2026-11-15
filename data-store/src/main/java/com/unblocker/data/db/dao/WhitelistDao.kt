@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.Flow
  */
 @Dao
 interface WhitelistDao {
-
     /**
      * Inserts or replaces an exact allow entry.
      *

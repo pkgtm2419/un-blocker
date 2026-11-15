@@ -10,7 +10,6 @@ import org.junit.Test
  * Regression coverage for never block policy.
  */
 class NeverBlockPolicyTest {
-
     /**
      * Resets the fixture state before each test to keep assertions independent.
      */
@@ -22,8 +21,8 @@ class NeverBlockPolicyTest {
                 "connectivitycheck.gstatic.com",
                 "*.google.com",
                 "time.android.com",
-                "dns.google"
-            )
+                "dns.google",
+            ),
         )
     }
 

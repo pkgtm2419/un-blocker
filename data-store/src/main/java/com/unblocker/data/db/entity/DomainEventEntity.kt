@@ -21,20 +21,17 @@ import androidx.room.PrimaryKey
     tableName = "domain_events",
     indices = [
         Index(value = ["domain", "ts"]),
-        Index(value = ["ts"])
-    ]
+        Index(value = ["ts"]),
+    ],
 )
 data class DomainEventEntity(
     @PrimaryKey(autoGenerate = true)
     @ColumnInfo(name = "id")
     val id: Long = 0,
-
     @ColumnInfo(name = "domain")
     val domain: String,
-
     @ColumnInfo(name = "ts")
     val ts: Long,
-
     @ColumnInfo(name = "decision")
-    val decision: Int
+    val decision: Int,
 )

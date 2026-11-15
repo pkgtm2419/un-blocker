@@ -19,7 +19,6 @@ import java.io.InputStreamReader
  * Regression coverage for primary hosts regression.
  */
 class PrimaryHostsRegressionTest {
-
     private lateinit var decideBlockingUseCase: DecideBlockingUseCase
     private val primaryHosts = mutableListOf<String>()
 
@@ -28,10 +27,12 @@ class PrimaryHostsRegressionTest {
      */
     @Before
     fun setup() {
-        val stream = javaClass.classLoader?.getResourceAsStream("primary-hosts.tsv")
-            ?: throw IllegalStateException("primary-hosts.tsv not found in resources")
+        val stream =
+            javaClass.classLoader?.getResourceAsStream("primary-hosts.tsv")
+                ?: throw IllegalStateException("primary-hosts.tsv not found in resources")
         BufferedReader(InputStreamReader(stream, Charsets.UTF_8)).useLines { lines ->
-            lines.map { it.trim() }
+            lines
+                .map { it.trim() }
                 .filter { it.isNotEmpty() && !it.startsWith("#") }
                 .forEach { line ->
                     line.split(Regex("\\s+")).forEach { host ->
@@ -46,29 +47,31 @@ class PrimaryHostsRegressionTest {
         val adaptive = AdaptiveBlockingEngine(preferences = null, networkLearner = learner)
         val protected = DefaultProtectedDomains()
 
-        decideBlockingUseCase = DecideBlockingUseCase(
-            adDetector = adDetector,
-            adultContentDetector = adultDetector,
-            adaptiveBlockingEngine = adaptive,
-            isAllowlisted = { false },
-            isBlocklisted = { false },
-            protectedDomains = protected,
-            blockingMode = { BlockingMode.SMART }
-        )
+        decideBlockingUseCase =
+            DecideBlockingUseCase(
+                adDetector = adDetector,
+                adultContentDetector = adultDetector,
+                adaptiveBlockingEngine = adaptive,
+                isAllowlisted = { false },
+                isBlocklisted = { false },
+                protectedDomains = protected,
+                blockingMode = { BlockingMode.SMART },
+            )
     }
 
     /**
      * Verifies that test all primary hosts resolve to allow in smart mode.
      */
     @Test
-    fun testAllPrimaryHostsResolveToAllowInSmartMode() = runBlocking {
-        assertTrue("Corpus must not be empty", primaryHosts.isNotEmpty())
-        for (host in primaryHosts) {
-            val decision = decideBlockingUseCase(host)
-            assertFalse(
-                "Primary host '$host' must not be blocked! Decided: ${decision.action} with reason ${decision.reason}",
-                decision.isBlocked
-            )
+    fun testAllPrimaryHostsResolveToAllowInSmartMode() =
+        runBlocking {
+            assertTrue("Corpus must not be empty", primaryHosts.isNotEmpty())
+            for (host in primaryHosts) {
+                val decision = decideBlockingUseCase(host)
+                assertFalse(
+                    "Primary host '$host' must not be blocked! Decided: ${decision.action} with reason ${decision.reason}",
+                    decision.isBlocked,
+                )
+            }
         }
-    }
 }

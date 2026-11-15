@@ -6,7 +6,6 @@ import com.unblocker.app.logic.DomainName
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.nio.channels.FileChannel
 
 /**
  * Binary UBR2 rule matcher using reversed labels and allow-before-block precedence.
@@ -20,7 +19,7 @@ import java.nio.channels.FileChannel
 class RuleSet private constructor(
     private val buffer: ByteBuffer,
     val ruleCount: Int,
-    private val blobOffset: Int
+    private val blobOffset: Int,
 ) {
     /**
      * Matches exact, suffix and strict-subdomain rules, checking allow rules first.
@@ -69,7 +68,7 @@ class RuleSet private constructor(
         action: RuleAction,
         fullDomainReversed: String,
         prefixLengths: IntArray,
-        labelCount: Int
+        labelCount: Int,
     ): DnsRule? {
         val fullLen = prefixLengths[labelCount - 1]
         // Step 1: Check EXACT on full domain
@@ -88,7 +87,12 @@ class RuleSet private constructor(
         return null
     }
 
-    private fun findRule(fullKey: CharSequence, targetLen: Int, targetAction: RuleAction, targetKind: RuleKind): DnsRule? {
+    private fun findRule(
+        fullKey: CharSequence,
+        targetLen: Int,
+        targetAction: RuleAction,
+        targetKind: RuleKind,
+    ): DnsRule? {
         var low = 0
         var high = ruleCount
         while (low < high) {
@@ -106,33 +110,36 @@ class RuleSet private constructor(
             val keyLen = buffer.get(entryPos).toInt() and 0xFF
             val flags = buffer.get(entryPos + 1 + keyLen).toInt() and 0xFF
             val action = if ((flags and 1) == 0) RuleAction.ALLOW else RuleAction.BLOCK
-            val kind = when ((flags shr 1) and 3) {
-                0 -> RuleKind.EXACT
-                1 -> RuleKind.SUFFIX
-                2 -> RuleKind.WILDCARD
-                else -> RuleKind.SUFFIX
-            }
+            val kind =
+                when ((flags shr 1) and 3) {
+                    0 -> RuleKind.EXACT
+                    1 -> RuleKind.SUFFIX
+                    2 -> RuleKind.WILDCARD
+                    else -> RuleKind.SUFFIX
+                }
             if (action == targetAction && kind == targetKind) {
                 val category = if (((flags shr 3) and 3) == 0) BlockingCategory.AD else BlockingCategory.ADULT_CONTENT
                 val sourceId = buffer.getShort(entryPos + 2 + keyLen).toInt() and 0xFFFF
-                val originalDomain = StringBuilder(targetLen).apply {
-                    var end = targetLen
-                    for (i in targetLen - 1 downTo 0) {
-                        if (fullKey[i] == '.') {
+                val originalDomain =
+                    StringBuilder(targetLen)
+                        .apply {
+                            var end = targetLen
+                            for (i in targetLen - 1 downTo 0) {
+                                if (fullKey[i] == '.') {
+                                    if (isNotEmpty()) append('.')
+                                    append(fullKey, i + 1, end)
+                                    end = i
+                                }
+                            }
                             if (isNotEmpty()) append('.')
-                            append(fullKey, i + 1, end)
-                            end = i
-                        }
-                    }
-                    if (isNotEmpty()) append('.')
-                    append(fullKey, 0, end)
-                }.toString()
+                            append(fullKey, 0, end)
+                        }.toString()
                 return DnsRule(
                     action = action,
                     kind = kind,
                     value = originalDomain,
                     category = category,
-                    sourceId = sourceId
+                    sourceId = sourceId,
                 )
             }
             low++
@@ -145,7 +152,11 @@ class RuleSet private constructor(
         return blobOffset + relOffset
     }
 
-    private fun compareKeyAt(index: Int, target: CharSequence, targetLen: Int): Int {
+    private fun compareKeyAt(
+        index: Int,
+        target: CharSequence,
+        targetLen: Int,
+    ): Int {
         val entryPos = getEntryPosition(index)
         val keyLen = buffer.get(entryPos).toInt() and 0xFF
         val minLen = minOf(keyLen, targetLen)
@@ -194,23 +205,23 @@ class RuleSet private constructor(
          * @return Matcher sharing the supplied array.
          * @throws IllegalArgumentException If the checked UBR2 header fields are invalid.
          */
-        fun fromByteArray(bytes: ByteArray): RuleSet =
-            fromByteBuffer(ByteBuffer.wrap(bytes))
+        fun fromByteArray(bytes: ByteArray): RuleSet = fromByteBuffer(ByteBuffer.wrap(bytes))
 
         /**
          * Returns a matcher over an empty valid UBR2 header.
          */
         fun empty(): RuleSet {
-            val emptyHeader = ByteBuffer.allocate(14).order(ByteOrder.LITTLE_ENDIAN).apply {
-                put('U'.code.toByte())
-                put('B'.code.toByte())
-                put('R'.code.toByte())
-                put('2'.code.toByte())
-                putShort(2.toShort())
-                putInt(0)
-                putInt(0)
-                flip()
-            }
+            val emptyHeader =
+                ByteBuffer.allocate(14).order(ByteOrder.LITTLE_ENDIAN).apply {
+                    put('U'.code.toByte())
+                    put('B'.code.toByte())
+                    put('R'.code.toByte())
+                    put('2'.code.toByte())
+                    putShort(2.toShort())
+                    putInt(0)
+                    putInt(0)
+                    flip()
+                }
             return fromByteBuffer(emptyHeader)
         }
     }
@@ -227,17 +238,28 @@ class RuleSet private constructor(
 fun CompiledRuleSet.toRuleSet(): RuleSet {
     if (rules.isEmpty()) return RuleSet.empty()
 
-    data class Entry(val rule: DnsRule, val revKey: String)
-    val sorted = rules.map { rule ->
-        val revKey = rule.value.split('.').asReversed().joinToString(".")
-        Entry(rule, revKey)
-    }.sortedWith(compareBy(
-        { it.revKey },
-        { it.rule.action.ordinal },
-        { it.rule.kind.ordinal },
-        { it.rule.category.ordinal },
-        { it.rule.sourceId }
-    ))
+    data class Entry(
+        val rule: DnsRule,
+        val revKey: String,
+    )
+    val sorted =
+        rules
+            .map { rule ->
+                val revKey =
+                    rule.value
+                        .split('.')
+                        .asReversed()
+                        .joinToString(".")
+                Entry(rule, revKey)
+            }.sortedWith(
+                compareBy(
+                    { it.revKey },
+                    { it.rule.action.ordinal },
+                    { it.rule.kind.ordinal },
+                    { it.rule.category.ordinal },
+                    { it.rule.sourceId },
+                ),
+            )
 
     val count = sorted.size
     val offsets = IntArray(count)
@@ -249,11 +271,12 @@ fun CompiledRuleSet.toRuleSet(): RuleSet {
         require(keyBytes.size <= 255) { "Key too long: ${entry.revKey}" }
 
         val actionBit = if (entry.rule.action == RuleAction.ALLOW) 0 else 1
-        val kindBits = when (entry.rule.kind) {
-            RuleKind.EXACT -> 0
-            RuleKind.SUFFIX -> 1
-            RuleKind.WILDCARD -> 2
-        }
+        val kindBits =
+            when (entry.rule.kind) {
+                RuleKind.EXACT -> 0
+                RuleKind.SUFFIX -> 1
+                RuleKind.WILDCARD -> 2
+            }
         val catBits = if (entry.rule.category == BlockingCategory.AD) 0 else 1
         val flags = actionBit or (kindBits shl 1) or (catBits shl 3)
 
@@ -293,13 +316,20 @@ sealed class RuleSetStatus {
      * @property count Number of rules in the loaded set.
      * @property source Asset format identifier.
      */
-    data class Loaded(val count: Int, val source: String) : RuleSetStatus()
+    data class Loaded(
+        val count: Int,
+        val source: String,
+    ) : RuleSetStatus()
+
     /**
      * Embedded seed rules selected after a loading failure.
      *
      * @property reason Loading stage or error category that triggered fallback.
      */
-    data class Fallback(val reason: String) : RuleSetStatus()
+    data class Fallback(
+        val reason: String,
+    ) : RuleSetStatus()
+
     /**
      * Initial state before any asset-loading result has been published.
      */
@@ -312,8 +342,9 @@ sealed class RuleSetStatus {
 object RuleSetHolder {
     @Volatile
     private var cached: RuleSet? = null
-    
+
     private val _status = kotlinx.coroutines.flow.MutableStateFlow<RuleSetStatus>(RuleSetStatus.Failed)
+
     /**
      * Most recent asset-load result; cache overrides for tests do not update this flow.
      */
@@ -329,9 +360,9 @@ object RuleSetHolder {
         val current = cached
         if (current != null) return current
         return synchronized(this) {
-            cached ?: load(context).also { 
+            cached ?: load(context).also {
                 if (it != fallbackRuleSet) {
-                    cached = it 
+                    cached = it
                 }
             }
         }
@@ -352,19 +383,18 @@ object RuleSetHolder {
     fun clearForTesting() {
         synchronized(this) { cached = null }
     }
-    
+
     private val fallbackRuleSet: RuleSet by lazy {
-        val rules = com.unblocker.app.logic.AdDetector.defaultSeedRules.map {
-            DnsRule(RuleAction.BLOCK, RuleKind.SUFFIX, it, com.unblocker.app.domain.model.BlockingCategory.AD, 0)
-        }
+        val rules =
+            com.unblocker.app.logic.AdDetector.defaultSeedRules.map {
+                DnsRule(RuleAction.BLOCK, RuleKind.SUFFIX, it, com.unblocker.app.domain.model.BlockingCategory.AD, 0)
+            }
         val cr = CompiledRuleSet(rules)
         cr.toRuleSet()
     }
 
-    private fun load(context: Context): RuleSet {
-        return loadWithOpener { name -> context.assets.open(name) }
-    }
-    
+    private fun load(context: Context): RuleSet = loadWithOpener { name -> context.assets.open(name) }
+
     /**
      * Loads the manifest and binary asset, checking SHA-256 when the manifest provides one.
      *
@@ -384,13 +414,13 @@ object RuleSetHolder {
             _status.value = RuleSetStatus.Fallback("manifest")
             return fallbackRuleSet
         }
-        
+
         try {
             val bytes = openAsset("dns-rules.bin").use { input -> input.readBytes() }
             val md = java.security.MessageDigest.getInstance("SHA-256")
             val digest = md.digest(bytes)
             val actualSha256 = digest.joinToString("") { "%02x".format(it) }
-            
+
             if (expectedSha256.isNotEmpty() && expectedSha256 != actualSha256) {
                 _status.value = RuleSetStatus.Fallback("integrity")
                 return fallbackRuleSet
@@ -405,7 +435,7 @@ object RuleSetHolder {
         } catch (e: RuntimeException) {
             _status.value = RuleSetStatus.Fallback("runtime")
         }
-        
+
         return fallbackRuleSet
     }
 }

@@ -6,12 +6,12 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.net.VpnService
 import android.net.ConnectivityManager
 import android.net.LinkProperties
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import androidx.core.app.NotificationCompat
@@ -22,7 +22,6 @@ import com.unblocker.app.logic.ContentFilterEngine
 import com.unblocker.app.logic.dns.DnsPacketUtil
 import com.unblocker.app.logic.dns.ForwardingDnsRequest
 import com.unblocker.app.logic.dns.toForwardingRequest
-import com.unblocker.vpn.builder.TrappedDnsServers
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,10 +29,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.net.InetAddress
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.ArrayBlockingQueue
-import java.util.concurrent.ThreadPoolExecutor
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.RejectedExecutionException
 
 /**
@@ -43,59 +38,71 @@ import java.util.concurrent.RejectedExecutionException
  * and submits domain decisions to the separately controlled local query-log sink.
  */
 class UnblockerVpnService : VpnService() {
-
     private var activeRun: TunnelRun? = null
 
-    private val dnsCache = com.unblocker.app.logic.dns.DnsCache()
-    private val bufferPool = com.unblocker.app.logic.dns.ByteArrayPool(4096, 64)
+    private val dnsCache =
+        com.unblocker.app.logic.dns
+            .DnsCache()
+    private val bufferPool =
+        com.unblocker.app.logic.dns
+            .ByteArrayPool(4096, 64)
     private val upstreamClient by lazy {
         DnsUpstreamClient(
             protectDatagramSocket = { socket -> protect(socket) },
-            protectTcpSocket = { socket -> protect(socket) }
+            protectTcpSocket = { socket -> protect(socket) },
         )
     }
 
     private lateinit var connectivityManager: ConnectivityManager
-    private val networkResolvers = ResolverRegistry<Network> {
-        dnsCache.clear()
-        upstreamClient.resetPreferredResolver()
-    }
+    private val networkResolvers =
+        ResolverRegistry<Network> {
+            dnsCache.clear()
+            upstreamClient.resetPreferredResolver()
+        }
     private var networkCallbackRegistered = false
-    private val networkCallback = object : ConnectivityManager.NetworkCallback() {
-        override fun onAvailable(network: Network) = refreshNetworkResolvers(network)
+    private val networkCallback =
+        object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) = refreshNetworkResolvers(network)
 
-        override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
-            if (isUsableUnderlyingNetwork(capabilities)) refreshNetworkResolvers(network)
-            else {
+            override fun onCapabilitiesChanged(
+                network: Network,
+                capabilities: NetworkCapabilities,
+            ) {
+                if (isUsableUnderlyingNetwork(capabilities)) {
+                    refreshNetworkResolvers(network)
+                } else {
+                    networkResolvers.remove(network)
+                    if (network == connectivityManager.activeNetwork) {
+                        updatePrivateDnsState(null)
+                    }
+                }
+            }
+
+            override fun onLinkPropertiesChanged(
+                network: Network,
+                linkProperties: LinkProperties,
+            ) {
+                val capabilities = connectivityManager.getNetworkCapabilities(network)
+                if (capabilities != null && isUsableUnderlyingNetwork(capabilities)) {
+                    networkResolvers.update(network, linkProperties.dnsServers)
+                    if (network == connectivityManager.activeNetwork) {
+                        updatePrivateDnsState(linkProperties)
+                    }
+                } else {
+                    networkResolvers.remove(network)
+                    if (network == connectivityManager.activeNetwork) {
+                        updatePrivateDnsState(null)
+                    }
+                }
+            }
+
+            override fun onLost(network: Network) {
                 networkResolvers.remove(network)
                 if (network == connectivityManager.activeNetwork) {
                     updatePrivateDnsState(null)
                 }
             }
         }
-
-        override fun onLinkPropertiesChanged(network: Network, linkProperties: LinkProperties) {
-            val capabilities = connectivityManager.getNetworkCapabilities(network)
-            if (capabilities != null && isUsableUnderlyingNetwork(capabilities)) {
-                networkResolvers.update(network, linkProperties.dnsServers)
-                if (network == connectivityManager.activeNetwork) {
-                    updatePrivateDnsState(linkProperties)
-                }
-            } else {
-                networkResolvers.remove(network)
-                if (network == connectivityManager.activeNetwork) {
-                    updatePrivateDnsState(null)
-                }
-            }
-        }
-
-        override fun onLost(network: Network) {
-            networkResolvers.remove(network)
-            if (network == connectivityManager.activeNetwork) {
-                updatePrivateDnsState(null)
-            }
-        }
-    }
 
     private lateinit var preferences: FilteringPreferences
 
@@ -115,10 +122,11 @@ class UnblockerVpnService : VpnService() {
         // to adapt local DNS resolver pointers, and initiates ZERO outbound telemetry or network flows.
         runCatching {
             connectivityManager.registerNetworkCallback(
-                NetworkRequest.Builder()
+                NetworkRequest
+                    .Builder()
                     .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                     .build(),
-                networkCallback
+                networkCallback,
             )
             networkCallbackRegistered = true
         }
@@ -132,10 +140,16 @@ class UnblockerVpnService : VpnService() {
      * @param startId Android identifier for this start request.
      * @return START_NOT_STICKY for explicit stop, otherwise START_STICKY.
      */
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+    override fun onStartCommand(
+        intent: Intent?,
+        flags: Int,
+        startId: Int,
+    ): Int {
         val action = intent?.action
         if (ACTION_STOP == action) {
-            try { runCatching { preferences.setProtectionEnabled(false) } } finally {
+            try {
+                runCatching { preferences.setProtectionEnabled(false) }
+            } finally {
                 stopVpn(publishStopped = false)
                 stopSelf(startId)
             }
@@ -160,11 +174,12 @@ class UnblockerVpnService : VpnService() {
     }
 
     private fun startVpn(startId: Int) {
-        val run = synchronized(lifecycleLock) {
-            if (activeRun?.running?.get() == true) return
-            activeRun?.close()
-            TunnelRun(session.begin(), startId).also { activeRun = it }
-        }
+        val run =
+            synchronized(lifecycleLock) {
+                if (activeRun?.running?.get() == true) return
+                activeRun?.close()
+                TunnelRun(session.begin(), startId).also { activeRun = it }
+            }
         try {
             createNotificationChannel()
             startForeground(NOTIFICATION_ID, buildNotification())
@@ -175,11 +190,12 @@ class UnblockerVpnService : VpnService() {
             return
         }
 
-        run.thread = Thread({
-            runVpnLoop(run)
-        }, "UnblockerVpnWorker").apply {
-            start()
-        }
+        run.thread =
+            Thread({
+                runVpnLoop(run)
+            }, "UnblockerVpnWorker").apply {
+                start()
+            }
     }
 
     private fun runVpnLoop(run: TunnelRun) {
@@ -192,17 +208,19 @@ class UnblockerVpnService : VpnService() {
             // Asset loading, Keystore and migration stay off the main/foreground deadline path.
             val filterEngine = ContentFilterEngine(this, preferences = preferences)
             val uidResolver = UidResolver(this)
-            val builder = Builder()
-                .setSession("Un-Blocker DNS Shield")
-                .setMtu(1500)
-                .setBlocking(true)
-                .addAddress(TunnelDnsConfig.IPV4_CLIENT, 24)
-                .addDnsServer(TunnelDnsConfig.IPV4_DNS)
+            val builder =
+                Builder()
+                    .setSession("Un-Blocker DNS Shield")
+                    .setMtu(1500)
+                    .setBlocking(true)
+                    .addAddress(TunnelDnsConfig.IPV4_CLIENT, 24)
+                    .addDnsServer(TunnelDnsConfig.IPV4_DNS)
 
             for ((host, prefix) in VpnRoutePolicy.hostRoutes().filter { it.second == 32 }) {
                 try {
                     builder.addRoute(host, prefix)
-                } catch (_: Exception) {}
+                } catch (_: Exception) {
+                }
             }
 
             // Add the synthetic IPv6 resolver route when the platform supports it.
@@ -212,7 +230,8 @@ class UnblockerVpnService : VpnService() {
                 for ((host, prefix) in VpnRoutePolicy.hostRoutes().filter { it.second == 128 }) {
                     try {
                         builder.addRoute(host, prefix)
-                    } catch (_: Exception) {}
+                    } catch (_: Exception) {
+                    }
                 }
             } catch (_: Exception) {
                 // Graceful fallback on devices with no IPv6 support
@@ -221,13 +240,15 @@ class UnblockerVpnService : VpnService() {
             // Exclude our own app process to avoid VPN routing loops
             try {
                 builder.addDisallowedApplication(packageName)
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
 
             // Automatic Physical Network Tracking across Wi-Fi, 5G, and LTE switches
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 try {
                     builder.setUnderlyingNetworks(null)
-                } catch (_: Exception) {}
+                } catch (_: Exception) {
+                }
             }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -249,88 +270,109 @@ class UnblockerVpnService : VpnService() {
             val packetBuffer = bufferPool.acquire()
             val coalescer = DnsRequestCoalescer()
 
-            val tcpResponder = com.unblocker.app.logic.dns.TcpDnsResponder(
-                executor = run.forwarding,
-                emit = { packets ->
-                    for (p in packets) {
-                        responseWriter.offer(p)
-                    }
-                },
-                queryResolver = { dnsWireBytes, isIpv6, clientIp ->
-                    val wireQuery = DnsPacketUtil.parseWireQuery(dnsWireBytes, isIpv6, clientIp) ?: return@TcpDnsResponder null
-                    if (RecordingSessionManager.instance.isRecordingActive()) {
-                        try {
-                            val clientAddr = java.net.InetAddress.getByAddress(clientIp)
-                            val srcAddr = java.net.InetSocketAddress(clientAddr, 0)
-                            val dstAddr = java.net.InetSocketAddress(clientAddr, 53)
-                            val uid = uidResolver.resolveUid(android.system.OsConstants.IPPROTO_TCP, srcAddr, dstAddr)
-                            RecordingSessionManager.instance.recordDomain(wireQuery.domain, uid)
-                        } catch (_: Exception) {}
-                    }
-                    val filterResult = filterEngine.analyzeAndFilter(wireQuery.domain)
-                    val wireDecision = if (filterResult.shouldBlock) 1 else 0
-                    com.unblocker.app.data.logs.QueryLogSink.record(wireQuery.domain, wireDecision, filterResult.detectionMethod.ordinal)
-                    if (filterResult.shouldBlock) {
-                        DnsPacketUtil.buildBlockedWireResponse(dnsWireBytes)
-                    } else {
-                        val cached = dnsCache.getValidated(wireQuery)
-                        if (cached != null) {
-                            if (filterEngine.blockedAlias(wireQuery.domain, cached.metadata.aliases) != null) {
-                                DnsPacketUtil.buildBlockedWireResponse(dnsWireBytes)
-                            } else cached.bytes
-                        } else {
-                            val resolverSnapshot = networkResolvers.snapshot()
-                            val resolvers = resolverSnapshot.resolvers
-                            if (resolvers.isEmpty()) {
-                                VpnDiagnostics.record(
-                                    code = VpnDiagnostics.FailureCode.UPSTREAM_TIMEOUT,
-                                    exceptionClass = "NoResolversAvailable",
-                                    resolverCount = 0
-                                )
-                                return@TcpDnsResponder DnsPacketUtil.buildServfailWireResponse(dnsWireBytes)
-                            }
-                            val response = upstreamClient.resolve(
-                                run,
-                                wireQuery,
-                                dnsWireBytes,
-                                resolvers,
-                                outboundGuard = { action ->
-                                    var allowed = false
-                                    run.useWhileRunning { allowed = networkResolvers.useCurrent(resolverSnapshot, action) }
-                                    allowed
-                                }
-                            )
-                            if (response != null) {
-                                if (filterEngine.blockedAlias(wireQuery.domain, response.metadata.aliases) != null) {
-                                    DnsPacketUtil.buildBlockedWireResponse(dnsWireBytes)
-                                } else {
-                                    dnsCache.putValidated(wireQuery, response)
-                                    response.bytes
-                                }
-                            } else {
-                                VpnDiagnostics.record(
-                                    code = VpnDiagnostics.FailureCode.UPSTREAM_TIMEOUT,
-                                    exceptionClass = "UpstreamResolutionNull",
-                                    resolverCount = resolvers.size
-                                )
-                                DnsPacketUtil.buildServfailWireResponse(dnsWireBytes)
+            val tcpResponder =
+                com.unblocker.app.logic.dns.TcpDnsResponder(
+                    executor = run.forwarding,
+                    emit = { packets ->
+                        for (p in packets) {
+                            responseWriter.offer(p)
+                        }
+                    },
+                    queryResolver = { dnsWireBytes, isIpv6, clientIp ->
+                        val wireQuery =
+                            DnsPacketUtil.parseWireQuery(dnsWireBytes, isIpv6, clientIp) ?: return@TcpDnsResponder null
+                        if (RecordingSessionManager.instance.isRecordingActive()) {
+                            try {
+                                val clientAddr = java.net.InetAddress.getByAddress(clientIp)
+                                val srcAddr = java.net.InetSocketAddress(clientAddr, 0)
+                                val dstAddr = java.net.InetSocketAddress(clientAddr, 53)
+                                val uid =
+                                    uidResolver.resolveUid(
+                                        android.system.OsConstants.IPPROTO_TCP,
+                                        srcAddr,
+                                        dstAddr,
+                                    )
+                                RecordingSessionManager.instance.recordDomain(wireQuery.domain, uid)
+                            } catch (_: Exception) {
                             }
                         }
-                    }
-                }
-            )
+                        val filterResult = filterEngine.analyzeAndFilter(wireQuery.domain)
+                        val wireDecision = if (filterResult.shouldBlock) 1 else 0
+                        com.unblocker.app.data.logs.QueryLogSink.record(
+                            wireQuery.domain,
+                            wireDecision,
+                            filterResult.detectionMethod.ordinal,
+                        )
+                        if (filterResult.shouldBlock) {
+                            DnsPacketUtil.buildBlockedWireResponse(dnsWireBytes)
+                        } else {
+                            val cached = dnsCache.getValidated(wireQuery)
+                            if (cached != null) {
+                                if (filterEngine.blockedAlias(wireQuery.domain, cached.metadata.aliases) != null) {
+                                    DnsPacketUtil.buildBlockedWireResponse(dnsWireBytes)
+                                } else {
+                                    cached.bytes
+                                }
+                            } else {
+                                val resolverSnapshot = networkResolvers.snapshot()
+                                val resolvers = resolverSnapshot.resolvers
+                                if (resolvers.isEmpty()) {
+                                    VpnDiagnostics.record(
+                                        code = VpnDiagnostics.FailureCode.UPSTREAM_TIMEOUT,
+                                        exceptionClass = "NoResolversAvailable",
+                                        resolverCount = 0,
+                                    )
+                                    return@TcpDnsResponder DnsPacketUtil.buildServfailWireResponse(dnsWireBytes)
+                                }
+                                val response =
+                                    upstreamClient.resolve(
+                                        run,
+                                        wireQuery,
+                                        dnsWireBytes,
+                                        resolvers,
+                                        outboundGuard = { action ->
+                                            var allowed = false
+                                            run.useWhileRunning {
+                                                allowed =
+                                                    networkResolvers.useCurrent(resolverSnapshot, action)
+                                            }
+                                            allowed
+                                        },
+                                    )
+                                if (response != null) {
+                                    if (filterEngine.blockedAlias(wireQuery.domain, response.metadata.aliases) !=
+                                        null
+                                    ) {
+                                        DnsPacketUtil.buildBlockedWireResponse(dnsWireBytes)
+                                    } else {
+                                        dnsCache.putValidated(wireQuery, response)
+                                        response.bytes
+                                    }
+                                } else {
+                                    VpnDiagnostics.record(
+                                        code = VpnDiagnostics.FailureCode.UPSTREAM_TIMEOUT,
+                                        exceptionClass = "UpstreamResolutionNull",
+                                        resolverCount = resolvers.size,
+                                    )
+                                    DnsPacketUtil.buildServfailWireResponse(dnsWireBytes)
+                                }
+                            }
+                        }
+                    },
+                )
 
             try {
                 while (isRunning.get()) {
-                    val length = try {
-                        inputStream!!.read(packetBuffer)
-                    } catch (e: Exception) {
-                        VpnDiagnostics.record(
-                            code = VpnDiagnostics.FailureCode.TUN_READ_ERROR,
-                            exceptionClass = e::class.java.name
-                        )
-                        break
-                    }
+                    val length =
+                        try {
+                            inputStream!!.read(packetBuffer)
+                        } catch (e: Exception) {
+                            VpnDiagnostics.record(
+                                code = VpnDiagnostics.FailureCode.TUN_READ_ERROR,
+                                exceptionClass = e::class.java.name,
+                            )
+                            break
+                        }
 
                     if (length < 0) break
                     if (length == 0) continue
@@ -338,7 +380,14 @@ class UnblockerVpnService : VpnService() {
                     try {
                         val query = DnsPacketUtil.parseIpPacket(packetBuffer, length)
                         if (query == null) {
-                            val consumed = try { tcpResponder.processPacket(packetBuffer, length) } catch (e: Exception) { false }
+                            val consumed =
+                                try {
+                                    tcpResponder.processPacket(packetBuffer, length)
+                                } catch (
+                                    e: Exception,
+                                ) {
+                                    false
+                                }
                             if (consumed) {
                                 continue
                             }
@@ -353,81 +402,121 @@ class UnblockerVpnService : VpnService() {
                         if (!isRunning.get()) break
                         if (RecordingSessionManager.instance.isRecordingActive()) {
                             try {
-                                val srcAddr = java.net.InetSocketAddress(java.net.InetAddress.getByAddress(query.srcIp), query.srcPort)
-                                val dstAddr = java.net.InetSocketAddress(java.net.InetAddress.getByAddress(query.dstIp), query.dstPort)
-                                val uid = uidResolver.resolveUid(android.system.OsConstants.IPPROTO_UDP, srcAddr, dstAddr)
+                                val srcAddr =
+                                    java.net.InetSocketAddress(
+                                        java.net.InetAddress.getByAddress(query.srcIp),
+                                        query.srcPort,
+                                    )
+                                val dstAddr =
+                                    java.net.InetSocketAddress(
+                                        java.net.InetAddress.getByAddress(query.dstIp),
+                                        query.dstPort,
+                                    )
+                                val uid =
+                                    uidResolver.resolveUid(
+                                        android.system.OsConstants.IPPROTO_UDP,
+                                        srcAddr,
+                                        dstAddr,
+                                    )
                                 RecordingSessionManager.instance.recordDomain(query.domain, uid)
-                            } catch (_: Exception) {}
+                            } catch (_: Exception) {
+                            }
                         }
                         val result = filterEngine.analyzeAndFilter(query.domain)
                         val queryDecision = if (result.shouldBlock) 1 else 0
-                        com.unblocker.app.data.logs.QueryLogSink.record(query.domain, queryDecision, result.detectionMethod.ordinal)
+                        com.unblocker.app.data.logs.QueryLogSink.record(
+                            query.domain,
+                            queryDecision,
+                            result.detectionMethod.ordinal,
+                        )
 
-                    if (result.shouldBlock) {
-                        // Local blocked response.
-                        val responsePacket = DnsPacketUtil.buildBlockedDnsResponsePacket(query)
-                        responseWriter.offer(responsePacket)
-                    } else {
-                        // Check local high-speed DNS cache
-                        val resolverSnapshot = networkResolvers.snapshot()
-                        val cached = dnsCache.getValidated(query)
-                        if (cached != null) {
-                            val cachedPayload = cached.bytes
-                            val metadata = cached.metadata
-                            val wrappedResponse = if (filterEngine.blockedAlias(query.domain, metadata.aliases) != null)
-                                DnsPacketUtil.buildBlockedDnsResponsePacket(query)
-                            else DnsPacketUtil.wrapClientResponse(query, cachedPayload)
-                            responseWriter.offer(wrappedResponse)
+                        if (result.shouldBlock) {
+                            // Local blocked response.
+                            val responsePacket = DnsPacketUtil.buildBlockedDnsResponsePacket(query)
+                            responseWriter.offer(responsePacket)
                         } else {
-                            // Check in-flight coalescer before submitting to the executor
-                            val coalesceKey = CoalesceKey(query.domain, query.queryType, query.queryClass, query.isIpv6, resolverSnapshot.epoch)
-                            when (coalescer.attachOrLead(coalesceKey, query)) {
-                                DnsRequestCoalescer.JoinResult.Joined -> {
-                                    VpnDiagnostics.recordCoalesced()
-                                    // Attached to active in-flight resolution; response delivered when leader completes
-                                }
-                                DnsRequestCoalescer.JoinResult.Overflow -> {
-                                    responseWriter.offer(DnsPacketUtil.buildServfailDnsResponsePacket(query))
-                                }
-                                DnsRequestCoalescer.JoinResult.Leader -> {
-                                    // Bounded forwarding; blocking resolver I/O stays off the TUN loop.
-                                    val forwardingRequest = query.toForwardingRequest()
-                                    try {
-                                        run.forwarding.execute {
-                                            try {
-                                                resolveAndForward(run, forwardingRequest, responseWriter, filterEngine, resolverSnapshot, coalescer, coalesceKey)
-                                            } catch (e: Exception) {
-                                                val all = coalescer.complete(coalesceKey)
-                                                for (q in all) {
-                                                    responseWriter.offer(DnsPacketUtil.buildServfailDnsResponsePacket(q))
+                            // Check local high-speed DNS cache
+                            val resolverSnapshot = networkResolvers.snapshot()
+                            val cached = dnsCache.getValidated(query)
+                            if (cached != null) {
+                                val cachedPayload = cached.bytes
+                                val metadata = cached.metadata
+                                val wrappedResponse =
+                                    if (filterEngine.blockedAlias(query.domain, metadata.aliases) != null) {
+                                        DnsPacketUtil.buildBlockedDnsResponsePacket(query)
+                                    } else {
+                                        DnsPacketUtil.wrapClientResponse(query, cachedPayload)
+                                    }
+                                responseWriter.offer(wrappedResponse)
+                            } else {
+                                // Check in-flight coalescer before submitting to the executor
+                                val coalesceKey =
+                                    CoalesceKey(
+                                        query.domain,
+                                        query.queryType,
+                                        query.queryClass,
+                                        query.isIpv6,
+                                        resolverSnapshot.epoch,
+                                    )
+                                when (coalescer.attachOrLead(coalesceKey, query)) {
+                                    DnsRequestCoalescer.JoinResult.Joined -> {
+                                        VpnDiagnostics.recordCoalesced()
+                                        // Attached to active in-flight resolution; response delivered when leader completes
+                                    }
+
+                                    DnsRequestCoalescer.JoinResult.Overflow -> {
+                                        responseWriter.offer(DnsPacketUtil.buildServfailDnsResponsePacket(query))
+                                    }
+
+                                    DnsRequestCoalescer.JoinResult.Leader -> {
+                                        // Bounded forwarding; blocking resolver I/O stays off the TUN loop.
+                                        val forwardingRequest = query.toForwardingRequest()
+                                        try {
+                                            run.forwarding.execute {
+                                                try {
+                                                    resolveAndForward(
+                                                        run,
+                                                        forwardingRequest,
+                                                        responseWriter,
+                                                        filterEngine,
+                                                        resolverSnapshot,
+                                                        coalescer,
+                                                        coalesceKey,
+                                                    )
+                                                } catch (e: Exception) {
+                                                    val all = coalescer.complete(coalesceKey)
+                                                    for (q in all) {
+                                                        responseWriter.offer(
+                                                            DnsPacketUtil.buildServfailDnsResponsePacket(q),
+                                                        )
+                                                    }
+                                                    VpnDiagnostics.record(
+                                                        code = VpnDiagnostics.FailureCode.UPSTREAM_TIMEOUT,
+                                                        exceptionClass = e::class.java.name,
+                                                        queueDepth = run.forwarding.queue.size,
+                                                        resolverCount = resolverSnapshot.resolvers.size,
+                                                    )
                                                 }
-                                                VpnDiagnostics.record(
-                                                    code = VpnDiagnostics.FailureCode.UPSTREAM_TIMEOUT,
-                                                    exceptionClass = e::class.java.name,
-                                                    queueDepth = run.forwarding.queue.size,
-                                                    resolverCount = resolverSnapshot.resolvers.size
-                                                )
                                             }
-                                        }
-                                    } catch (e: RejectedExecutionException) {
-                                        val all = coalescer.complete(coalesceKey)
-                                        VpnDiagnostics.forwardingRejected(
-                                            queueDepth = run.forwarding.queue.size,
-                                            resolverCount = resolverSnapshot.resolvers.size
-                                        )
-                                        for (q in all) {
-                                            val servfailPacket = DnsPacketUtil.buildServfailDnsResponsePacket(q)
-                                            responseWriter.offer(servfailPacket)
+                                        } catch (e: RejectedExecutionException) {
+                                            val all = coalescer.complete(coalesceKey)
+                                            VpnDiagnostics.forwardingRejected(
+                                                queueDepth = run.forwarding.queue.size,
+                                                resolverCount = resolverSnapshot.resolvers.size,
+                                            )
+                                            for (q in all) {
+                                                val servfailPacket = DnsPacketUtil.buildServfailDnsResponsePacket(q)
+                                                responseWriter.offer(servfailPacket)
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
-                    }
                     } catch (e: Exception) {
                         VpnDiagnostics.record(
                             code = VpnDiagnostics.FailureCode.PACKET_PROCESSING,
-                            exceptionClass = e::class.java.name
+                            exceptionClass = e::class.java.name,
                         )
                         continue
                     }
@@ -439,7 +528,7 @@ class UnblockerVpnService : VpnService() {
         } catch (e: Exception) {
             VpnDiagnostics.record(
                 code = VpnDiagnostics.FailureCode.VPN_LOOP_FAILURE,
-                exceptionClass = e::class.java.name
+                exceptionClass = e::class.java.name,
             )
         } finally {
             synchronized(lifecycleLock) {
@@ -451,9 +540,18 @@ class UnblockerVpnService : VpnService() {
                     stopSelf(run.startId)
                 }
             }
-            try { inputStream?.close() } catch (ignored: Exception) {}
-            try { outputStream?.close() } catch (ignored: Exception) {}
-            try { localInterface?.close() } catch (ignored: Exception) {}
+            try {
+                inputStream?.close()
+            } catch (ignored: Exception) {
+            }
+            try {
+                outputStream?.close()
+            } catch (ignored: Exception) {
+            }
+            try {
+                localInterface?.close()
+            } catch (ignored: Exception) {
+            }
         }
     }
 
@@ -464,7 +562,7 @@ class UnblockerVpnService : VpnService() {
         filterEngine: ContentFilterEngine,
         resolverSnapshot: ResolverRegistry.Snapshot,
         coalescer: DnsRequestCoalescer,
-        coalesceKey: CoalesceKey
+        coalesceKey: CoalesceKey,
     ) {
         VpnDiagnostics.forwardingActiveIncrement()
         try {
@@ -481,7 +579,7 @@ class UnblockerVpnService : VpnService() {
                 VpnDiagnostics.record(
                     code = VpnDiagnostics.FailureCode.UPSTREAM_TIMEOUT,
                     exceptionClass = "NoResolversAvailable",
-                    resolverCount = 0
+                    resolverCount = 0,
                 )
                 val allQueries = coalescer.complete(coalesceKey)
                 for (q in allQueries) {
@@ -489,12 +587,18 @@ class UnblockerVpnService : VpnService() {
                 }
                 return
             }
-            val response = upstreamClient.resolve(run, query, dnsPayload, resolvers,
-                outboundGuard = { action ->
-                    var allowed = false
-                    run.useWhileRunning { allowed = networkResolvers.useCurrent(resolverSnapshot, action) }
-                    allowed
-                })
+            val response =
+                upstreamClient.resolve(
+                    run,
+                    query,
+                    dnsPayload,
+                    resolvers,
+                    outboundGuard = { action ->
+                        var allowed = false
+                        run.useWhileRunning { allowed = networkResolvers.useCurrent(resolverSnapshot, action) }
+                        allowed
+                    },
+                )
             val allQueries = coalescer.complete(coalesceKey)
             if (allQueries.isEmpty()) return
 
@@ -502,7 +606,7 @@ class UnblockerVpnService : VpnService() {
                 VpnDiagnostics.record(
                     code = VpnDiagnostics.FailureCode.UPSTREAM_TIMEOUT,
                     exceptionClass = "UpstreamResolutionNull",
-                    resolverCount = resolvers.size
+                    resolverCount = resolvers.size,
                 )
                 for (q in allQueries) {
                     responseWriter.offer(DnsPacketUtil.buildServfailDnsResponsePacket(q))
@@ -511,15 +615,17 @@ class UnblockerVpnService : VpnService() {
             }
             if (!isRunning.get() || !session.owns(run.owner)) return
 
-            val aliasBlocked = response.metadata.rcode == 0 &&
-                filterEngine.blockedAlias(query.domain, response.metadata.aliases) != null
+            val aliasBlocked =
+                response.metadata.rcode == 0 &&
+                    filterEngine.blockedAlias(query.domain, response.metadata.aliases) != null
 
             for (q in allQueries) {
-                val wrappedResponse = if (aliasBlocked) {
-                    DnsPacketUtil.buildBlockedDnsResponsePacket(q)
-                } else {
-                    DnsPacketUtil.wrapClientResponse(q, response.bytes)
-                }
+                val wrappedResponse =
+                    if (aliasBlocked) {
+                        DnsPacketUtil.buildBlockedDnsResponsePacket(q)
+                    } else {
+                        DnsPacketUtil.wrapClientResponse(q, response.bytes)
+                    }
                 responseWriter.offer(wrappedResponse)
             }
             if (!aliasBlocked) dnsCache.putValidated(query, response)
@@ -544,47 +650,53 @@ class UnblockerVpnService : VpnService() {
         }
     }
 
-    private fun isUsableUnderlyingNetwork(capabilities: NetworkCapabilities): Boolean {
-        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+    private fun isUsableUnderlyingNetwork(capabilities: NetworkCapabilities): Boolean =
+        capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
             capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED) &&
             !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
-    }
 
     private fun buildNotification(): Notification {
-        val launchIntent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
-        }
-        val pendingIntent = PendingIntent.getActivity(
-            this,
-            0,
-            launchIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        val launchIntent =
+            Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+            }
+        val pendingIntent =
+            PendingIntent.getActivity(
+                this,
+                0,
+                launchIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
 
-        val stopIntent = Intent(this, UnblockerVpnService::class.java).apply {
-            action = ACTION_STOP
-        }
-        val stopPendingIntent = PendingIntent.getService(
-            this,
-            1,
-            stopIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        val stopIntent =
+            Intent(this, UnblockerVpnService::class.java).apply {
+                action = ACTION_STOP
+            }
+        val stopPendingIntent =
+            PendingIntent.getService(
+                this,
+                1,
+                stopIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
 
         val isPaused = preferences.isPaused()
-        val pauseIntent = Intent(this, UnblockerVpnService::class.java).apply {
-            action = if (isPaused) ACTION_RESUME_PROTECTION else ACTION_PAUSE_PROTECTION
-        }
-        val pausePendingIntent = PendingIntent.getService(
-            this,
-            2,
-            pauseIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        val pauseIntent =
+            Intent(this, UnblockerVpnService::class.java).apply {
+                action = if (isPaused) ACTION_RESUME_PROTECTION else ACTION_PAUSE_PROTECTION
+            }
+        val pausePendingIntent =
+            PendingIntent.getService(
+                this,
+                2,
+                pauseIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
         val pauseActionTitle = if (isPaused) "Resume" else "Pause 5m"
         val statusText = if (isPaused) "Protection paused • Tap Resume to re-enable" else "Local DNS protection active • No telemetry"
 
-        return NotificationCompat.Builder(this, CHANNEL_ID)
+        return NotificationCompat
+            .Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_blocker_notification)
             .setContentTitle("unblocker")
             .setContentText(statusText)
@@ -603,14 +715,15 @@ class UnblockerVpnService : VpnService() {
     }
 
     private fun createNotificationChannel() {
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            "unblocker Protection",
-            NotificationManager.IMPORTANCE_LOW
-        ).apply {
-            description = "Shows live status of active local network protection"
-            setShowBadge(false)
-        }
+        val channel =
+            NotificationChannel(
+                CHANNEL_ID,
+                "unblocker Protection",
+                NotificationManager.IMPORTANCE_LOW,
+            ).apply {
+                description = "Shows live status of active local network protection"
+                setShowBadge(false)
+            }
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.createNotificationChannel(channel)
     }
@@ -628,7 +741,10 @@ class UnblockerVpnService : VpnService() {
             dnsCache.clear()
             updatePrivateDnsState(null)
         }
-        runCatching { com.unblocker.app.logic.analysis.DeviceLearning.flush() }
+        runCatching {
+            com.unblocker.app.logic.analysis.DeviceLearning
+                .flush()
+        }
 
         stopForeground(STOP_FOREGROUND_REMOVE)
     }
@@ -671,7 +787,9 @@ class UnblockerVpnService : VpnService() {
      * Clears protection intent and requests teardown after Android revokes VPN consent.
      */
     override fun onRevoke() {
-        try { runCatching { preferences.setProtectionEnabled(false) } } finally {
+        try {
+            runCatching { preferences.setProtectionEnabled(false) }
+        } finally {
             stopVpn(publishStopped = false)
             stopSelf()
         }
@@ -685,14 +803,17 @@ class UnblockerVpnService : VpnService() {
          * Intent action requesting tunnel startup.
          */
         const val ACTION_START = "com.unblocker.app.START_VPN"
+
         /**
          * Intent action requesting tunnel teardown and clearing protection intent.
          */
         const val ACTION_STOP = "com.unblocker.app.STOP_VPN"
+
         /**
          * Intent action requesting a five-minute filtering pause.
          */
         const val ACTION_PAUSE_PROTECTION = "com.unblocker.app.PAUSE_PROTECTION"
+
         /**
          * Intent action clearing the filtering pause.
          */
@@ -702,28 +823,33 @@ class UnblockerVpnService : VpnService() {
 
         // Shared lock serializes establish/teardown even across successive Service instances.
         private val lifecycleLock = Any()
+
         /**
          * Shared generation-aware VPN lifecycle state.
          */
         val session = VpnSessionState { updateCoverage() }
+
         /**
          * Whether the shared session has an established active tunnel.
          */
         val isServiceActive: StateFlow<Boolean> = session.active
 
         private val _isPrivateDnsActive = MutableStateFlow(false)
+
         /**
          * Whether the most recently inspected Android link reports active Private DNS.
          */
         val isPrivateDnsActive: StateFlow<Boolean> = _isPrivateDnsActive.asStateFlow()
 
         private val _privateDnsServerName = MutableStateFlow<String?>(null)
+
         /**
          * Reported Private DNS server hostname, or null when inactive or unnamed.
          */
         val privateDnsServerName: StateFlow<String?> = _privateDnsServerName.asStateFlow()
 
         private val _coverage = MutableStateFlow(ProtectionCoverage.OFF)
+
         /**
          * Derived standard-system-DNS coverage indicator; does not measure encrypted DNS interception.
          */
@@ -735,11 +861,12 @@ class UnblockerVpnService : VpnService() {
          * @param hasUsableResolvers Whether configured upstream resolvers are available; defaults to true.
          */
         fun updateCoverage(hasUsableResolvers: Boolean = true) {
-            _coverage.value = ProtectionCoverage.compute(
-                status = session.status.value,
-                isPrivateDnsActive = _isPrivateDnsActive.value,
-                hasUsableResolvers = hasUsableResolvers
-            )
+            _coverage.value =
+                ProtectionCoverage.compute(
+                    status = session.status.value,
+                    isPrivateDnsActive = _isPrivateDnsActive.value,
+                    hasUsableResolvers = hasUsableResolvers,
+                )
         }
 
         /**
@@ -749,9 +876,10 @@ class UnblockerVpnService : VpnService() {
          * @param serverName Reported Private DNS hostname, or null when unnamed.
          * @return Whether serverName is non-null.
          */
-        fun shouldWarn(active: Boolean, serverName: String?): Boolean {
-            return serverName != null
-        }
+        fun shouldWarn(
+            active: Boolean,
+            serverName: String?,
+        ): Boolean = serverName != null
 
         /**
          * Publishes reported Private DNS state and recomputes coverage.
@@ -759,7 +887,10 @@ class UnblockerVpnService : VpnService() {
          * @param active Whether Android reports active Private DNS.
          * @param serverName Reported provider hostname; discarded when inactive.
          */
-        fun updatePrivateDnsState(active: Boolean, serverName: String?) {
+        fun updatePrivateDnsState(
+            active: Boolean,
+            serverName: String?,
+        ) {
             _isPrivateDnsActive.value = active
             _privateDnsServerName.value = if (active) serverName else null
             updateCoverage()
@@ -802,10 +933,14 @@ class UnblockerVpnService : VpnService() {
          * @throws IllegalStateException If Android disallows the requested service start.
          * @throws SecurityException If Android denies the service-start request.
          */
-        fun start(context: Context, fromBackground: Boolean = false) {
-            val intent = Intent(context, UnblockerVpnService::class.java).apply {
-                action = ACTION_START
-            }
+        fun start(
+            context: Context,
+            fromBackground: Boolean = false,
+        ) {
+            val intent =
+                Intent(context, UnblockerVpnService::class.java).apply {
+                    action = ACTION_START
+                }
             if (fromBackground) {
                 context.startForegroundService(intent)
             } else {
@@ -819,10 +954,13 @@ class UnblockerVpnService : VpnService() {
          * @param context Context used for preferences and service commands.
          */
         fun stop(context: Context) {
-            try { FilteringPreferences.getInstance(context).setProtectionEnabled(false) } finally {
-                val intent = Intent(context, UnblockerVpnService::class.java).apply {
-                    action = ACTION_STOP
-                }
+            try {
+                FilteringPreferences.getInstance(context).setProtectionEnabled(false)
+            } finally {
+                val intent =
+                    Intent(context, UnblockerVpnService::class.java).apply {
+                        action = ACTION_STOP
+                    }
                 val status = session.status.value
                 if (status == ServiceStatus.RUNNING || status == ServiceStatus.STARTING) {
                     try {

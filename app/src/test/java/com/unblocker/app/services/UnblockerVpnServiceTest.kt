@@ -7,7 +7,6 @@ import org.junit.Test
  * Regression coverage for unblocker vpn service.
  */
 class UnblockerVpnServiceTest {
-
     /**
      * Verifies that test should warn truth table.
      */
@@ -15,13 +14,13 @@ class UnblockerVpnServiceTest {
     fun testShouldWarnTruthTable() {
         // active = true, serverName = non-null -> warn
         assertEquals(true, UnblockerVpnService.Companion.shouldWarn(true, "dns.google"))
-        
+
         // active = true, serverName = null -> no warn (fallback mode)
         assertEquals(false, UnblockerVpnService.Companion.shouldWarn(true, null))
-        
+
         // active = false, serverName = non-null -> warn (user has it set, but not actively used for resolution yet)
         assertEquals(true, UnblockerVpnService.Companion.shouldWarn(false, "dns.google"))
-        
+
         // active = false, serverName = null -> no warn
         assertEquals(false, UnblockerVpnService.Companion.shouldWarn(false, null))
     }

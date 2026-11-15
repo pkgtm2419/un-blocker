@@ -3,31 +3,32 @@ package com.unblocker.app.dns
 import com.unblocker.app.logic.dns.DnsPacketUtil
 import com.unblocker.app.logic.dns.DnsQuery
 import com.unblocker.app.logic.dns.DnsResponseValidator
-import java.io.ByteArrayOutputStream
-import java.io.DataOutputStream
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.ByteArrayOutputStream
+import java.io.DataOutputStream
 
 /**
  * Regression coverage for DNS response validator.
  */
 class DnsResponseValidatorTest {
-    private val query = DnsQuery(
-        transactionId = 0x1234,
-        domain = "ads.example",
-        queryType = DnsPacketUtil.TYPE_A,
-        queryClass = DnsPacketUtil.CLASS_IN,
-        rawPacket = ByteArray(0),
-        dnsOffset = 0,
-        dnsLength = 0,
-        srcIp = byteArrayOf(10, 10, 0, 2),
-        dstIp = byteArrayOf(10, 10, 0, 1),
-        srcPort = 45_678,
-        dstPort = 53
-    )
+    private val query =
+        DnsQuery(
+            transactionId = 0x1234,
+            domain = "ads.example",
+            queryType = DnsPacketUtil.TYPE_A,
+            queryClass = DnsPacketUtil.CLASS_IN,
+            rawPacket = ByteArray(0),
+            dnsOffset = 0,
+            dnsLength = 0,
+            srcIp = byteArrayOf(10, 10, 0, 2),
+            dstIp = byteArrayOf(10, 10, 0, 1),
+            srcPort = 45_678,
+            dstPort = 53,
+        )
 
     /**
      * Verifies that accepts matching response and extracts metadata.
@@ -178,18 +179,27 @@ class DnsResponseValidatorTest {
      * Verifies that rooted aliases ignore unrelated answers and respect chain order.
      */
     @Test fun rootedAliasesIgnoreUnrelatedAnswersAndRespectChainOrder() {
-        val bytes = chain("other.test" to "tracker.test", "hop.test" to "end.test",
-            "ads.example" to "hop.test")
-        assertEquals(listOf("hop.test", "end.test"), DnsResponseValidator.parseAndValidate(bytes, bytes.size, query)!!.aliases)
+        val bytes =
+            chain(
+                "other.test" to "tracker.test",
+                "hop.test" to "end.test",
+                "ads.example" to "hop.test",
+            )
+        assertEquals(
+            listOf("hop.test", "end.test"),
+            DnsResponseValidator.parseAndValidate(bytes, bytes.size, query)!!.aliases,
+        )
     }
 
     /**
      * Verifies that cyclic conflicting and overlong chains are rejected.
      */
     @Test fun cyclicConflictingAndOverlongChainsAreRejected() {
-        for (edges in listOf(listOf("ads.example" to "hop.test", "hop.test" to "ads.example"),
+        for (edges in listOf(
+            listOf("ads.example" to "hop.test", "hop.test" to "ads.example"),
             listOf("ads.example" to "one.test", "ads.example" to "two.test"),
-            (0..8).map { (if (it == 0) "ads.example" else "h$it.test") to "h${it+1}.test" })) {
+            (0..8).map { (if (it == 0) "ads.example" else "h$it.test") to "h${it + 1}.test" },
+        )) {
             val bytes = chain(*edges.toTypedArray())
             assertNull(DnsResponseValidator.parseAndValidate(bytes, bytes.size, query))
         }
@@ -198,12 +208,23 @@ class DnsResponseValidatorTest {
     private fun chain(vararg edges: Pair<String, String>): ByteArray {
         val output = ByteArrayOutputStream()
         DataOutputStream(output).use { d ->
-            d.writeShort(0x1234); d.writeShort(0x8180); d.writeShort(1)
-            d.writeShort(edges.size); d.writeShort(0); d.writeShort(0)
-            d.write(encodeName("ads.example")); d.writeShort(1); d.writeShort(1)
+            d.writeShort(0x1234)
+            d.writeShort(0x8180)
+            d.writeShort(1)
+            d.writeShort(edges.size)
+            d.writeShort(0)
+            d.writeShort(0)
+            d.write(encodeName("ads.example"))
+            d.writeShort(1)
+            d.writeShort(1)
             edges.forEach { (owner, target) ->
-                d.write(encodeName(owner)); d.writeShort(5); d.writeShort(1); d.writeInt(60)
-                val name = encodeName(target); d.writeShort(name.size); d.write(name)
+                d.write(encodeName(owner))
+                d.writeShort(5)
+                d.writeShort(1)
+                d.writeInt(60)
+                val name = encodeName(target)
+                d.writeShort(name.size)
+                d.write(name)
             }
         }
         return output.toByteArray()
@@ -218,7 +239,7 @@ class DnsResponseValidatorTest {
         questionClass: Int = 1,
         answerTtl: Int = 120,
         cnameAlias: String? = null,
-        includeAnswerBytes: Boolean = true
+        includeAnswerBytes: Boolean = true,
     ): ByteArray {
         val output = ByteArrayOutputStream()
         DataOutputStream(output).use { data ->
@@ -268,7 +289,10 @@ class DnsResponseValidatorTest {
         return output.toByteArray()
     }
 
-    private fun responseWithCnameAndAddressTtls(cnameTtl: Int, addressTtl: Int): ByteArray {
+    private fun responseWithCnameAndAddressTtls(
+        cnameTtl: Int,
+        addressTtl: Int,
+    ): ByteArray {
         val alias = encodeName("target.example")
         val output = ByteArrayOutputStream()
         DataOutputStream(output).use { data ->

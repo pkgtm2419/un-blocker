@@ -1,14 +1,14 @@
 package com.unblocker.app.privacy
 
 import com.unblocker.app.logic.analysis.PrivateDomainSet
-import java.io.File
-import javax.crypto.spec.SecretKeySpec
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.io.File
+import javax.crypto.spec.SecretKeySpec
 
 /**
  * Regression coverage for private domain set.
@@ -18,6 +18,7 @@ class PrivateDomainSetTest {
      * Temporary filesystem fixture isolated and cleaned up by JUnit.
      */
     @get:Rule val temp = TemporaryFolder()
+
     private fun key(byte: Byte = 11) = SecretKeySpec(ByteArray(32) { byte }, "HmacSHA256")
 
     /**

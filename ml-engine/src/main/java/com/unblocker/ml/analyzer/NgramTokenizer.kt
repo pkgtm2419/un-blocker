@@ -7,8 +7,9 @@ package com.unblocker.ml.analyzer
  *
  * @param n Gram width in characters; positive values are expected but not validated at construction.
  */
-class NgramTokenizer(private val n: Int = 3) {
-
+class NgramTokenizer(
+    private val n: Int = 3,
+) {
     /**
      * Normalizes text and extracts consecutive n-grams in order.
      *

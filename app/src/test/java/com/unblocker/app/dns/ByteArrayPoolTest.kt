@@ -13,7 +13,6 @@ import java.util.concurrent.atomic.AtomicInteger
  * Regression coverage for byte array pool.
  */
 class ByteArrayPoolTest {
-
     /**
      * Verifies that test acquire and release.
      */

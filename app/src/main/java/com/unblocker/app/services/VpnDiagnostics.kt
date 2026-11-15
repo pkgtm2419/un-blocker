@@ -10,7 +10,6 @@ import java.util.concurrent.atomic.AtomicLong
  * retained as supplied and are not sanitized here; domains, addresses and payloads must not be passed.
  */
 object VpnDiagnostics {
-
     /**
      * Operational event categories used for local diagnostics and selected counters.
      */
@@ -24,7 +23,7 @@ object VpnDiagnostics {
         TUN_WRITE_ERROR,
         DNS_PARSE_ERROR,
         VPN_LOOP_FAILURE,
-        DATABASE_LOG_ERROR
+        DATABASE_LOG_ERROR,
     }
 
     /**
@@ -43,7 +42,7 @@ object VpnDiagnostics {
         val exceptionClass: String?,
         val queueDepth: Int,
         val resolverCount: Int,
-        val details: String? = null
+        val details: String? = null,
     )
 
     private val _forwardingActive = AtomicLong(0)
@@ -58,26 +57,32 @@ object VpnDiagnostics {
      * Current count of forwarding operations tracked by increment/decrement calls.
      */
     val forwardingActiveCount: Long get() = _forwardingActive.get()
+
     /**
      * Number of recorded executor forwarding rejections.
      */
     val forwardingRejectedCount: Long get() = _forwardingRejected.get()
+
     /**
      * Number of recorded upstream failure/timeout events.
      */
     val upstreamTimeoutCount: Long get() = _upstreamTimeouts.get()
+
     /**
      * Number of recorded packet-processing and DNS-parse error events.
      */
     val packetProcessingErrorCount: Long get() = _packetProcessingErrors.get()
+
     /**
      * Number of recorded TUN read-error events.
      */
     val tunReadErrorCount: Long get() = _tunReadErrors.get()
+
     /**
      * Number of recorded TUN write-error events, including queue backpressure drops.
      */
     val tunWriteErrorCount: Long get() = _tunWriteErrors.get()
+
     /**
      * Number of duplicate queries attached to an existing resolution.
      */
@@ -100,25 +105,41 @@ object VpnDiagnostics {
         exceptionClass: String? = null,
         queueDepth: Int = 0,
         resolverCount: Int = 0,
-        details: String? = null
+        details: String? = null,
     ) {
         when (code) {
-            FailureCode.FORWARDING_REJECTED -> _forwardingRejected.incrementAndGet()
-            FailureCode.UPSTREAM_TIMEOUT -> _upstreamTimeouts.incrementAndGet()
-            FailureCode.PACKET_PROCESSING, FailureCode.DNS_PARSE_ERROR -> _packetProcessingErrors.incrementAndGet()
-            FailureCode.TUN_READ_ERROR -> _tunReadErrors.incrementAndGet()
-            FailureCode.TUN_WRITE_ERROR -> _tunWriteErrors.incrementAndGet()
+            FailureCode.FORWARDING_REJECTED -> {
+                _forwardingRejected.incrementAndGet()
+            }
+
+            FailureCode.UPSTREAM_TIMEOUT -> {
+                _upstreamTimeouts.incrementAndGet()
+            }
+
+            FailureCode.PACKET_PROCESSING, FailureCode.DNS_PARSE_ERROR -> {
+                _packetProcessingErrors.incrementAndGet()
+            }
+
+            FailureCode.TUN_READ_ERROR -> {
+                _tunReadErrors.incrementAndGet()
+            }
+
+            FailureCode.TUN_WRITE_ERROR -> {
+                _tunWriteErrors.incrementAndGet()
+            }
+
             else -> {}
         }
 
-        val event = DiagnosticEvent(
-            timestampMs = System.currentTimeMillis(),
-            code = code,
-            exceptionClass = exceptionClass,
-            queueDepth = queueDepth,
-            resolverCount = resolverCount,
-            details = details
-        )
+        val event =
+            DiagnosticEvent(
+                timestampMs = System.currentTimeMillis(),
+                code = code,
+                exceptionClass = exceptionClass,
+                queueDepth = queueDepth,
+                resolverCount = resolverCount,
+                details = details,
+            )
         recentEvents.offer(event)
         while (recentEvents.size > MAX_HISTORY_EVENTS) {
             recentEvents.poll()
@@ -129,10 +150,12 @@ object VpnDiagnostics {
      * Increments active forwarding operations and returns the new count.
      */
     fun forwardingActiveIncrement(): Long = _forwardingActive.incrementAndGet()
+
     /**
      * Decrements active forwarding operations and returns the new count.
      */
     fun forwardingActiveDecrement(): Long = _forwardingActive.decrementAndGet()
+
     /**
      * Increments the duplicate-query counter and returns the new count.
      */
@@ -144,12 +167,15 @@ object VpnDiagnostics {
      * @param queueDepth Forwarding queue size in items.
      * @param resolverCount Number of configured resolver candidates.
      */
-    fun forwardingRejected(queueDepth: Int = 0, resolverCount: Int = 0) {
+    fun forwardingRejected(
+        queueDepth: Int = 0,
+        resolverCount: Int = 0,
+    ) {
         record(
             code = FailureCode.FORWARDING_REJECTED,
             exceptionClass = "java.util.concurrent.RejectedExecutionException",
             queueDepth = queueDepth,
-            resolverCount = resolverCount
+            resolverCount = resolverCount,
         )
     }
 

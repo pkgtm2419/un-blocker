@@ -1,12 +1,12 @@
 package com.unblocker.app.services
 
+import org.junit.Assert.*
+import org.junit.Test
 import java.io.Closeable
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
-import org.junit.Assert.*
-import org.junit.Test
 
 /**
  * Regression coverage for tunnel run.
@@ -14,7 +14,10 @@ import org.junit.Test
 class TunnelRunTest {
     private class RecordingCloseable : Closeable {
         val closeCount = AtomicInteger(0)
-        override fun close() { closeCount.incrementAndGet() }
+
+        override fun close() {
+            closeCount.incrementAndGet()
+        }
     }
 
     /**
@@ -29,7 +32,9 @@ class TunnelRunTest {
             assertEquals(42, current.forwarding.submit<Int> { 42 }.get(2, TimeUnit.SECONDS))
             assertTrue(current.running.get())
             assertFalse(old.running.get())
-        } finally { current.close() }
+        } finally {
+            current.close()
+        }
     }
 
     /**
@@ -40,16 +45,23 @@ class TunnelRunTest {
         val entered = CountDownLatch(4)
         val release = CountDownLatch(1)
         try {
-            repeat(4) { run.forwarding.execute {
-                entered.countDown()
-                try { release.await() } catch (_: InterruptedException) { Thread.currentThread().interrupt() }
-            } }
+            repeat(4) {
+                run.forwarding.execute {
+                    entered.countDown()
+                    try {
+                        release.await()
+                    } catch (_: InterruptedException) {
+                        Thread.currentThread().interrupt()
+                    }
+                }
+            }
             assertTrue(entered.await(3, TimeUnit.SECONDS))
             repeat(64) { run.forwarding.execute {} }
             try {
                 run.forwarding.execute {}
                 fail("Excess work should be rejected")
-            } catch (_: RejectedExecutionException) { }
+            } catch (_: RejectedExecutionException) {
+            }
         } finally {
             run.close()
             release.countDown()
@@ -117,19 +129,23 @@ class TunnelRunTest {
         val releaseDelivery = CountDownLatch(1)
         val cleanupAttempted = CountDownLatch(1)
         val cleanupFinished = CountDownLatch(1)
-        val executor = java.util.concurrent.Executors.newFixedThreadPool(2)
-        val cleanupThread = Thread {
-            cleanupAttempted.countDown()
-            run.close()
-            cleanupFinished.countDown()
-        }
-        try {
-            val delivery = executor.submit<Boolean> {
-                run.useWhileRunning {
-                    deliveryEntered.countDown()
-                    releaseDelivery.await(2, TimeUnit.SECONDS)
-                }
+        val executor =
+            java.util.concurrent.Executors
+                .newFixedThreadPool(2)
+        val cleanupThread =
+            Thread {
+                cleanupAttempted.countDown()
+                run.close()
+                cleanupFinished.countDown()
             }
+        try {
+            val delivery =
+                executor.submit<Boolean> {
+                    run.useWhileRunning {
+                        deliveryEntered.countDown()
+                        releaseDelivery.await(2, TimeUnit.SECONDS)
+                    }
+                }
             assertTrue(deliveryEntered.await(2, TimeUnit.SECONDS))
 
             cleanupThread.start()

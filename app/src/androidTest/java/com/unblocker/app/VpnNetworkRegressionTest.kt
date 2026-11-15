@@ -20,6 +20,9 @@ import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
 
+/**
+ * Regression coverage for vpn network regression.
+ */
 @RunWith(AndroidJUnit4::class)
 class VpnNetworkRegressionTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
@@ -45,6 +48,9 @@ class VpnNetworkRegressionTest {
         Thread.sleep(500)
     }
 
+    /**
+     * Releases test resources and restores shared state after each test.
+     */
     @After
     fun cleanup() {
         UnblockerVpnService.stop(context)
@@ -52,6 +58,9 @@ class VpnNetworkRegressionTest {
         instrumentation.uiAutomation.dropShellPermissionIdentity()
     }
 
+    /**
+     * Verifies that permission revoked closes tunnel and disables protection.
+     */
     @Test
     fun permissionRevokedClosesTunnelAndDisablesProtection() {
         openApp()
@@ -69,6 +78,9 @@ class VpnNetworkRegressionTest {
         assertFalse(UnblockerVpnService.isServiceActive.value)
     }
 
+    /**
+     * Verifies that twenty rapid start stop cycles leave no stale session.
+     */
     @Test
     fun twentyRapidStartStopCyclesLeaveNoStaleSession() {
         openApp()
@@ -87,6 +99,9 @@ class VpnNetworkRegressionTest {
         assertFalse(UnblockerVpnService.isServiceActive.value)
     }
 
+    /**
+     * Verifies that blocked domain receives local DNS response without upstream.
+     */
     @Test
     fun blockedDomainReceivesLocalDnsResponseWithoutUpstream() {
         openApp()

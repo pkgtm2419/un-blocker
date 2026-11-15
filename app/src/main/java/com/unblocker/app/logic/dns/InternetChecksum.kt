@@ -2,11 +2,31 @@ package com.unblocker.app.logic.dns
 
 /** One's-complement checksums used by IP and UDP packet builders. */
 object InternetChecksum {
+    /**
+     * Computes the Internet checksum across a selected IPv4 header range.
+     *
+     * @param packet Bytes containing the header; zero the checksum field when generating a checksum.
+     * @param offset Zero-based header byte offset.
+     * @param length Header range length in bytes.
+     * @return Checksum wire bits as a Short, without normalizing a zero result.
+     * @throws IllegalArgumentException If the selected range is empty or outside packet.
+     */
     fun ipv4Header(packet: ByteArray, offset: Int, length: Int): Short {
         require(offset >= 0 && length > 0 && offset <= packet.size - length)
         return finish(sumBytes(packet, offset, length), normalizeZero = false)
     }
 
+    /**
+     * Computes the IPv6 UDP pseudo-header and segment checksum.
+     *
+     * @param source Sixteen-byte source address.
+     * @param destination Sixteen-byte destination address.
+     * @param udpSegment Bytes containing the UDP header and payload.
+     * @param offset Zero-based segment byte offset.
+     * @param length Segment length in bytes, from 8 through 65535.
+     * @return Checksum wire bits, mapping a zero result to 0xffff.
+     * @throws IllegalArgumentException If addresses or segment bounds are invalid.
+     */
     fun udpIpv6(
         source: ByteArray,
         destination: ByteArray,
@@ -28,6 +48,17 @@ object InternetChecksum {
         return finish(sum, normalizeZero = true)
     }
 
+    /**
+     * Computes the IPv4 TCP pseudo-header and segment checksum.
+     *
+     * @param source Four-byte source address.
+     * @param destination Four-byte destination address.
+     * @param tcpSegment Bytes containing the TCP header and payload.
+     * @param offset Zero-based segment byte offset.
+     * @param length Segment length in bytes, from 20 through 65535.
+     * @return Checksum wire bits, mapping a zero result to 0xffff.
+     * @throws IllegalArgumentException If addresses or segment bounds are invalid.
+     */
     fun tcpIpv4(
         source: ByteArray,
         destination: ByteArray,
@@ -47,6 +78,17 @@ object InternetChecksum {
         return finish(sum, normalizeZero = true)
     }
 
+    /**
+     * Computes the IPv6 TCP pseudo-header and segment checksum.
+     *
+     * @param source Sixteen-byte source address.
+     * @param destination Sixteen-byte destination address.
+     * @param tcpSegment Bytes containing the TCP header and payload.
+     * @param offset Zero-based segment byte offset.
+     * @param length Segment length in bytes, from 20 through 65535.
+     * @return Checksum wire bits, mapping a zero result to 0xffff.
+     * @throws IllegalArgumentException If addresses or segment bounds are invalid.
+     */
     fun tcpIpv6(
         source: ByteArray,
         destination: ByteArray,

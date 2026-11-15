@@ -8,6 +8,9 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 
+/**
+ * Regression coverage for DNS servfail response.
+ */
 class DnsServfailResponseTest {
 
     private fun buildSyntheticQueryPacket(txId: Short, domain: String): ByteArray {
@@ -59,6 +62,9 @@ class DnsServfailResponseTest {
         return buf.array()
     }
 
+    /**
+     * Verifies that test build servfail DNS response packet preserves tx id and question.
+     */
     @Test
     fun testBuildServfailDnsResponsePacketPreservesTxIdAndQuestion() {
         val txId: Short = 0x7A9B.toShort()
@@ -96,6 +102,9 @@ class DnsServfailResponseTest {
         assertEquals("RCODE must be 2 (SERVFAIL)", 2, rcode)
     }
 
+    /**
+     * Verifies that test build servfail wire response valid query.
+     */
     @Test
     fun testBuildServfailWireResponseValidQuery() {
         val queryPacket = buildSyntheticQueryPacket(0x3344.toShort(), "sub.domain.test")
@@ -112,6 +121,9 @@ class DnsServfailResponseTest {
         assertEquals("ANCOUNT must be 0", 0, respBuf.short.toInt() and 0xFFFF)
     }
 
+    /**
+     * Verifies that test build servfail wire response malformed payload returns null.
+     */
     @Test
     fun testBuildServfailWireResponseMalformedPayloadReturnsNull() {
         val garbage = byteArrayOf(1, 2, 3, 4)

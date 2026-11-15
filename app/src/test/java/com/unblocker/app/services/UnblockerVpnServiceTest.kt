@@ -3,8 +3,14 @@ package com.unblocker.app.services
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
+/**
+ * Regression coverage for unblocker vpn service.
+ */
 class UnblockerVpnServiceTest {
 
+    /**
+     * Verifies that test should warn truth table.
+     */
     @Test
     fun testShouldWarnTruthTable() {
         // active = true, serverName = non-null -> warn

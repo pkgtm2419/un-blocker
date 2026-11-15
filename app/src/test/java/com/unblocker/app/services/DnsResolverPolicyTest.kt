@@ -4,7 +4,13 @@ import java.net.InetAddress
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
+/**
+ * Regression coverage for DNS resolver policy.
+ */
 class DnsResolverPolicyTest {
+    /**
+     * Verifies that removes tunnel loopback unspecified and duplicate addresses.
+     */
     @Test fun removesTunnelLoopbackUnspecifiedAndDuplicateAddresses() {
         val result = DnsResolverPolicy.sanitize(listOf(
             InetAddress.getByName("10.10.0.1"),
@@ -19,6 +25,9 @@ class DnsResolverPolicyTest {
             result.mapNotNull { it.hostAddress })
     }
 
+    /**
+     * Verifies that does not invent public fallback when no system resolver is usable.
+     */
     @Test fun doesNotInventPublicFallbackWhenNoSystemResolverIsUsable() {
         val result = DnsResolverPolicy.sanitize(listOf(
             InetAddress.getByName("10.10.0.1"),
@@ -28,6 +37,9 @@ class DnsResolverPolicyTest {
         assertEquals(emptyList<InetAddress>(), result)
     }
 
+    /**
+     * Verifies that select configured returns only sanitized android resolvers.
+     */
     @Test fun selectConfiguredReturnsOnlySanitizedAndroidResolvers() {
         val result = DnsResolverPolicy.selectConfigured(listOf(
             listOf(
@@ -47,6 +59,9 @@ class DnsResolverPolicyTest {
         )
     }
 
+    /**
+     * Verifies that select configured fails closed when discovery is empty or unusable.
+     */
     @Test fun selectConfiguredFailsClosedWhenDiscoveryIsEmptyOrUnusable() {
         assertEquals(emptyList<InetAddress>(), DnsResolverPolicy.selectConfigured(emptyList()))
         assertEquals(

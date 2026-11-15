@@ -6,8 +6,21 @@ import java.io.InputStreamReader
 import com.unblocker.app.domain.model.DecisionReason
 import com.unblocker.app.logic.analysis.PublicSuffixRules
 
+/**
+ * Result of the DNS-only adult-domain classifier.
+ *
+ * @property blocked Whether this classifier matched a block condition.
+ * @property reason Match explanation, empty when unmatched.
+ * @property code Machine-readable reason for the matched or allowed result.
+ */
 data class AdultMatch(val blocked: Boolean, val reason: String, val code: DecisionReason)
 
+/**
+ * Classifies names using exceptions, a static list, TLDs and lexical patterns.
+ *
+ * @param context Asset context, or null to use embedded domains.
+ * @param suffixRules Public suffix context used to select pattern targets.
+ */
 class AdultContentDetector(
     private val context: Context? = null,
     private val suffixRules: PublicSuffixRules = PublicSuffixRules.from(context)
@@ -55,6 +68,9 @@ class AdultContentDetector(
         return false
     }
 
+    /**
+     * Adds normalized asset domains, falling back to embedded domains when loading fails.
+     */
     fun loadStaticList() {
         if (context == null) {
             val fallback = listOf(
@@ -86,12 +102,29 @@ class AdultContentDetector(
         }
     }
 
+    /**
+     * Adds a valid user-entered domain to the classifier in memory.
+     *
+     * @param domain Domain to normalize; invalid entries are ignored.
+     */
     fun addDomain(domain: String) {
         DomainName.normalizeUserEntry(domain)?.let(adultDomains::add)
     }
 
+    /**
+     * Returns the classifier block flag and explanation.
+     *
+     * @param rawDomain DNS hostname to classify.
+     * @return Block flag and reason, with an empty reason for unmatched or invalid names.
+     */
     fun isAdultContent(rawDomain: String): Pair<Boolean, String> = match(rawDomain).let { it.blocked to it.reason }
 
+    /**
+     * Evaluates exceptions before static domains, TLDs and lexical patterns.
+     *
+     * @param rawDomain DNS hostname to normalize and classify.
+     * @return Classifier result; invalid and unmatched domains are allowed.
+     */
     fun match(rawDomain: String): AdultMatch {
         val domain = DomainName.normalize(rawDomain) ?: return AdultMatch(false,"",DecisionReason.ALLOWED)
 
@@ -138,5 +171,8 @@ class AdultContentDetector(
         return AdultMatch(false,"",DecisionReason.ALLOWED)
     }
 
+    /**
+     * Returns the number of distinct domains in the static membership set.
+     */
     fun getDomainCount(): Int = adultDomains.size
 }

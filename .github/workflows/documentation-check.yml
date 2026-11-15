@@ -1,0 +1,27 @@
+name: Documentation contracts and drift
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: docs-check-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out source and documentation
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Test documentation tooling
+        run: python3 -m unittest discover -s scripts/tests -p 'test_docs_*.py' -v
+      - name: Validate Markdown, skills and rules
+        run: python3 scripts/docs_contract.py
+      - name: Check generated inventories for source drift
+        run: python3 scripts/docs_sync.py --check

@@ -6,7 +6,7 @@ package com.unblocker.common.model
 enum class RuleSource {
     /** Compiled from static blocklist assets bundled with the app. */
     STATIC,
-    /** Inferred by the on-device TensorFlow Lite ML batch worker. */
+    /** Inferred by an on-device classifier or heuristic worker. */
     ML,
     /** Manually set by the user via the whitelist / false-positive dashboard. */
     USER

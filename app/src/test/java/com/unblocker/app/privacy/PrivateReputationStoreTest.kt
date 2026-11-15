@@ -10,10 +10,19 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 
+/**
+ * Regression coverage for private reputation store.
+ */
 class PrivateReputationStoreTest {
+    /**
+     * Temporary filesystem fixture isolated and cleaned up by JUnit.
+     */
     @get:Rule val temp = TemporaryFolder()
     private fun key(byte: Byte = 7) = SecretKeySpec(ByteArray(32) { byte }, "HmacSHA256")
 
+    /**
+     * Verifies that reload preserves scores without persisting domains.
+     */
     @Test fun reloadPreservesScoresWithoutPersistingDomains() {
         val file = File(temp.root, "reputations")
         PrivateReputationStore(key(), file).put("Ads.Example.com", 0.9f)
@@ -22,6 +31,9 @@ class PrivateReputationStoreTest {
         assertNull(PrivateReputationStore(key(8), file).get("ads.example.com"))
     }
 
+    /**
+     * Verifies that migration removes plaintext and rejects invalid scores.
+     */
     @Test fun migrationRemovesPlaintextAndRejectsInvalidScores() {
         val legacy = File(temp.root, "learned_trackers.txt").apply {
             writeText("ads.example.com:0.9\nbad.example:NaN\nbad2.example:4\n")
@@ -35,6 +47,9 @@ class PrivateReputationStoreTest {
         assertFalse(file.readText().contains("example"))
     }
 
+    /**
+     * Verifies that concurrent updates stay bounded and reset removes learning.
+     */
     @Test fun concurrentUpdatesStayBoundedAndResetRemovesLearning() {
         val file = File(temp.root, "reputations")
         val store = PrivateReputationStore(key(), file, 8)
@@ -48,6 +63,9 @@ class PrivateReputationStoreTest {
         assertEquals(0, PrivateReputationStore(key(), file).size())
     }
 
+    /**
+     * Verifies that corrupt snapshot does not break filtering.
+     */
     @Test fun corruptSnapshotDoesNotBreakFiltering() {
         val file = File(temp.root, "reputations").apply { writeText("garbage\nexample.com:NaN\n") }
         val store = PrivateReputationStore(key(), file)
@@ -56,6 +74,9 @@ class PrivateReputationStoreTest {
         assertEquals(0.8f, store.get("ads.example.com")!!, 0f)
     }
 
+    /**
+     * Verifies that unavailable key during lookup does not interrupt filtering.
+     */
     @Test fun unavailableKeyDuringLookupDoesNotInterruptFiltering() {
         var available = true
         val flakyKey = object : SecretKey {
@@ -75,6 +96,9 @@ class PrivateReputationStoreTest {
         assertEquals(0.9f, store.get("ads.example.com")!!, 0f)
     }
 
+    /**
+     * Verifies that default capacity retains more than legacy five thousand limit.
+     */
     @Test fun defaultCapacityRetainsMoreThanLegacyFiveThousandLimit() {
         val store = PrivateReputationStore(key())
         repeat(5_001) { index -> store.put("ads-$index.example.com", 0.9f) }
@@ -83,6 +107,9 @@ class PrivateReputationStoreTest {
         assertEquals(0.9f, store.get("ads-0.example.com")!!, 0f)
     }
 
+    /**
+     * Verifies that untouched score decays five percent per completed week.
+     */
     @Test fun untouchedScoreDecaysFivePercentPerCompletedWeek() {
         var now = 1_700_000_000_000L
         val store = PrivateReputationStore(key(), nowMillis = { now })

@@ -5,10 +5,16 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
+/**
+ * Regression coverage for adult content detector.
+ */
 class AdultContentDetectorTest {
 
     private lateinit var adultDetector: AdultContentDetector
 
+    /**
+     * Resets the fixture state before each test to keep assertions independent.
+     */
     @Before
     fun setup() {
         adultDetector = AdultContentDetector(context = null)
@@ -19,6 +25,9 @@ class AdultContentDetectorTest {
         adultDetector.addDomain("livejasmin.com")
     }
 
+    /**
+     * Verifies that test exact adult domain match.
+     */
     @Test
     fun testExactAdultDomainMatch() {
         val (isAdult1, _) = adultDetector.isAdultContent("pornhub.com")
@@ -28,6 +37,9 @@ class AdultContentDetectorTest {
         assertTrue("xvideos.com should be detected as adult content", isAdult2)
     }
 
+    /**
+     * Verifies that test subdomain match.
+     */
     @Test
     fun testSubdomainMatch() {
         val (isAdult, _) = adultDetector.isAdultContent("m.pornhub.com")
@@ -37,6 +49,9 @@ class AdultContentDetectorTest {
         assertTrue("cdn.chaturbate.com should match adult domain", isAdult2)
     }
 
+    /**
+     * Verifies that test adult tld rule.
+     */
     @Test
     fun testAdultTldRule() {
         val (isAdult1, _) = adultDetector.isAdultContent("example-gallery.xxx")
@@ -49,6 +64,9 @@ class AdultContentDetectorTest {
         assertTrue(".porn TLD should be identified as adult content", isAdult3)
     }
 
+    /**
+     * Verifies that test adult pattern match.
+     */
     @Test
     fun testAdultPatternMatch() {
         val (isAdult1, _) = adultDetector.isAdultContent("free-porn-videos.com")
@@ -58,6 +76,9 @@ class AdultContentDetectorTest {
         assertTrue("Domain with strip/cam pattern should be identified as adult", isAdult2)
     }
 
+    /**
+     * Verifies that test false positive guard.
+     */
     @Test
     fun testFalsePositiveGuard() {
         val (isAdult1, _) = adultDetector.isAdultContent("essex.ac.uk")
@@ -70,6 +91,9 @@ class AdultContentDetectorTest {
         assertFalse("middlesex.edu must NOT be blocked as adult content", isAdult3)
     }
 
+    /**
+     * Verifies that test benign domains not blocked.
+     */
     @Test
     fun testBenignDomainsNotBlocked() {
         val (isAdult1, _) = adultDetector.isAdultContent("google.com")
@@ -91,6 +115,9 @@ class AdultContentDetectorTest {
         assertFalse("googlevideo CDN must NOT be identified as adult content", isAdult6)
     }
 
+    /**
+     * Verifies that benign prefixes do not gain adult blocking authority.
+     */
     @Test fun benignPrefixesDoNotGainAdultBlockingAuthority() {
         for(domain in listOf("stripe.com","api.stripe.com","cambridge.org","camera.example.test",
             "adultlearning.example.test","sexeducation.example.test","striped.example.test")) {
@@ -98,6 +125,9 @@ class AdultContentDetectorTest {
         }
     }
 
+    /**
+     * Verifies that test must allow corpus has zero false positives.
+     */
     @Test
     fun testMustAllowCorpusHasZeroFalsePositives() {
         val mustAllow50Plus = listOf(

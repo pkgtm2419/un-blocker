@@ -7,8 +7,14 @@ import org.junit.Test
 import java.io.ByteArrayOutputStream
 import java.io.StringWriter
 
+/**
+ * Regression coverage for CSV writer.
+ */
 class CsvWriterTest {
 
+    /**
+     * Verifies that test escape cell standard.
+     */
     @Test
     fun testEscapeCellStandard() {
         assertEquals("google.com", CsvWriter.escapeCell("google.com"))
@@ -16,6 +22,9 @@ class CsvWriterTest {
         assertEquals("\"quotes\"\"test\"", CsvWriter.escapeCell("quotes\"test"))
     }
 
+    /**
+     * Verifies that test formula injection guarded.
+     */
     @Test
     fun testFormulaInjectionGuarded() {
         // Cells starting with =, +, -, @ must be prefixed with single quote
@@ -25,6 +34,9 @@ class CsvWriterTest {
         assertEquals("'@SUM(A1:A10)", CsvWriter.escapeCell("@SUM(A1:A10)"))
     }
 
+    /**
+     * Verifies that test domain exporter outputs valid CSV.
+     */
     @Test
     fun testDomainExporterOutputsValidCsv() {
         val stats = listOf(

@@ -5,6 +5,9 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * Regression coverage for protected domains.
+ */
 class ProtectedDomainsTest {
 
     private val psl = PublicSuffixRules.fallback
@@ -21,6 +24,9 @@ class ProtectedDomainsTest {
         psl = psl
     )
 
+    /**
+     * Verifies that test built in protection.
+     */
     @Test
     fun testBuiltInProtection() {
         assertTrue(protectedDomains.isProtected("google.com"))
@@ -34,6 +40,9 @@ class ProtectedDomainsTest {
         assertFalse(protectedDomains.isProtected("example.com"))
     }
 
+    /**
+     * Verifies that test my domains protection.
+     */
     @Test
     fun testMyDomainsProtection() {
         // Registrable domain
@@ -48,6 +57,9 @@ class ProtectedDomainsTest {
         assertFalse(protectedDomains.isProtected("otherbank.com"))
     }
 
+    /**
+     * Verifies that test rule would block protected.
+     */
     @Test
     fun testRuleWouldBlockProtected() {
         // SUFFIX rule on google.com blocks google.com, docs.google.com, www.google.com

@@ -1,14 +1,16 @@
 package com.unblocker.common.model
 
 /**
- * Represents a parsed DNS query extracted from a raw IP/UDP packet.
+ * Parsed DNS query metadata extracted from an IP/UDP packet.
  *
- * @param domain      The fully-qualified domain name being queried (e.g. "ads.example.com").
- * @param isIpv6      True when the enclosing IP packet is IPv6; false for IPv4.
- * @param srcIp       Source IP bytes (4 bytes for IPv4, 16 bytes for IPv6).
- * @param dstIp       Destination IP bytes.
- * @param srcPort     UDP source port of the original DNS query.
- * @param txId        DNS transaction ID, used to match responses.
+ * Address arrays are retained directly; do not mutate them while using equality or hashing.
+ *
+ * @property domain Queried domain name as supplied by the parser.
+ * @property isIpv6 Whether the enclosing packet uses IPv6.
+ * @property srcIp Source address bytes: four for IPv4 or sixteen for IPv6.
+ * @property dstIp Destination address bytes in the same address family.
+ * @property srcPort Original UDP source port as an unsigned 16-bit value in an Int.
+ * @property txId DNS transaction ID bits represented as a signed Short.
  */
 data class DnsPacket(
     val domain: String,
@@ -18,6 +20,12 @@ data class DnsPacket(
     val srcPort: Int = 0,
     val txId: Short = 0
 ) {
+    /**
+     * Compares metadata using address array contents.
+     *
+     * @param other Value to compare.
+     * @return Whether all metadata and address bytes match.
+     */
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is DnsPacket) return false
@@ -29,6 +37,11 @@ data class DnsPacket(
             txId == other.txId
     }
 
+    /**
+     * Hashes metadata using address array contents.
+     *
+     * @return Hash consistent with [equals] while address arrays remain unchanged.
+     */
     override fun hashCode(): Int {
         var result = domain.hashCode()
         result = 31 * result + isIpv6.hashCode()

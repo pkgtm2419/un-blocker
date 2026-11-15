@@ -4,14 +4,26 @@ import android.content.Context
 import android.provider.Settings
 
 /**
- * Encapsulates system accessibility animation settings and user Quiet UI preference.
- * Affects only Compose decoration and visual effects, never VPN packet processing.
+ * Snapshot of animation settings for UI decoration, independent of VPN packet processing.
+ *
+ * @property disableDecorativeLoops Whether looping decoration should be disabled.
+ * @property durationScale System animation-duration multiplier, or zero when reduced motion is requested.
  */
 data class ReducedMotionPolicy(
     val disableDecorativeLoops: Boolean,
     val durationScale: Float
 ) {
+    /**
+     * Factory for snapshots of the current system animation policy.
+     */
     companion object {
+        /**
+         * Reads the global animator scale, falling back to one when the setting cannot be read.
+         *
+         * @param context Context providing access to global settings.
+         * @param quietUiOptIn Whether a caller explicitly requests reduced decoration.
+         * @return Reduced motion when opted in or when the system animator scale is zero.
+         */
         fun resolve(context: Context, quietUiOptIn: Boolean = false): ReducedMotionPolicy {
             val systemScale = try {
                 Settings.Global.getFloat(

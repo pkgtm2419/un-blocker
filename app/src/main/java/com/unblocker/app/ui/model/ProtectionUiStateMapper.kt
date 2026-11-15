@@ -2,8 +2,19 @@ package com.unblocker.app.ui.model
 
 import com.unblocker.app.services.ServiceStatus
 
+/**
+ * Maps service and DNS coverage signals to protection labels and recovery actions.
+ */
 object ProtectionUiStateMapper {
 
+    /**
+     * Derives a presentation with Private DNS warnings taking priority over missing resolvers while running.
+     *
+     * @param status Current service status.
+     * @param privateDnsActive Whether Android reports active Private DNS.
+     * @param resolverAvailable Whether a usable upstream network resolver is available.
+     * @return Protection label, detail, and an optional recovery action.
+     */
     fun from(
         status: ServiceStatus,
         privateDnsActive: Boolean,

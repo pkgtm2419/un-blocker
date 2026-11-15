@@ -7,8 +7,14 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 
+/**
+ * Regression coverage for rule set allocation benchmark.
+ */
 class RuleSetAllocationBenchmarkTest {
 
+    /**
+     * Verifies that benchmark rule set matching correctness and efficiency.
+     */
     @Test
     fun benchmarkRuleSetMatchingCorrectnessAndEfficiency() {
         val rules = listOf(

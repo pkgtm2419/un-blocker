@@ -7,6 +7,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
+/**
+ * Regression coverage for multi factor ad classifier.
+ */
 class MultiFactorAdClassifierTest {
 
     private lateinit var learner: LocalNetworkLearner
@@ -15,11 +18,17 @@ class MultiFactorAdClassifierTest {
         "mixpanel.com", "segment.com", "amplitude.com", "scorecardresearch.com"
     )
 
+    /**
+     * Resets the fixture state before each test to keep assertions independent.
+     */
     @Before
     fun setup() {
         learner = LocalNetworkLearner(isKnownTracker = { it in trackers || trackers.any { t -> it.endsWith(".$t") } })
     }
 
+    /**
+     * Verifies that test domain signature extraction.
+     */
     @Test
     fun testDomainSignatureExtraction() {
         val signature = learner.extractDomainSignature("pixel.track.telemetry.adserver.com")
@@ -29,6 +38,9 @@ class MultiFactorAdClassifierTest {
         assertTrue("Threat score should be elevated", signature.compositeThreatScore >= 0.70f)
     }
 
+    /**
+     * Verifies that test dynamic DNS tracker detection.
+     */
     @Test
     fun testDynamicDnsTrackerDetection() {
         val ddnsDomain = "tracker-beacon.duckdns.org"
@@ -39,6 +51,9 @@ class MultiFactorAdClassifierTest {
         assertTrue("Threat score should be elevated for DDNS tracker", signature.compositeThreatScore >= 0.75f)
     }
 
+    /**
+     * Verifies that test known mobile tracker frameworks.
+     */
     @Test
     fun testKnownMobileTrackerFrameworks() {
         val trackers = listOf(
@@ -53,6 +68,9 @@ class MultiFactorAdClassifierTest {
         }
     }
 
+    /**
+     * Verifies that test benign domain signature.
+     */
     @Test
     fun testBenignDomainSignature() {
         val signature = learner.extractDomainSignature("en.wikipedia.org")

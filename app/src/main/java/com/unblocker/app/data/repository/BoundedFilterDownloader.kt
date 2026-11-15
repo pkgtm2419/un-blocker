@@ -15,20 +15,68 @@ import java.net.URL
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
+/**
+ * Outcome of downloading and admitting a bounded DNS rule list.
+ */
 sealed class DownloadResult {
+    /**
+     * The admitted file was saved.
+     *
+     * @property bytesRead Total response body bytes consumed, including discarded lines.
+     * @property validRuleCount Number of accepted rules written to the destination.
+     */
     data class Success(val bytesRead: Long, val validRuleCount: Int) : DownloadResult()
+    /**
+     * The HTTP response or redirect chain was rejected.
+     *
+     * @property statusCode Last observed HTTP response code.
+     * @property message Failure explanation.
+     */
     data class HttpFailure(val statusCode: Int, val message: String) : DownloadResult()
+    /**
+     * Reading the response failed.
+     *
+     * @property message Network or stream I/O failure explanation.
+     */
     data class NetworkFailure(val message: String) : DownloadResult()
+    /**
+     * A URL or resolved destination failed validation.
+     *
+     * @property message Source validation failure explanation.
+     */
     data class InvalidSource(val message: String) : DownloadResult()
+    /**
+     * The byte, line, or rule budget was exceeded.
+     *
+     * @property message Description of the exceeded limit.
+     */
     data class TooLarge(val message: String) : DownloadResult()
+    /**
+     * The list contained no admitted rules or too many anomalous lines.
+     *
+     * @property message Rule admission failure explanation.
+     */
     data class InvalidRules(val message: String) : DownloadResult()
 }
 
+/**
+ * Downloads HTTPS lists with redirect validation, resource limits, and DNS rule admission.
+ *
+ * @param connectionFactory Opens each validated URL; injectable for connection-level tests.
+ */
 class BoundedFilterDownloader(
     private val connectionFactory: (URL) -> HttpURLConnection = { url -> url.openConnection() as HttpURLConnection }
 ) {
 
+    /**
+     * Shared downloader configured with standard URL connections.
+     */
     companion object {
+        private const val MAX_REDIRECTS = 3
+        private const val MAX_ANOMALOUS_SKIP_RATIO = 0.02
+        /**
+         * Shared downloader using standard URL connections.
+         */
         val DEFAULT = BoundedFilterDownloader()
     }
 
@@ -38,19 +86,19 @@ class BoundedFilterDownloader(
         }
         val bytes = address.address
         if (bytes.size == 4) {
-            val b0 = bytes[0].toInt() and 0xFF
-            val b1 = bytes[1].toInt() and 0xFF
-            if (b0 == 10) return true
-            if (b0 == 127) return true
-            if (b0 == 172 && (b1 in 16..31)) return true
-            if (b0 == 192 && b1 == 168) return true
-            if (b0 == 169 && b1 == 254) return true
-            if (b0 == 0) return true
+            val firstOctet = bytes[0].toInt() and 0xFF
+            val secondOctet = bytes[1].toInt() and 0xFF
+            if (firstOctet == 10) return true
+            if (firstOctet == 127) return true
+            if (firstOctet == 172 && (secondOctet in 16..31)) return true
+            if (firstOctet == 192 && secondOctet == 168) return true
+            if (firstOctet == 169 && secondOctet == 254) return true
+            if (firstOctet == 0) return true
         } else if (bytes.size == 16) {
-            val b0 = bytes[0].toInt() and 0xFF
-            val b1 = bytes[1].toInt() and 0xFF
-            if ((b0 and 0xFE) == 0xFC) return true // Unique Local Address (fc00::/7)
-            if (b0 == 0xFE && (b1 and 0xC0) == 0x80) return true // Link-Local (fe80::/10)
+            val firstOctet = bytes[0].toInt() and 0xFF
+            val secondOctet = bytes[1].toInt() and 0xFF
+            if ((firstOctet and 0xFE) == 0xFC) return true // Unique Local Address (fc00::/7)
+            if (firstOctet == 0xFE && (secondOctet and 0xC0) == 0x80) return true // Link-Local (fe80::/10)
         }
         return false
     }
@@ -65,13 +113,26 @@ class BoundedFilterDownloader(
         } catch (e: Exception) {
             throw IllegalArgumentException("Could not resolve host: $host", e)
         }
-        for (addr in addresses) {
-            if (isPrivateIpAddress(addr)) {
-                throw IllegalArgumentException("Blocked private network URL: $host ($addr)")
+        for (address in addresses) {
+            if (isPrivateIpAddress(address)) {
+                throw IllegalArgumentException("Blocked private network URL: $host ($address)")
             }
         }
     }
 
+    /**
+     * Downloads admitted rule lines on the IO dispatcher and replaces the destination after validation.
+     *
+     * @param sourceUrl Initial HTTPS list URL; redirect targets are validated separately.
+     * @param destination Cached rule file to replace after successful admission.
+     * @param maxBytes Maximum number of response body bytes to consume.
+     * @param maxRules Maximum number of admitted rule lines.
+     * @param maxLineBytes Maximum length of a response line in bytes.
+     * @param connectTimeoutMs Connection timeout in milliseconds.
+     * @param readTimeoutMs Response read timeout in milliseconds.
+     * @return Saved-file counts or a typed validation, HTTP, size, or read failure.
+     * @throws IOException If temporary-file creation or the final fallback copy fails.
+     */
     suspend fun download(
         sourceUrl: URL,
         destination: File,
@@ -95,7 +156,6 @@ class BoundedFilterDownloader(
     ): DownloadResult {
         var currentUrl = sourceUrl
         var redirectCount = 0
-        val maxRedirects = 3
 
         while (true) {
             try {
@@ -118,9 +178,9 @@ class BoundedFilterDownloader(
 
             if (statusCode in 300..399) {
                 redirectCount++
-                if (redirectCount > maxRedirects) {
+                if (redirectCount > MAX_REDIRECTS) {
                     conn.disconnect()
-                    return DownloadResult.HttpFailure(statusCode, "Redirect limit exceeded ($maxRedirects)")
+                    return DownloadResult.HttpFailure(statusCode, "Redirect limit exceeded ($MAX_REDIRECTS)")
                 }
                 val location = conn.getHeaderField("Location")
                 conn.disconnect()
@@ -156,13 +216,13 @@ class BoundedFilterDownloader(
                     BufferedInputStream(conn.inputStream).use { stream ->
                         tempFile.bufferedWriter(Charsets.UTF_8).use { writer ->
                             var currentLineBytes = 0
-                            var b: Int
-                            while (stream.read().also { b = it } != -1) {
+                            var nextByte: Int
+                            while (stream.read().also { nextByte = it } != -1) {
                                 totalBytesRead++
                                 if (totalBytesRead > maxBytes) {
                                     return DownloadResult.TooLarge("Download exceeded limit of $maxBytes bytes")
                                 }
-                                if (b == '\n'.code) {
+                                if (nextByte == '\n'.code) {
                                     val line = lineBuffer.toString("UTF-8").trimEnd('\r')
                                     lineBuffer.reset()
                                     currentLineBytes = 0
@@ -193,7 +253,7 @@ class BoundedFilterDownloader(
                                     if (currentLineBytes > maxLineBytes) {
                                         return DownloadResult.TooLarge("Line length exceeded limit of $maxLineBytes bytes")
                                     }
-                                    lineBuffer.write(b)
+                                    lineBuffer.write(nextByte)
                                 }
                             }
 
@@ -238,7 +298,7 @@ class BoundedFilterDownloader(
 
                 if (nonCommentLines > 0) {
                     val anomalousRatio = anomalousSkippedCount.toDouble() / nonCommentLines.toDouble()
-                    if (anomalousRatio > 0.02) {
+                    if (anomalousRatio > MAX_ANOMALOUS_SKIP_RATIO) {
                         return DownloadResult.InvalidRules(
                             "Filter rejected: anomalous skip rate ${(anomalousRatio * 100).toInt()}% exceeds 2% threshold"
                         )

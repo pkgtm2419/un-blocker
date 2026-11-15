@@ -9,6 +9,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * Regression coverage for user rule action.
+ */
 class UserRuleActionTest {
 
     private class FakeUserRuleGateway : UserRuleGateway {
@@ -57,6 +60,9 @@ class UserRuleActionTest {
         }
     }
 
+    /**
+     * Verifies that fake gateway receives allow and block and rejects malformed.
+     */
     @Test
     fun fakeGatewayReceivesAllowAndBlockAndRejectsMalformed() = runBlocking {
         val gateway = FakeUserRuleGateway()

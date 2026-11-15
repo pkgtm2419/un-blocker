@@ -13,9 +13,17 @@ import com.unblocker.app.ui.adaptive.ProvideAdaptiveWindow
 import com.unblocker.app.ui.theme.UnblockerTheme
 import dagger.hilt.android.AndroidEntryPoint
 
+/**
+ * Android entry activity hosting the adaptive Compose application screen.
+ */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
+    /**
+     * Initializes edge-to-edge rendering and installs application Compose content.
+     *
+     * @param savedInstanceState Previously saved activity state, or null for a new instance.
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

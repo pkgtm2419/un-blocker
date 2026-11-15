@@ -8,14 +8,18 @@ import java.nio.ByteOrder
 import kotlin.random.Random
 
 /**
- * Minimal user-space TCP DNS responder serving on the configured local tunnel DNS endpoints.
+ * Minimal user-space TCP DNS responder with bounded connection state and one answered query per connection.
  *
- * Enforces hard bounds:
- * - <= 32 concurrent connections
- * - <= 64 KB buffer per connection
- * - 5 s idle timeout
- * - Drops out-of-order segments
- * - Sends RST on unexpected traffic or bounds violation
+ * Idle entries are purged while processing later packets. Out-of-order segments are consumed without reassembly.
+ *
+ * @param executor Executor receiving DNS resolution work.
+ * @param emit Callback receiving complete reply packets; may run on the reader or executor thread.
+ * @param queryResolver Resolves a DNS body using client IP version and address; null omits a DNS reply.
+ * @param maxConnections Connection-admission threshold; oldest entries are evicted when reached.
+ * @param maxBufferSize Maximum accumulated query bytes per connection.
+ * @param idleTimeoutMillis Idle timeout in wall-clock milliseconds.
+ * @param localIpv4Dns Synthetic IPv4 DNS address bytes.
+ * @param localIpv6Dns Synthetic IPv6 DNS address bytes.
  */
 class TcpDnsResponder(
     private val executor: java.util.concurrent.Executor,
@@ -31,14 +35,38 @@ class TcpDnsResponder(
     private val lock = Any()
     private var connectionSequence = 0L
 
+    /**
+     * TCP flag masks and synthetic tunnel address bytes.
+     */
     companion object {
+        /**
+         * TCP FIN control-bit mask.
+         */
         const val FLAG_FIN = 0x01
+        /**
+         * TCP SYN control-bit mask.
+         */
         const val FLAG_SYN = 0x02
+        /**
+         * TCP RST control-bit mask.
+         */
         const val FLAG_RST = 0x04
+        /**
+         * TCP PSH control-bit mask.
+         */
         const val FLAG_PSH = 0x08
+        /**
+         * TCP ACK control-bit mask.
+         */
         const val FLAG_ACK = 0x10
 
+        /**
+         * Shared synthetic IPv4 DNS address bytes; callers must not mutate the array.
+         */
         val IPV4_DNS: ByteArray by lazy { InetAddress.getByName(TunnelDnsConfig.IPV4_DNS).address }
+        /**
+         * Shared synthetic IPv6 DNS address bytes; callers must not mutate the array.
+         */
         val IPV6_DNS: ByteArray by lazy { InetAddress.getByName(TunnelDnsConfig.IPV6_DNS).address }
 
         private val TRAPPED_IPV4_BYTES: List<ByteArray> = listOf(
@@ -74,7 +102,19 @@ class TcpDnsResponder(
         }
     }
 
+    /**
+     * Connection key comparing client address contents and port.
+     *
+     * @property ip Client address bytes, retained without copying and requiring stable contents.
+     * @property port Client TCP port.
+     */
     class TcpConnectionKey(val ip: ByteArray, val port: Int) {
+        /**
+         * Compares client port and address bytes by content.
+         *
+         * @param other Object to compare.
+         * @return Whether both connection-key components match.
+         */
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
@@ -83,6 +123,9 @@ class TcpDnsResponder(
             if (!ip.contentEquals(other.ip)) return false
             return true
         }
+        /**
+         * Returns a content-based address and port hash consistent with equals.
+         */
         override fun hashCode(): Int {
             return 31 * ip.contentHashCode() + port
         }
@@ -104,8 +147,12 @@ class TcpDnsResponder(
     }
 
     /**
-     * Processes an incoming raw IP packet.
-     * Returns true if the packet was consumed by the TCP responder, false otherwise.
+     * Processes TCP directed to configured synthetic or recognized DNS destinations.
+     *
+     * @param packet Raw IP packet storage; length must not exceed the array size.
+     * @param length Available IP packet bytes.
+     * @return Whether this responder consumed the packet, including dropped segments and emitted resets.
+     * @throws IndexOutOfBoundsException If supplied packet bounds are inconsistent.
      */
     fun processPacket(packet: ByteArray, length: Int): Boolean {
         if (length < 20) return false
@@ -420,8 +467,14 @@ class TcpDnsResponder(
         }
     }
 
+    /**
+     * Returns currently retained connections; idle entries remain until another packet triggers pruning.
+     */
     fun activeConnectionCount(): Int = synchronized(lock) { connections.size }
 
+    /**
+     * Removes retained connections; already submitted executor work is not cancelled.
+     */
     fun clear() = synchronized(lock) { connections.clear() }
 
     private fun buildTcpPacket(

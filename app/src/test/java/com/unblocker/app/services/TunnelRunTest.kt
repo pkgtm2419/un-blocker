@@ -8,12 +8,18 @@ import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Assert.*
 import org.junit.Test
 
+/**
+ * Regression coverage for tunnel run.
+ */
 class TunnelRunTest {
     private class RecordingCloseable : Closeable {
         val closeCount = AtomicInteger(0)
         override fun close() { closeCount.incrementAndGet() }
     }
 
+    /**
+     * Verifies that restart gets fresh forwarder and old cleanup cannot close it.
+     */
     @Test fun restartGetsFreshForwarderAndOldCleanupCannotCloseIt() {
         val old = TunnelRun(1)
         old.close()
@@ -26,6 +32,9 @@ class TunnelRunTest {
         } finally { current.close() }
     }
 
+    /**
+     * Verifies that saturated forwarder rejects excess work and terminates on close.
+     */
     @Test fun saturatedForwarderRejectsExcessWorkAndTerminatesOnClose() {
         val run = TunnelRun(1, coreThreads = 4, maxThreads = 4, queueCapacity = 64)
         val entered = CountDownLatch(4)
@@ -48,6 +57,9 @@ class TunnelRunTest {
         assertTrue(run.forwarding.awaitTermination(3, TimeUnit.SECONDS))
     }
 
+    /**
+     * Verifies that default thread pool and queue handles high concurrency bursts.
+     */
     @Test fun defaultThreadPoolAndQueueHandlesHighConcurrencyBursts() {
         val run = TunnelRun(1)
         try {
@@ -64,6 +76,9 @@ class TunnelRunTest {
         }
     }
 
+    /**
+     * Verifies that close closes registered UDP and TCP resources exactly once.
+     */
     @Test fun closeClosesRegisteredUdpAndTcpResourcesExactlyOnce() {
         val run = TunnelRun(1)
         val udpResource = RecordingCloseable()
@@ -78,6 +93,9 @@ class TunnelRunTest {
         assertEquals(1, tcpResource.closeCount.get())
     }
 
+    /**
+     * Verifies that close still cleans resources after running flag was cleared by loop failure.
+     */
     @Test fun closeStillCleansResourcesAfterRunningFlagWasClearedByLoopFailure() {
         val run = TunnelRun(1)
         val resource = RecordingCloseable()
@@ -90,6 +108,9 @@ class TunnelRunTest {
         assertTrue(run.forwarding.isShutdown)
     }
 
+    /**
+     * Verifies that close waits for in flight delivery and rejects late delivery.
+     */
     @Test fun closeWaitsForInFlightDeliveryAndRejectsLateDelivery() {
         val run = TunnelRun(1)
         val deliveryEntered = CountDownLatch(1)
@@ -132,6 +153,9 @@ class TunnelRunTest {
         }
     }
 
+    /**
+     * Verifies that register after close immediately closes resource.
+     */
     @Test fun registerAfterCloseImmediatelyClosesResource() {
         val run = TunnelRun(1)
         run.close()
@@ -142,6 +166,9 @@ class TunnelRunTest {
         assertEquals(1, lateResource.closeCount.get())
     }
 
+    /**
+     * Verifies that unregister prevents later run ownership.
+     */
     @Test fun unregisterPreventsLaterRunOwnership() {
         val run = TunnelRun(1)
         val resource = RecordingCloseable()

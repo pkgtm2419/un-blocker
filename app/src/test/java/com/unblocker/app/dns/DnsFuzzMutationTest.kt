@@ -10,10 +10,16 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.Random
 
+/**
+ * Regression coverage for DNS fuzz mutation.
+ */
 class DnsFuzzMutationTest {
 
     private val rng = Random(42)
 
+    /**
+     * Verifies that test fuzz random garbage byte payloads.
+     */
     @Test
     fun testFuzzRandomGarbageBytePayloads() {
         // Feed 500 pseudo-random byte arrays of arbitrary sizes through all packet parser entry points
@@ -37,6 +43,9 @@ class DnsFuzzMutationTest {
         }
     }
 
+    /**
+     * Verifies that test fuzz malformed IPv4 and IPv6 headers.
+     */
     @Test
     fun testFuzzMalformedIpv4AndIpv6Headers() {
         val baseV4 = ByteArray(60)
@@ -66,6 +75,9 @@ class DnsFuzzMutationTest {
         }
     }
 
+    /**
+     * Verifies that test fuzz compression pointer loops.
+     */
     @Test
     fun testFuzzCompressionPointerLoops() {
         // Construct DNS wire packet with cyclic compression pointer
@@ -89,6 +101,9 @@ class DnsFuzzMutationTest {
         assertNull("Cyclic compression pointer must be rejected", result)
     }
 
+    /**
+     * Verifies that test fuzz oversized labels and hostnames.
+     */
     @Test
     fun testFuzzOversizedLabelsAndHostnames() {
         // Label length > 63 is illegal in DNS RFC 1035
@@ -109,6 +124,9 @@ class DnsFuzzMutationTest {
         assertNull("Label length > 63 must be rejected", result)
     }
 
+    /**
+     * Verifies that test fuzz DNS response validator corrupted packets.
+     */
     @Test
     fun testFuzzDnsResponseValidatorCorruptedPackets() {
         val query = DnsQuery(

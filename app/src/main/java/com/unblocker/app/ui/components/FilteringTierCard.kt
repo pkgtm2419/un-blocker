@@ -21,10 +21,11 @@ import androidx.compose.ui.unit.sp
 import com.unblocker.app.data.preferences.FilteringTier
 
 /**
- * Skeuomorphic card for selecting the active DNS filtering tier:
- * - Basic: Low false-positive filtering for games and shopping
- * - Optimal: Balanced day-to-day privacy and ad-blocking
- * - Complete: Strict anti-tracking and telemetry protection
+ * Renders selectable tier labels and forwards selections to the caller-owned preference state.
+ *
+ * @param currentTier Tier whose selection indicator is active.
+ * @param onTierSelected Callback receiving the selected tier.
+ * @param modifier Modifier for the outer card.
  */
 @Composable
 fun FilteringTierCard(
@@ -64,7 +65,7 @@ fun FilteringTierCard(
             ) {
                 FilteringTier.entries.forEach { tier ->
                     val isSelected = tier == currentTier
-                    val (label, desc) = when (tier) {
+                    val (label, description) = when (tier) {
                         FilteringTier.BASIC -> "Basic" to "Game & shopping friendly"
                         FilteringTier.OPTIMAL -> "Optimal" to "Balanced shield"
                         FilteringTier.COMPLETE -> "Complete" to "Strict shield"
@@ -93,7 +94,7 @@ fun FilteringTierCard(
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = desc,
+                                text = description,
                                 style = MaterialTheme.typography.labelSmall,
                                 fontSize = 9.sp,
                                 textAlign = TextAlign.Center,

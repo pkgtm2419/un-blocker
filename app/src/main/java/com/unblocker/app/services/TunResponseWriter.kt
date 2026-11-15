@@ -8,10 +8,14 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
 /**
- * Dedicated single-writer queue for serializing all packet writes to the TUN interface.
+ * Serializes TUN packet writes through a bounded queue and one daemon writer thread.
  *
- * Eliminates monitor lock contention across forwarding workers, cache hits, blocked responses,
- * and TCP responders. Enforces run-liveness and session-ownership invariants on output.
+ * @param run Tunnel run whose liveness is checked before enqueue and write.
+ * @param session Session whose generation ownership is checked before enqueue and write.
+ * @param outputStream TUN output; null skips I/O while still consuming queued packets.
+ * @property queueCapacity Maximum queued packet arrays.
+ * @param onWriteError Callback for write exceptions.
+ * @throws IllegalArgumentException If queueCapacity is not positive.
  */
 internal class TunResponseWriter(
     private val run: TunnelRun,
@@ -31,8 +35,17 @@ internal class TunResponseWriter(
     private val _droppedPackets = AtomicLong(0)
     private val _writtenPackets = AtomicLong(0)
 
+    /**
+     * Number of packet arrays rejected because the queue was full.
+     */
     val droppedPackets: Long get() = _droppedPackets.get()
+    /**
+     * Number of dequeued packets consumed successfully, including when outputStream is null.
+     */
     val writtenPackets: Long get() = _writtenPackets.get()
+    /**
+     * Current number of queued packet arrays.
+     */
     val queueSize: Int get() = queue.size
 
     private val writerThread = Thread({
@@ -56,8 +69,10 @@ internal class TunResponseWriter(
     }
 
     /**
-     * Non-blocking packet enqueue from any thread.
-     * Returns true if queued, false if rejected due to queue full or dead session.
+     * Attempts a nonblocking packet enqueue for a live owned session.
+     *
+     * @param packet Complete reply array whose ownership transfers to the writer when accepted.
+     * @return Whether queued; a full queue increments the drop counter, while dead-session rejection does not.
      */
     fun offer(packet: ByteArray): Boolean {
         if (stopped.get() || !run.running.get() || !session.owns(run.owner) || !session.active.value) {
@@ -75,6 +90,9 @@ internal class TunResponseWriter(
         return accepted
     }
 
+    /**
+     * Stops new writes, clears the queue, interrupts the writer and waits up to 250 milliseconds.
+     */
     override fun close() {
         if (stopped.compareAndSet(false, true)) {
             queue.clear()

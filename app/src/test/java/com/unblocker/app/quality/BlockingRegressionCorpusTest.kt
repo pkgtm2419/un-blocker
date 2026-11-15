@@ -22,6 +22,9 @@ class BlockingRegressionCorpusTest {
         isAdultBlockingEnabled = { false }
     )
 
+    /**
+     * Verifies that representative ad and tracker endpoints remain blocked.
+     */
     @Test fun representativeAdAndTrackerEndpointsRemainBlocked() {
         val blocked = listOf(
             "doubleclick.net",
@@ -49,6 +52,9 @@ class BlockingRegressionCorpusTest {
         }
     }
 
+    /**
+     * Verifies that major legitimate services remain allowed.
+     */
     @Test fun majorLegitimateServicesRemainAllowed() {
         val allowed = listOf(
             "google.com",

@@ -2,6 +2,19 @@ package com.unblocker.app.logic.dns
 
 import com.unblocker.app.logic.DomainName
 
+/**
+ * Parsed response identity, alias chain and TTL locations for validated DNS handling.
+ *
+ * @property transactionId Unsigned 16-bit DNS transaction identifier.
+ * @property questionName Canonical hostname in the single question.
+ * @property questionType Unsigned DNS QTYPE value.
+ * @property questionClass Unsigned DNS QCLASS value.
+ * @property truncated Whether the TC flag is set.
+ * @property rcode Combined header and EDNS extended response code.
+ * @property aliases Reachable CNAME or alias-mode SVCB/HTTPS targets in chain order.
+ * @property minPositiveTtlSeconds Minimum positive answer TTL in seconds; null when unavailable or any answer TTL is zero.
+ * @property ttlOffsets Byte offsets of non-OPT resource-record TTL fields in the DNS body.
+ */
 data class DnsResponseMetadata(
     val transactionId: Int,
     val questionName: String,
@@ -14,11 +27,22 @@ data class DnsResponseMetadata(
     val ttlOffsets: List<Int> = emptyList()
 )
 
+/**
+ * Parses bounded DNS response metadata and validates question identity against a query.
+ */
 object DnsResponseValidator {
     private const val DNS_HEADER_LENGTH = 12
     private const val TYPE_CNAME = 5
     private const val MAX_POINTER_HOPS = 128
 
+    /**
+     * Parses a response and verifies its transaction ID, question name, QTYPE and QCLASS.
+     *
+     * @param payload DNS response body.
+     * @param length Number of available bytes from the start of payload.
+     * @param query Expected upstream query identity.
+     * @return Response metadata, or null for invalid structure or mismatched identity.
+     */
     fun parseAndValidate(payload: ByteArray, length: Int, query: DnsQuery): DnsResponseMetadata? {
         val metadata = parseMetadata(payload, length) ?: return null
         if (metadata.transactionId != (query.transactionId.toInt() and 0xffff)) return null
@@ -28,6 +52,13 @@ object DnsResponseValidator {
         return metadata
     }
 
+    /**
+     * Parses response records, bounded compression pointers, aliases and EDNS metadata.
+     *
+     * @param payload DNS response body.
+     * @param length Available body length in bytes.
+     * @return Parsed metadata, or null for invalid bounds, structure or alias chains.
+     */
     internal fun parseMetadata(payload: ByteArray, length: Int): DnsResponseMetadata? {
         if (length !in DNS_HEADER_LENGTH..payload.size) return null
         val flags = u16(payload, 2)

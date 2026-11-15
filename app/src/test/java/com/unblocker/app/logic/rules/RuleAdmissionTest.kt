@@ -6,6 +6,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
+/**
+ * Regression coverage for rule admission.
+ */
 class RuleAdmissionTest {
 
     private val psl = PublicSuffixRules.fallback
@@ -18,6 +21,9 @@ class RuleAdmissionTest {
     private val protected = DefaultProtectedDomains(builtIn = protectedHosts, psl = psl)
     private val admission = DefaultRuleAdmission(psl = psl, protected = protected)
 
+    /**
+     * Verifies that test IP literals rejected.
+     */
     @Test
     fun testIpLiteralsRejected() {
         assertEquals(SkipReason.IP_LITERAL, admission.check(RuleAction.BLOCK, RuleKind.EXACT, "192.168.1.1"))
@@ -26,6 +32,9 @@ class RuleAdmissionTest {
         assertEquals(SkipReason.IP_LITERAL, admission.check(RuleAction.BLOCK, RuleKind.EXACT, "fe80::1"))
     }
 
+    /**
+     * Verifies that test single labels rejected.
+     */
     @Test
     fun testSingleLabelsRejected() {
         assertEquals(SkipReason.SINGLE_LABEL, admission.check(RuleAction.BLOCK, RuleKind.SUFFIX, "com"))
@@ -33,6 +42,9 @@ class RuleAdmissionTest {
         assertEquals(SkipReason.SINGLE_LABEL, admission.check(RuleAction.BLOCK, RuleKind.EXACT, "localhost"))
     }
 
+    /**
+     * Verifies that test public suffixes rejected.
+     */
     @Test
     fun testPublicSuffixesRejected() {
         assertEquals(SkipReason.PUBLIC_SUFFIX, admission.check(RuleAction.BLOCK, RuleKind.SUFFIX, "co.uk"))
@@ -40,6 +52,9 @@ class RuleAdmissionTest {
         assertEquals(SkipReason.PUBLIC_SUFFIX, admission.check(RuleAction.BLOCK, RuleKind.SUFFIX, "blogspot.com"))
     }
 
+    /**
+     * Verifies that test protected ancestors rejected.
+     */
     @Test
     fun testProtectedAncestorsRejected() {
         // ||google.com^ as a SUFFIX rule covers google.com and www.google.com
@@ -53,6 +68,9 @@ class RuleAdmissionTest {
         assertNull(admission.check(RuleAction.BLOCK, RuleKind.SUFFIX, "adserver.net"))
     }
 
+    /**
+     * Verifies that test quarantined rule rejected.
+     */
     @Test
     fun testQuarantinedRuleRejected() {
         QuarantineList.clearForTest()

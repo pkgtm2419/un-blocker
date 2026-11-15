@@ -4,7 +4,13 @@ import java.net.InetAddress
 import org.junit.Assert.*
 import org.junit.Test
 
+/**
+ * Regression coverage for resolver registry.
+ */
 class ResolverRegistryTest {
+    /**
+     * Verifies that replacement and loss invalidate cache and reject old delivery.
+     */
     @Test fun replacementAndLossInvalidateCacheAndRejectOldDelivery() {
         var invalidations=0
         val registry=ResolverRegistry<String> { invalidations++ }
@@ -22,6 +28,9 @@ class ResolverRegistryTest {
         assertTrue(registry.snapshot().resolvers.isEmpty())
         assertEquals(3,invalidations)
     }
+    /**
+     * Verifies that network identity change even with same DNS rejects old work.
+     */
     @Test fun networkIdentityChangeEvenWithSameDnsRejectsOldWork() {
         val registry=ResolverRegistry<String> {}
         val servers=listOf(InetAddress.getByName("192.0.2.1"))

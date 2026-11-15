@@ -13,6 +13,9 @@ import org.junit.Test
  */
 class NavigationAndSettingsTest {
 
+    /**
+     * Verifies that test navigation destinations.
+     */
     @Test
     fun testNavigationDestinations() {
         val destinations = listOf("Home", "Learn", "Logs", "Settings")
@@ -23,6 +26,9 @@ class NavigationAndSettingsTest {
         assertEquals("Settings", destinations[3])
     }
 
+    /**
+     * Verifies that test filtering tiers integrity.
+     */
     @Test
     fun testFilteringTiersIntegrity() {
         val tiers = FilteringTier.entries
@@ -47,6 +53,9 @@ class NavigationAndSettingsTest {
         assertEquals("Complete", descriptions[FilteringTier.COMPLETE]?.first)
     }
 
+    /**
+     * Verifies that test ui status captions.
+     */
     @Test
     fun testUiStatusCaptions() {
         val statuses = listOf(

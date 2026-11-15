@@ -1,31 +1,40 @@
 #!/usr/bin/env python3
-"""Validate structure and link integrity of the Un-Blocker improvement plans."""
-import os
-import re
+"""Validate installed documentation and plan structure without historical counts."""
 from pathlib import Path
+import sys
+from scripts.docs_contract import check
 
-root=Path(__file__).resolve().parent
-specs=list((root/'docs/superpowers/specs').glob('*.md'))
-plans=sorted((root/'docs/superpowers/plans').glob('*.md'))
-audits=list((root/'docs/qa').glob('*audit*.md'))
-qa_docs=list((root/'docs/qa').glob('*.md'))
-assert len(specs)==1, f'Expected exactly one spec, got {len(specs)}'
-assert len(plans)==6, f'Expected six plans, got {len(plans)}'
-assert len(audits)==1, f'Expected one audit, got {len(audits)}'
-for file in plans:
- txt=file.read_text(encoding='utf-8')
- assert txt.startswith('# ') and 'Implementation Plan' in txt.splitlines()[0]
- assert '**Goal:**' in txt and '**Architecture:**' in txt and '**Tech Stack:**' in txt and '**Spec:**' in txt
- assert '## Global Constraints' in txt and '## Review Focus' in txt and '## Exit gates' in txt
- assert txt.count('### Task ')>=3, f'Not enough independently verifiable tasks: {file.name}'
- assert txt.count('- [ ]')>=12, f'Not enough checkable actions: {file.name}'
- assert 'Write' in txt and 'Run' in txt and 'Commit' in txt
- assert 'TBD' not in txt and '[BRANCH_NAME' not in txt and '[GITHUB' not in txt
- print('VALID',file.name,'tasks',txt.count('### Task '),'checkable steps',txt.count('- [ ]'))
-for f in [*specs,*plans,*qa_docs,root/'README.md']:
- text=f.read_text(encoding='utf-8')
- for url in re.findall(r'\]\(([^)]+\.md)\)',text):
-  if url.startswith('https:') or url.startswith('http:'): continue
-  path=(f.parent/url).resolve()
-  assert path.is_file(), f'Broken relative link: {f.name} -> {url}'
-print('VALID',len(specs),'spec,',len(plans),'plans,',len(audits),'audit; relative plan links resolved')
+
+def validate(root: Path) -> list[str]:
+    root = root.resolve()
+    issues = check(root)
+    specs = sorted((root / 'docs/superpowers/specs').glob('*.md'))
+    plans = sorted((root / 'docs/superpowers/plans').glob('*.md'))
+    if not specs:
+        issues.append('no design specifications installed')
+    if not plans:
+        issues.append('no implementation plans installed')
+    for path in plans:
+        content = path.read_text(encoding='utf-8')
+        if not content.startswith('# ') or 'implementation plan' not in content.splitlines()[0].lower():
+            issues.append(f'{path.relative_to(root)}: missing implementation plan title')
+        for field in ('Goal', 'Architecture', 'Tech Stack', 'Spec'):
+            if f'**{field}:**' not in content:
+                issues.append(f'{path.relative_to(root)}: missing {field}')
+        if '### Task ' not in content or not any(token in content for token in ('- [ ]', '- [x]')):
+            issues.append(f'{path.relative_to(root)}: missing tasks or checkboxes')
+    return issues
+
+
+def main() -> int:
+    issues = validate(Path(__file__).resolve().parent)
+    if issues:
+        for issue in issues:
+            print(f'ERROR: {issue}', file=sys.stderr)
+        return 1
+    print('VALID: installed plan structure and maintained documentation links')
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

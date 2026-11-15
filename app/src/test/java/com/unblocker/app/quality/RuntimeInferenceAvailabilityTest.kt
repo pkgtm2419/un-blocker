@@ -4,7 +4,13 @@ import com.unblocker.ml.classifier.HeuristicDomainClassifier
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * Regression coverage for runtime inference availability.
+ */
 class RuntimeInferenceAvailabilityTest {
+    /**
+     * Verifies that heuristic classifier scores ad domain higher than benign.
+     */
     @Test
     fun heuristicClassifierScoresAdDomainHigherThanBenign() {
         val classifier = HeuristicDomainClassifier()

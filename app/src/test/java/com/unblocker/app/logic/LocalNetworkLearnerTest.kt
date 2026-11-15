@@ -7,15 +7,24 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
+/**
+ * Regression coverage for local network learner.
+ */
 class LocalNetworkLearnerTest {
 
     private lateinit var learner: LocalNetworkLearner
 
+    /**
+     * Resets the fixture state before each test to keep assertions independent.
+     */
     @Before
     fun setup() {
         learner = LocalNetworkLearner()
     }
 
+    /**
+     * Verifies that test lexical token detection.
+     */
     @Test
     fun testLexicalTokenDetection() {
         listOf("ads.example.com", "pixel.tracker.net", "telemetry.vendor.org", "adserver.metrics.io").forEach {
@@ -24,6 +33,9 @@ class LocalNetworkLearnerTest {
         }
     }
 
+    /**
+     * Verifies that test shannon entropy detection.
+     */
     @Test
     fun testShannonEntropyDetection() {
         // Normal domain: low entropy
@@ -35,6 +47,9 @@ class LocalNetworkLearnerTest {
         assertTrue("Algorithmic tracker subdomain should have elevated entropy", randomSubdomainEntropy >= 0.6f)
     }
 
+    /**
+     * Verifies that test cadence and burst detection.
+     */
     @Test
     fun testCadenceAndBurstDetection() {
         val testDomain = "tracker.burst-endpoint.com"
@@ -49,6 +64,9 @@ class LocalNetworkLearnerTest {
         assertTrue("Rapid burst should trigger elevated score or tracker flag", analysis.score >= 0.5f)
     }
 
+    /**
+     * Verifies that test safe domain bypass.
+     */
     @Test
     fun testSafeDomainBypass() {
         assertFalse("wikipedia.org should not be flagged", learner.isAdOrTracker("wikipedia.org"))
@@ -68,6 +86,9 @@ class LocalNetworkLearnerTest {
         assertFalse("Unknown ad words require corroboration", learner.isAdOrTracker("ads.youtube.com"))
     }
 
+    /**
+     * Verifies that malformed domain syntax never becomes learned tracker.
+     */
     @Test
     fun malformedDomainSyntaxNeverBecomesLearnedTracker() {
         assertFalse(learner.isAdOrTracker("ads..example.com"))

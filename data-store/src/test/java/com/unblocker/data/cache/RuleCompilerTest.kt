@@ -19,9 +19,15 @@ import java.io.StringReader
  */
 class RuleCompilerTest {
 
+    /**
+     * Temporary filesystem fixture isolated and cleaned up by JUnit.
+     */
     @get:Rule
     val tempFolder: TemporaryFolder = TemporaryFolder()
 
+    /**
+     * Verifies that test extract clean domain multi syntax.
+     */
     @Test
     fun testExtractCleanDomain_multiSyntax() {
         // Adblock / uBlock syntax
@@ -68,6 +74,9 @@ class RuleCompilerTest {
         assertNull(RuleCompiler.extractCleanDomain("   "))
     }
 
+    /**
+     * Verifies that test fnv1a64 case insensitive and substring equivalence.
+     */
     @Test
     fun testFnv1a64_caseInsensitiveAndSubstringEquivalence() {
         val uppercaseDomain = "GoogleAds.G.DoubleClick.Net"
@@ -84,6 +93,9 @@ class RuleCompilerTest {
         assertEquals("Sub-range hash must equal direct string hash", hash2, substringHash)
     }
 
+    /**
+     * Verifies that test compile streams and off heap engine verification.
+     */
     @Test
     fun testCompileStreamsAndOffHeapEngineVerification() {
         val rulesContent = """

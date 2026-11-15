@@ -10,7 +10,18 @@ enum class ProtectionCoverage {
     UNKNOWN_RESOLVER,
     OFF;
 
+    /**
+     * Derives coverage indicators from current service and Android resolver state.
+     */
     companion object {
+        /**
+         * Computes the coverage indicator without probing traffic.
+         *
+         * @param status Current VPN lifecycle status.
+         * @param isPrivateDnsActive Whether Android reports active Private DNS.
+         * @param hasUsableResolvers Whether configured upstream resolvers are available.
+         * @return OFF unless running, otherwise the Private DNS or resolver availability indicator.
+         */
         fun compute(
             status: ServiceStatus,
             isPrivateDnsActive: Boolean,

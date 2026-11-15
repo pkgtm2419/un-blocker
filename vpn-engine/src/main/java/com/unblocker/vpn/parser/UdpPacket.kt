@@ -1,15 +1,13 @@
 package com.unblocker.vpn.parser
 
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 
 /**
- * Represents a parsed UDP header.
+ * Parsed UDP ports and payload range within an enclosing packet.
  *
- * @param srcPort    Source UDP port.
- * @param dstPort    Destination UDP port (53 = DNS).
- * @param payloadOffset Byte offset of the UDP payload in the original packet buffer.
- * @param payloadLength Length in bytes of the UDP payload.
+ * @property srcPort Unsigned 16-bit source port represented as an Int.
+ * @property dstPort Unsigned 16-bit destination port represented as an Int.
+ * @property payloadOffset First payload byte index in the enclosing packet storage.
+ * @property payloadLength Payload length in bytes, excluding the eight-byte UDP header.
  */
 data class UdpPacket(
     val srcPort: Int,
@@ -17,15 +15,29 @@ data class UdpPacket(
     val payloadOffset: Int,
     val payloadLength: Int
 ) {
+    /**
+     * Whether the destination port is 53; this alone does not validate the DNS payload.
+     */
     val isDns: Boolean get() = dstPort == DNS_PORT
 
+    /**
+     * UDP header parsing entry point and DNS port identifier.
+     */
     companion object {
+        /**
+         * Standard DNS destination port used by [isDns].
+         */
         const val DNS_PORT = 53
         private const val UDP_HEADER_SIZE = 8
 
         /**
-         * Parses a UDP header from [buffer] starting at [offset].
-         * Returns null if the buffer is too short or the UDP length is invalid.
+         * Reads UDP ports and validates its payload against the declared enclosing packet length.
+         *
+         * @param buffer Raw packet storage.
+         * @param offset Nonnegative byte index of the UDP header.
+         * @param totalLength Declared enclosing packet length in bytes, at most [buffer] size.
+         * @return Header metadata, or null when declared lengths cannot contain the datagram.
+         * @throws IndexOutOfBoundsException If caller bounds permit access outside the supplied array.
          */
         fun parse(buffer: ByteArray, offset: Int, totalLength: Int): UdpPacket? {
             if (offset + UDP_HEADER_SIZE > totalLength) return null

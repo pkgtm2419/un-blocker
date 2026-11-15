@@ -1,34 +1,48 @@
 package com.unblocker.vpn.builder
 
 /**
- * Upstream DNS server configuration.
+ * Resolver configuration for the separate library forwarding implementation.
  *
- * @param address       IP address of the upstream DNS resolver.
- * @param port          DNS port (default 53).
- * @param useTcp        If true, use TCP fallback when UDP response is truncated.
+ * @property address Resolver IP address or hostname; this value is not validated at construction.
+ * @property port Resolver transport port, conventionally 53.
+ * @property useTcp Compatibility preference field; the current DnsForwarder retries truncated UDP
+ * responses over TCP regardless of this value.
  */
 data class UpstreamDnsServer(
     val address: String,
     val port: Int = 53,
     val useTcp: Boolean = true
 ) {
+    /**
+     * Public resolver configurations retained for the reusable library path.
+     */
     companion object {
-        /** Cloudflare DNS — low latency, privacy-focused. */
+        /**
+         * Cloudflare public IPv4 resolver configuration.
+         */
         val CLOUDFLARE = UpstreamDnsServer("1.1.1.1")
 
-        /** Google DNS — reliable fallback. */
+        /**
+         * Google public IPv4 resolver configuration.
+         */
         val GOOGLE = UpstreamDnsServer("8.8.8.8")
 
-        /** Ordered list of preferred upstream resolvers. */
+        /**
+         * Library resolver order: Cloudflare followed by Google; separate from the active app resolver policy.
+         */
         val DEFAULTS = listOf(CLOUDFLARE, GOOGLE)
     }
 }
 
 /**
- * Well-known public DNS resolvers trapped into the VPN tunnel
- * to prevent evasive applications from bypassing local DNS filtering.
+ * Well-known resolver address lists retained for callers that explicitly configure interception.
+ *
+ * Declaring these lists does not add routes or provide coverage for encrypted DNS.
  */
 object TrappedDnsServers {
+    /**
+     * Public IPv4 resolver addresses available to route-building callers.
+     */
     val IPV4_TRAPPED: List<String> = listOf(
         "8.8.8.8", "8.8.4.4",               // Google
         "1.1.1.1", "1.0.0.1",               // Cloudflare
@@ -38,6 +52,9 @@ object TrappedDnsServers {
         "76.76.2.0", "76.76.10.0"           // Control D
     )
 
+    /**
+     * Public IPv6 resolver addresses available to route-building callers.
+     */
     val IPV6_TRAPPED: List<String> = listOf(
         "2001:4860:4860::8888", "2001:4860:4860::8844",   // Google
         "2606:4700:4700::1111", "2606:4700:4700::1001",   // Cloudflare

@@ -9,8 +9,17 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 
+/**
+ * Regression coverage for review privacy regression.
+ */
 class ReviewPrivacyRegressionTest {
+    /**
+     * Temporary filesystem fixture isolated and cleaned up by JUnit.
+     */
     @get:Rule val temp=TemporaryFolder()
+    /**
+     * Verifies that obsolete learning is removed even when keystore fails but rules survive.
+     */
     @Test fun obsoleteLearningIsRemovedEvenWhenKeystoreFailsButRulesSurvive() {
         val files=temp.newFolder("files"); val privateFiles=temp.newFolder("private")
         File(files,"learned_trackers.txt").writeText("sensitive.example:0.9")
@@ -23,6 +32,9 @@ class ReviewPrivacyRegressionTest {
         assertFalse(File(privateFiles,"learning-v1.tmp").exists())
         assertEquals("preserved",rule.readText())
     }
+    /**
+     * Verifies that oversized unterminated header and record stop reading promptly.
+     */
     @Test fun oversizedUnterminatedHeaderAndRecordStopReadingPromptly() {
         for(limit in listOf(68,256)) {
             var readCount=0
@@ -38,6 +50,9 @@ class ReviewPrivacyRegressionTest {
             assertTrue(readCount<=limit+1)
         }
     }
+    /**
+     * Verifies that total snapshot limit rejects oversized file without restoring records.
+     */
     @Test fun totalSnapshotLimitRejectsOversizedFileWithoutRestoringRecords() {
         val file=File(temp.root,"snapshot")
         val key=SecretKeySpec(ByteArray(32){7},"HmacSHA256")

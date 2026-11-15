@@ -16,6 +16,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
+/**
+ * Regression coverage for decide blocking use case.
+ */
 class DecideBlockingUseCaseTest {
 
     private lateinit var useCase: DecideBlockingUseCase
@@ -27,6 +30,9 @@ class DecideBlockingUseCaseTest {
     private var blocklistedDomains = emptySet<String>()
     private var myDomains = mutableSetOf<String>()
 
+    /**
+     * Resets the fixture state before each test to keep assertions independent.
+     */
     @Before
     fun setup() {
         val adDetector = AdDetector(context = null).apply {
@@ -59,6 +65,9 @@ class DecideBlockingUseCaseTest {
         )
     }
 
+    /**
+     * Verifies that test block known ad network when enabled.
+     */
     @Test
     fun testBlockKnownAdNetworkWhenEnabled() {
         adEnabled = true
@@ -68,6 +77,9 @@ class DecideBlockingUseCaseTest {
         assertEquals(BlockingCategory.AD, decision.category)
     }
 
+    /**
+     * Verifies that test allow known ad network when disabled.
+     */
     @Test
     fun testAllowKnownAdNetworkWhenDisabled() {
         adEnabled = false
@@ -76,6 +88,9 @@ class DecideBlockingUseCaseTest {
         assertEquals(BlockingAction.ALLOW, decision.action)
     }
 
+    /**
+     * Verifies that test block adult when enabled.
+     */
     @Test
     fun testBlockAdultWhenEnabled() {
         adultEnabled = true
@@ -84,6 +99,9 @@ class DecideBlockingUseCaseTest {
         assertEquals(BlockingCategory.ADULT_CONTENT, decision.category)
     }
 
+    /**
+     * Verifies that test allow adult when disabled.
+     */
     @Test
     fun testAllowAdultWhenDisabled() {
         adultEnabled = false
@@ -91,6 +109,9 @@ class DecideBlockingUseCaseTest {
         assertFalse("pornhub.com should be allowed when adult blocking is disabled", decision.isBlocked)
     }
 
+    /**
+     * Verifies that test allow benign domains.
+     */
     @Test
     fun testAllowBenignDomains() {
         adEnabled = true
@@ -103,6 +124,9 @@ class DecideBlockingUseCaseTest {
         assertFalse("wikipedia.org should be allowed", wikiDecision.isBlocked)
     }
 
+    /**
+     * Verifies that test local allowlist overrides ad and adult rules.
+     */
     @Test
     fun testLocalAllowlistOverridesAdAndAdultRules() {
         allowlistedDomains = setOf("doubleclick.net", "pornhub.com")
@@ -111,6 +135,9 @@ class DecideBlockingUseCaseTest {
         assertFalse(useCase("pornhub.com").isBlocked)
     }
 
+    /**
+     * Verifies that test local blocklist overrides disabled filters.
+     */
     @Test
     fun testLocalBlocklistOverridesDisabledFilters() {
         adEnabled = false
@@ -123,6 +150,9 @@ class DecideBlockingUseCaseTest {
         assertEquals(BlockingCategory.CUSTOM, decision.category)
     }
 
+    /**
+     * Verifies that test allowlist wins when domain exists in both local sets.
+     */
     @Test
     fun testAllowlistWinsWhenDomainExistsInBothLocalSets() {
         allowlistedDomains = setOf("example.org")
@@ -131,6 +161,9 @@ class DecideBlockingUseCaseTest {
         assertFalse(useCase("example.org").isBlocked)
     }
 
+    /**
+     * Verifies that test primary domain in never block cannot be blocked by ad rules.
+     */
     @Test
     fun testPrimaryDomainInNeverBlockCannotBeBlockedByAdRules() {
         com.unblocker.app.logic.analysis.NeverBlockPolicy.injectForTest(
@@ -146,6 +179,9 @@ class DecideBlockingUseCaseTest {
         assertEquals(BlockingAction.ALLOW, wwwDecision.action)
     }
 
+    /**
+     * Verifies that test my domains subtree protection.
+     */
     @Test
     fun testMyDomainsSubtreeProtection() {
         myDomains.add("mybank.com")
@@ -157,6 +193,9 @@ class DecideBlockingUseCaseTest {
         assertEquals(DecisionReason.PROTECTED, decision.reasonCode)
     }
 
+    /**
+     * Verifies that test approved only mode does not block lists.
+     */
     @Test
     fun testApprovedOnlyModeDoesNotBlockLists() {
         mode = BlockingMode.APPROVED_ONLY
@@ -167,6 +206,9 @@ class DecideBlockingUseCaseTest {
         assertEquals(DecisionReason.NO_MATCH, decision.reasonCode)
     }
 
+    /**
+     * Verifies that test paused allows traffic.
+     */
     @Test
     fun testPausedAllowsTraffic() {
         paused = true
@@ -177,6 +219,9 @@ class DecideBlockingUseCaseTest {
         assertEquals(DecisionReason.PAUSED, decision.reasonCode)
     }
 
+    /**
+     * Verifies that test deofleadyetca quarantined seed blocked.
+     */
     @Test
     fun testDeofleadyetcaQuarantinedSeedBlocked() {
         val decision = useCase("deofleadyetca.org")
@@ -184,6 +229,9 @@ class DecideBlockingUseCaseTest {
         assertEquals(DecisionReason.STATIC_RULE, decision.reasonCode)
     }
 
+    /**
+     * Verifies that test off heap rule engine integration.
+     */
     @Test
     fun testOffHeapRuleEngineIntegration() {
         val tempFile = java.io.File.createTempFile("rules_test", ".bin").apply { deleteOnExit() }
@@ -214,6 +262,9 @@ class DecideBlockingUseCaseTest {
         assertFalse("Unrelated domain must be allowed", safeDecision.isBlocked)
     }
 
+    /**
+     * Verifies that test mobile unbreak list allows essential app domains.
+     */
     @Test
     fun testMobileUnbreakListAllowsEssentialAppDomains() {
         val supercellDecision = useCase("accounts.supercell.com")
@@ -233,6 +284,9 @@ class DecideBlockingUseCaseTest {
         assertEquals(DecisionReason.ALLOWED, whatsappDecision.reasonCode)
     }
 
+    /**
+     * Verifies that test basic tier preserves reward and shopping redirects.
+     */
     @Test
     fun testBasicTierPreservesRewardAndShoppingRedirects() {
         var currentTier = com.unblocker.app.data.preferences.FilteringTier.BASIC

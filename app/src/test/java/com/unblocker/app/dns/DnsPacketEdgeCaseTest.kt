@@ -15,8 +15,14 @@ import java.util.Random
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
+/**
+ * Regression coverage for DNS packet edge case.
+ */
 class DnsPacketEdgeCaseTest {
 
+    /**
+     * Verifies that test parser rejects illegal DNS name characters.
+     */
     @Test
     fun testParserRejectsIllegalDnsNameCharacters() {
         val packet = createDnsQueryPacket("ads/example.com")
@@ -24,6 +30,9 @@ class DnsPacketEdgeCaseTest {
         assertNull(DnsPacketUtil.parseIpPacket(packet, packet.size))
     }
 
+    /**
+     * Verifies that test ihl less than20 is rejected.
+     */
     @Test
     fun testIhlLessThan20IsRejected() {
         // Version 4, IHL = 4 (16 bytes, illegal IPv4 header since min IHL is 5 = 20 bytes)
@@ -51,6 +60,9 @@ class DnsPacketEdgeCaseTest {
         assertNull("RFC 791 requires min IHL of 20, non-compliant packet must be rejected", query)
     }
 
+    /**
+     * Verifies that test negative array size vulnerability resolved.
+     */
     @Test
     fun testNegativeArraySizeVulnerabilityResolved() {
         // Construct a query where dnsLength is less than 12
@@ -74,6 +86,9 @@ class DnsPacketEdgeCaseTest {
         assertTrue("Response packet must be at least 28 bytes", resp.size >= 28)
     }
 
+    /**
+     * Verifies that test fuzzing DNS packet parser50k iterations.
+     */
     @Test
     fun testFuzzingDnsPacketParser50kIterations() {
         val random = Random(42)
@@ -95,6 +110,9 @@ class DnsPacketEdgeCaseTest {
         assertEquals("Fuzzing must have 0 crashes across 50,000 malformed packets", 0, crashes)
     }
 
+    /**
+     * Verifies that test punycode entropy false positive bypass.
+     */
     @Test
     fun testPunycodeEntropyFalsePositiveBypass() {
         val learner = LocalNetworkLearner()
@@ -108,6 +126,9 @@ class DnsPacketEdgeCaseTest {
         )
     }
 
+    /**
+     * Verifies that test concurrent learner load under extreme throughput.
+     */
     @Test
     fun testConcurrentLearnerLoadUnderExtremeThroughput() {
         val learner = LocalNetworkLearner()

@@ -12,17 +12,16 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Forwards validated DNS query payloads to upstream resolvers over protected sockets.
+ * Blocking UDP-first DNS forwarding for the separate library resolver path.
  *
- * Uses UDP first (lower latency); if the UDP response is truncated (TC flag set),
- * automatically retries over TCP per RFC 1035 §4.2.
+ * Sockets must pass the supplied protection callbacks. A truncated UDP answer triggers a TCP
+ * retry for that server regardless of its useTcp field. Replies are not matched to the query's
+ * transaction ID, question, or UDP sender here; validation belongs to a caller using this path.
+ * The active app uses its separate DnsUpstreamClient and Android-network resolver policy.
  *
- * All sockets are protected via [android.net.VpnService.protect] to route their traffic
- * through the real network interface rather than back into the VPN tunnel.
- *
- * @param protectSocket   Lambda wrapping [android.net.VpnService.protect] for DatagramSocket.
- * @param protectTcp      Lambda wrapping [android.net.VpnService.protect] for TCP Socket.
- * @param servers         Ordered list of upstream DNS servers to try.
+ * @param protectSocket Protects a UDP socket from VPN routing; false skips that attempt.
+ * @param protectTcp Protects a TCP socket from VPN routing; false skips that attempt.
+ * @param servers Resolver configurations tried in order, defaulting to library public resolvers.
  */
 @Singleton
 class DnsForwarder @Inject constructor(
@@ -35,13 +34,16 @@ class DnsForwarder @Inject constructor(
         private const val TCP_CONNECT_TIMEOUT_MS = 1_000
         private const val TCP_READ_TIMEOUT_MS = 1_000
         private const val MAX_RESPONSE_BYTES = 0xFFFF
+        private const val DNS_HEADER_BYTES = 12
     }
 
     /**
-     * Forwards a raw DNS payload (wire-format bytes) to the configured upstream resolvers.
+     * Tries resolvers sequentially and retries truncated UDP responses using TCP.
      *
-     * @param payload  Raw DNS query bytes (without IP/UDP headers).
-     * @return         Raw DNS response bytes, or null if all resolvers failed.
+     * The call blocks for network I/O. Per-attempt network and protection failures are caught.
+     *
+     * @param payload Caller-validated DNS wire query without IP or UDP headers.
+     * @return Unvalidated DNS response bytes, or null when no resolver attempt succeeds.
      */
     fun forwardToUpstream(payload: ByteArray): ByteArray? {
         for (server in servers) {
@@ -61,10 +63,10 @@ class DnsForwarder @Inject constructor(
             socket.soTimeout = UDP_TIMEOUT_MS
             val address = InetAddress.getByName(server.address)
             socket.send(DatagramPacket(payload, payload.size, address, server.port))
-            val buf = ByteArray(MAX_RESPONSE_BYTES)
-            val response = DatagramPacket(buf, buf.size)
+            val responseBuffer = ByteArray(MAX_RESPONSE_BYTES)
+            val response = DatagramPacket(responseBuffer, responseBuffer.size)
             socket.receive(response)
-            buf.copyOf(response.length)
+            responseBuffer.copyOf(response.length)
         } catch (_: Exception) {
             null
         } finally {
@@ -84,9 +86,9 @@ class DnsForwarder @Inject constructor(
                 flush()
             }
             val input = DataInputStream(socket.getInputStream())
-            val len = input.readUnsignedShort()
-            if (len < 12 || len > MAX_RESPONSE_BYTES) return null
-            ByteArray(len).also { input.readFully(it) }
+            val responseLength = input.readUnsignedShort()
+            if (responseLength < DNS_HEADER_BYTES || responseLength > MAX_RESPONSE_BYTES) return null
+            ByteArray(responseLength).also { input.readFully(it) }
         } catch (_: Exception) {
             null
         } finally {

@@ -12,11 +12,30 @@ import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Socket
 
+/**
+ * DNS body paired with parsed response identity and metadata.
+ *
+ * @property bytes Response body with the expected client transaction ID.
+ * @property metadata Parsed identity, aliases and TTL information.
+ */
 internal data class ValidatedDnsResponse(
     val bytes: ByteArray,
     val metadata: DnsResponseMetadata
 )
 
+/**
+ * Resolves DNS through protected UDP sockets and validated TCP retry for truncated replies.
+ *
+ * @param protectDatagramSocket Removes a UDP socket from VPN routing before use.
+ * @param protectTcpSocket Removes a TCP socket from VPN routing before use.
+ * @param port Upstream DNS destination port.
+ * @param udpTimeoutMillis UDP receive timeout in milliseconds.
+ * @param tcpConnectTimeoutMillis TCP connection timeout in milliseconds.
+ * @param tcpReadTimeoutMillis TCP read timeout in milliseconds.
+ * @param maxDnsMessageBytes Maximum accepted response body in bytes.
+ * @param txIdGenerator Supplies randomized upstream transaction-ID wire bits.
+ * @throws IllegalArgumentException If port, timeouts or maximum message size are outside supported bounds.
+ */
 internal class DnsUpstreamClient(
     private val protectDatagramSocket: (DatagramSocket) -> Boolean,
     private val protectTcpSocket: (Socket) -> Boolean,
@@ -27,6 +46,9 @@ internal class DnsUpstreamClient(
     private val maxDnsMessageBytes: Int = 0xffff,
     private val txIdGenerator: () -> Short = { secureRandom.nextInt(0x10000).toShort() }
 ) {
+    /**
+     * Process-shared secure randomness for upstream transaction identifiers.
+     */
     companion object {
         private val secureRandom = java.security.SecureRandom()
     }
@@ -40,6 +62,16 @@ internal class DnsUpstreamClient(
     @Volatile
     private var preferredResolver: InetAddress? = null
 
+    /**
+     * Tries supplied resolvers, validates replies and restores the client transaction ID.
+     *
+     * @param run Tunnel run owning upstream sockets and cancellation state.
+     * @param query Expected client question and transport envelope limits.
+     * @param dnsPayload Query body copied before upstream transaction-ID replacement.
+     * @param resolvers Configured upstream candidates, without injected fallback addresses.
+     * @param outboundGuard Executes connect/send operations only while their topology/run remains eligible.
+     * @return Validated response, or null after invalid input, cancellation or handled upstream failure.
+     */
     fun resolve(
         run: TunnelRun,
         query: DnsQuery,
@@ -96,6 +128,9 @@ internal class DnsUpstreamClient(
         return ValidatedDnsResponse(restoredBytes, restoredMetadata)
     }
 
+    /**
+     * Forgets the last responsive upstream after resolver topology changes.
+     */
     fun resetPreferredResolver() {
         preferredResolver = null
     }

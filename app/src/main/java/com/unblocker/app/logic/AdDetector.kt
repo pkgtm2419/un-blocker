@@ -4,6 +4,14 @@ import android.content.Context
 import com.unblocker.app.domain.model.BlockingCategory
 import com.unblocker.app.logic.rules.*
 
+/**
+ * Matches overlay, extension, off-heap and compiled DNS advertising rules in that order.
+ *
+ * @param context Asset context, or null to use seed rules.
+ * @param compiledRules Optional rules converted to the binary matcher.
+ * @param ruleSet Explicit matcher taking precedence over compiled rules and assets.
+ * @param offHeapRuleEngine Optional additional block-rule source.
+ */
 class AdDetector(
     private val context: Context? = null,
     private val compiledRules: CompiledRuleSet? = null,
@@ -16,6 +24,11 @@ class AdDetector(
         ruleSet ?: compiledRules?.toRuleSet() ?: if (context != null) RuleSetHolder.get(context) else fallbackRuleSet()
     }
 
+    /**
+     * Adds an admitted suffix block rule to the in-memory overlay.
+     *
+     * @param domain User-entered domain; invalid or unsafe entries are ignored.
+     */
     @Synchronized fun addDomain(domain: String) {
         DomainName.normalizeUserEntry(domain)?.let {
             if (admission.check(RuleAction.BLOCK, RuleKind.SUFFIX, it) == null) {
@@ -24,6 +37,12 @@ class AdDetector(
         }
     }
 
+    /**
+     * Finds the first matching rule across the configured sources.
+     *
+     * @param domain DNS hostname to normalize and match.
+     * @return Matching rule, or null for invalid names or no match.
+     */
     fun matchRule(domain: String): DnsRule? {
         val normalized = DomainName.normalize(domain) ?: return null
         synchronized(overlay) {
@@ -44,6 +63,12 @@ class AdDetector(
         return activeRuleSet.match(domain)
     }
 
+    /**
+     * Checks the compatibility canary and configured advertising rules.
+     *
+     * @param raw DNS hostname to evaluate.
+     * @return Block flag and explanation; unmatched names have an empty reason.
+     */
     fun isAdDomain(raw: String): Pair<Boolean, String> {
         val domain = DomainName.normalize(raw) ?: return false to ""
         if (domain == "use-application-dns.net" || domain.endsWith(".use-application-dns.net")) {
@@ -55,9 +80,15 @@ class AdDetector(
             else "Domain Suffix Match (${rule.value})"
     }
 
+    /**
+     * Returns the sum of source rule counts, including overlaps between sources.
+     */
     @Synchronized fun getDomainCount(): Int =
         activeRuleSet.ruleCount + overlay.size + ExtensionRuleStore.ruleCount + (offHeapRuleEngine?.ruleCount() ?: 0)
 
+    /**
+     * Provides seed domains used when compiled assets are unavailable.
+     */
     companion object {
         private fun fallbackRuleSet(): RuleSet {
             val rules = fallback.mapNotNull(DomainName::normalize).map {
@@ -66,6 +97,9 @@ class AdDetector(
             return CompiledRuleSet(rules).toRuleSet()
         }
 
+        /**
+         * Built-in suffix-rule seed domains, subject to the final decision pipeline precedence.
+         */
         val defaultSeedRules = listOf(
             "doubleclick.net", "googleads.g.doubleclick.net", "adservice.google.com",
             "pagead2.googlesyndication.com", "pubads.g.doubleclick.net", "admob.com",

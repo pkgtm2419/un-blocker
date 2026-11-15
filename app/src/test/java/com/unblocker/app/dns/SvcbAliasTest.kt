@@ -4,7 +4,13 @@ import com.unblocker.app.logic.dns.*
 import org.junit.Assert.*
 import org.junit.Test
 
+/**
+ * Regression coverage for svcb alias.
+ */
 class SvcbAliasTest {
+    /**
+     * Verifies that alias mode is rooted and requires matching question type and class.
+     */
     @Test fun aliasModeIsRootedAndRequiresMatchingQuestionTypeAndClass() {
         val q=DnsFixtures.query(type=65)
         val body=DnsFixtures.response(q,listOf(
@@ -19,6 +25,9 @@ class SvcbAliasTest {
             assertTrue(DnsResponseValidator.parseAndValidate(bytes,bytes.size,q)!!.aliases.isEmpty())
         }
     }
+    /**
+     * Verifies that compressed targets and malformed or duplicate parameters are rejected.
+     */
     @Test fun compressedTargetsAndMalformedOrDuplicateParametersAreRejected() {
         val q=DnsFixtures.query(type=65)
         for(data in listOf(byteArrayOf(0,0,0xc0.toByte(),0x0c),binding(1,"target.test",byteArrayOf(0,1,0,8,0)),

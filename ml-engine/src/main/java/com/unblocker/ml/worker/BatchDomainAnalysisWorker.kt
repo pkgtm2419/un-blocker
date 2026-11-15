@@ -13,35 +13,18 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Nightly batch ML worker — scheduled to run at **1:00 AM** while the device is
- * charging and idle (see [WorkScheduler]).
+ * Processes legacy DNS logs with the injected on-device classifier.
  *
- * ## Processing pipeline
- * ```
- * 1. Fetch up to 10,000 unanalyzed DnsLog entries  (oldest-first)
- * 2. Deduplicate by domain name
- * 3. Remove domains already present in block_rules  (no re-inference needed)
- * 4. Run TFLite inference: DomainFeatureExtractor → TFLiteClassifierImpl
- * 5. Flag domains scoring ≥ CONFIDENCE_THRESHOLD as ads/trackers
- * 6. Bulk-commit new BlockRuleEntity rows to Room
- * 7. Trigger atomic Bloom Filter hot-swap                ← traffic is now updated
- * 8. Mark processed log IDs as analyzed
- * 9. Prune dns_logs entries older than 7 days            ← keeps DB footprint bounded
- * ```
+ * Each run reads a bounded log batch, deduplicates names within that batch, persists scores at
+ * or above the confidence threshold, and marks all fetched row IDs analyzed. A non-backlog run
+ * also prunes logs older than seven days, unless its initial batch is empty. Scheduling is
+ * best-effort WorkManager work; the scheduler configures battery-not-low, not charging or idle.
  *
- * ## Fail-safe: backlog watchdog
- * If the device was not charging overnight and the nightly job did not run, unanalyzed
- * logs accumulate. When [LogRepository.countUnanalyzedLogs] exceeds [BACKLOG_THRESHOLD],
- * [WorkScheduler.scheduleBacklogScan] triggers a throttled daytime scan of only
- * [BACKLOG_BATCH_SIZE] domains per run to avoid blocking daytime activity.
- *
- * ## Constraints
- * - `setRequiresCharging(true)`    — zero perceived battery impact on the user.
- * - `setRequiresDeviceIdle(true)`  — only runs while the user is asleep / inactive.
- *
- * @param classifier      Injected [DomainClassifier] (TFLite or test fake).
- * @param logRepository   Source of unanalyzed DNS log entries.
- * @param filterRepository  Sink for newly discovered block rules.
+ * @param appContext Application context supplied by WorkManager.
+ * @param workerParams WorkManager execution metadata and input data.
+ * @param classifier On-device scorer for each distinct name in the batch.
+ * @param logRepository Legacy DNS log source and analysis-state sink.
+ * @param filterRepository Persists inferred rows and refreshes the library indices.
  */
 @HiltWorker
 class BatchDomainAnalysisWorker @AssistedInject constructor(
@@ -52,23 +35,20 @@ class BatchDomainAnalysisWorker @AssistedInject constructor(
     private val filterRepository: FilterRepository
 ) : CoroutineWorker(appContext, workerParams) {
 
+    /**
+     * Stable worker limits, unique work names, and input keys.
+     */
     companion object {
-        /** TFLite confidence threshold: domains scoring above this are flagged as ads. */
+        /** Inclusive heuristic score threshold for creating a block rule. */
         const val CONFIDENCE_THRESHOLD = 0.88f
 
-        /** Maximum domains processed per nightly run (prevents OOM on large backlogs). */
+        /** Maximum legacy log rows fetched per periodic run, before domain deduplication. */
         const val BATCH_LIMIT = 10_000
 
-        /**
-         * Daytime backlog threshold — if unanalyzed logs exceed this count
-         * (because the nightly job didn't run), a throttled daytime scan fires.
-         */
+        /** Legacy log backlog threshold available to callers deciding whether to enqueue work. */
         const val BACKLOG_THRESHOLD = 5_000
 
-        /**
-         * Domains analyzed per throttled daytime scan invocation.
-         * Small enough to avoid thermal or UI jank during daytime use.
-         */
+        /** Maximum legacy log rows fetched for a backlog run, before domain deduplication. */
         const val BACKLOG_BATCH_SIZE = 500
 
         /** WorkManager unique work name for the nightly job. */
@@ -82,10 +62,12 @@ class BatchDomainAnalysisWorker @AssistedInject constructor(
     }
 
     /**
-     * Executes the batch analysis pipeline on [Dispatchers.Default] (CPU-bound work).
+     * Runs scoring on Default and database work on IO.
      *
-     * Heavy TFLite inference loops run on [Dispatchers.Default] to take advantage of
-     * all available cores without blocking the main thread or I/O pool.
+     * A stopped worker exits the scoring loop but still attempts to mark all fetched rows analyzed.
+     * Dependency failures are not converted to an explicit retry or failure result here.
+     *
+     * @return Success when the batch is empty or the processing path completes.
      */
     override suspend fun doWork(): Result = withContext(Dispatchers.Default) {
         val isBacklogRun = inputData.getBoolean(KEY_IS_BACKLOG_RUN, false)
@@ -97,10 +79,10 @@ class BatchDomainAnalysisWorker @AssistedInject constructor(
         }
         if (unanalyzedLogs.isEmpty()) return@withContext Result.success()
 
-        // ── Step 2 & 3: Deduplicate and filter out already-known domains ───
+        // Deduplicate names within the fetched batch; existing rule rows are not filtered out.
         val uniqueDomains = unanalyzedLogs.map { it.domain }.distinct()
 
-        // ── Step 4 & 5: TFLite inference ───────────────────────────────────
+        // Score each distinct domain using the injected classifier.
         val newRules = mutableListOf<Pair<String, Float>>()
         for (domain in uniqueDomains) {
             if (isStopped) break   // Honour WorkManager cancellation

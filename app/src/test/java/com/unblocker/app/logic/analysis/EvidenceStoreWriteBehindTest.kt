@@ -11,13 +11,22 @@ import java.util.concurrent.TimeUnit
 import javax.crypto.spec.SecretKeySpec
 import kotlin.system.measureNanoTime
 
+/**
+ * Regression coverage for evidence store write behind.
+ */
 class EvidenceStoreWriteBehindTest {
 
+    /**
+     * Temporary filesystem fixture isolated and cleaned up by JUnit.
+     */
     @get:Rule
     val temp = TemporaryFolder()
 
     private fun key(n: Byte = 7) = SecretKeySpec(ByteArray(32) { n }, "HmacSHA256")
 
+    /**
+     * Verifies that burst of10000 evidence domains completes with sub millisecond latency.
+     */
     @Test
     fun burstOf10000EvidenceDomainsCompletesWithSubMillisecondLatency() {
         val file = File(temp.root, "burst-evidence")
@@ -52,6 +61,9 @@ class EvidenceStoreWriteBehindTest {
         reloaded.close()
     }
 
+    /**
+     * Verifies that stop during flush completes promptly.
+     */
     @Test
     fun stopDuringFlushCompletesPromptly() {
         val file = File(temp.root, "stop-evidence")
@@ -71,6 +83,9 @@ class EvidenceStoreWriteBehindTest {
         assertTrue("store.close() took $elapsedMs ms, expected < 1000 ms", elapsedMs < 1000)
     }
 
+    /**
+     * Verifies that crash consistency leaves old file valid.
+     */
     @Test
     fun crashConsistencyLeavesOldFileValid() {
         val file = File(temp.root, "crash-evidence")

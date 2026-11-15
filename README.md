@@ -161,13 +161,13 @@ Un-Blocker does **not** include:
 
 - analytics or advertising SDKs;
 - user accounts or device-to-account identifiers;
-- domain, URL, browsing-history, or exception logging;
+- remote URL, page-content, browsing-history, or remote exception telemetry (local on-device DNS statistics in `unblocker_logs.db` are bounded, never uploaded, and user-pausable/clearable);
 - cloud or federated learning;
 - uploaded training data or remote models;
 - automatic blocklist downloads;
 - cross-app behavior tracking;
 - TLS interception, custom certificates, or page-content inspection;
-- plaintext persistence of learned or user-entered domains;
+- plaintext persistence of learned domains or custom allow/block rules (stored as device-keyed HMAC identifiers; the separate "My domains" protection list stores up to 500 readable names locally in private app preferences);
 - private-data backups.
 
 Raw domain names exist transiently in memory while a DNS request is parsed,
@@ -200,13 +200,13 @@ those encrypted paths can bypass a DNS-only VPN.
 
 ## Requirements
 
-- Current source version: 2.3.0 (`versionCode` 28); published test APK: 2.3.0.
+- Current source version: 2.6.1 (`versionCode` 35); published test APK: 2.6.1.
 - Android package: `com.unblocker.app`.
 - Android 8.0 or newer (API 26+).
-- Target and compile SDK: Android 16 / API 36.
+- Target and compile SDK: Android 14 / API 35.
 - Android VPN consent.
 - A network exposing at least one usable Android-configured DNS resolver.
-- JDK 17 and Android SDK 36 when building from source.
+- JDK 17 and Android SDK 35 when building from source.
 
 ## Install and use
 
@@ -261,7 +261,7 @@ git clone https://github.com/pkgtm2419/un-blocker.git
 cd un-blocker
 ```
 
-Install JDK 17, Python 3.11 (CI version) and Android SDK platform 36. Set `JAVA_HOME` and `ANDROID_HOME`, or
+Install JDK 17, Python 3.11 (CI version) and Android SDK platform 35. Set `JAVA_HOME` and `ANDROID_HOME`, or
 create an untracked `local.properties` containing `sdk.dir`.
 
 Windows PowerShell:
@@ -286,7 +286,7 @@ the test installation's VPN app-op and local application data.
 Build output:
 
 ```text
-app/build/outputs/apk/release/ub-blocker-2.3.0.apk
+app/build/outputs/apk/release/ub-blocker-2.6.1.apk
 ```
 
 Gradle derives this filename from `versionName`, so future builds automatically

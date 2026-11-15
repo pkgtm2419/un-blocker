@@ -6,18 +6,14 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /**
- * Stores a domain blocking rule, regardless of its origin.
+ * Persistent block rule keyed by the readable domain string.
  *
- * Rules are keyed by [domain] (unique constraint). If the ML worker discovers that
- * a previously ML-flagged domain is whitelisted by the user, the row is deleted rather
- * than updated, then the Bloom Filter is recompiled without it.
+ * The source stores a RuleSource enum name; this entity does not enforce filtering policy.
  *
- * [source] maps to [com.unblocker.common.model.RuleSource] by name string:
- *   "STATIC" — shipped with the app bundle (compiled ad-list assets).
- *   "ML"     — inferred by the 4 AM TFLite batch worker.
- *   "USER"   — manually created/removed by the user via the whitelist screen.
- *
- * Table: `block_rules`
+ * @property domain Domain primary key.
+ * @property confidenceScore Confidence conventionally from 0 to 1; not validated here.
+ * @property createdAt Creation time in milliseconds since the Unix epoch.
+ * @property source RuleSource name, conventionally STATIC, ML, or USER.
  */
 @Entity(
     tableName = "block_rules",
@@ -28,14 +24,12 @@ data class BlockRuleEntity(
     @ColumnInfo(name = "domain")
     val domain: String,
 
-    /** ML confidence score 0.0–1.0. Static/user rules default to 1.0. */
     @ColumnInfo(name = "confidence_score")
     val confidenceScore: Float = 1.0f,
 
     @ColumnInfo(name = "created_at")
     val createdAt: Long = System.currentTimeMillis(),
 
-    /** One of "STATIC", "ML", "USER" — matches [RuleSource] enum names. */
     @ColumnInfo(name = "rule_source")
     val source: String
 )

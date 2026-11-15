@@ -6,8 +6,14 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.lang.reflect.Proxy
 
+/**
+ * Regression coverage for unblocker migrations.
+ */
 class UnblockerMigrationsTest {
 
+    /**
+     * Verifies that test migration1 to2 executes expected schema ddl.
+     */
     @Test
     fun testMigration1To2ExecutesExpectedSchemaDdl() {
         assertEquals(1, UnblockerMigrations.MIGRATION_1_2.startVersion)

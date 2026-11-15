@@ -92,6 +92,12 @@ import com.unblocker.app.ui.theme.TealAccent
 import com.unblocker.app.ui.theme.TealPrimary
 import kotlinx.coroutines.flow.collectLatest
 
+/**
+ * Renders the extension catalog with search, categories, downloads, and custom-list controls.
+ *
+ * @param onNavigateBack Callback used by system and toolbar back actions.
+ * @param viewModel Owner of catalog state and extension update actions.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExtensionsScreen(
@@ -529,6 +535,14 @@ fun ExtensionsScreen(
     }
 }
 
+/**
+ * Renders one catalog entry with its enabled switch and available overflow actions.
+ *
+ * @param item Metadata, download state, and compatibility flags to display.
+ * @param onToggle Callback receiving the requested enabled state.
+ * @param onUpdate Callback requesting a list download when a source URL exists.
+ * @param onDelete Callback requesting deletion for a custom entry.
+ */
 @Composable
 fun ExtensionCard(
     item: ExtensionFilter,

@@ -14,6 +14,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
+/**
+ * Regression coverage for query log sink.
+ */
 class QueryLogSinkTest {
 
     private class FakeDomainLogDao(
@@ -53,10 +56,23 @@ class QueryLogSinkTest {
         override fun getTotalBlockedCountFlow(): Flow<Long> = emptyFlow()
         override fun getFirstObservedTimeFlow(): Flow<Long?> = emptyFlow()
         override fun getLastObservedTimeFlow(): Flow<Long?> = emptyFlow()
-        override suspend fun pruneEventsOlderThan(cutoffTimestamp: Long) {}
-        override suspend fun pruneOldestEventsBeyondCap(globalCap: Int) {}
-        override suspend fun pruneStatsOlderThan(cutoffTimestamp: Long) {}
-        override suspend fun pruneOldestStatsBeyondCap(globalCap: Int) {}
+        var prunedEventsCutoff: Long? = null
+        var prunedEventsCap: Int? = null
+        var prunedStatsCutoff: Long? = null
+        var prunedStatsCap: Int? = null
+
+        override suspend fun pruneEventsOlderThan(cutoffTimestamp: Long) {
+            prunedEventsCutoff = cutoffTimestamp
+        }
+        override suspend fun pruneOldestEventsBeyondCap(globalCap: Int) {
+            prunedEventsCap = globalCap
+        }
+        override suspend fun pruneStatsOlderThan(cutoffTimestamp: Long) {
+            prunedStatsCutoff = cutoffTimestamp
+        }
+        override suspend fun pruneOldestStatsBeyondCap(globalCap: Int) {
+            prunedStatsCap = globalCap
+        }
         override suspend fun clearEvents() {
             insertedEvents.clear()
         }
@@ -70,17 +86,26 @@ class QueryLogSinkTest {
         }
     }
 
+    /**
+     * Resets the fixture state before each test to keep assertions independent.
+     */
     @Before
     fun setup() {
         QueryLogSink.resetForTesting()
         VpnDiagnostics.resetForTesting()
     }
 
+    /**
+     * Verifies that test default history mode is aggregate only.
+     */
     @Test
     fun testDefaultHistoryModeIsAggregateOnly() {
         assertEquals(QueryLogSink.HistoryMode.AGGREGATE_ONLY, QueryLogSink.getHistoryMode())
     }
 
+    /**
+     * Verifies that test aggregate only mode does not store raw events.
+     */
     @Test
     fun testAggregateOnlyModeDoesNotStoreRawEvents() = runBlocking {
         val fakeDao = FakeDomainLogDao()
@@ -103,6 +128,9 @@ class QueryLogSinkTest {
         assertTrue("Under AGGREGATE_ONLY, no raw events should be inserted", fakeDao.insertedEvents.isEmpty())
     }
 
+    /**
+     * Verifies that test opt in mode stores both aggregates and raw events.
+     */
     @Test
     fun testOptInModeStoresBothAggregatesAndRawEvents() = runBlocking {
         val fakeDao = FakeDomainLogDao()
@@ -120,6 +148,9 @@ class QueryLogSinkTest {
         assertEquals("opt-in.com", fakeDao.insertedEvents.first().domain)
     }
 
+    /**
+     * Verifies that test pause and resume logging.
+     */
     @Test
     fun testPauseAndResumeLogging() {
         assertFalse(QueryLogSink.isLoggingPaused())
@@ -131,6 +162,9 @@ class QueryLogSinkTest {
         assertFalse(QueryLogSink.isLoggingPaused())
     }
 
+    /**
+     * Verifies that test record enqueues without blocking.
+     */
     @Test
     fun testRecordEnqueuesWithoutBlocking() {
         val start = System.nanoTime()
@@ -141,6 +175,9 @@ class QueryLogSinkTest {
         assertTrue("Enqueueing must be non-blocking (took $elapsedMillis ms)", elapsedMillis < 200)
     }
 
+    /**
+     * Verifies that test invalid or empty domains ignored.
+     */
     @Test
     fun testInvalidOrEmptyDomainsIgnored() {
         QueryLogSink.record("", 0, 0)
@@ -148,6 +185,9 @@ class QueryLogSinkTest {
         QueryLogSink.record("a".repeat(300) + ".com", 0, 0)
     }
 
+    /**
+     * Verifies that test clear history and barrier prevents pre clear items from flushing.
+     */
     @Test
     fun testClearHistoryAndBarrierPreventsPreClearItemsFromFlushing() = runBlocking {
         val fakeDao = FakeDomainLogDao()
@@ -169,5 +209,28 @@ class QueryLogSinkTest {
 
         // Pre-clear item must NOT be written to the database
         assertFalse(fakeDao.upsertedStats.contains("pre-clear-tracker.com"))
+    }
+
+    /**
+     * Verifies that pruneOldLogs triggers deletion of expired events and stats with configured caps.
+     */
+    @Test
+    fun testPruneOldLogsAppliesRetentionLimitsAndCaps() = runBlocking {
+        val fakeDao = FakeDomainLogDao()
+        QueryLogSink.init(fakeDao)
+
+        val before = System.currentTimeMillis()
+        QueryLogSink.pruneOldLogs()
+        val after = System.currentTimeMillis()
+
+        // 24 hour event retention
+        val expectedOneDay = 24L * 60 * 60 * 1000
+        assertTrue(fakeDao.prunedEventsCutoff != null && fakeDao.prunedEventsCutoff!! in (before - expectedOneDay)..(after - expectedOneDay))
+        assertEquals(1_000, fakeDao.prunedEventsCap)
+
+        // 30 day aggregate retention
+        val expectedThirtyDays = 30L * 24 * 60 * 60 * 1000
+        assertTrue(fakeDao.prunedStatsCutoff != null && fakeDao.prunedStatsCutoff!! in (before - expectedThirtyDays)..(after - expectedThirtyDays))
+        assertEquals(10_000, fakeDao.prunedStatsCap)
     }
 }

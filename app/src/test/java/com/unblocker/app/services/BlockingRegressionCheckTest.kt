@@ -3,7 +3,13 @@ package com.unblocker.app.services
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
+/**
+ * Regression coverage for blocking regression check.
+ */
 class BlockingRegressionCheckTest {
+    /**
+     * Verifies that evaluates both blocked and allowed expectations.
+     */
     @Test fun evaluatesBothBlockedAndAllowedExpectations() {
         val cases = listOf(
             BlockingRegressionCase("ads.example", shouldBlock = true),
@@ -20,6 +26,9 @@ class BlockingRegressionCheckTest {
         assertEquals(100f, result.passRate, 0f)
     }
 
+    /**
+     * Verifies that reports failures as regression rate not effectiveness.
+     */
     @Test fun reportsFailuresAsRegressionRateNotEffectiveness() {
         val cases = listOf(
             BlockingRegressionCase("ads.example", shouldBlock = true),

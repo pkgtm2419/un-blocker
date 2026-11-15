@@ -1,0 +1,169 @@
+diff --git a/app/src/main/java/com/unblocker/app/logic/rules/ExtensionRuleStore.kt b/app/src/main/java/com/unblocker/app/logic/rules/ExtensionRuleStore.kt
+index 2e5158c..65bdeac 100644
+--- a/app/src/main/java/com/unblocker/app/logic/rules/ExtensionRuleStore.kt
++++ b/app/src/main/java/com/unblocker/app/logic/rules/ExtensionRuleStore.kt
+@@ -26,6 +26,7 @@ object ExtensionRuleStore {
+     internal class RuleSnapshot(
+         val allowExact: Set<String>,
+         val allowSuffix: Set<String>,
++        val allowWildcard: Set<String>,
+         val blockExact: Set<String>,
+         val blockSuffix: Set<String>,
+         val blockWildcard: Set<String>,
+@@ -33,7 +34,7 @@ object ExtensionRuleStore {
+     ) {
+         companion object {
+             val EMPTY = RuleSnapshot(
+-                emptySet(), emptySet(), emptySet(), emptySet(), emptySet(), 0
++                emptySet(), emptySet(), emptySet(), emptySet(), emptySet(), emptySet(), 0
+             )
+         }
+     }
+@@ -66,7 +67,7 @@ object ExtensionRuleStore {
+             return DnsRule(RuleAction.ALLOW, RuleKind.SUFFIX, domain, BlockingCategory.AD)
+         }
+ 
+-        if (current.allowSuffix.isNotEmpty()) {
++        if (current.allowSuffix.isNotEmpty() || current.allowWildcard.isNotEmpty()) {
+             var dotIndex = domain.indexOf('.')
+             while (dotIndex != -1) {
+                 val nextDot = domain.indexOf('.', dotIndex + 1)
+@@ -77,6 +78,9 @@ object ExtensionRuleStore {
+                 if (parentSuffix in current.allowSuffix) {
+                     return DnsRule(RuleAction.ALLOW, RuleKind.SUFFIX, parentSuffix, BlockingCategory.AD)
+                 }
++                if (parentSuffix in current.allowWildcard) {
++                    return DnsRule(RuleAction.ALLOW, RuleKind.WILDCARD, parentSuffix, BlockingCategory.AD)
++                }
+                 dotIndex = nextDot
+             }
+         }
+@@ -117,6 +121,7 @@ object ExtensionRuleStore {
+     ) {
+         val allowExact = HashSet<String>()
+         val allowSuffix = HashSet<String>()
++        val allowWildcard = HashSet<String>()
+         val blockExact = HashSet<String>()
+         val blockSuffix = HashSet<String>()
+         val blockWildcard = HashSet<String>()
+@@ -141,7 +146,8 @@ object ExtensionRuleStore {
+                 RuleAction.ALLOW -> {
+                     when (rule.kind) {
+                         RuleKind.EXACT -> allowExact.add(rule.value)
+-                        RuleKind.SUFFIX, RuleKind.WILDCARD -> allowSuffix.add(rule.value)
++                        RuleKind.SUFFIX -> allowSuffix.add(rule.value)
++                        RuleKind.WILDCARD -> allowWildcard.add(rule.value)
+                     }
+                 }
+                 RuleAction.BLOCK -> {
+@@ -161,6 +167,7 @@ object ExtensionRuleStore {
+             return RuleSnapshot(
+                 allowExact = allowExact,
+                 allowSuffix = allowSuffix,
++                allowWildcard = allowWildcard,
+                 blockExact = blockExact,
+                 blockSuffix = blockSuffix,
+                 blockWildcard = blockWildcard,
+diff --git a/app/src/main/java/com/unblocker/app/logic/rules/RuleLineParser.kt b/app/src/main/java/com/unblocker/app/logic/rules/RuleLineParser.kt
+index 124202f..07701cd 100644
+--- a/app/src/main/java/com/unblocker/app/logic/rules/RuleLineParser.kt
++++ b/app/src/main/java/com/unblocker/app/logic/rules/RuleLineParser.kt
+@@ -34,11 +34,6 @@ class RuleLineParser(
+     private val psl: PublicSuffixRules = PublicSuffixRules.fallback
+ ) {
+     private val cosmetic = arrayOf("##", "#@#", "#?#", "#$#", "#%#", "#@$#", "#@?#", "#@%#", "$$")
+-    private val partyResource = setOf(
+-        "third-party", "3p", "script", "image", "stylesheet", "css", "font", "media",
+-        "xmlhttprequest", "xhr", "subdocument", "frame", "ping", "popup", "object", "other", "websocket"
+-    )
+-    private val docLevel = setOf("doc", "document", "all")
+     private val hostsIps = setOf("0.0.0.0", "127.0.0.1", "::", "::1")
+     private val metaHosts = setOf("localhost", "localhost.localdomain", "local", "broadcasthost")
+     private val hostChars = Regex("[a-z0-9._-]+")
+@@ -78,17 +73,12 @@ class RuleLineParser(
+         val host = pattern.lowercase()
+         if (!hostChars.matches(host)) return skip(SkipReason.PATH_OR_REGEX)
+ 
+-        val opts = options.filter { it != "important" }
+-        if (opts.isNotEmpty()) {
+-            if (action == RuleAction.ALLOW) return skip(SkipReason.UNSUPPORTED_OPTIONS)
+-            when {
+-                opts.all { it in partyResource } -> {
+-                    val reg = psl.registrableDomain(host)
+-                    if (reg == null || reg == host) return skip(SkipReason.OPTIONS_ON_REGISTRABLE)
+-                }
+-                opts.all { it in docLevel } && ctx.security && action == RuleAction.BLOCK -> Unit
+-                else -> return skip(SkipReason.UNSUPPORTED_OPTIONS)
+-            }
++        // DNS filtering has no visibility into request type, initiator, or navigation
++        // context. Turning rules scoped to images/scripts/third-party/documents into
++        // domain-wide DNS blocks would break unrelated first-party functionality.
++        // A sole $important on a BLOCK rule has no additional match restrictions.
++        if (dollar >= 0 && (action != RuleAction.BLOCK || options.size != 1 || options[0] != "important")) {
++            return skip(SkipReason.UNSUPPORTED_OPTIONS)
+         }
+         return admit(action, RuleKind.SUFFIX, host, ctx)
+     }
+diff --git a/app/src/test/java/com/unblocker/app/logic/rules/ExtensionRuleStoreTest.kt b/app/src/test/java/com/unblocker/app/logic/rules/ExtensionRuleStoreTest.kt
+index e5f84a6..4b4346b 100644
+--- a/app/src/test/java/com/unblocker/app/logic/rules/ExtensionRuleStoreTest.kt
++++ b/app/src/test/java/com/unblocker/app/logic/rules/ExtensionRuleStoreTest.kt
+@@ -53,9 +53,9 @@ class ExtensionRuleStoreTest {
+         val bareOptionsRule = ExtensionRuleStore.parseLine("||adserver.net^\$third-party,image")
+         assertNull(bareOptionsRule)
+ 
++        // A request-scoped filter must never become a domain-wide DNS block.
+         val subOptionsRule = ExtensionRuleStore.parseLine("||ads.adserver.net^\$third-party,image")
+-        assertNotNull(subOptionsRule)
+-        assertEquals("ads.adserver.net", subOptionsRule!!.value)
++        assertNull(subOptionsRule)
+ 
+         val commentRule = ExtensionRuleStore.parseLine("! This is a comment")
+         assertNull(commentRule)
+@@ -107,6 +107,18 @@ class ExtensionRuleStoreTest {
+         assertNull(mClean)
+     }
+ 
++    @Test
++    fun testWildcardAllowDoesNotAllowBaseHost() {
++        val blockBase = ExtensionRuleStore.parseLine("||adserver.example^")!!
++        val allowChildren = ExtensionRuleStore.parseLine("@@*.adserver.example")!!
++        ExtensionRuleStore.setRules(listOf(blockBase, allowChildren))
++
++        assertEquals(RuleAction.BLOCK, ExtensionRuleStore.matchRule("adserver.example")?.action)
++        assertEquals(RuleAction.ALLOW, ExtensionRuleStore.matchRule("a.adserver.example")?.action)
++        assertEquals(RuleKind.WILDCARD, ExtensionRuleStore.matchRule("a.adserver.example")?.kind)
++        assertEquals(RuleAction.ALLOW, ExtensionRuleStore.matchRule("b.a.adserver.example")?.action)
++    }
++
+     @Test
+     fun testSingleLabelParentNeverBlocks() {
+         // Even if an admitted rule with value 'com' exists in blockSuffix
+diff --git a/app/src/test/resources/rule-parser-cases.tsv b/app/src/test/resources/rule-parser-cases.tsv
+index bd0bf38..4e03aa4 100644
+--- a/app/src/test/resources/rule-parser-cases.tsv
++++ b/app/src/test/resources/rule-parser-cases.tsv
+@@ -16,10 +16,10 @@ linkedin.com##.ad-banner-container	AD	SKIP:COSMETIC
+ x.com##+js(prevent-xhr, /api/1.1/flow/viewer.json)	AD	SKIP:COSMETIC
+ paypal.com##+js(href-sanitizer, a[href^="https://app.adjust.com/"])	AD	SKIP:COSMETIC
+ windowsreport.com##.code-block	AD	SKIP:COSMETIC
+-||vlc.de^$doc	SECURITY	RULE:BLOCK:SUFFIX:vlc.de
++||vlc.de^$doc	SECURITY	SKIP:UNSUPPORTED_OPTIONS
+ ||vlc.de^$doc	AD	SKIP:UNSUPPORTED_OPTIONS
+-||adserver.net^$third-party,image	AD	SKIP:OPTIONS_ON_REGISTRABLE
+-||ads.adserver.net^$third-party,image	AD	RULE:BLOCK:SUFFIX:ads.adserver.net
++||adserver.net^$third-party,image	AD	SKIP:UNSUPPORTED_OPTIONS
++||ads.adserver.net^$third-party,image	AD	SKIP:UNSUPPORTED_OPTIONS
+ ||adserver.net^	AD	RULE:BLOCK:SUFFIX:adserver.net
+ ||adserver.net^$important	AD	RULE:BLOCK:SUFFIX:adserver.net
+ @@||goodservice.com^	AD	RULE:ALLOW:SUFFIX:goodservice.com
+@@ -34,3 +34,9 @@ tracker.example.net	AD	RULE:BLOCK:EXACT:tracker.example.net
+ ||google.com^	AD	SKIP:PROTECTED_HOST
+ ||ads.google.com^	AD	RULE:BLOCK:SUFFIX:ads.google.com
+ ||www.youtube.com^	AD	SKIP:PROTECTED_HOST
++||sub.ads.adserver.net^$script	AD	SKIP:UNSUPPORTED_OPTIONS
++||sub.ads.adserver.net^$image	AD	SKIP:UNSUPPORTED_OPTIONS
++||sub.ads.adserver.net^$3p	AD	SKIP:UNSUPPORTED_OPTIONS
++||sub.ads.adserver.net^$doc	SECURITY	SKIP:UNSUPPORTED_OPTIONS
++||sub.ads.adserver.net^$important,script	AD	SKIP:UNSUPPORTED_OPTIONS
++@@||goodservice.com^$important	AD	SKIP:UNSUPPORTED_OPTIONS

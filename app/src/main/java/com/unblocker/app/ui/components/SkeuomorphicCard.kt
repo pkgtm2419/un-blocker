@@ -26,8 +26,15 @@ import com.unblocker.app.ui.theme.Slate800
 import com.unblocker.app.ui.theme.Slate900
 
 /**
- * Skeuomorphic tactile surface card with realistic depth cues,
- * dual-specular rim lighting, directional shadows, and tactile affordances.
+ * Renders a raised or inset gradient card with highlighted edges and padded column content.
+ *
+ * @param modifier Modifier for the outer card.
+ * @param shape Shape used for clipping, borders, and shadows.
+ * @param elevation Shadow elevation when the card is raised.
+ * @param highlightColor Optional edge highlight override; null uses the state palette.
+ * @param shadowColor Optional shadow override; null uses theme defaults.
+ * @param isInset Whether to use inset shading and minimal shadow elevation.
+ * @param content Padded content rendered in the column scope.
  */
 @Composable
 fun SkeuomorphicCard(
@@ -117,7 +124,13 @@ fun SkeuomorphicCard(
 }
 
 /**
- * Skeuomorphic tactile button with physical depression affordance.
+ * Renders a gradient surface whose shading reflects a caller-owned press state.
+ *
+ * @param modifier Modifier for the outer surface.
+ * @param shape Shape used for clipping, borders, and shadows.
+ * @param isPressed Whether to render depressed shading.
+ * @param accentColor Border accent; transparent selects the normal highlight.
+ * @param content Content placed inside the surface.
  */
 @Composable
 fun SkeuomorphicTactileSurface(

@@ -4,8 +4,9 @@ import android.content.Context
 import com.unblocker.app.logic.DomainName
 
 /**
- * Runtime safety net preventing core infrastructure, captive portals, OS connectivity
- * checks, and vital services from ever being blocked or tracked by the on-device learner.
+ * Infrastructure exceptions consulted by rule admission and local learning.
+ *
+ * The main decision pipeline checks explicit user block rules before these exceptions.
  */
 object NeverBlockPolicy {
 
@@ -95,6 +96,11 @@ object NeverBlockPolicy {
     @Volatile
     private var loaded = false
 
+    /**
+     * Merges asset hosts with embedded exceptions once; failures retain the embedded set.
+     *
+     * @param context Application asset context.
+     */
     fun load(context: Context) {
         if (loaded) return
         synchronized(this) {
@@ -109,14 +115,28 @@ object NeverBlockPolicy {
         }
     }
 
+    /**
+     * Replaces all protected hosts and marks asset loading complete for tests.
+     *
+     * @param hosts Replacement entries, including optional wildcard prefixes.
+     */
     @androidx.annotation.VisibleForTesting
     fun injectForTest(hosts: Set<String>) {
         protectedHosts = hosts
         loaded = true
     }
 
+    /**
+     * Returns the current protected host entries, including any wildcard-prefixed entries.
+     */
     fun getProtectedHosts(): Set<String> = protectedHosts
 
+    /**
+     * Checks exact hosts, the special www form and explicit wildcard subtrees.
+     *
+     * @param rawDomain Hostname to normalize.
+     * @return Whether a valid hostname matches the current exception policy.
+     */
     fun isNeverBlock(rawDomain: String): Boolean {
         val domain = DomainName.normalize(rawDomain) ?: return false
         if (domain in protectedHosts) return true

@@ -108,10 +108,12 @@ android {
     }
 
     lint {
-        abortOnError = false
+        abortOnError = true
         checkReleaseBuilds = false
-        ignoreWarnings = true
+        ignoreWarnings = false
         disable += setOf(
+            "GradleDependency",
+            "AndroidGradlePluginVersion",
             "UnsafeOptInUsageError",
             "NullSafeMutableLiveData",
             "CustomX509TrustManager",

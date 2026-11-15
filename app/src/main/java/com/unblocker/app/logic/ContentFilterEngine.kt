@@ -19,10 +19,18 @@ import com.unblocker.app.logic.analysis.PublicSuffixRules
 import com.unblocker.app.logic.rules.CnamePolicy
 
 /**
- * Autonomous local content filter engine.
- * Combines UseCase orchestration with evidence-based local learning,
- * seed heuristics, and adult content classifier.
- * Operates 100% on-device with zero logs, zero history, and zero cloud dependency.
+ * Adapts the on-device decision pipeline to UI and VPN filter results.
+ *
+ * Learning identifiers use private stores; query logging is managed separately by the VPN/logging path.
+ *
+ * @param context Application context for assets, preferences and private stores.
+ * @param adDetector Static and extension-rule matcher.
+ * @param adultContentDetector Adult-domain classifier.
+ * @param networkLearner Evidence collector used by the default adaptive engine.
+ * @param preferences Current filtering settings.
+ * @param allowlistedDomains User allow rules.
+ * @param blocklistedDomains User block rules.
+ * @property adaptiveEngine Evidence-based decision component exposed to callers.
  */
 class ContentFilterEngine(
     private val context: Context,
@@ -59,6 +67,13 @@ class ContentFilterEngine(
         protectedDomains
     )
 
+    /**
+     * Checks aliases while honoring original-host exceptions and the ad-filter toggle.
+     *
+     * @param original Original queried hostname.
+     * @param aliases Validated CNAME targets in response order.
+     * @return First alias matching a block rule, or null when none may be blocked.
+     */
     fun blockedAlias(original: String, aliases: List<String>): String? =
         cnamePolicy.blockedAlias(original, aliases)
 
@@ -73,6 +88,12 @@ class ContentFilterEngine(
         psl = PublicSuffixRules.from(context)
     )
 
+    /**
+     * Returns the current filtering result for a domain, allowing blank input.
+     *
+     * @param rawDomain DNS hostname to trim and evaluate.
+     * @return Decision, explanation and detection method for the supplied name.
+     */
     fun analyzeAndFilter(rawDomain: String): FilterResult {
         val domain = rawDomain.trim().lowercase()
         if (domain.isBlank()) {
@@ -119,7 +140,16 @@ class ContentFilterEngine(
         )
     }
 
+    /**
+     * Loads the optional installed off-heap rule file.
+     */
     companion object {
+        /**
+         * Loads rules.bin when present and at least eight bytes long.
+         *
+         * @param context Context whose private files directory contains the rules.
+         * @return Loaded engine, or null when absent, too short or loading fails.
+         */
         fun createDefaultOffHeapEngine(context: Context): com.unblocker.data.cache.OffHeapRuleEngine? {
             val file = java.io.File(context.filesDir, "rules.bin")
             if (!file.exists() || file.length() < 8L) return null

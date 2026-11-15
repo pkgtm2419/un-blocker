@@ -8,16 +8,25 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
+/**
+ * Regression coverage for recording session manager.
+ */
 class RecordingSessionManagerTest {
 
     private lateinit var manager: RecordingSessionManager
 
+    /**
+     * Resets the fixture state before each test to keep assertions independent.
+     */
     @Before
     fun setup() {
         manager = RecordingSessionManager.instance
         manager.stopSession()
     }
 
+    /**
+     * Verifies that test start session and record domain.
+     */
     @Test
     fun testStartSessionAndRecordDomain() {
         assertFalse(manager.isRecordingActive())
@@ -52,6 +61,9 @@ class RecordingSessionManagerTest {
         assertEquals("api.example.com", summary[0].domain)
     }
 
+    /**
+     * Verifies that test session auto expiry.
+     */
     @Test
     fun testSessionAutoExpiry() {
         // Start a session with 1ms max duration

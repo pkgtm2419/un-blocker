@@ -18,14 +18,29 @@ import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
-import java.net.HttpURLConnection
 import java.net.URL
 
+/**
+ * Most recently reported downloaded-rule admission state.
+ */
 sealed interface RuleUpdateState {
+    /**
+     * No downloaded-rule failure is currently reported.
+     */
     data object Ready : RuleUpdateState
+    /**
+     * A downloaded list could not be installed.
+     *
+     * @property reason User-facing download or admission failure explanation.
+     */
     data class Failed(val reason: String) : RuleUpdateState
 }
 
+/**
+ * Owns extension metadata, cached rule files, and rebuilding of the active extension rule store.
+ *
+ * @param context Application context used for assets and private extension storage.
+ */
 class ExtensionRepository private constructor(private val context: Context) {
 
     private val prefs: SharedPreferences =
@@ -35,15 +50,27 @@ class ExtensionRepository private constructor(private val context: Context) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     private val _extensions = MutableStateFlow<List<ExtensionFilter>>(emptyList())
+    /**
+     * Current catalog entries, including enabled state and cached download metadata.
+     */
     val extensions: StateFlow<List<ExtensionFilter>> = _extensions.asStateFlow()
 
     private val _autoUpdateEnabled = MutableStateFlow(prefs.getBoolean(KEY_AUTO_UPDATE, false))
+    /**
+     * Persisted preference for periodic extension updates.
+     */
     val autoUpdateEnabled: StateFlow<Boolean> = _autoUpdateEnabled.asStateFlow()
 
     private val _isUpdating = MutableStateFlow(false)
+    /**
+     * Whether an update operation is currently in progress.
+     */
     val isUpdating: StateFlow<Boolean> = _isUpdating.asStateFlow()
 
     private val _ruleUpdateState = MutableStateFlow<RuleUpdateState>(RuleUpdateState.Ready)
+    /**
+     * Last reported list download or admission state.
+     */
     val ruleUpdateState: StateFlow<RuleUpdateState> = _ruleUpdateState.asStateFlow()
 
     init {
@@ -51,17 +78,31 @@ class ExtensionRepository private constructor(private val context: Context) {
         reloadActiveRulesAsync()
     }
 
+    /**
+     * Schedules rebuilding the active rule store in the repository IO scope.
+     */
     fun reloadActiveRulesAsync() {
         scope.launch {
             reloadActiveRules()
         }
     }
 
+    /**
+     * Persists the automatic-update preference; scheduling is managed by callers.
+     *
+     * @param enabled Whether periodic updates are requested.
+     */
     fun setAutoUpdateEnabled(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_AUTO_UPDATE, enabled).apply()
         _autoUpdateEnabled.value = enabled
     }
 
+    /**
+     * Persists one entry's enabled state and schedules a rule-store rebuild.
+     *
+     * @param id Catalog identifier to update.
+     * @param enabled Whether the entry should contribute cached rules.
+     */
     fun toggleExtension(id: String, enabled: Boolean) {
         val updated = _extensions.value.map {
             if (it.id == id) it.copy(isEnabled = enabled) else it
@@ -71,6 +112,11 @@ class ExtensionRepository private constructor(private val context: Context) {
         reloadActiveRulesAsync()
     }
 
+    /**
+     * Persists the enabled state of every entry and schedules a rule-store rebuild.
+     *
+     * @param enabled Whether all catalog entries should be enabled.
+     */
     fun setAllEnabled(enabled: Boolean) {
         val updated = _extensions.value.map { it.copy(isEnabled = enabled) }
         _extensions.value = updated
@@ -78,6 +124,12 @@ class ExtensionRepository private constructor(private val context: Context) {
         reloadActiveRulesAsync()
     }
 
+    /**
+     * Adds enabled custom metadata without downloading the list.
+     *
+     * @param name Display name supplied by the user.
+     * @param url List URL saved for a subsequent update attempt.
+     */
     fun addCustomFilter(name: String, url: String) {
         val id = "custom_" + System.currentTimeMillis()
         val customFilter = ExtensionFilter(
@@ -97,6 +149,11 @@ class ExtensionRepository private constructor(private val context: Context) {
         persistExtensions(updated)
     }
 
+    /**
+     * Removes matching metadata and its cached file, then schedules a rule-store rebuild.
+     *
+     * @param id Catalog identifier to remove.
+     */
     fun removeCustomFilter(id: String) {
         val updated = _extensions.value.filter { it.id != id }
         _extensions.value = updated
@@ -106,6 +163,11 @@ class ExtensionRepository private constructor(private val context: Context) {
         reloadActiveRulesAsync()
     }
 
+    /**
+     * Rebuilds active rules from bundled data and enabled cached lists. Unreadable sources are skipped.
+     *
+     * This performs file I/O on the calling thread; use [reloadActiveRulesAsync] from UI callers.
+     */
     fun reloadActiveRules() {
         try {
             val builder = ExtensionRuleStore.Builder()
@@ -143,6 +205,11 @@ class ExtensionRepository private constructor(private val context: Context) {
         }
     }
 
+    /**
+     * Attempts downloads for every entry with a URL, retaining metadata for failed downloads.
+     *
+     * @return Number of successful downloads, or a failure if the enclosing update operation fails.
+     */
     suspend fun updateAll(): Result<Int> = withContext(Dispatchers.IO) {
         _isUpdating.value = true
         var successCount = 0
@@ -177,6 +244,12 @@ class ExtensionRepository private constructor(private val context: Context) {
         }
     }
 
+    /**
+     * Downloads one entry and publishes updated metadata and active rules on success.
+     *
+     * @param id Catalog identifier to update.
+     * @return Success containing true, or a failure for missing, invalid, or rejected entries.
+     */
     suspend fun updateExtension(id: String): Result<Boolean> = withContext(Dispatchers.IO) {
         _isUpdating.value = true
         try {
@@ -347,11 +420,27 @@ class ExtensionRepository private constructor(private val context: Context) {
         return result
     }
 
+    /**
+     * Stable preference keys, catalog migration, and the application-scoped repository accessor.
+     */
     companion object {
+        /**
+         * Preference key holding serialized extension metadata.
+         */
         const val KEY_EXTENSIONS_JSON = "key_extensions_json"
+        /**
+         * Preference key holding the last incorporated bundled catalog version.
+         */
         const val KEY_MANIFEST_VERSION = "key_manifest_version"
         private const val KEY_AUTO_UPDATE = "key_auto_update_extensions"
 
+        /**
+         * Merges a new bundled catalog with saved user selections and compatible cache metadata.
+         *
+         * @param savedList Previously persisted catalog, including user-created entries.
+         * @param bundledList Current bundled definitions whose IDs and defaults take precedence.
+         * @return Preserved custom entries followed by merged bundled entries.
+         */
         fun migrateExtensions(
             savedList: List<ExtensionFilter>,
             bundledList: List<ExtensionFilter>
@@ -386,6 +475,12 @@ class ExtensionRepository private constructor(private val context: Context) {
         @Volatile
         private var INSTANCE: ExtensionRepository? = null
 
+        /**
+         * Returns the process-wide repository backed by application-private storage.
+         *
+         * @param context Context whose application context is retained.
+         * @return Shared extension repository.
+         */
         fun getInstance(context: Context): ExtensionRepository {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: ExtensionRepository(context.applicationContext).also { INSTANCE = it }

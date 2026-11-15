@@ -6,7 +6,13 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * Regression coverage for seed list provenance.
+ */
 class SeedListProvenanceTest {
+    /**
+     * Verifies that bundled seed lists declare license and contain only canonical domains.
+     */
     @Test fun bundledSeedListsDeclareLicenseAndContainOnlyCanonicalDomains() {
         listOf("ad_domains.txt", "adult_domains.txt").forEach { name ->
             val file = File("src/main/assets", name)

@@ -9,6 +9,9 @@ import org.junit.Test
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
+/**
+ * Regression coverage for rule line parser.
+ */
 class RuleLineParserTest {
 
     private val psl = PublicSuffixRules.fallback
@@ -22,6 +25,9 @@ class RuleLineParserTest {
     private val admission = DefaultRuleAdmission(psl = psl, protected = protectedDomains)
     private val parser = RuleLineParser(admission = admission, psl = psl)
 
+    /**
+     * Verifies that test all cases from tsv.
+     */
     @Test
     fun testAllCasesFromTsv() {
         val stream = javaClass.classLoader?.getResourceAsStream("rule-parser-cases.tsv")

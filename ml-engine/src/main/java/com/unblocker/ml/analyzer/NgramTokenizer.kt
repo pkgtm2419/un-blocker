@@ -1,27 +1,20 @@
 package com.unblocker.ml.analyzer
 
 /**
- * Extracts character-level n-gram frequency vectors from a domain label string.
+ * Extracts overlapping character n-grams from normalized text.
  *
- * N-grams are overlapping sub-sequences of length [n] from the input. They capture
- * structural patterns in domain labels that a TFLite text-classification model uses
- * as dense features — for example, "ads", "trk", "pxl" frequently appear in ad/tracker
- * domains regardless of surrounding context.
+ * Normalization lowercases text and keeps letters, digits, and hyphens.
  *
- * ## Example
- * ```
- * "adserver" with n=3 → ["ads", "dse", "ser", "erv", "rve", "ver"]
- * ```
- *
- * @param n  The n-gram size. Default 3 (trigrams) — optimal for domain label classification.
+ * @param n Gram width in characters; positive values are expected but not validated at construction.
  */
 class NgramTokenizer(private val n: Int = 3) {
 
     /**
-     * Tokenizes [input] into a list of n-gram strings.
+     * Normalizes text and extracts consecutive n-grams in order.
      *
-     * @param input  A single domain label (no dots). Lowercased automatically.
-     * @return       Ordered list of overlapping n-grams. Empty if [input].length < [n].
+     * @param input Text to normalize; dots and other excluded characters are removed.
+     * @return Overlapping grams, or an empty list when normalized text is shorter than [n].
+     * @throws IndexOutOfBoundsException If a negative [n] yields invalid substring bounds.
      */
     fun tokenize(input: String): List<String> {
         val clean = input.lowercase().filter { it.isLetterOrDigit() || it == '-' }
@@ -30,11 +23,11 @@ class NgramTokenizer(private val n: Int = 3) {
     }
 
     /**
-     * Returns a frequency map of n-grams → count, normalised by total n-gram count.
-     * Used as a sparse feature vector for TFLite models that accept float[] tensors.
+     * Counts normalized n-grams and divides each count by the total number of grams.
      *
-     * @param input  Domain label string.
-     * @return       Map of n-gram → relative frequency (0.0–1.0).
+     * @param input Text normalized by [tokenize].
+     * @return Relative gram frequencies, or an empty map when no grams are produced.
+     * @throws IndexOutOfBoundsException If a negative [n] yields invalid substring bounds.
      */
     fun frequencyVector(input: String): Map<String, Float> {
         val ngrams = tokenize(input)

@@ -16,6 +16,12 @@ object DnsResolverPolicy {
             .toSet()
     }
 
+    /**
+     * Removes synthetic tunnel, unspecified and loopback resolver addresses, then deduplicates by bytes.
+     *
+     * @param addresses Android-configured resolver candidates; private network addresses remain eligible.
+     * @return Usable distinct candidates in input order, without adding a public fallback.
+     */
     fun sanitize(addresses: Iterable<InetAddress>): List<InetAddress> = addresses
         .filterNot { address ->
             address.address.toList() in tunnelDnsAddresses ||
@@ -23,6 +29,12 @@ object DnsResolverPolicy {
         }
         .distinctBy { it.address.toList() }
 
+    /**
+     * Flattens and sanitizes network-provided resolver groups.
+     *
+     * @param groups Resolver lists in network preference order.
+     * @return Sanitized configured resolvers without injecting defaults.
+     */
     fun selectConfigured(groups: Iterable<Iterable<InetAddress>>): List<InetAddress> =
         sanitize(groups.flatten())
 }

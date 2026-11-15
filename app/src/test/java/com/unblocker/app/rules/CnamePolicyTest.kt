@@ -5,9 +5,15 @@ import com.unblocker.app.logic.rules.*
 import org.junit.Assert.*
 import org.junit.Test
 
+/**
+ * Regression coverage for cname policy.
+ */
 class CnamePolicyTest {
     private val engine = DnsRuleEngine(CompiledRuleSet(listOf(RuleParser.parse("||tracker.test^")!!)))
 
+    /**
+     * Verifies that original allow and current switch override aliases.
+     */
     @Test fun originalAllowAndCurrentSwitchOverrideAliases() {
         var enabled = true
         var allowed = false
@@ -20,6 +26,9 @@ class CnamePolicyTest {
         assertNull(policy.blockedAlias("shop.test", listOf("x.tracker.test")))
     }
 
+    /**
+     * Verifies that benign and shipped exceptions are not alias blocks.
+     */
     @Test fun benignAndShippedExceptionsAreNotAliasBlocks() {
         val matcher = DnsRuleEngine(CompiledRuleSet(listOf(RuleParser.parse("||tracker.test^")!!,
             RuleParser.parse("@@||good.tracker.test^")!!)))
@@ -27,6 +36,9 @@ class CnamePolicyTest {
             listOf("cdn.test", "good.tracker.test")))
     }
 
+    /**
+     * Verifies that protected original domain is not blocked by alias.
+     */
     @Test fun protectedOriginalDomainIsNotBlockedByAlias() {
         val protectedDomains = DefaultProtectedDomains(builtIn = setOf("google.com", "docs.google.com"))
         val matcher = DnsRuleEngine(CompiledRuleSet(listOf(RuleParser.parse("||tracker.test^")!!)))

@@ -11,6 +11,9 @@ import org.junit.Test
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
+/**
+ * Regression coverage for TCP DNS responder.
+ */
 class TcpDnsResponderTest {
     private val emittedPackets = mutableListOf<ByteArray>()
     private val immediateExecutor = java.util.concurrent.Executor { it.run() }
@@ -179,6 +182,9 @@ class TcpDnsResponderTest {
         return buf.array().copyOf(size)
     }
 
+    /**
+     * Verifies that complete three way handshake and tear down.
+     */
     @Test
     fun completeThreeWayHandshakeAndTearDown() {
         val responder = createResponder()
@@ -227,6 +233,9 @@ class TcpDnsResponderTest {
         assertEquals(0, responder.activeConnectionCount())
     }
 
+    /**
+     * Verifies that length prefixed query and psh ack response.
+     */
     @Test
     fun lengthPrefixedQueryAndPshAckResponse() {
         var queryReceived: ByteArray? = null
@@ -278,6 +287,9 @@ class TcpDnsResponderTest {
         }
     }
 
+    /**
+     * Verifies that client rst closes connection immediately.
+     */
     @Test
     fun clientRstClosesConnectionImmediately() {
         val responder = createResponder()
@@ -292,6 +304,9 @@ class TcpDnsResponderTest {
         assertEquals(0, responder.activeConnectionCount())
     }
 
+    /**
+     * Verifies that unexpected traffic on unknown connection returns rst.
+     */
     @Test
     fun unexpectedTrafficOnUnknownConnectionReturnsRst() {
         val responder = createResponder()
@@ -308,6 +323,9 @@ class TcpDnsResponderTest {
         assertEquals(0, responder.activeConnectionCount())
     }
 
+    /**
+     * Verifies that ignores non port53 or wrong IP or garbage packets.
+     */
     @Test
     fun ignoresNonPort53OrWrongIpOrGarbagePackets() {
         val responder = createResponder()
@@ -327,6 +345,9 @@ class TcpDnsResponderTest {
         assertTrue(process(responder, garbage).isEmpty())
     }
 
+    /**
+     * Verifies that drops out of order segments.
+     */
     @Test
     fun dropsOutOfOrderSegments() {
         val responder = createResponder()
@@ -346,6 +367,9 @@ class TcpDnsResponderTest {
         assertTrue(responses.isEmpty())
     }
 
+    /**
+     * Verifies that buffer bound exceeded sends rst and closes.
+     */
     @Test
     fun bufferBoundExceededSendsRstAndCloses() {
         val responder = createResponder(maxBufferSize = 64)
@@ -369,6 +393,9 @@ class TcpDnsResponderTest {
         assertEquals(0, responder.activeConnectionCount())
     }
 
+    /**
+     * Verifies that purges idle connections after timeout.
+     */
     @Test
     fun purgesIdleConnectionsAfterTimeout() {
         val responder = createResponder(idleTimeoutMillis = 50L)
@@ -384,6 +411,9 @@ class TcpDnsResponderTest {
         assertEquals(1, responder.activeConnectionCount())
     }
 
+    /**
+     * Verifies that syn flood bound enforces max concurrent connections.
+     */
     @Test
     fun synFloodBoundEnforcesMaxConcurrentConnections() {
         val responder = createResponder(maxConnections = 32)
@@ -412,6 +442,9 @@ class TcpDnsResponderTest {
         assertEquals(TcpDnsResponder.FLAG_RST, parseTcpPacket(evictedResp[0]).flags)
     }
 
+    /**
+     * Verifies that complete IPv6 TCP DNS exchange.
+     */
     @Test
     fun completeIpv6TcpDnsExchange() {
         val dnsWire = buildSyntheticDnsQuery("ipv6.example.org", txId = 0x5678.toShort(), type = 28) // AAAA
@@ -478,6 +511,9 @@ class TcpDnsResponderTest {
         assertEquals(0, responder.activeConnectionCount())
     }
 
+    /**
+     * Verifies that parse wire query and build blocked wire response.
+     */
     @Test
     fun parseWireQueryAndBuildBlockedWireResponse() {
         val queryWire = buildSyntheticDnsQuery("adserver.tracking.com", txId = 0x4321.toShort(), type = 1)
@@ -499,6 +535,9 @@ class TcpDnsResponderTest {
         assertEquals(1, anCount)
     }
 
+    /**
+     * Verifies that doh canary returns nxdomain in blocked wire response.
+     */
     @Test
     fun dohCanaryReturnsNxdomainInBlockedWireResponse() {
         val canaryWire = buildSyntheticDnsQuery("use-application-dns.net", txId = 0x9999.toShort(), type = 1)
@@ -510,6 +549,9 @@ class TcpDnsResponderTest {
         assertEquals(0, anCount)
     }
 
+    /**
+     * Verifies that test do tnon DNS port syn emits fast rst.
+     */
     @Test
     fun testDoTNonDnsPortSynEmitsFastRst() {
         val responder = createResponder()
@@ -527,6 +569,9 @@ class TcpDnsResponderTest {
         assertEquals(54321, parsed.dstPort)
     }
 
+    /**
+     * Verifies that test non tunnel IP returns false and emits nothing.
+     */
     @Test
     fun testNonTunnelIpReturnsFalseAndEmitsNothing() {
         val responder = createResponder()
@@ -539,6 +584,9 @@ class TcpDnsResponderTest {
         assertTrue(emittedPackets.isEmpty())
     }
 
+    /**
+     * Verifies that test trapped public DNS is handled.
+     */
     @Test
     fun testTrappedPublicDnsIsHandled() {
         val responder = createResponder()

@@ -8,8 +8,14 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * Regression coverage for extension repository.
+ */
 class ExtensionRepositoryTest {
 
+    /**
+     * Verifies that test migrate extensions preserves user custom filters and toggles.
+     */
     @Test
     fun testMigrateExtensionsPreservesUserCustomFiltersAndToggles() {
         // Previous stored extensions:
@@ -107,6 +113,9 @@ class ExtensionRepositoryTest {
         assertNull(mergedAak)
     }
 
+    /**
+     * Verifies that test migrate extensions does not duplicate manual filters.
+     */
     @Test
     fun testMigrateExtensionsDoesNotDuplicateManualFilters() {
         val manualFilter = ExtensionFilter(
@@ -157,6 +166,9 @@ class ExtensionRepositoryTest {
         assertFalse(merged.first { it.id == "manual_filters" }.isEnabled)
     }
 
+    /**
+     * Verifies that test migrate extensions preserves legacy oisd toggle.
+     */
     @Test
     fun testMigrateExtensionsPreservesLegacyOisdToggle() {
         val legacyOisd = ExtensionFilter(

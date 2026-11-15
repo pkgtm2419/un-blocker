@@ -10,13 +10,22 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
+/**
+ * Regression coverage for tun response writer.
+ */
 class TunResponseWriterTest {
 
+    /**
+     * Resets the fixture state before each test to keep assertions independent.
+     */
     @Before
     fun setUp() {
         VpnDiagnostics.resetForTesting()
     }
 
+    /**
+     * Verifies that test concurrent enqueue writes to output stream.
+     */
     @Test
     fun testConcurrentEnqueueWritesToOutputStream() {
         val session = VpnSessionState()
@@ -63,6 +72,9 @@ class TunResponseWriterTest {
         run.close()
     }
 
+    /**
+     * Verifies that test queue overflow drops packets and records diagnostics without blocking.
+     */
     @Test
     fun testQueueOverflowDropsPacketsAndRecordsDiagnosticsWithoutBlocking() {
         val session = VpnSessionState()
@@ -102,6 +114,9 @@ class TunResponseWriterTest {
         run.close()
     }
 
+    /**
+     * Verifies that test ownership revocation prevents further writes.
+     */
     @Test
     fun testOwnershipRevocationPreventsFurtherWrites() {
         val session = VpnSessionState()

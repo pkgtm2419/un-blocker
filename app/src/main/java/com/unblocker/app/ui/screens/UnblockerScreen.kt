@@ -59,17 +59,14 @@ import com.unblocker.app.ui.theme.TealAccent
 import com.unblocker.app.ui.theme.rememberVpnStateColors
 
 /**
- * Streamlined Unblocker Landing Page (Home Tab).
+ * Renders the home shield start/stop control and adult-domain filtering toggle.
  *
- * Minimalist design featuring strictly:
- *  1. Header branding with dynamic status pill.
- *  2. Central Hero: Tactile Interactive Shield Logo Start/Stop Button.
- *     The authentic shield logo remains identical while the inner power icon
- *     dynamically changes state, illumination, and breathing aura based on VPN status.
- *  3. Directly below the logo: Block 18+ Adult Content Toggle Card.
- *
- * All secondary diagnostic workflows, tier selectors, logs shortcuts, and system
- * toggles have moved to the dedicated Settings screen.
+ * @param preferences Source of filtering state and destination for user preference changes.
+ * @param quickStartManager Service status source and stop controller.
+ * @param onRequestVpnPermission Callback that requests consent and starts protection when appropriate.
+ * @param contentPadding Parent navigation padding; its bottom inset is applied to scrolling content.
+ * @param onOpenSettings Reserved settings navigation callback, currently unused by this screen.
+ * @param onNavigateToLogs Reserved logs navigation callback, currently unused by this screen.
  */
 @Composable
 fun UnblockerScreen(
@@ -166,9 +163,9 @@ fun UnblockerScreen(
                         modifier = Modifier
                             .size(outerGlowSize)
                             .graphicsLayer {
-                                val s = if (isRunning) pulseGlowScale else 1.0f
-                                scaleX = s
-                                scaleY = s
+                                val glowScale = if (isRunning) pulseGlowScale else 1.0f
+                                scaleX = glowScale
+                                scaleY = glowScale
                             }
                             .background(
                                 brush = Brush.radialGradient(

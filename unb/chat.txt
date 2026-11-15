@@ -1,0 +1,824 @@
+Analyze this open source application. https://github.com/pkgtm2419/un-blocker
+I want to use this for my mobile. is this safe for android 16 and 17? or check the security and performance of this application. and also check is this actual working to block the ads. and let me know is how much % it is working? so I can decide to Use this application in my mobile. [Web search](chatgpt-system-hint://search) $deep-research [$superpowers](app://plugins~Plugin_60aea7460bd4819199fd97a9553a5e12)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Worked for 5m 59s
+
+
+I’ll inspect the repository’s Android code, permissions, network and ad-blocking mechanisms, then check its release history and Android 16/17 compatibility. I’ll separate what the code demonstrates from what would require testing an APK on a real phone, especially for the blocking percentage.
+
+Investigated the Un-Blocker repository, ecosystem, implementation, releases, and security concerns
+
+
+
+
+Searched the web
+
+
+Investigated Un-Blocker repository structure, sources, and releases
+
+
+
+
+Cloned repository for deep security audit
+
+
+
+
+Assessed app risks
+
+
+
+
+Measured effectiveness carefully
+
+
+
+
+Audited repository security, privacy, compatibility, reliability, and release readiness
+
+
+
+
+Audited implementation details
+
+Searched the web
+
+
+The code review has confirmed the core mechanism: Un-Blocker creates a local VPN interface for DNS filtering and forwards allowed queries to the phone’s configured DNS resolvers. I also found a release-testing gap and a few privacy and maintenance details worth checking before recommending installation.
+
+Audited ad filtering architecture, protection coverage, and logging privacy defaults
+
+
+
+
+Searched the web
+
+
+Validated release evidence
+
+
+
+
+Finalized the audit
+
+
+
+
+Audited ad domains, release security, performance, coverage, and reliability claims
+
+
+
+
+Searched the web
+
+
+
+
+
+
+
+
+
+Un-Blocker: Android 16 & 17 Security and Performance Audit
+Conditional recommendation
+Reviewed: 11 November 2026
+
+Application: Un-Blocker by pkgtm2419
+
+Latest published release: v2.6.1, released 10 November 2026.
+
+Initial verdict: This is a genuine DNS-based ad-blocking application, not a conventional VPN service. Its architecture can block advertising and tracking domains across Android apps without rooting your device. However, it cannot block every type of advertisement, and its real-world effectiveness has not been established by an independent, comprehensive benchmark.
+
+The important distinction is between an application that can block ads and one that has been proven safe and effective across Android devices. I'll assess those separately.
+1. Android 16 and 17 compatibility
+Android 16 (API 36)	Not device-verified
+Android 17 (API 37)	Not device-verified
+Minimum supported version	Android 8.0 (API 26)
+Actual target SDK in v2.6.1	API 35 (Android 15)
+
+
+Android 17 was released on 16 June 2026. 
+android-developers.googleblog.com
+ The application's configuration permits installation on newer Android versions, but installation compatibility is not proof that its DNS filtering, background service and VPN lifecycle work correctly.
+
+There is a significant testing gap: the repository's Android device-test matrix covers API 26, 30 and 35, not API 36 or 37. The app also compiles against SDK 35, despite older README text referring to SDK 36.
+
+That means I cannot certify reliable operation on either Android 16 or Android 17 from the available automated tests.
+
+Sources: Build configuration and Android device-test matrix.
+2. How much does it actually block?
+I found a useful number in the project's historical test documentation, rather than relying on its marketing claims.
+PROJECT-REPORTED TEST RESULTS — 4 OCTOBER 2026
+94.7%
+Advertising domains detected (18/19)
+59.1%
+Tracking domains detected (13/22)
+75.61%
+Combined detection (31/41)
+0/58
+Known necessary domains falsely blocked
+
+
+These figures come from the project's own small, predefined hostname corpus evaluated on development version 1.4.1. They are not independently reproduced measurements of release 2.6.1, nor percentages of ads removed from an Android phone.
+Source: Historical coverage baseline included in the v2.6.1 release.
+
+The old test supports the conclusion that the filtering rules are capable of identifying recognizable advertising infrastructure. It does not establish a 94.7% ad-blocking rate during actual use, especially across thousands of mobile apps.
+What you can realistically expect
+Ad type	Assessment
+Standard third-party website ad domains	Often blockable
+Ads in mobile games using distinct ad servers	Often blockable
+Analytics and tracking requests	Partially blockable
+Pop-ups delivered from blocked ad domains	Sometimes blockable
+YouTube app video ads	Unreliable
+Instagram/Facebook feed ads	Usually not removable through DNS alone
+First-party or same-domain advertising	Generally not distinguishable
+Ads using encrypted DNS bypasses	May evade filtering
+
+The YouTube limitation is fundamental: its advertising and videos can share delivery domains, so DNS filtering cannot reliably distinguish one from the other. 
+AdGuard
+
+
+My assessment of the percentage: There is credible evidence of a working domain classifier, but insufficient evidence to assign a trustworthy overall mobile ad-blocking percentage to version 2.6.1. The historical 75.61% figure is a limited benchmark, not the application's real-world effectiveness.
+3. Security and privacy audit
+The architecture has several sensible safeguards, but I found issues that affect whether I would trust the downloadable APK on a primary phone.
+Area	Finding	Assessment
+Sensitive Android permissions	No location, contacts, SMS, camera or microphone permissions in the app manifest	Positive
+VPN architecture	Uses synthetic DNS-only routes instead of intercepting all normal web traffic	Positive
+HTTPS interception	No custom CA certificate or TLS-decryption mechanism in the reviewed architecture	Positive
+DNS response validation	Transaction-ID randomization, response validation, timeouts and bounded DNS operations	Positive
+Local learning	Android Keystore-backed HMAC identifiers for learned domains and private rules	Positive
+Query history	Readable domain statistics are saved locally by default	Privacy concern
+Downloaded blocklists	HTTPS validation and download limits exist, but external lists can change	Manageable risk
+Release signing	Published production-labeled APK actually uses a test signing key	Significant concern
+Security CI	CodeQL passes, but Android lint is configured not to fail the build on findings	Testing weakness
+
+Findings that matter most
+1. The v2.6.1 APK is test-signed, despite being labeled a production release.
+
+I inspected the successful GitHub Actions release run. Its logs explicitly state that production keystore secrets were unavailable and the process fell back to stable test signing.
+
+The APK signature was subsequently verified against that test certificate, so this is not evidence of malware. But production signing provenance is weaker than the release description suggests.
+
+Evidence: v2.6.1 release pipeline logs and release workflow.
+
+2. DNS logging is enabled by default.
+
+The application records readable domain names and aggregate request counts in a local Room/SQLite database. Aggregate records have a 30-day retention policy; detailed chronological event history requires opt-in.
+
+This is not the same as uploading browsing history to a developer's server, and I did not find a telemetry upload mechanism in the reviewed filtering path. However, local domain history is not encrypted at the application database layer. It is principally protected by Android's app sandbox and device security.
+
+The app's privacy documentation describes these local logs, but some promotional and code comments still imply that no domain history is stored.
+
+Evidence: QueryLogSink.kt, database provider, privacy policy.
+
+3. Release quality checks need strengthening.
+
+The app's Gradle configuration contains abortOnError = false, ignoreWarnings = true, and disabled lint checks. This weakens automated quality enforcement.
+
+The project does have positive evidence: the v2.6.1 release build, unit-test workflow and CodeQL analysis completed successfully. But a scheduled device-matrix run on 10 November failed during job setup, before its Android emulator tests ran. That failure does not prove an application defect, but it also cannot be counted as a successful device test.
+
+Evidence: Build configuration, Android checks and device matrix run.
+
+I also found that a post-release commit removed many historical QA documents from main, while the README still links to some of them. The documents remain available in the v2.6.1 tag. This is a documentation and auditability weakness, not evidence by itself of malicious activity.
+4. Performance and battery assessment
+APK download size	5.56 MiB
+DNS processing	Local filtering with caching and bounded work queues
+Background operation	Persistent foreground VPN service
+Mobile battery impact	Not independently measured
+24-hour stability	No verified physical-device soak test for v2.6.1
+
+
+The code uses a DNS cache, bounded queues, worker threads and limits on downloaded filter sizes. These are reasonable performance engineering choices.
+
+However, the DNS resolver uses timeouts and retries. Under unreliable Wi-Fi or mobile-data conditions, upstream DNS failures could cause noticeable website or app-loading delays.
+
+The repository's older performance reports describe fast local rule matching, but they do not establish current device-wide battery consumption, memory stability or end-to-end browsing latency on Android 16/17.
+
+Another important point: the Extensions screen lists many third-party filter subscriptions. Most require an explicit download or enabled auto-update before their remote rule files become available. The displayed estimated filter counts should not be confused with verified, loaded rules.
+
+Performance verdict: The architecture is lightweight enough to justify testing, but its real-world battery and reliability impact is still unverified.
+5. My recommendation for your phone
+I would not yet make Un-Blocker v2.6.1 my primary ad blocker on an Android 16 or 17 daily-use phone. The test-signed production-labeled release, missing current Android-version CI coverage, and locally stored DNS history are enough reasons for caution.
+
+If you still want to evaluate it, use this checklist:
+Installation and evaluation checklist
+
+0/7
+
+
+
+[ ] Download only the APK from the original GitHub v2.6.1 release.
+[ ] Verify the SHA-256 checksum and leave Google Play Protect enabled.
+[ ] Disable optional adult-content filtering if you only want advertisement blocking.
+[ ] Open Logs, pause query logging and clear existing history if you do not want local domain records.
+[ ] Leave third-party filter auto-updates and unnecessary battery-optimization exemptions disabled initially.
+[ ] Test Wi-Fi and mobile data, banking/UPI apps, messaging, games, browsing and background reconnects.
+[ ] Compare visible ads with protection on and off, and check battery usage in Android settings.
+
+Published v2.6.1 APK SHA-256
+869f28867a4d520fffee47a71b3109a6c30245263682eeb996bd4825b7a4368c
+
+ Copy
+Checksum sourced from the GitHub release asset metadata. A matching checksum verifies download integrity, not that the app is malware-free.View official v2.6.1 release 
+One particularly important compatibility issue: Android allows only one active VPN per user/profile, and this application may conflict with an existing VPN. Android's Block connections without VPN setting should remain disabled for this DNS-only split-tunnel design. 
+developer.android.com
+
+
+Also, strict Android Private DNS or application-specific encrypted DNS can bypass Un-Blocker's local DNS filter. Don't disable encrypted DNS solely to get more ad blocking without understanding the privacy trade-off.
+A simpler alternative
+If your primary goal is ordinary ad blocking without installing another APK, you could use AdGuard DNS through Android's built-in Private DNS.
+Android Settings → Network & Internet → Private DNS
+
+Choose Private DNS provider hostname and enter:
+dns.adguard-dns.com
+ Copy
+This provides encrypted DNS filtering without a local VPN app. The provider handles your DNS requests, so it offers a different privacy model and no equivalent on-device customization.Official AdGuard DNS setup 
+adguard-dns.io
+
+
+Final decision
+Your priority	My recommendation
+Experiment with an open-source DNS blocker	Try Un-Blocker cautiously on a secondary device
+Dependable Android 16/17 daily use	Wait for verified compatibility and release-signing improvements
+Block typical ads without installing an APK	Consider encrypted filtering through Android Private DNS
+Remove nearly all YouTube or social-media ads	Un-Blocker alone is not the right solution
+Maximum security assurance	Prefer independently audited software with verified release provenance
+
+Overall conclusion: Un-Blocker has a credible technical foundation and historical evidence of functional hostname blocking. I did not establish that its published APK is malicious, but neither the source review nor its existing CI provides enough evidence to certify it as safe, reliable and highly effective on Android 16/17.
+
+This assessment examined repository source, historical evaluation documents, permissions, release metadata and GitHub Actions evidence. I could not independently install or dynamically benchmark the APK on a physical Android device, so no real-world blocking or battery percentage is claimed.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+is this possible, any app like this can block all ads from the device. from any application. if yes, how is this possible and what should we need to do for that? [$deep-research](app://connector_openai_deep_research)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Worked for 15s
+
+
+
+
+
+
+Started deep research on the query
+
+
+
+
+
+
+
+
+
+
+
+
+
+Deep Research has started investigating whether a single Android app can block advertisements across all applications on Android 16 and 17.
+
+The research will cover the technical limitations of achieving 100% ad blocking, approaches for rooted and non-rooted devices, and how an application like Un-Blocker could be improved.
+
+It will also examine security, privacy, battery performance, Android restrictions, and a practical implementation architecture.
+
+The detailed report will appear in the Deep Research panel, with sources and recommendations.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+I read the document. but based on Un-blocker app, we can block most of the ads from the device. 
+and you are right. we can't block 100% but based on un-blocker app we can increase the % of blocking only ads without breaking primary tasks. 
+so we contribute with un-blocker git repo with connected git ID. for fix all issues and block most of the ads. and provide option to user to add you own data to block. and based on application features. we can increase the functionalities and features to make that working strongly. 
+is this possible to do? [$superpowers](app://plugins~Plugin_60aea7460bd4819199fd97a9553a5e12)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Worked for 3m 10s
+
+
+Yes—this is feasible. I’ll check the current Un-Blocker codebase and your connected GitHub access, then identify which improvements can be implemented safely without disrupting normal app traffic. I’ll prioritize custom blocking rules, filtering reliability, and testable fixes rather than promising an unverified blocking percentage.
+
+Assessed feasibility
+
+
+
+
+Clarified next steps
+
+
+
+
+Prioritized improvements and recommended a roadmap
+
+
+
+
+Inspected Un-Blocker repository, architecture, documentation, and extension enhancement feasibility
+
+
+
+
+
+
+
+
+
+
+
+Yes. We can contribute to Un-Blocker and make it significantly more capable without sacrificing its privacy-first design. The right objective is to block more advertising and tracking traffic while minimizing false positives and preserving normal app functionality.
+
+I checked the connected GitHub account and the current repository:
+- Connected account: presage-pawan
+- Repository: pkgtm2419/un-blocker
+- Default branch: main
+- Access: GitHub reports write permission for the connected account.
+- Current version: 2.6.1
+Importantly, Un-Blocker already supports up to 1,000 custom blocked domains and 1,000 custom allowed domains, alongside local learning and DNS filtering. So we should extend these existing capabilities rather than duplicate them.
+
+The repository's contribution guidelines also request feature branches, focused pull requests, and tests. I would follow that workflow rather than commit directly to main.
+What should actually be improved?
+The source review revealed several opportunities, including one important detail: users can already add a custom filter-list URL in the Extensions screen. The feature we should build is a more complete and safer custom-rule management system—not just another URL input.
+Priority	Finding	Recommended change
+Critical	Some Adblock-style conditional rules can lose their conditions when converted to DNS rules	Reject unsupported conditions instead of broadening a rule and potentially breaking legitimate traffic
+High	MyDomainsStore saves domain names as plaintext in Android SharedPreferences	Align persistence with the project's privacy guarantees
+High	Existing custom-list controls are limited	Add local-file import, multiline paste, validation previews, editing, export and rollback
+High	Android 16/17 compatibility is not adequately established by the current device-test coverage	Expand emulator tests and validate physical devices
+High	Android lint is configured not to fail the build on errors	Strengthen CI quality gates and address findings
+Medium	Documentation and UI contain outdated version references	Make version metadata automatic and synchronize documentation
+Ongoing	Blocking effectiveness has not been independently measured on a broad, current app corpus	Build an ad-blocking and false-positive regression benchmark
+
+The relevant code is available in RuleLineParser.kt, MyDomainsStore.kt, and ExtensionsScreen.kt.
+Proposed development roadmap
+Phase 1
+Reliability and security
+
+Correct rule parsing and precedence, protect essential service domains, strengthen release signing and CI, and add regression tests for login, payments, media playback and connectivity.
+
+
+
+Phase 2
+Bring your own blocking data
+
+Support imported hosts files, compatible Adblock domain rules, locally selected files, custom HTTPS subscriptions, rule previews, source-specific toggles, encrypted local storage and one-tap rollback.
+
+
+
+Phase 3
+Improve blocking coverage
+
+Optimize curated mobile-ad and tracker lists, improve CNAME handling, refine local detection, provide compatibility exceptions, and optionally apply different filtering policies to different apps.
+
+
+
+Phase 4
+Advanced protection, if justified
+
+Evaluate an optional full local-VPN traffic-filtering mode. Only introduce it if measured gains justify its greater networking complexity, battery cost and compatibility risks.
+
+
+
+Phase 5
+Measurable effectiveness
+
+Compare blocked ad impressions, tracker requests, false positives, broken workflows, DNS latency and battery usage before and after each change, including Android 16/17 testing.
+
+
+
+My proposed implementation approach
+I recommend improving the existing DNS-only architecture first, rather than immediately replacing it with a full packet-processing VPN. That offers the best starting balance between increased blocking, battery efficiency, maintainability and minimal application breakage.
+
+We should also keep HTTPS decryption, root access and Accessibility-based screen manipulation out of the standard app. They would introduce significant security or compatibility concerns without guaranteeing universal ad removal.
+
+One important engineering rule: more rules do not automatically mean more ads blocked. A large list that disrupts authentication, video playback or payments would make the application worse. Every expansion should pass effectiveness and regression tests.
+
+The contribution process should be module-wise: isolated feature branch, focused commits, automated tests, Android device validation and a pull request for the repository maintainer to review.
+
+Current status: I have verified repository access and reviewed relevant source files, but I have not changed or pushed code, opened a pull request, or run an Android build in this turn.
+
+The project is technically feasible. The most valuable first contribution would be rule-engine correctness and a robust user-managed filter-list system, followed by measurable improvements to device-wide blocking effectiveness.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+create a new branch and start contribution on this application to fix all issues. and after all changes create a pull request for main branch. [$superpowers](app://plugins~Plugin_60aea7460bd4819199fd97a9553a5e12) [$github](app://connector_76869538009648d5b282a4bb21c3d157) [$context7](app://asdk_app_69ef18c674308191a2f952431f91ea61)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Worked for 9m 38s
+
+
+I’ll create a dedicated contribution branch, audit the current rule engine and safety controls, then implement the highest-impact fixes with regression tests. I’ll use the connected GitHub account for commits and open a pull request to main once the changes are reviewable. I’ll keep any unverified Android-device behavior clearly identified rather than treating it as fixed.
+
+Fetched GitHub authentication and main branch information sequentially
+
+
+
+
+Ensured function calls execute sequentially
+
+
+
+
+Configured sequential tools, checked GitHub authentication, and created safety filter branch
+
+
+
+
+Assessed repository access
+
+
+
+
+Researched Android VPN and storage APIs
+
+
+
+
+The repository is readable through your connected GitHub account, but GitHub rejected the branch-creation request with 403: Resource not accessible by integration. I’m checking whether this is a repository-specific permission limitation. Meanwhile, I can prepare and test the code changes independently so the contribution itself isn’t blocked.
+
+Checked GitHub write access and local tools
+
+
+
+
+Checked GitHub collaborator, app, and repository permissions
+
+
+
+
+Evaluated implementation options and prepared a safe patch
+
+Cloned public repository with Git
+
+
+
+
+Tested the conservative fix
+
+
+
+
+Reviewed and prepared comprehensive rule parser and filter security improvements
+
+
+
+
+Used container tool
+
+
+
+
+I found two concrete filtering-safety problems worth fixing first: request-type-specific Adblock rules can be turned into broader DNS blocks, and wildcard allow rules can be applied too broadly. Both can affect the balance between blocking ads and keeping apps working. The connector still cannot create a branch upstream, so I’m preparing a tested patch while preserving the original main branch.
+
+Implemented parser patches, Kotlin harness tests, safety fixes, and verified repository changes
+
+
+
+
+Updated rule parser fixtures, extension parsing, and safety tests
+
+
+
+
+Packaged the contribution
+
+Created test fixture, updated parser tests, and validated safeguards
+
+
+
+
+Created contribution patch and handoff documentation
+
+
+
+
+
+
+
+
+
+
+
+I started the Un-Blocker contribution and prepared a tested code patch. However, GitHub blocked remote branch creation, so I could not push the changes or open the pull request to main.
+Contribution status
+Task	Status
+Review current source code	Completed for the affected modules
+Create local contribution branch	Completed
+Fix unsafe conditional DNS rule handling	Patched locally
+Fix wildcard allow-rule behavior	Patched locally
+Run isolated regression checks	23 passed
+Validate patch applies cleanly	Passed
+Create branch on GitHub	Blocked — HTTP 403
+Open pull request to main	Not created
+Fix all application issues	Not completed
+
+The patch prevents certain filter-list rules from accidentally blocking legitimate application functionality. It also corrects wildcard allow-rule matching. These are reliability improvements, not yet evidence of a higher device-wide ad-blocking percentage.
+Download the contribution
+Contribution package
+
+Code patch and implementation notes
+
+
+Git patch
+
+Four changed repository files
+
+
+Contribution notes and remaining roadmap
+
+Verification evidence, limitations and application instructions
+
+
+
+What is blocking the GitHub PR?
+The connected account is presage-pawan, while the repository belongs to pkgtm2419.
+
+GitHub returned:
+
+403 — Resource not accessible by integration
+
+The repository owner needs to authorize the connected GitHub integration for pkgtm2419/un-blocker, including Contents: Read and write and Pull requests: Read and write. Alternatively, you can create a fork under an authorized account.
+
+The source changes are prepared, but full Android builds, device testing, and the remaining feature roadmap still need to be completed before a production-ready PR can be justified.
+
+
+
+
+
+UN_BLOCKER_CONTRIBUTION_NOTES.mdDocument
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+so can you create proper plan to fix all issue properly. and also describe properly why is this issue happening and what type of change should fix that. also add proper process to fix all issue phase by phase. and after all changes do proper testing.
+after all testing create a proper report again for security, performance and ads blocking % before and after all report. [$superpowers](app://plugins~Plugin_60aea7460bd4819199fd97a9553a5e12)  [$deep-research](app://connector_openai_deep_research)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Worked for 29s
+
+
+
+
+
+
+Started deep research on the query
+
+
+
+
+
+
+
+
+
+
+
+
+
+I’ve started Deep Research on the Un-Blocker repository, using the Superpowers planning approach.
+
+The research will produce a comprehensive remediation plan covering the root cause of each verified issue, the changes required to fix it, implementation priorities, and a phase-by-phase development and testing process.
+
+It will also define how to produce a before-and-after audit of security, privacy, performance, Android 16/17 compatibility, ad-blocking effectiveness, and application breakage.
+
+Importantly, the report will distinguish measured results from estimates and proposed targets. Actual improvements in ad-blocking percentage can only be established after implementation and controlled testing.
+
+The research will also account for the GitHub permission issue that previously prevented branch creation and pull-request submission.
+
+Deep Research will provide the detailed plan and report in its research panel.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+based on this plan what is the improvment? create a table view before and after.
+
+
+
+
+
+
+
+
+
+
+
+
+
+Based on the Un-Blocker improvement plan, the expected result is better ad-blocking coverage, fewer broken applications, stronger security, more user control, and improved Android compatibility.
+
+However, this is a planned before-and-after comparison, not a completed benchmark. The full implementation and physical-device testing are still pending.
+1. Un-Blocker: Before vs. after improvements
+Baseline: Un-Blocker v2.6.1 · After: Proposed implementation of all seven phases
+Feature / Area	Before — Current App	After — Planned Improvement
+Ad blocking	DNS-based domain blocking with bundled lists	More effective curated lists, better rule selection and fewer missed DNS-level ad domains
+In-app ads	Blocks some known SDK advertising domains	Better coverage for mobile games, utility apps and advertising SDKs
+Tracker blocking	Existing domain lists and local detection	Improved tracker datasets, category separation and regression-tested detection
+False positives	Some conditional rules may create overly broad blocks	Strict DNS-compatible parsing, deterministic rule precedence and protected-domain checks
+Application compatibility	Legitimate services can be affected by aggressive rules	Explicit protection and testing for login, payments, notifications, streaming and updates
+Custom domain blocking	Basic custom allow/block rules	Advanced rule editor, import/export, bulk input, validation and explanations
+Custom filter lists	URL-based custom lists already supported	Local file import, preview, update comparison, source management and rollback
+Filter updates	Dynamic downloads and existing validation	More robust verification, atomic activation and last-known-good recovery
+Privacy	Some custom domains stored in plaintext preferences	Keystore-protected encryption, secure migration and backup exclusions
+Security	Signing, download validation and build-quality concerns	Stronger downloader protections, enforced security checks and verified release signing
+Performance	DNS-only processing, but insufficient current independent benchmarks	Optimized matching with measured latency, memory and CPU budgets
+Battery usage	Actual overhead not independently established	Profiling, controlled power tests and regression limits
+Android support	API 26+, target SDK 35; Android 16/17 not fully validated	Expanded API 36/37 tests and physical-device validation
+VPN reliability	Basic service lifecycle handling	Tested recovery from network switches, reboots, Doze and resolver failures
+Error handling	Existing diagnostics and status reporting	Clearer failure reasons, recovery controls and actionable messages
+Release process	Identified CI/lint/signing weaknesses	Mandatory quality gates, production signing verification, SBOM and build provenance
+Testing	JVM, instrumentation and limited emulator coverage	Comprehensive unit, fuzz, integration, device, battery and 72-hour stability tests
+
+2. Ad-blocking effectiveness: Before vs. after
+This is the most important comparison for your primary goal.
+Measurement	Before	After implementation
+Historical ad-domain test	94.7% (18/19)	To be remeasured
+Historical tracker-domain test	59.1% (13/22)	To be remeasured
+Real-world in-app ad requests blocked	Unknown	Expected to improve; percentage TBD
+Visible ads removed from apps	Unknown	Expected to improve in DNS-addressable categories
+Browser advertisements blocked	Unknown	Potential improvement from better domain lists
+Mobile game advertisements blocked	Unknown	Potential improvement from curated SDK rules
+YouTube in-stream ads blocked	Not reliably supported	Still not reliably supported by DNS-only filtering
+Instagram/Facebook sponsored feed ads	Not reliably supported	Still limited by first-party delivery
+Ads using encrypted DNS bypasses	Limited	Better detection and warnings; blocking not guaranteed
+Legitimate traffic incorrectly blocked	Unknown	Target: lower than baseline
+Critical workflows broken	Unknown	Target: 0
+Device-wide ad-removal percentage	Not established	Must be measured after implementation
+
+Important: The historical 94.7% and 59.1% figures came from a small developer test of version 1.4.1. They are not measurements of v2.6.1's real-world effectiveness and cannot be used as its baseline.
+3. Expected security and performance improvements
+KPI	Current baseline	Proposed acceptance target
+Critical security findings	Several issues identified	0 unresolved P0/P1 findings
+Protected system-service regressions	Not comprehensively measured	0 critical failures
+Overall workflow breakage	Unknown	Below 0.5% of tested workflows
+DNS processing p95 overhead	Unknown	Below 10 ms, subject to baseline validation
+VPN continuous stability	Not independently established	72 hours without crash, ANR or unrecovered tunnel failure
+Production APK signing	Provenance concerns identified	100% verified production signing
+Custom rule recovery	Limited recovery controls	Last-known-good snapshot and one-step rollback
+Android 16/17 compatibility	Not fully verified	Release-critical tests passing on both versions
+Battery overhead	Unknown	No unacceptable regression against baseline
+
+These are proposed engineering targets, not achieved measurements.
+4. Improvement across development phases
+P0–1
+
+Baseline + core fixes
+
+Correct rule parsing and matching, reduce application breakage
+
+
+
+P2–3
+
+Security + user control
+
+Secure storage, hardened releases, custom rule import, preview and rollback
+
+
+
+P4–5
+
+Coverage + device reliability
+
+Better mobile ad lists, Android 16/17 testing, performance optimization
+
+
+
+P6–7
+
+Measurement + release
+
+Real before/after metrics, security audit, final regression report and pull requests
+
+
+
+5. What is the biggest improvement?
+The goal is not simply to add more blocking rules. It is to make blocking more accurate while preserving essential app functionality.
+
+For example, an overly broad advertising rule might block a domain that an application also uses for authentication. The improved engine should reject unsupported conditional rules, prioritize protected services and let users resolve conflicts without disabling protection entirely.
+
+The final results should include three independently measured percentages:
+- Ad-blocking effectiveness: Percentage of actual ad requests or visible impressions removed.
+- Tracker-blocking effectiveness: Percentage of independently identified tracker requests prevented.
+- Application compatibility: Percentage of critical user workflows that continue working correctly.
+Expected outcome: Un-Blocker should become a safer, more configurable and potentially more effective device-wide DNS ad blocker. The actual percentage improvement can only be reported after the complete implementation is compared against the unchanged v2.6.1 baseline under controlled conditions.

@@ -11,6 +11,9 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * Regression coverage for DNS response validator.
+ */
 class DnsResponseValidatorTest {
     private val query = DnsQuery(
         transactionId = 0x1234,
@@ -26,6 +29,9 @@ class DnsResponseValidatorTest {
         dstPort = 53
     )
 
+    /**
+     * Verifies that accepts matching response and extracts metadata.
+     */
     @Test fun acceptsMatchingResponseAndExtractsMetadata() {
         val response = response(answerTtl = 120)
 
@@ -41,6 +47,9 @@ class DnsResponseValidatorTest {
         assertEquals(emptyList<String>(), metadata.aliases)
     }
 
+    /**
+     * Verifies that collects canonical cname alias.
+     */
     @Test fun collectsCanonicalCnameAlias() {
         val response = response(cnameAlias = "Tracker.Example", answerTtl = 90)
 
@@ -50,6 +59,9 @@ class DnsResponseValidatorTest {
         assertEquals(90L, metadata.minPositiveTtlSeconds)
     }
 
+    /**
+     * Verifies that accepts truncated response question without parsing missing answer.
+     */
     @Test fun acceptsTruncatedResponseQuestionWithoutParsingMissingAnswer() {
         val response = response(flags = 0x8380, includeAnswerBytes = false)
 
@@ -60,63 +72,99 @@ class DnsResponseValidatorTest {
         assertEquals(emptyList<String>(), metadata.aliases)
     }
 
+    /**
+     * Verifies that rejects packet whose qr flag still marks aquery.
+     */
     @Test fun rejectsPacketWhoseQrFlagStillMarksAQuery() {
         val response = response(flags = 0x0100)
         assertNull(DnsResponseValidator.parseAndValidate(response, response.size, query))
     }
 
+    /**
+     * Verifies that rejects wrong transaction id.
+     */
     @Test fun rejectsWrongTransactionId() {
         val response = response(transactionId = 0x4321)
         assertNull(DnsResponseValidator.parseAndValidate(response, response.size, query))
     }
 
+    /**
+     * Verifies that rejects question count other than one.
+     */
     @Test fun rejectsQuestionCountOtherThanOne() {
         val response = response(questionCount = 0)
         assertNull(DnsResponseValidator.parseAndValidate(response, response.size, query))
     }
 
+    /**
+     * Verifies that rejects same transaction id with wrong question name.
+     */
     @Test fun rejectsSameTransactionIdWithWrongQuestionName() {
         val response = response(questionName = "other.example")
         assertNull(DnsResponseValidator.parseAndValidate(response, response.size, query))
     }
 
+    /**
+     * Verifies that rejects wrong question type.
+     */
     @Test fun rejectsWrongQuestionType() {
         val response = response(questionType = DnsPacketUtil.TYPE_AAAA.toInt())
         assertNull(DnsResponseValidator.parseAndValidate(response, response.size, query))
     }
 
+    /**
+     * Verifies that rejects wrong question class.
+     */
     @Test fun rejectsWrongQuestionClass() {
         val response = response(questionClass = 3)
         assertNull(DnsResponseValidator.parseAndValidate(response, response.size, query))
     }
 
+    /**
+     * Verifies that rejects truncated question without throwing.
+     */
     @Test fun rejectsTruncatedQuestionWithoutThrowing() {
         val response = response().copyOf(15)
         assertNull(DnsResponseValidator.parseAndValidate(response, response.size, query))
     }
 
+    /**
+     * Verifies that rejects out of range compression pointer.
+     */
     @Test fun rejectsOutOfRangeCompressionPointer() {
         val response = responseWithQuestionBytes(byteArrayOf(0xc0.toByte(), 0xff.toByte()))
         assertNull(DnsResponseValidator.parseAndValidate(response, response.size, query))
     }
 
+    /**
+     * Verifies that rejects cyclic compression pointer.
+     */
     @Test fun rejectsCyclicCompressionPointer() {
         val response = responseWithQuestionBytes(byteArrayOf(0xc0.toByte(), 0x0c))
         assertNull(DnsResponseValidator.parseAndValidate(response, response.size, query))
     }
 
+    /**
+     * Verifies that rejects question whose single wire label contains adot.
+     */
     @Test fun rejectsQuestionWhoseSingleWireLabelContainsADot() {
         val response = responseWithQuestionBytes(encodeLabels("ads.example"))
 
         assertNull(DnsResponseValidator.parseAndValidate(response, response.size, query))
     }
 
+    /**
+     * Verifies that rejects question whose wire label would only match after trimming.
+     */
     @Test fun rejectsQuestionWhoseWireLabelWouldOnlyMatchAfterTrimming() {
         val response = responseWithQuestionBytes(encodeLabels(" ads", "example"))
 
         assertNull(DnsResponseValidator.parseAndValidate(response, response.size, query))
     }
 
+    /**
+     * Verifies that zero TTL in any answer makes whole response non cacheable.
+     */
     @Test fun zeroTtlInAnyAnswerMakesWholeResponseNonCacheable() {
         val response = responseWithCnameAndAddressTtls(cnameTtl = 0, addressTtl = 120)
 
@@ -126,12 +174,18 @@ class DnsResponseValidatorTest {
         assertNull(metadata.minPositiveTtlSeconds)
     }
 
+    /**
+     * Verifies that rooted aliases ignore unrelated answers and respect chain order.
+     */
     @Test fun rootedAliasesIgnoreUnrelatedAnswersAndRespectChainOrder() {
         val bytes = chain("other.test" to "tracker.test", "hop.test" to "end.test",
             "ads.example" to "hop.test")
         assertEquals(listOf("hop.test", "end.test"), DnsResponseValidator.parseAndValidate(bytes, bytes.size, query)!!.aliases)
     }
 
+    /**
+     * Verifies that cyclic conflicting and overlong chains are rejected.
+     */
     @Test fun cyclicConflictingAndOverlongChainsAreRejected() {
         for (edges in listOf(listOf("ads.example" to "hop.test", "hop.test" to "ads.example"),
             listOf("ads.example" to "one.test", "ads.example" to "two.test"),

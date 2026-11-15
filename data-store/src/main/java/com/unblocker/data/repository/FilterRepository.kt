@@ -18,13 +18,16 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Repository managing block rules and whitelist entries.
+ * Coordinates library block-rule and readable allow-entry storage with its in-memory indices.
  *
- * This is the single point of truth for all filtering decisions:
- *  - The ML batch worker calls [insertMlBlockRules] to commit its inferred rules.
- *  - The UI calls [whitelistDomain] / [removeFromWhitelist] for user overrides.
- *  - Each mutation triggers both a Bloom Filter rebuild and an off-heap binary index rebuild
- *    so the VPN engine is always current.
+ * Mutations rebuild the Bloom filter and attempt an off-heap rebuild. This repository is separate
+ * from the active app's decision use case and private HMAC rule stores.
+ *
+ * @param blockRuleDao Persistent block-rule access.
+ * @param whitelistDao Persistent exact allow-entry access.
+ * @param bloomFilterManager Filter rebuilt after mutations.
+ * @param offHeapRuleEngine Mapped index reloaded after successful compilation.
+ * @param context Application context supplying the private index directory.
  */
 @Singleton
 class FilterRepository @Inject constructor(
@@ -38,11 +41,9 @@ class FilterRepository @Inject constructor(
     // ─── Block Rules ──────────────────────────────────────────────────────────
 
     /**
-     * Bulk-commits ML-inferred block rules, triggers a Bloom Filter hot-swap,
-     * and rebuilds the off-heap binary rule index (`rules.bin`).
-     * Called at the end of each nightly batch worker run.
+     * Replaces classifier-derived rows, rebuilds the Bloom filter, and attempts an index rebuild.
      *
-     * @param rules  List of (domain, confidenceScore) pairs inferred by TFLite.
+     * @param rules Domain and confidence pairs; confidence values are persisted without validation.
      */
     suspend fun insertMlBlockRules(rules: List<Pair<String, Float>>) {
         val entities = rules.map { (domain, score) ->
@@ -58,10 +59,9 @@ class FilterRepository @Inject constructor(
     }
 
     /**
-     * Seeds the block_rules table with static domains from the compiled asset list.
-     * Called once at first app startup (or after a factory reset).
+     * Replaces static block-rule rows and refreshes the library indices.
      *
-     * @param domains  Domains from the compiled DNS asset binary.
+     * @param domains Domain keys supplied by the caller; no startup scheduling is implied.
      */
     suspend fun seedStaticRules(domains: Collection<String>) {
         val entities = domains.map { domain ->
@@ -77,8 +77,10 @@ class FilterRepository @Inject constructor(
     }
 
     /**
-     * Rebuilds the off-heap binary index (`rules.bin`) from active block rules
-     * and reloads [OffHeapRuleEngine] atomically.
+     * Attempts to compile all block-rule rows and reload the mapped index.
+     *
+     * The compiler also seeds its bootstrap keys. This path does not subtract whitelist keys, and
+     * caught compilation/database failures are ignored, potentially retaining the previous index.
      */
     suspend fun rebuildOffHeapIndex() {
         runCatching {
@@ -92,8 +94,7 @@ class FilterRepository @Inject constructor(
     }
 
     /**
-     * Reactive flow of all ML-inferred rules, ordered by confidence score.
-     * Consumed by the Dashboard screen's "ML Detections" section.
+     * Classifier-source block rows observed in descending confidence order.
      */
     val mlRulesFlow: Flow<List<BlockRuleEntity>> =
         blockRuleDao.getRulesBySourceFlow(RuleSource.ML.name)
@@ -101,10 +102,11 @@ class FilterRepository @Inject constructor(
     // ─── Whitelist (User Overrides) ───────────────────────────────────────────
 
     /**
-     * Whitelists [domain] — removes any matching block rule, inserts a whitelist entry,
-     * and rebuilds both the Bloom Filter and the off-heap rule index so traffic passes immediately.
+     * Deletes the exact block row, inserts an allow entry, and refreshes the library indices.
      *
-     * This is the one-tap false-positive reversal flow from the LogViewer screen.
+     * The writes and rebuilds are sequential, not one database transaction.
+     *
+     * @param domain Exact readable domain key to allow.
      */
     suspend fun whitelistDomain(domain: String) {
         blockRuleDao.deleteRule(domain)
@@ -114,8 +116,9 @@ class FilterRepository @Inject constructor(
     }
 
     /**
-     * Removes [domain] from the whitelist, re-enabling any existing block rules for it,
-     * and rebuilds both filters.
+     * Removes an exact allow entry and refreshes the indices without restoring deleted block rows.
+     *
+     * @param domain Readable allow-entry key to remove.
      */
     suspend fun removeFromWhitelist(domain: String) {
         whitelistDao.removeEntry(domain)
@@ -124,8 +127,9 @@ class FilterRepository @Inject constructor(
     }
 
     /**
-     * User-initiated block override: removes from whitelist if present, inserts a USER block rule,
-     * and rebuilds both filters.
+     * Removes an exact allow entry, inserts a USER block row, and refreshes the indices.
+     *
+     * @param domain Readable domain key to block.
      */
     suspend fun blacklistDomain(domain: String) {
         whitelistDao.removeEntry(domain)
@@ -136,25 +140,50 @@ class FilterRepository @Inject constructor(
         rebuildOffHeapIndex()
     }
 
-    /** Returns true if [domain] is currently present in the user whitelist. */
+    /**
+     * Checks exact allow-entry storage.
+     *
+     * @param domain Readable domain key.
+     * @return Whether that exact allow entry exists.
+     */
     suspend fun isWhitelisted(domain: String): Boolean = whitelistDao.isWhitelisted(domain)
 
-    /** Returns true if [domain] is blocked in the database. */
+    /**
+     * Checks exact block-row storage without applying allow precedence.
+     *
+     * @param domain Readable domain key.
+     * @return Whether that exact block row exists.
+     */
     suspend fun isDomainBlocked(domain: String): Boolean = blockRuleDao.isDomainBlocked(domain)
 
-    /** Returns the count of block rules per [RuleSource] for dashboard statistics. */
+    /**
+     * Counts block rows for one provenance label.
+     *
+     * @param source Rule source to count.
+     * @return Number of matching stored rows.
+     */
     suspend fun ruleCountBySource(source: RuleSource): Int =
         blockRuleDao.countBySource(source.name)
 
-    /** Returns the total count of active block rules across all sources. */
+    /**
+     * Counts stored rows across STATIC, ML, and USER sources.
+     *
+     * @return Sum of those three source counts, read through separate queries.
+     */
     suspend fun countAllBlockRules(): Int =
         blockRuleDao.countBySource(RuleSource.STATIC.name) +
                 blockRuleDao.countBySource(RuleSource.ML.name) +
                 blockRuleDao.countBySource(RuleSource.USER.name)
 
-    /** Returns the count of ML-inferred rules. */
+    /**
+     * Counts rows labeled ML.
+     *
+     * @return Number of stored classifier-derived block rows.
+     */
     suspend fun countMlRules(): Int = blockRuleDao.countBySource(RuleSource.ML.name)
 
-    /** Reactive flow of all whitelisted domains for the UI. */
+    /**
+     * Readable allow entries observed in descending addition-time order.
+     */
     val whitelistFlow: Flow<List<WhitelistEntity>> = whitelistDao.getWhitelistFlow()
 }

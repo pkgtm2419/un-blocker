@@ -4,7 +4,13 @@ import com.unblocker.app.logic.rules.*
 import org.junit.Assert.*
 import org.junit.Test
 
+/**
+ * Regression coverage for packed matcher.
+ */
 class PackedMatcherTest {
+    /**
+     * Verifies that equivalent across seeded hits misses and boundary cases.
+     */
     @Test fun equivalentAcrossSeededHitsMissesAndBoundaryCases() {
         val lines=(0..999).map { "||host$it.test^" } + listOf("@@||good.host1.test^", "exact.test", "*.wild.test")
         val rules=CompiledRuleSet(lines.map { RuleParser.parse(it)!! })

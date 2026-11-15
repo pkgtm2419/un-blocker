@@ -7,8 +7,14 @@ import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 
+/**
+ * Regression coverage for DNS cache.
+ */
 class DnsCacheTest {
 
+    /**
+     * Verifies that validated cache copies metadata and ages TTL without reparsing.
+     */
     @Test fun validatedCacheCopiesMetadataAndAgesTtlWithoutReparsing() {
         val query=DnsFixtures.query()
         val aliases=mutableListOf("tracker.test")
@@ -31,11 +37,17 @@ class DnsCacheTest {
     private lateinit var cache: DnsCache
     private var now = 1_000L
 
+    /**
+     * Resets the fixture state before each test to keep assertions independent.
+     */
     @Before
     fun setup() {
         cache = DnsCache(maxEntries = 50, nowMillis = { now })
     }
 
+    /**
+     * Verifies that test cache put and get with transaction id rewrite.
+     */
     @Test
     fun testCachePutAndGetWithTransactionIdRewrite() {
         val domain = "www.youtube.com"
@@ -54,12 +66,18 @@ class DnsCacheTest {
         assertEquals("Flags should match original", 0x81.toByte(), cached[2])
     }
 
+    /**
+     * Verifies that test cache miss.
+     */
     @Test
     fun testCacheMiss() {
         val result = cache.get("nonexistent.domain.com", 1, 0x1111)
         assertNull("Cache miss should return null", result)
     }
 
+    /**
+     * Verifies that honors resolver TTL including zero.
+     */
     @Test fun honorsResolverTtlIncludingZero() {
         val payload = byteArrayOf(0x12, 0x34, 0x81.toByte(), 0x80.toByte())
         cache.put("short.example", 1, payload, ttlSeconds = 2)
@@ -72,6 +90,9 @@ class DnsCacheTest {
         assertNull(cache.get("zero.example", 1, 0x1111))
     }
 
+    /**
+     * Verifies that DNS class is part of cache identity.
+     */
     @Test fun dnsClassIsPartOfCacheIdentity() {
         val payload = byteArrayOf(0x12, 0x34, 0x81.toByte(), 0x80.toByte())
         cache.put("class.example", 1, payload, ttlSeconds = 60, queryClass = 1)
@@ -80,6 +101,9 @@ class DnsCacheTest {
         assertNull(cache.get("class.example", 1, 0x1111, queryClass = 3))
     }
 
+    /**
+     * Verifies that IP family is part of cache identity.
+     */
     @Test fun ipFamilyIsPartOfCacheIdentity() {
         val largeIpv6Payload = ByteArray(65_508).also {
             it[0] = 0x12

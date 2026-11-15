@@ -6,6 +6,9 @@ import org.junit.Test
 
 /** Opt-in diagnostic, no wall-time CI assertions. Deterministic inputs, environment-specific output. */
 class MatcherBenchmarkTest {
+    /**
+     * Verifies that benchmark.
+     */
     @Test fun benchmark() {
         if(System.getenv("UB_BLOCKER_BENCHMARK")!="1") return
         val report=StringBuilder("rules,matcher,parse_ms,construct_ms,retained_index_bytes,p50_ns,p95_ns,p99_ns,allocated_bytes_per_query,tsv_bytes\n")

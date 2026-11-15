@@ -8,9 +8,18 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 
+/**
+ * Regression coverage for private evidence store.
+ */
 class PrivateEvidenceStoreTest {
+    /**
+     * Temporary filesystem fixture isolated and cleaned up by JUnit.
+     */
     @get:Rule val temp = TemporaryFolder()
     private fun key(n:Byte=7) = SecretKeySpec(ByteArray(32){n}, "HmacSHA256")
+    /**
+     * Verifies that reload is opaque bounded and rejects different key or old version.
+     */
     @Test fun reloadIsOpaqueBoundedAndRejectsDifferentKeyOrOldVersion() {
         val file = File(temp.root,"evidence")
         val s = PrivateEvidenceStore(key(),file,8,{100})
@@ -23,6 +32,9 @@ class PrivateEvidenceStoreTest {
         file.writeText(file.readText().replaceFirst("v3:","v2:"))
         assertEquals(0,PrivateEvidenceStore(key(),file).size())
     }
+    /**
+     * Verifies that malformed fields and weak stale records are discarded.
+     */
     @Test fun malformedFieldsAndWeakStaleRecordsAreDiscarded() {
         val file = File(temp.root,"evidence")
         val s=PrivateEvidenceStore(key(),file,8,{100})

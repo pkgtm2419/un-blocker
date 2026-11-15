@@ -9,7 +9,15 @@ import javax.crypto.Mac
 import javax.crypto.SecretKey
 import kotlin.math.pow
 
-/** Device-keyed identifiers and scores only. No query history or raw domain persistence. */
+/**
+ * Legacy device-keyed score store with week-based decay and no readable domain persistence.
+ *
+ * @param key HMAC-SHA256 key for identifiers.
+ * @param file Optional persistence file; null keeps records volatile.
+ * @param capacity Maximum retained record count; must be positive.
+ * @param nowMillis Wall clock in Unix epoch milliseconds for score aging.
+ * @throws IllegalArgumentException If capacity is not positive.
+ */
 class PrivateReputationStore(
     private val key: SecretKey,
     private val file: File? = null,
@@ -54,11 +62,27 @@ class PrivateReputationStore(
             .joinToString("") { "%02x".format(it.toInt() and 255) }
     }
 
+    /**
+     * Returns a stored score after whole-week decay.
+     *
+     * @param domain Hostname canonicalized for hashing.
+     * @return Decayed score, or null when missing or lookup fails.
+     */
     @Synchronized fun get(domain: String): Float? = runCatching {
         records[identifier(domain)]?.let { decayedScore(it, nowMillis()) }
     }.getOrNull()
+    /**
+     * Returns the retained record count without removing records whose scores have decayed.
+     */
     @Synchronized fun size(): Int = records.size
 
+    /**
+     * Stores a valid score at the current time and attempts persistence.
+     *
+     * @param domain Nonblank hostname used for the opaque identifier.
+     * @param score Finite value from zero through one; invalid values are ignored.
+     * Hashing and persistence failures are suppressed.
+     */
     @Synchronized fun put(domain: String, score: Float) {
         if (domain.isBlank() || !valid(score)) return
         // Keystore can become temporarily unavailable after successful initialization.
@@ -70,11 +94,23 @@ class PrivateReputationStore(
         runCatching { save() }
     }
 
+    /**
+     * Clears memory records and persists the empty file when file-backed.
+     *
+     * @throws java.io.IOException If writing or replacing the persistence file fails.
+     */
     @Synchronized fun clear() {
         records.clear()
         save()
     }
 
+    /**
+     * Imports valid legacy domain/score lines, persists identifiers and deletes the readable source.
+     *
+     * @param legacy Readable legacy file; missing files are ignored.
+     * @throws java.io.IOException If reading or saving fails.
+     * @throws IllegalStateException If the legacy file cannot be deleted after saving.
+     */
     @Synchronized fun migrate(legacy: File) {
         if (!legacy.exists()) return
         legacy.useLines { lines -> lines.forEach { line ->
@@ -121,7 +157,13 @@ class PrivateReputationStore(
 
     private fun valid(score: Float?) = score != null && score.isFinite() && score in 0f..1f
 
+    /**
+     * Default bound for the legacy score store.
+     */
     companion object {
+        /**
+         * Default maximum number of retained opaque reputation records.
+         */
         const val DEFAULT_CAPACITY = 20_000
         private const val WEEK_MILLIS = 7L * 24 * 60 * 60 * 1_000
         private const val DECAY_PER_WEEK = 0.95f

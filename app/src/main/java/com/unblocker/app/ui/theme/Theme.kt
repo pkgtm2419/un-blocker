@@ -58,6 +58,13 @@ private val OneUiLightColorScheme = lightColorScheme(
     onErrorContainer = Color(0xFF410002)
 )
 
+/**
+ * Applies the app Material color and typography theme to descendants.
+ *
+ * @param darkTheme Whether to select dark colors.
+ * @param dynamicColor Whether to use Android dynamic colors on API 31 and later.
+ * @param content Content rendered with the selected theme.
+ */
 @Composable
 fun UnblockerTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),

@@ -5,8 +5,14 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
+/**
+ * Regression coverage for manifest service declaration.
+ */
 class ManifestServiceDeclarationTest {
 
+    /**
+     * Verifies that test only canonical unblocker vpn service is declared.
+     */
     @Test
     fun testOnlyCanonicalUnblockerVpnServiceIsDeclared() {
         val manifestFile = File("src/main/AndroidManifest.xml")
@@ -30,6 +36,9 @@ class ManifestServiceDeclarationTest {
         )
     }
 
+    /**
+     * Verifies that test vpn service permission and intent filter declared.
+     */
     @Test
     fun testVpnServicePermissionAndIntentFilterDeclared() {
         val manifestFile = File("src/main/AndroidManifest.xml")

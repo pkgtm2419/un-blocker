@@ -6,6 +6,15 @@ import com.unblocker.app.logic.AdDetector
 import com.unblocker.app.logic.ContentFilterEngine
 import com.unblocker.app.logic.rules.RuleSetHolder
 
+/**
+ * Local policy smoke-check report.
+ *
+ * @property timestamp Report creation time in Unix epoch milliseconds.
+ * @property isVpnRunning Snapshot of established VPN activity.
+ * @property regressionChecksPassed Number of synthetic cases matching expectations.
+ * @property regressionChecksTotal Total synthetic cases evaluated.
+ * @property statusMessage Human-readable pass or warning summary.
+ */
 data class HealthReport(
     val timestamp: Long = System.currentTimeMillis(),
     val isVpnRunning: Boolean,
@@ -14,6 +23,11 @@ data class HealthReport(
     val statusMessage: String
 )
 
+/**
+ * Runs fixed local cases with volatile learning and user-rule sets.
+ *
+ * @param context Application context for assets and current filtering settings.
+ */
 class HealthCheckService(private val context: Context) {
 
     private val preferences = FilteringPreferences.getInstance(context)
@@ -29,6 +43,11 @@ class HealthCheckService(private val context: Context) {
         )
     }
 
+    /**
+     * Evaluates fixed cases, records the health-check time and reports observed VPN activity.
+     *
+     * @return Local regression counts and status; no external effectiveness measurement is performed.
+     */
     suspend fun performHealthCheck(): HealthReport {
         val isVpnRunning = UnblockerVpnService.isServiceActive.value
 

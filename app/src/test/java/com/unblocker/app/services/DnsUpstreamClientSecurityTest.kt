@@ -23,9 +23,15 @@ import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
+/**
+ * Regression coverage for DNS upstream client security.
+ */
 class DnsUpstreamClientSecurityTest {
     private val loopback = InetAddress.getByName("127.0.0.1")
 
+    /**
+     * Verifies that randomizes upstream transaction id and restores client tx id.
+     */
     @Test
     fun randomizesUpstreamTransactionIdAndRestoresClientTxId() {
         val clientTxId: Short = 0x5a5a.toShort()
@@ -84,6 +90,9 @@ class DnsUpstreamClientSecurityTest {
         }
     }
 
+    /**
+     * Verifies that rejects mismatched upstream transaction id anti spoofing.
+     */
     @Test
     fun rejectsMismatchedUpstreamTransactionIdAntiSpoofing() {
         val clientTxId: Short = 0x5a5a.toShort()
@@ -135,6 +144,9 @@ class DnsUpstreamClientSecurityTest {
         }
     }
 
+    /**
+     * Verifies that trapped public DNS addresses recognized.
+     */
     @Test
     fun trappedPublicDnsAddressesRecognized() {
         assertTrue(TcpDnsResponder.isTrappedPublicDns(byteArrayOf(8, 8, 8, 8), isIpv6 = false))

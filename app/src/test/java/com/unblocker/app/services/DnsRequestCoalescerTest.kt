@@ -7,10 +7,16 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
+/**
+ * Regression coverage for DNS request coalescer.
+ */
 class DnsRequestCoalescerTest {
 
     private lateinit var coalescer: DnsRequestCoalescer
 
+    /**
+     * Resets the fixture state before each test to keep assertions independent.
+     */
     @Before
     fun setup() {
         coalescer = DnsRequestCoalescer(maxWaitersPerKey = 4)
@@ -32,6 +38,9 @@ class DnsRequestCoalescerTest {
         )
     }
 
+    /**
+     * Verifies that test first query becomes leader.
+     */
     @Test
     fun testFirstQueryBecomesLeader() {
         val query = makeQuery("example.com", 1)
@@ -42,6 +51,9 @@ class DnsRequestCoalescerTest {
         assertEquals(1, coalescer.activeInFlightCount)
     }
 
+    /**
+     * Verifies that test concurrent identical queries attach to leader.
+     */
     @Test
     fun testConcurrentIdenticalQueriesAttachToLeader() {
         val key = CoalesceKey("example.com", DnsPacketUtil.TYPE_A, DnsPacketUtil.CLASS_IN, false, 1L)
@@ -64,6 +76,9 @@ class DnsRequestCoalescerTest {
         assertEquals("After completion in-flight count must be 0", 0, coalescer.activeInFlightCount)
     }
 
+    /**
+     * Verifies that test different keys remain independent leaders.
+     */
     @Test
     fun testDifferentKeysRemainIndependentLeaders() {
         val keyA = CoalesceKey("example.com", DnsPacketUtil.TYPE_A, DnsPacketUtil.CLASS_IN, false, 1L)
@@ -77,6 +92,9 @@ class DnsRequestCoalescerTest {
         assertEquals(3, coalescer.activeInFlightCount)
     }
 
+    /**
+     * Verifies that test waiters capped at max capacity.
+     */
     @Test
     fun testWaitersCappedAtMaxCapacity() {
         val key = CoalesceKey("capped.com", DnsPacketUtil.TYPE_A, DnsPacketUtil.CLASS_IN, false, 1L)
@@ -93,6 +111,9 @@ class DnsRequestCoalescerTest {
         assertEquals(5, all.size) // 1 leader + 4 waiters
     }
 
+    /**
+     * Verifies that test subsequent query after completion becomes new leader.
+     */
     @Test
     fun testSubsequentQueryAfterCompletionBecomesNewLeader() {
         val key = CoalesceKey("sequential.com", DnsPacketUtil.TYPE_A, DnsPacketUtil.CLASS_IN, false, 1L)
@@ -106,6 +127,9 @@ class DnsRequestCoalescerTest {
         assertEquals("Subsequent query must become leader again", DnsRequestCoalescer.JoinResult.Leader, coalescer.attachOrLead(key, q2))
     }
 
+    /**
+     * Verifies that test clear drains all queries and empties state.
+     */
     @Test
     fun testClearDrainsAllQueriesAndEmptiesState() {
         val key1 = CoalesceKey("a.com", DnsPacketUtil.TYPE_A, DnsPacketUtil.CLASS_IN, false, 1L)

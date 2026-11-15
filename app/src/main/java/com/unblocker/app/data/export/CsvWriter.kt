@@ -2,12 +2,19 @@ package com.unblocker.app.data.export
 
 import java.io.Writer
 
+/**
+ * Escapes CSV fields and writes CRLF-terminated rows to caller-owned writers.
+ */
 object CsvWriter {
 
     /**
-     * Sanitizes a cell value for RFC 4180 CSV compliance and defends against CSV Formula Injection.
-     * If a cell begins with '=', '+', '-', or '@', it is prepended with a single quote '\''.
-     * If the cell contains commas, quotes, or newlines, it is enclosed in double quotes and inner quotes are doubled.
+     * Escapes one field and prefixes formula-leading characters with an apostrophe.
+     *
+     * The leading characters checked are equals, plus, minus, at sign, tab, and carriage return.
+     * Commas, quotes, and line breaks trigger RFC 4180 quoting with doubled embedded quotes.
+     *
+     * @param raw Unescaped field text.
+     * @return Field text suitable for inclusion in a CSV row.
      */
     fun escapeCell(raw: String): String {
         var value = raw
@@ -27,6 +34,13 @@ object CsvWriter {
         }
     }
 
+    /**
+     * Writes one escaped CSV row followed by CRLF without flushing or closing the writer.
+     *
+     * @param writer Caller-owned character output.
+     * @param fields Unescaped field values in column order.
+     * @throws java.io.IOException If the writer cannot accept the row.
+     */
     fun writeRow(writer: Writer, fields: List<String>) {
         val row = fields.joinToString(separator = ",", postfix = "\r\n") { escapeCell(it) }
         writer.write(row)

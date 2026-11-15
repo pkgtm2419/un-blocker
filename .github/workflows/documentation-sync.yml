@@ -1,0 +1,50 @@
+name: Propose generated documentation updates
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '21 2 * * 1'
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+concurrency:
+  group: docs-sync-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  propose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out current main
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: true
+          ref: main
+      - name: Regenerate deterministic inventories only
+        run: |
+          python3 scripts/docs_sync.py --write
+          python3 scripts/docs_contract.py
+          python3 scripts/docs_sync.py --check
+          python3 -m unittest discover -s scripts/tests -p 'test_docs_*.py' -v
+      - name: Create reviewable PR if inventories changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- docs/generated; then
+            echo 'No documentation inventory drift'; exit 0
+          fi
+          BRANCH="automation/docs-sync-${RUN_ID}"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch -c "$BRANCH"
+          git add docs/generated/
+          git commit -m 'docs: refresh generated source inventories'
+          git push origin "$BRANCH"
+          gh pr create --base main --head "$BRANCH" \
+            --title 'docs: synchronize deterministic source inventories' \
+            --body 'Automated source-based inventory update. **Human review required.** This does not validate or rewrite human-owned product, privacy, security, feature or architecture claims. Please check accompanying behavior changes and tests.'

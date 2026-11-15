@@ -4,8 +4,14 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
+/**
+ * Regression coverage for local protection summary.
+ */
 class LocalProtectionSummaryTest {
 
+    /**
+     * Verifies that default summary has zero counts and null timestamps.
+     */
     @Test
     fun defaultSummaryHasZeroCountsAndNullTimestamps() {
         val summary = LocalProtectionSummary(
@@ -20,6 +26,9 @@ class LocalProtectionSummaryTest {
         assertNull(summary.lastObservedMs)
     }
 
+    /**
+     * Verifies that populated summary retains accurate counts.
+     */
     @Test
     fun populatedSummaryRetainsAccurateCounts() {
         val now = 1700000000000L

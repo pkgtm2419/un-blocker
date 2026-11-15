@@ -38,7 +38,10 @@ import com.unblocker.app.ui.screens.UnblockerScreen
 import com.unblocker.app.ui.settings.SettingsScreen
 
 /**
- * Main application host container with Samsung One UI 9 style floating pill navigation.
+ * Hosts app tabs, extension navigation, and Android VPN and notification permission launchers.
+ *
+ * @param preferences Persisted filtering preferences used by screens and service-start actions.
+ * @param quickStartManager Service lifecycle controller and status source.
  */
 @Composable
 fun MainScreen(

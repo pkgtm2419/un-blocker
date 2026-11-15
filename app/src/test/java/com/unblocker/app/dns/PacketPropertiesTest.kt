@@ -5,7 +5,13 @@ import org.junit.Assert.*
 import org.junit.Test
 import java.util.Random
 
+/**
+ * Regression coverage for packet properties.
+ */
 class PacketPropertiesTest {
+    /**
+     * Verifies that address records have exact wire lengths.
+     */
     @Test fun addressRecordsHaveExactWireLengths() {
         for(type in listOf(1,28)) {
             val query=DnsFixtures.query(type=type)
@@ -18,6 +24,9 @@ class PacketPropertiesTest {
             assertNotNull(DnsResponseValidator.parseAndValidate(reply,reply.size,query))
         }
     }
+    /**
+     * Verifies that nxdomain and nodata across families and malformed fuzz never crash.
+     */
     @Test fun nxdomainAndNodataAcrossFamiliesAndMalformedFuzzNeverCrash() {
         for(ipv6 in listOf(false,true)) for(type in listOf(1,28,65)) for(rcode in listOf(0,3)) {
             val wire=DnsFixtures.packet(DnsFixtures.question(type=type),ipv6)

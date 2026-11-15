@@ -8,14 +8,23 @@ import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 
+/**
+ * Regression coverage for extension rule store.
+ */
 class ExtensionRuleStoreTest {
 
+    /**
+     * Releases test resources and restores shared state after each test.
+     */
     @Before
     @After
     fun cleanUp() {
         ExtensionRuleStore.clearForTesting()
     }
 
+    /**
+     * Verifies that test parse line.
+     */
     @Test
     fun testParseLine() {
         val suffixRule = ExtensionRuleStore.parseLine("||doubleclick.net^")
@@ -53,9 +62,9 @@ class ExtensionRuleStoreTest {
         val bareOptionsRule = ExtensionRuleStore.parseLine("||adserver.net^\$third-party,image")
         assertNull(bareOptionsRule)
 
+        // A request-scoped filter must never become a domain-wide DNS block.
         val subOptionsRule = ExtensionRuleStore.parseLine("||ads.adserver.net^\$third-party,image")
-        assertNotNull(subOptionsRule)
-        assertEquals("ads.adserver.net", subOptionsRule!!.value)
+        assertNull(subOptionsRule)
 
         val commentRule = ExtensionRuleStore.parseLine("! This is a comment")
         assertNull(commentRule)
@@ -64,6 +73,9 @@ class ExtensionRuleStoreTest {
         assertNull(emptyRule)
     }
 
+    /**
+     * Verifies that test rule matching.
+     */
     @Test
     fun testRuleMatching() {
         val r1 = ExtensionRuleStore.parseLine("||badads.com^")!!
@@ -107,6 +119,24 @@ class ExtensionRuleStoreTest {
         assertNull(mClean)
     }
 
+    /**
+     * Verifies that wildcard allow rules only unblock strict subdomains, preserving the apex block.
+     */
+    @Test
+    fun testWildcardAllowDoesNotAllowBaseHost() {
+        val blockBase = ExtensionRuleStore.parseLine("||adserver.example^")!!
+        val allowChildren = ExtensionRuleStore.parseLine("@@*.adserver.example")!!
+        ExtensionRuleStore.setRules(listOf(blockBase, allowChildren))
+
+        assertEquals(RuleAction.BLOCK, ExtensionRuleStore.matchRule("adserver.example")?.action)
+        assertEquals(RuleAction.ALLOW, ExtensionRuleStore.matchRule("a.adserver.example")?.action)
+        assertEquals(RuleKind.WILDCARD, ExtensionRuleStore.matchRule("a.adserver.example")?.kind)
+        assertEquals(RuleAction.ALLOW, ExtensionRuleStore.matchRule("b.a.adserver.example")?.action)
+    }
+
+    /**
+     * Verifies that test single label parent never blocks.
+     */
     @Test
     fun testSingleLabelParentNeverBlocks() {
         // Even if an admitted rule with value 'com' exists in blockSuffix
@@ -119,6 +149,9 @@ class ExtensionRuleStoreTest {
         assertNull(ExtensionRuleStore.matchRule("google.com"))
     }
 
+    /**
+     * Verifies that test builder streaming direct ingestion.
+     */
     @Test
     fun testBuilderStreamingDirectIngestion() {
         val builder = ExtensionRuleStore.Builder()
@@ -150,6 +183,9 @@ class ExtensionRuleStoreTest {
         assertEquals(RuleAction.BLOCK, blockedHost!!.action)
     }
 
+    /**
+     * Verifies that test builder deduplicates rule count.
+     */
     @Test
     fun testBuilderDeduplicatesRuleCount() {
         val builder = ExtensionRuleStore.Builder()

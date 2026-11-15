@@ -2,7 +2,16 @@ package com.unblocker.app.logic.rules
 
 import com.unblocker.app.logic.DomainName
 
+/**
+ * Small syntax parser for exact, suffix and wildcard rules; does not apply safety admission.
+ */
 object RuleParser {
+    /**
+     * Parses simple hostname syntax and validates the resulting domain name.
+     *
+     * @param raw Rule text, optionally prefixed by an allow/suffix or wildcard marker.
+     * @return Normalized rule, or null for comments, blank input or invalid hostname syntax.
+     */
     fun parse(raw: String): DnsRule? {
         var value = raw.trim()
         if (value.isEmpty() || value.startsWith('#') || value.startsWith('!')) return null

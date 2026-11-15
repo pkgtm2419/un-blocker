@@ -1,39 +1,22 @@
 package com.unblocker.ml.analyzer
 
-import kotlin.math.log2
-
 /**
- * Extracts a fixed-length normalised feature vector from a domain name for TFLite inference.
+ * Extracts nine bounded heuristic features from a domain string.
  *
- * ## Feature vector layout (indices 0–8)
- * | Index | Feature               | Normalisation       | Signal                                     |
- * |-------|-----------------------|---------------------|--------------------------------------------|
- * | 0     | Total domain length   | ÷ 50                | Long domains → more likely generated       |
- * | 1     | Shannon entropy       | ÷ 5                 | High entropy → randomised tracking label   |
- * | 2     | Digit ratio           | raw [0.0–1.0]       | Lots of digits → ID/hash segment           |
- * | 3     | Hyphen count          | ÷ 5                 | Hyphens common in ad-network subdomains    |
- * | 4     | Subdomain depth       | ÷ 4                 | Deep nesting → tracking proxy chain        |
- * | 5     | Keyword flag          | 0 or 1              | Exact ad/tracker token present             |
- * | 6     | Entropy signal        | see EntropyCalculator| Binned entropy confidence signal          |
- * | 7     | Label count           | ÷ 6                 | Total label count                          |
- * | 8     | Longest label ratio   | raw [0.0–1.0]       | Unusually long single label                |
- *
- * The vector is designed to be directly consumable as the input tensor for the bundled
- * `domain_classifier.tflite` model (`input_shape=[1, 9]`).
- *
- * ## Design note
- * This class supersedes the legacy [com.unblocker.app.logic.analysis.DomainFeatureExtractor]
- * in the `:app` module. It extends the feature set with entropy signal and structural depth
- * to improve recall on CDN-hosted ad trackers.
+ * Indices are length/50, registrant-label entropy/5, registrant digit ratio, registrant hyphens/5,
+ * subdomain depth/4, keyword flag, entropy signal, label count/6, and longest-label length/30.
+ * The registrant label is approximated as the penultimate label without public-suffix parsing.
+ * Keyword matching includes substrings of the full domain. This is a heuristic feature layout,
+ * not evidence of a bundled trained model or a replacement for the separate app extractor.
  */
 object DomainFeatureExtractor {
 
+    /**
+     * Number of elements emitted by [extractFeatures], with stable feature indices 0 through 8.
+     */
     const val FEATURE_SIZE = 9
 
-    /**
-     * Suspicious token set — present in the majority of known ad/tracking domain labels.
-     * Sourced from EasyList and AdGuard blocklist label analysis.
-     */
+    /** Heuristic tokens checked as full-domain substrings and split-label parts. */
     private val SUSPICIOUS_TOKENS = setOf(
         "ad", "ads", "adv", "adserver", "adservice", "adsystem", "adtech", "adclick",
         "adlog", "pagead", "track", "tracker", "tracking", "telemetry", "pixel",
@@ -43,10 +26,10 @@ object DomainFeatureExtractor {
     )
 
     /**
-     * Extracts a normalised [FloatArray] of length [FEATURE_SIZE] from [domain].
+     * Extracts normalized features after lowercasing and removing trailing dots.
      *
-     * @param domain  Fully-qualified domain name (lowercased, no trailing dot required).
-     * @return        Feature vector ready for TFLite `Interpreter.run()`.
+     * @param domain Domain text; validity and public-suffix policy are not checked here.
+     * @return New nine-element array with the layout documented on [DomainFeatureExtractor].
      */
     fun extractFeatures(domain: String): FloatArray {
         val clean = domain.lowercase().trimEnd('.')
@@ -98,8 +81,10 @@ object DomainFeatureExtractor {
     }
 
     /**
-     * Convenience: calculate Shannon entropy directly (delegates to [EntropyCalculator]).
-     * Kept for backwards compatibility with tests referencing this object.
+     * Calculates the same entropy value used by the feature extractor.
+     *
+     * @param input Text to measure using [EntropyCalculator] exclusions.
+     * @return Entropy in bits, or zero for short text or text containing the punycode prefix.
      */
     fun calculateShannonEntropy(input: String): Float = EntropyCalculator.calculate(input)
 }

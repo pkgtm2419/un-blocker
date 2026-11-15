@@ -8,38 +8,55 @@ import com.unblocker.data.db.entity.WhitelistEntity
 import kotlinx.coroutines.flow.Flow
 
 /**
- * DAO for the `whitelist` table.
- *
- * The whitelist is user-managed and checked at Bloom Filter compile time:
- * any domain present here is excluded from the filter, so it is always allowed through.
- *
- * ## Precedence
- * whitelist > USER rule > ML rule > STATIC rule
+ * Room access to exact readable allow entries. The repository applies these during Bloom rebuilds.
  */
 @Dao
 interface WhitelistDao {
 
-    /** Inserts or replaces a whitelist entry. */
+    /**
+     * Inserts or replaces an exact allow entry.
+     *
+     * @param entry Domain key and creation time to persist.
+     */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEntry(entry: WhitelistEntity)
 
-    /** Removes a domain from the whitelist (re-enables blocking for it). */
+    /**
+     * Deletes an exact allow entry without adding a block rule.
+     *
+     * @param domain Stored domain key to remove.
+     */
     @Query("DELETE FROM whitelist WHERE domain = :domain")
     suspend fun removeEntry(domain: String)
 
-    /** Returns all whitelisted domain strings — used during Bloom Filter compilation. */
+    /**
+     * Reads all allow-entry keys, newest first.
+     *
+     * @return Stored readable domains ordered by descending addition time.
+     */
     @Query("SELECT domain FROM whitelist ORDER BY added_at DESC")
     suspend fun getAllWhitelistedDomains(): List<String>
 
-    /** Reactive flow of all whitelist entries for the whitelist management screen. */
+    /**
+     * Observes all allow entries.
+     *
+     * @return Entries ordered by descending addition time.
+     */
     @Query("SELECT * FROM whitelist ORDER BY added_at DESC")
     fun getWhitelistFlow(): Flow<List<WhitelistEntity>>
 
-    /** Returns true if [domain] is in the whitelist. */
+    /**
+     * Checks exact allow-entry membership.
+     *
+     * @param domain Stored domain key to look up.
+     * @return Whether an entry exists for that exact key.
+     */
     @Query("SELECT EXISTS(SELECT 1 FROM whitelist WHERE domain = :domain LIMIT 1)")
     suspend fun isWhitelisted(domain: String): Boolean
 
-    /** Clears the entire whitelist — used for a factory reset. */
+    /**
+     * Deletes every allow entry.
+     */
     @Query("DELETE FROM whitelist")
     suspend fun clearAll()
 }

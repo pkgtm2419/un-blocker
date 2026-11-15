@@ -33,14 +33,24 @@ import com.unblocker.app.ui.theme.Slate900
 import com.unblocker.app.ui.theme.TealAccent
 import com.unblocker.app.ui.theme.TealPrimary
 
+/**
+ * Navigation item shown in the floating tab bar.
+ *
+ * @property title Visible label and icon accessibility description.
+ * @property icon Vector icon displayed above the label.
+ */
 data class NavItem(
     val title: String,
     val icon: ImageVector
 )
 
 /**
- * Floating pill navigation bar with vertically stacked icons and text.
- * Styled with theme-matched teal accents and tactile spring interaction.
+ * Renders floating navigation tabs above the system navigation inset.
+ *
+ * @param items Navigation items in display order.
+ * @param selectedItem Zero-based index of the selected item.
+ * @param onItemSelected Callback receiving the tapped zero-based item index.
+ * @param modifier Modifier for the outer navigation container.
  */
 @Composable
 fun FloatingPillNavBar(

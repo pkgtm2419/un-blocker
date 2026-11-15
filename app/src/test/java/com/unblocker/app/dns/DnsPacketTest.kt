@@ -10,6 +10,9 @@ import org.junit.Test
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
+/**
+ * Regression coverage for DNS packet.
+ */
 class DnsPacketTest {
 
     private fun ipv4Query(): DnsQuery {
@@ -17,6 +20,9 @@ class DnsPacketTest {
         return DnsPacketUtil.parseIpPacket(packet, packet.size)!!
     }
 
+    /**
+     * Verifies that IPv4 wrapper enforces maximum representable DNS payload.
+     */
     @Test fun ipv4WrapperEnforcesMaximumRepresentableDnsPayload() {
         val query = ipv4Query()
 
@@ -31,6 +37,9 @@ class DnsPacketTest {
         }
     }
 
+    /**
+     * Verifies that test parse and build blocked DNS response.
+     */
     @Test
     fun testParseAndBuildBlockedDnsResponse() {
         // Construct a synthetic DNS query packet for "ads.google.com"
@@ -71,18 +80,27 @@ class DnsPacketTest {
         assertEquals(300L, DnsPacketUtil.minCacheTtlSeconds(response.copyOfRange(28, response.size)))
     }
 
+    /**
+     * Verifies that cache TTL rejects queries and malformed responses.
+     */
     @Test fun cacheTtlRejectsQueriesAndMalformedResponses() {
         val query = createMockDnsQueryPacket("example.com", 0x4321)
         assertEquals(null, DnsPacketUtil.minCacheTtlSeconds(query))
         assertEquals(null, DnsPacketUtil.minCacheTtlSeconds(byteArrayOf(1, 2, 3)))
     }
 
+    /**
+     * Verifies that query parser rejects single wire label containing dot.
+     */
     @Test fun queryParserRejectsSingleWireLabelContainingDot() {
         val packet = createMockDnsQueryPacketFromLabels(listOf("ads.example"), 0x1234)
 
         assertEquals(null, DnsPacketUtil.parseIpPacket(packet, packet.size))
     }
 
+    /**
+     * Verifies that query parser rejects wire label that would only match after trimming.
+     */
     @Test fun queryParserRejectsWireLabelThatWouldOnlyMatchAfterTrimming() {
         val packet = createMockDnsQueryPacketFromLabels(listOf(" ads", "example"), 0x1234)
 
@@ -146,6 +164,9 @@ class DnsPacketTest {
         return buf.array()
     }
 
+    /**
+     * Verifies that test parse and build blocked DNS response IPv6.
+     */
     @Test
     fun testParseAndBuildBlockedDnsResponseIpv6() {
         val domain = "adservice.google.com"
@@ -178,6 +199,9 @@ class DnsPacketTest {
         assertValidIpv6UdpChecksum(response)
     }
 
+    /**
+     * Verifies that blocked IPv6 aaaa response has valid UDP checksum.
+     */
     @Test fun blockedIpv6AaaaResponseHasValidUdpChecksum() {
         val packet = createMockIpv6DnsQueryPacket(
             domain = "ipv6-ads.example",
@@ -191,6 +215,9 @@ class DnsPacketTest {
         assertValidIpv6UdpChecksum(response)
     }
 
+    /**
+     * Verifies that wrapped odd length IPv6 response has valid UDP checksum.
+     */
     @Test fun wrappedOddLengthIpv6ResponseHasValidUdpChecksum() {
         val packet = createMockIpv6DnsQueryPacket("allowed.example", 0x6b6b)
         val query = DnsPacketUtil.parseIpPacket(packet, packet.size)!!
@@ -202,6 +229,9 @@ class DnsPacketTest {
         assertValidIpv6UdpChecksum(response)
     }
 
+    /**
+     * Verifies that test do hcanary domain returns nx domain.
+     */
     @Test
     fun testDoHCanaryDomainReturnsNxDomain() {
         val canary = "use-application-dns.net"

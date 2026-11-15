@@ -4,8 +4,14 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * Regression coverage for extension filter.
+ */
 class ExtensionFilterTest {
 
+    /**
+     * Verifies that test formatted size.
+     */
     @Test
     fun testFormattedSize() {
         val bytes = ExtensionFilter(
@@ -38,6 +44,9 @@ class ExtensionFilterTest {
         assertEquals("N/A", customZero.formattedSize())
     }
 
+    /**
+     * Verifies that test formatted last updated.
+     */
     @Test
     fun testFormattedLastUpdated() {
         val ext = ExtensionFilter(
@@ -57,6 +66,9 @@ class ExtensionFilterTest {
         assertEquals("N/A", customNoDate.formattedLastUpdated())
     }
 
+    /**
+     * Verifies that test category and description defaults.
+     */
     @Test
     fun testCategoryAndDescriptionDefaults() {
         val defaultFilter = ExtensionFilter(
@@ -76,6 +88,9 @@ class ExtensionFilterTest {
         assertEquals("High-priority malware feed", customFilter.description)
     }
 
+    /**
+     * Verifies that test browser only flag.
+     */
     @Test
     fun testBrowserOnlyFlag() {
         val defaultFilter = ExtensionFilter(id = "test_default", name = "Default")
@@ -85,6 +100,9 @@ class ExtensionFilterTest {
         assertTrue(annoyance.browserOnly)
     }
 
+    /**
+     * Verifies that test categories list.
+     */
     @Test
     fun testCategoriesList() {
         assertTrue(FilterCategories.ALL_CATEGORIES.contains(FilterCategories.ALL))

@@ -5,7 +5,13 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * Regression coverage for vpn route policy.
+ */
 class VpnRoutePolicyTest {
+    /**
+     * Verifies that asserts public resolver addresses are absent and only local endpoints remain.
+     */
     @Test
     fun assertsPublicResolverAddressesAreAbsentAndOnlyLocalEndpointsRemain() {
         val routes = VpnRoutePolicy.hostRoutes()

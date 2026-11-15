@@ -2,11 +2,17 @@ package com.unblocker.app.domain.model
 
 import com.unblocker.app.logic.rules.RuleKind
 
+/**
+ * Allow or block action for a DNS policy decision.
+ */
 enum class BlockingAction {
     BLOCK,
     ALLOW
 }
 
+/**
+ * Content category attached to a filtering decision.
+ */
 enum class BlockingCategory {
     AD,
     TRACKER,
@@ -15,6 +21,9 @@ enum class BlockingCategory {
     NORMAL
 }
 
+/**
+ * Machine-readable explanation codes emitted by the decision pipeline.
+ */
 enum class DecisionReason {
     ALLOWED,
     USER_ALLOW,
@@ -24,7 +33,6 @@ enum class DecisionReason {
     ADULT_STATIC,
     ADULT_TLD,
     ADULT_PATTERN,
-    // New reasons per spec Section 2.2
     PROTECTED,
     PAUSED,
     NO_MATCH,
@@ -34,7 +42,17 @@ enum class DecisionReason {
 }
 
 /**
- * Domain model representing a verified blocking decision produced by the on-device filtering pipeline.
+ * Domain policy result produced by the on-device filtering pipeline.
+ *
+ * @property action Allow or block outcome.
+ * @property reason Human-readable explanation.
+ * @property confidence Classifier confidence, conventionally from zero through one.
+ * @property category Content category attributed to this decision.
+ * @property timestamp Decision time in Unix epoch milliseconds.
+ * @property reasonCode Machine-readable policy reason.
+ * @property ruleValue Matched rule hostname when available.
+ * @property ruleKind Matched rule scope when available.
+ * @property sourceId Source identifier supplied by the matching rule, when available.
  */
 data class BlockingDecision(
     val action: BlockingAction,
@@ -47,9 +65,22 @@ data class BlockingDecision(
     val ruleKind: RuleKind? = null,
     val sourceId: Int? = null
 ) {
+    /**
+     * Whether the action is BLOCK.
+     */
     val isBlocked: Boolean get() = action == BlockingAction.BLOCK
 
+    /**
+     * Constructs decisions with default metadata.
+     */
     companion object {
+        /**
+         * Creates an allowed normal-content decision with the default ALLOWED reason code.
+         *
+         * @param reason Human-readable explanation.
+         * @param confidence Confidence retained without clamping.
+         * @return New allowed decision stamped with the current wall-clock time.
+         */
         fun allow(reason: String = "Allowed normal traffic", confidence: Float = 1.0f): BlockingDecision {
             return BlockingDecision(
                 action = BlockingAction.ALLOW,
@@ -59,6 +90,14 @@ data class BlockingDecision(
             )
         }
 
+        /**
+         * Creates a blocked decision with default metadata.
+         *
+         * @param reason Human-readable explanation.
+         * @param confidence Confidence retained without clamping.
+         * @param category Category responsible for blocking.
+         * @return New blocked decision stamped with the current wall-clock time.
+         */
         fun block(
             reason: String,
             confidence: Float,

@@ -6,10 +6,16 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
+/**
+ * Regression coverage for ad detector.
+ */
 class AdDetectorTest {
 
     private lateinit var adDetector: AdDetector
 
+    /**
+     * Resets the fixture state before each test to keep assertions independent.
+     */
     @Before
     fun setup() {
         // Without Android context, tests fallback + pattern matching + manual additions
@@ -23,6 +29,9 @@ class AdDetectorTest {
         adDetector.addDomain("criteo.com")
     }
 
+    /**
+     * Verifies that test exact domain match.
+     */
     @Test
     fun testExactDomainMatch() {
         val (isAd1, reason1) = adDetector.isAdDomain("doubleclick.net")
@@ -32,6 +41,9 @@ class AdDetectorTest {
         assertTrue("applovin.com should be detected as ad", isAd2)
     }
 
+    /**
+     * Verifies that test subdomain suffix match.
+     */
     @Test
     fun testSubdomainSuffixMatch() {
         val (isAd, _) = adDetector.isAdDomain("sub.doubleclick.net")
@@ -41,6 +53,9 @@ class AdDetectorTest {
         assertTrue("deep.nested.applovin.com should match applovin.com", isAd2)
     }
 
+    /**
+     * Verifies that test pattern match.
+     */
     @Test
     fun testPatternMatch() {
         val (isAd1, _) = adDetector.isAdDomain("ads.randomwebsite.com")
@@ -53,6 +68,9 @@ class AdDetectorTest {
         assertFalse("Generic tracker words are not deterministic authority", isAd3)
     }
 
+    /**
+     * Verifies that test do hcanary domain.
+     */
     @Test
     fun testDoHCanaryDomain() {
         val (isCanary, reason) = adDetector.isAdDomain("use-application-dns.net")
@@ -62,6 +80,9 @@ class AdDetectorTest {
         assertFalse(reason.contains("prevent", ignoreCase = true))
     }
 
+    /**
+     * Verifies that test browser ad patterns.
+     */
     @Test
     fun testBrowserAdPatterns() {
         val (isAd1, _) = adDetector.isAdDomain("adserver.newsportal.com")
@@ -74,6 +95,9 @@ class AdDetectorTest {
         assertFalse("Generic pixel names are only learning evidence", isAd3)
     }
 
+    /**
+     * Verifies that test movie site popunder and ad networks blocked.
+     */
     @Test
     fun testMovieSitePopunderAndAdNetworksBlocked() {
         val (isAd1, _) = adDetector.isAdDomain("ds.recrampwiped.com")
@@ -95,6 +119,9 @@ class AdDetectorTest {
         assertTrue("droplink ad gateway must be blocked", isAd6)
     }
 
+    /**
+     * Verifies that test benign domains not blocked.
+     */
     @Test
     fun testBenignDomainsNotBlocked() {
         val (isAd1, _) = adDetector.isAdDomain("wikipedia.org")

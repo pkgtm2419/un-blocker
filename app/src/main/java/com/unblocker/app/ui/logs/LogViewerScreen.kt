@@ -49,14 +49,10 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Redesigned Connection Logs Screen.
+ * Renders local aggregate DNS logs, filters, optional event details, export, and history controls.
  *
- * Implements:
- * - Haikei atmospheric background layer
- * - Skeuomorphic tactile depth cards with specular rim lighting
- * - Unique domain aggregation with call counts & timestamped event records (up to 50 events)
- * - Filter chips (All / Blocked / Allowed) and sort options (Recent / Most calls)
- * - Live aggregate counters, history wiping, and pause/resume logging
+ * @param contentPadding Parent navigation padding whose bottom inset is applied to the list and snackbar.
+ * @param viewModel Owner of log queries, rule feedback, and local-history operations.
  */
 @Composable
 fun LogViewerScreen(
@@ -442,6 +438,17 @@ fun LogViewerScreen(
 }
 }
 
+/**
+ * Renders one domain aggregate and its expandable event and rule-action section.
+ *
+ * @param stat Aggregate counts and timestamps for the readable domain.
+ * @param isExpanded Whether details should be visible.
+ * @param events Available recent events supplied by the caller; may be empty in aggregate-only mode.
+ * @param onToggleExpand Callback requesting expansion or collapse.
+ * @param onAllow Callback requesting an exact-domain allow override.
+ * @param onBlock Callback requesting an exact-domain block override.
+ * @param onReset Callback requesting removal of the exact-domain override.
+ */
 @Composable
 fun DomainStatCard(
     stat: DomainStatEntity,
@@ -597,10 +604,16 @@ fun DomainStatCard(
     }
 }
 
+/**
+ * Renders mixed, blocked, or allowed status from aggregate decision counts.
+ *
+ * @param blockedCount Number of blocked observations.
+ * @param allowedCount Number of allowed observations; both zero render the allowed label.
+ */
 @Composable
 fun StatusChip(blockedCount: Long, allowedCount: Long) {
     val isDark = isSystemInDarkTheme()
-    val (label, bg, text) = when {
+    val (label, backgroundColor, textColor) = when {
         blockedCount > 0 && allowedCount > 0 -> Triple(
             "Mixed",
             if (isDark) Color(0x33F59E0B) else Color(0xFFFEF3C7),
@@ -620,12 +633,12 @@ fun StatusChip(blockedCount: Long, allowedCount: Long) {
 
     Surface(
         shape = CircleShape,
-        color = bg,
-        border = BorderStroke(1.dp, if (isDark) text.copy(alpha = 0.4f) else text.copy(alpha = 0.25f))
+        color = backgroundColor,
+        border = BorderStroke(1.dp, if (isDark) textColor.copy(alpha = 0.4f) else textColor.copy(alpha = 0.25f))
     ) {
         Text(
             text = label,
-            color = text,
+            color = textColor,
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
@@ -634,9 +647,9 @@ fun StatusChip(blockedCount: Long, allowedCount: Long) {
 }
 
 private fun formatRelativeTime(epochMillis: Long): String {
-    val diff = System.currentTimeMillis() - epochMillis
-    if (diff < 0) return "just now"
-    val seconds = diff / 1000
+    val elapsedMillis = System.currentTimeMillis() - epochMillis
+    if (elapsedMillis < 0) return "just now"
+    val seconds = elapsedMillis / 1000
     if (seconds < 60) return "${seconds}s ago"
     val minutes = seconds / 60
     if (minutes < 60) return "${minutes}m ago"

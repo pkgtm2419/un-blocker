@@ -1,27 +1,20 @@
 package com.unblocker.ml.classifier
 
 /**
- * Contract for an on-device domain classification model.
- *
- * Separates the TFLite implementation from its callers so that:
- *  - Unit tests can inject a deterministic fake without a real `.tflite` file.
- *  - Future model backends (ONNX, Gemini Nano) can be swapped in without changing
- *    [BatchDomainAnalysisWorker].
+ * On-device domain scoring boundary used by the separate library batch-analysis worker.
  */
 interface DomainClassifier {
 
     /**
-     * Predicts the probability (0.0–1.0) that [domain] is an ad/tracker domain.
+     * Scores whether a domain resembles advertising or tracking infrastructure.
      *
-     * @param domain  Fully-qualified domain name (lowercased).
-     * @return        Confidence score in [0.0, 1.0].
-     *                Returns 0.0f if the model is not ready or an error occurs.
+     * @param domain Domain expected to be normalized by the caller.
+     * @return Confidence score conventionally from 0 to 1; failure handling is implementation-specific.
      */
     fun predictAdProbability(domain: String): Float
 
     /**
-     * Releases native resources held by the model interpreter.
-     * Must be called when the owning component is destroyed.
+     * Releases resources owned by the classifier; implementations without resources may do nothing.
      */
     fun close()
 }

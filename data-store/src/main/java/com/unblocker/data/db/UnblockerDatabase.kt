@@ -15,7 +15,7 @@ import com.unblocker.data.db.entity.DomainStatEntity
 import com.unblocker.data.db.entity.WhitelistEntity
 
 /**
- * Room database for un-blocker 2.0.x.
+ * Room schema version 2 for library rules, legacy DNS logs, and readable domain statistics.
  */
 @Database(
     entities = [
@@ -31,12 +31,38 @@ import com.unblocker.data.db.entity.WhitelistEntity
 @TypeConverters(DateConverters::class)
 abstract class UnblockerDatabase : RoomDatabase() {
 
+    /**
+     * Accesses legacy DNS logs.
+     *
+     * @return DAO owned by this database instance.
+     */
     abstract fun dnsLogDao(): DnsLogDao
+    /**
+     * Accesses domain aggregates and events.
+     *
+     * @return DAO owned by this database instance.
+     */
     abstract fun domainLogDao(): DomainLogDao
+    /**
+     * Accesses block rules.
+     *
+     * @return DAO owned by this database instance.
+     */
     abstract fun blockRuleDao(): BlockRuleDao
+    /**
+     * Accesses readable allow entries.
+     *
+     * @return DAO owned by this database instance.
+     */
     abstract fun whitelistDao(): WhitelistDao
 
+    /**
+     * Stable database file identifier.
+     */
     companion object {
+        /**
+         * Default database filename used by the library Hilt provider.
+         */
         const val DATABASE_NAME = "unblocker_v2.db"
     }
 }

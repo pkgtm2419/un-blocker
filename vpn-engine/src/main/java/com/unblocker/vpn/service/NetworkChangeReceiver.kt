@@ -1,24 +1,21 @@
 package com.unblocker.vpn.service
 
-import android.content.BroadcastReceiver
 import android.content.Context
-import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
-import android.os.Build
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Monitors active network changes and notifies the VPN service so it can
- * refresh its upstream DNS server list when the underlying network changes
- * (e.g., switching from Wi-Fi to mobile data).
+ * Registers Android internet-capable network callbacks and invokes a caller-owned listener.
  *
- * The [onNetworkChanged] callback is invoked on the ConnectivityManager callback thread;
- * callers must dispatch any heavy work to a background coroutine.
+ * Callbacks run on ConnectivityManager callback threads, so the listener must dispatch heavy work.
+ * Registration failures are caught; registration does not guarantee an initial notification.
+ *
+ * @param context Application context providing ConnectivityManager.
  */
 @Singleton
 class NetworkChangeReceiver @Inject constructor(
@@ -29,13 +26,35 @@ class NetworkChangeReceiver @Inject constructor(
         context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
+        /**
+         * Notifies the listener that a matching network became available.
+         *
+         * @param network Network reported by Android.
+         */
         override fun onAvailable(network: Network) = onNetworkChanged?.invoke() ?: Unit
+        /**
+         * Notifies the listener that a matching network was lost.
+         *
+         * @param network Network reported by Android.
+         */
         override fun onLost(network: Network) = onNetworkChanged?.invoke() ?: Unit
+        /**
+         * Notifies the listener that network capabilities changed.
+         *
+         * @param network Network reported by Android.
+         * @param caps Latest capabilities supplied by Android.
+         */
         override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) =
             onNetworkChanged?.invoke() ?: Unit
     }
 
-    /** Registers the network callback. [callback] is invoked whenever connectivity changes. */
+    /**
+     * Replaces the listener and attempts to register the shared network callback.
+     *
+     * Registration exceptions are ignored. Repeated calls are not deduplicated here.
+     *
+     * @param callback Listener invoked for availability, loss, and capability changes.
+     */
     fun register(callback: () -> Unit) {
         onNetworkChanged = callback
         val request = NetworkRequest.Builder()
@@ -46,7 +65,9 @@ class NetworkChangeReceiver @Inject constructor(
         }
     }
 
-    /** Unregisters the network callback. Safe to call even if not registered. */
+    /**
+     * Clears the listener and attempts unregistration, ignoring exceptions from Android.
+     */
     fun unregister() {
         onNetworkChanged = null
         runCatching { connectivityManager.unregisterNetworkCallback(networkCallback) }

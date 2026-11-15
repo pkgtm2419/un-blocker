@@ -6,13 +6,22 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
+/**
+ * Regression coverage for vpn diagnostics.
+ */
 class VpnDiagnosticsTest {
 
+    /**
+     * Resets the fixture state before each test to keep assertions independent.
+     */
     @Before
     fun setUp() {
         VpnDiagnostics.resetForTesting()
     }
 
+    /**
+     * Verifies that test counters increment correctly.
+     */
     @Test
     fun testCountersIncrementCorrectly() {
         assertEquals(0L, VpnDiagnostics.forwardingRejectedCount)
@@ -38,6 +47,9 @@ class VpnDiagnosticsTest {
         assertEquals(2L, VpnDiagnostics.packetProcessingErrorCount)
     }
 
+    /**
+     * Verifies that test forwarding active tracking.
+     */
     @Test
     fun testForwardingActiveTracking() {
         assertEquals(0L, VpnDiagnostics.forwardingActiveCount)
@@ -50,6 +62,9 @@ class VpnDiagnosticsTest {
         assertEquals(0L, VpnDiagnostics.forwardingActiveCount)
     }
 
+    /**
+     * Verifies that test ring buffer bounded at200 events.
+     */
     @Test
     fun testRingBufferBoundedAt200Events() {
         for (i in 1..250) {
@@ -66,6 +81,9 @@ class VpnDiagnosticsTest {
         assertEquals("Error_250", events.last().exceptionClass)
     }
 
+    /**
+     * Verifies that test privacy invariant zero pii or domain leakage.
+     */
     @Test
     fun testPrivacyInvariantZeroPiiOrDomainLeakage() {
         val testDomain = "super-secret-user-domain.example.com"

@@ -16,8 +16,14 @@ import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
 import java.net.URL
 
+/**
+ * Regression coverage for extension update rollback.
+ */
 class ExtensionUpdateRollbackTest {
 
+    /**
+     * Temporary filesystem fixture isolated and cleaned up by JUnit.
+     */
     @get:Rule
     val tempFolder = TemporaryFolder()
 
@@ -37,6 +43,9 @@ class ExtensionUpdateRollbackTest {
         }
     }
 
+    /**
+     * Verifies that failed update preserves existing filter and rules.
+     */
     @Test
     fun failedUpdatePreservesExistingFilterAndRules() = runBlocking {
         val rulesFile = File(tempFolder.root, "my_filter.rules")
@@ -59,6 +68,9 @@ class ExtensionUpdateRollbackTest {
         assertEquals(originalRuleContent, rulesFile.readText())
     }
 
+    /**
+     * Verifies that invalid rules update preserves existing file.
+     */
     @Test
     fun invalidRulesUpdatePreservesExistingFile() = runBlocking {
         val rulesFile = File(tempFolder.root, "my_filter.rules")
@@ -77,6 +89,9 @@ class ExtensionUpdateRollbackTest {
         assertEquals(originalRuleContent, rulesFile.readText())
     }
 
+    /**
+     * Verifies that oversized update preserves existing file.
+     */
     @Test
     fun oversizedUpdatePreservesExistingFile() = runBlocking {
         val rulesFile = File(tempFolder.root, "my_filter.rules")
@@ -96,6 +111,9 @@ class ExtensionUpdateRollbackTest {
         assertEquals(originalRuleContent, rulesFile.readText())
     }
 
+    /**
+     * Verifies that successful update atomically swaps file.
+     */
     @Test
     fun successfulUpdateAtomicallySwapsFile() = runBlocking {
         val rulesFile = File(tempFolder.root, "my_filter.rules")

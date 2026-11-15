@@ -1,11 +1,11 @@
 package com.unblocker.common.model
 
 /**
- * Represents a domain record stored in the filtering rule tables.
+ * Domain rule and provenance, without normalization or range validation.
  *
- * @param domain          Fully-qualified domain name (lowercase, no trailing dot).
- * @param confidenceScore ML confidence score (0.0–1.0). 1.0 for static rules.
- * @param ruleSource      Origin of the rule: [RuleSource.STATIC], [RuleSource.ML], [RuleSource.USER].
+ * @property domain Domain expected to be lowercase without a trailing dot.
+ * @property confidenceScore Confidence conventionally from 0 to 1; static rules default to 1.
+ * @property ruleSource Source responsible for the rule.
  */
 data class DomainRecord(
     val domain: String,

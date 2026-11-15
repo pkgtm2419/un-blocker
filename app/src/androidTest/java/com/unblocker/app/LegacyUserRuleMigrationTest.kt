@@ -20,6 +20,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
+/**
+ * Regression coverage for legacy user rule migration.
+ */
 @RunWith(AndroidJUnit4::class)
 class LegacyUserRuleMigrationTest {
 
@@ -55,6 +58,9 @@ class LegacyUserRuleMigrationTest {
         }
     }
 
+    /**
+     * Verifies that test migrate transfers user rules and cleans legacy rows.
+     */
     @Test
     fun testMigrateTransfersUserRulesAndCleansLegacyRows() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
@@ -91,6 +97,9 @@ class LegacyUserRuleMigrationTest {
         assertEquals(MigrationResult.NotRequired, secondResult)
     }
 
+    /**
+     * Verifies that test partial failure leaves unmigrated rows and does not mark complete.
+     */
     @Test
     fun testPartialFailureLeavesUnmigratedRowsAndDoesNotMarkComplete() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext

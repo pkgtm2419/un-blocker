@@ -17,8 +17,20 @@ import com.unblocker.app.logic.analysis.UserFeedback
 import com.unblocker.app.logic.rules.RuleAction
 
 /**
- * Clean Architecture Use Case for evaluating network domains and deciding blocking actions.
- * Orchestrates static lists, independent local evidence, and optional adult-content filters.
+ * Evaluates user intent, protection policy, rules, evidence and adult-domain filters in order.
+ *
+ * @param adDetector Static and extension advertising-rule matcher.
+ * @param adultContentDetector Adult-domain classifier.
+ * @param adaptiveBlockingEngine Local evidence evaluator.
+ * @param isAllowlisted User allow-rule predicate.
+ * @param isBlocklisted User block-rule predicate.
+ * @param isAdBlockingEnabled Supplies the advertising-filter toggle.
+ * @param isAdultBlockingEnabled Supplies the independent adult-filter toggle.
+ * @param isPaused Supplies protection pause state.
+ * @param blockingMode Supplies the decision mode; APPROVED_ONLY allows unmatched domains.
+ * @param filteringTier Supplies compatibility-exception behavior.
+ * @param protectedDomains Infrastructure and user-protection policy.
+ * @param psl Public suffix context for registrable-domain checks.
  */
 class DecideBlockingUseCase(
     private val adDetector: AdDetector,
@@ -34,6 +46,18 @@ class DecideBlockingUseCase(
     private val protectedDomains: ProtectedDomains = ProtectedDomains.DEFAULT,
     private val psl: PublicSuffixRules = PublicSuffixRules.fallback
 ) {
+    /**
+     * Builds a pipeline whose settings are read from current preference state.
+     *
+     * @param adDetector Static and extension-rule matcher.
+     * @param adultContentDetector Adult-domain classifier.
+     * @param adaptiveBlockingEngine Local evidence evaluator.
+     * @param preferences Reactive filtering settings.
+     * @param isAllowlisted User allow-rule predicate.
+     * @param isBlocklisted User block-rule predicate.
+     * @param protectedDomains Infrastructure and user-protection policy.
+     * @param psl Public suffix context for registrable-domain checks.
+     */
     constructor(
         adDetector: AdDetector,
         adultContentDetector: AdultContentDetector,
@@ -58,11 +82,17 @@ class DecideBlockingUseCase(
         psl = psl
     )
 
+    /**
+     * Evaluates the chain, failing open when evaluation throws an Exception.
+     *
+     * @param rawDomain DNS hostname to normalize and evaluate.
+     * @return Decision, including INVALID for malformed names or ENGINE_ERROR after an exception.
+     */
     operator fun invoke(rawDomain: String): BlockingDecision {
         return try {
             evaluate(rawDomain)
         } catch (e: Exception) {
-            // Section 2.2: Fail open on any error
+            // Preserve fail-open policy for exceptions during evaluation.
             BlockingDecision.allow("Engine error (fail open)", 1.0f).copy(
                 reasonCode = DecisionReason.ENGINE_ERROR
             )
@@ -85,7 +115,7 @@ class DecideBlockingUseCase(
             return BlockingDecision.allow("Local exception", 1.0f).copy(reasonCode = DecisionReason.USER_ALLOW)
         }
 
-        // Step 4: user BLOCK (exact host OR ancestor entry; per-app scope if set) -> BLOCK(USER_BLOCK)
+        // Step 4: user BLOCK through the supplied membership predicate.
         if (isBlocklisted(domain)) {
             adaptiveBlockingEngine.networkLearner.syncFeedback(domain, UserFeedback.BLOCK)
             return BlockingDecision.block("Local block rule", 1.0f, BlockingCategory.CUSTOM).copy(
@@ -94,7 +124,7 @@ class DecideBlockingUseCase(
         }
         adaptiveBlockingEngine.networkLearner.syncFeedback(domain, UserFeedback.NONE)
 
-        // Step 5: mode == APPROVED_ONLY -> ALLOW(NO_MATCH) [record suggestion if matched]
+        // Step 5: APPROVED_ONLY allows names without a user rule before later classifiers.
         val currentMode = blockingMode()
         if (currentMode == BlockingMode.APPROVED_ONLY) {
             return BlockingDecision.allow("Approved-only mode: benign traffic", 1.0f).copy(

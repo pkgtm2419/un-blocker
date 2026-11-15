@@ -12,7 +12,16 @@ import java.util.concurrent.TimeUnit
 import javax.crypto.Mac
 import javax.crypto.SecretKey
 
-/** v3: opaque ID, score, state, evidence mask, windows, feedback and coarse day only. */
+/**
+ * Stores opaque HMAC identifiers and coarse reputation evidence without readable query history.
+ *
+ * @param key HMAC-SHA256 key for v3 identifiers.
+ * @param file Optional persistence file; null keeps evidence volatile.
+ * @param capacity Maximum retained record count; must be positive.
+ * @param nowBucket Clock returning nonnegative coarse day buckets, normally Unix epoch days.
+ * @param flushIntervalMs Background flush delay in milliseconds; nonpositive disables scheduling.
+ * @throws IllegalArgumentException If capacity is not positive.
+ */
 class PrivateEvidenceStore(
     private val key: SecretKey,
     private val file: File? = null,
@@ -59,6 +68,9 @@ class PrivateEvidenceStore(
             trim()
         }
     }
+    /**
+     * Returns the current coarse day bucket clamped to a nonnegative value.
+     */
     fun currentBucket() = nowBucket().coerceAtLeast(0)
     private fun id(domain: String): String {
         val bytes = mac.doFinal(("reputation-v3:" + domain).toByteArray(Charsets.UTF_8))
@@ -70,13 +82,32 @@ class PrivateEvidenceStore(
         r.mask in 0..31 && r.positiveWindows in 0..255 && r.dayBucket in 0..currentBucket() &&
         (r.state != ReputationState.CONFIRMED || r.mask and 16 != 0 ||
             (r.positiveWindows >= 2 && r.mask and 1 != 0 && Integer.bitCount(r.mask and 15) >= 2))
+    /**
+     * Prunes expired evidence and returns the retained record count.
+     */
+    /**
+     * Prunes expired evidence and counts records whose feedback/state confirms blocking.
+     */
     @Synchronized fun size(): Int { prune(); return records.size }
+    /**
+     * Looks up current evidence after periodic expiry pruning.
+     *
+     * @param raw Hostname to normalize and hash.
+     * @return Evidence, or null for invalid names, missing records or hashing failure.
+     */
     @Synchronized fun confirmedCount(): Int { prune(); return records.values.count { it.confirmed } }
     @Synchronized fun get(raw: String): ReputationEvidence? {
         val domain = DomainName.normalize(raw) ?: return null
         prune()
         return runCatching { records[id(domain)] }.getOrNull()
     }
+    /**
+     * Updates valid evidence in memory and marks it for a later flush.
+     *
+     * @param raw Hostname to normalize and hash.
+     * @param record Evidence satisfying score, mask, state and day-bucket constraints.
+     * Invalid names, records and hashing failures are ignored.
+     */
     @Synchronized fun put(raw: String, record: ReputationEvidence) {
         val domain = DomainName.normalize(raw) ?: return
         if (!valid(record)) return
@@ -87,6 +118,9 @@ class PrivateEvidenceStore(
         trim()
         isDirty = true
     }
+    /**
+     * Clears records and attempts to persist the empty snapshot; failed writes remain dirty.
+     */
     fun clear() {
         val snapshot = synchronized(this) {
             records.clear()
@@ -95,6 +129,9 @@ class PrivateEvidenceStore(
         }
         snapshot?.let { writeSnapshot(it) }
     }
+    /**
+     * Removes user feedback and derives normal states from existing evidence; marks the store dirty.
+     */
     @Synchronized fun clearFeedback() {
         records.replaceAll { _, r ->
             if (r.feedback == UserFeedback.NONE) r else
@@ -143,6 +180,9 @@ class PrivateEvidenceStore(
         return lines
     }
 
+    /**
+     * Writes a dirty snapshot when file-backed; failed writes are retained for a later retry.
+     */
     fun flush() {
         val lines = takeSnapshotIfDirty() ?: return
         writeSnapshot(lines)
@@ -174,6 +214,9 @@ class PrivateEvidenceStore(
         }
     }
 
+    /**
+     * Stops periodic flushing, flushes current evidence and waits up to one second for the writer.
+     */
     override fun close() {
         writer?.shutdown()
         flush()

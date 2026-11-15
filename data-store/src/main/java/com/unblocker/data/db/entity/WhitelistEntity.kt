@@ -5,16 +5,13 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 /**
- * User-managed whitelist — domains here are always allowed regardless of any block rule.
+ * Readable user allow entry consulted by the library filter repository.
  *
- * When a user whitelists a domain from the false-positive dashboard:
- *  1. The matching [BlockRuleEntity] row is deleted.
- *  2. A [WhitelistEntity] row is inserted.
- *  3. The Bloom Filter is atomically recompiled.
+ * The repository deletes a matching block-rule row when adding an allow entry. This entity
+ * alone implements neither precedence nor the active app's HMAC rule storage.
  *
- * The whitelist takes precedence over static, ML, and any future rule sources.
- *
- * Table: `whitelist`
+ * @property domain Readable domain primary key.
+ * @property addedAt Entry creation time in milliseconds since the Unix epoch.
  */
 @Entity(tableName = "whitelist")
 data class WhitelistEntity(

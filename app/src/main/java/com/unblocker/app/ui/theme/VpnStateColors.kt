@@ -10,8 +10,18 @@ import androidx.compose.ui.graphics.Color
 import com.unblocker.app.services.ServiceStatus
 
 /**
- * Real-time dynamic state-driven color theming for Un-Blocker.
- * Morphing color palette that responds dynamically to VPN protection states.
+ * Visual palette for a rendered service state; colors do not independently verify VPN health.
+ *
+ * @property coreAccent Main shield and status accent.
+ * @property coreGradientStart Start color for the shield gradient.
+ * @property coreGradientEnd End color for the shield gradient.
+ * @property glowColor Decorative halo color.
+ * @property surfaceHighlight Highlight color for raised surface edges.
+ * @property surfaceShadow Shadow color for surface depth.
+ * @property badgeBackground Background color for status badges.
+ * @property badgeTextColor Foreground color for status badges.
+ * @property waveAccent Decorative background wave color.
+ * @property statusText Foreground color for status text.
  */
 @Immutable
 data class VpnStateColors(
@@ -27,6 +37,9 @@ data class VpnStateColors(
     val statusText: Color
 )
 
+/**
+ * Service-state palette available to descendants, with a green default palette.
+ */
 val LocalVpnStateColors = compositionLocalOf {
     VpnStateColors(
         coreAccent = AllowedGreen,
@@ -42,12 +55,18 @@ val LocalVpnStateColors = compositionLocalOf {
     )
 }
 
+/**
+ * Animates the state-specific palette and selects theme-appropriate surface contrast.
+ *
+ * @param serviceStatus Service state driving the target colors.
+ * @param isDarkTheme Whether contrast colors target dark surfaces.
+ * @return Current interpolated palette for rendering.
+ */
 @Composable
 fun rememberVpnStateColors(
     serviceStatus: ServiceStatus,
     isDarkTheme: Boolean = true
 ): VpnStateColors {
-    val duration = 400
 
     val (targetCore, targetGradStart, targetGradEnd, targetGlow, targetBadgeBg, targetBadgeText, targetWave) = when (serviceStatus) {
         ServiceStatus.RUNNING -> StatePalette(
@@ -97,13 +116,13 @@ fun rememberVpnStateColors(
         )
     }
 
-    val animCore by animateColorAsState(targetCore, tween(duration), label = "animCore")
-    val animGradStart by animateColorAsState(targetGradStart, tween(duration), label = "animGradStart")
-    val animGradEnd by animateColorAsState(targetGradEnd, tween(duration), label = "animGradEnd")
-    val animGlow by animateColorAsState(targetGlow, tween(duration), label = "animGlow")
-    val animBadgeBg by animateColorAsState(targetBadgeBg, tween(duration), label = "animBadgeBg")
-    val animBadgeText by animateColorAsState(targetBadgeText, tween(duration), label = "animBadgeText")
-    val animWave by animateColorAsState(targetWave, tween(duration), label = "animWave")
+    val animCore by animateColorAsState(targetCore, tween(STATE_COLOR_TRANSITION_MS), label = "animCore")
+    val animGradStart by animateColorAsState(targetGradStart, tween(STATE_COLOR_TRANSITION_MS), label = "animGradStart")
+    val animGradEnd by animateColorAsState(targetGradEnd, tween(STATE_COLOR_TRANSITION_MS), label = "animGradEnd")
+    val animGlow by animateColorAsState(targetGlow, tween(STATE_COLOR_TRANSITION_MS), label = "animGlow")
+    val animBadgeBg by animateColorAsState(targetBadgeBg, tween(STATE_COLOR_TRANSITION_MS), label = "animBadgeBg")
+    val animBadgeText by animateColorAsState(targetBadgeText, tween(STATE_COLOR_TRANSITION_MS), label = "animBadgeText")
+    val animWave by animateColorAsState(targetWave, tween(STATE_COLOR_TRANSITION_MS), label = "animWave")
 
     return VpnStateColors(
         coreAccent = animCore,
@@ -118,6 +137,8 @@ fun rememberVpnStateColors(
         statusText = animBadgeText
     )
 }
+
+private const val STATE_COLOR_TRANSITION_MS = 400
 
 private data class StatePalette(
     val core: Color,

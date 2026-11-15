@@ -5,7 +5,13 @@ import com.unblocker.app.logic.analysis.*
 import org.junit.Assert.*
 import org.junit.Test
 
+/**
+ * Regression coverage for adaptive blocking engine.
+ */
 class AdaptiveBlockingEngineTest {
+    /**
+     * Verifies that age cannot change evidence threshold or classification.
+     */
     @Test fun ageCannotChangeEvidenceThresholdOrClassification() {
         val learner = LocalNetworkLearner(isKnownTracker = { it == "app.adjust.com" })
         val engine = AdaptiveBlockingEngine(networkLearner = learner)
@@ -17,6 +23,9 @@ class AdaptiveBlockingEngineTest {
             assertEquals(DecisionReason.STATIC_RULE,engine.evaluateDomain("app.adjust.com",day).reasonCode)
         }
     }
+    /**
+     * Verifies that independent evidence confirms but single burst does not.
+     */
     @Test fun independentEvidenceConfirmsButSingleBurstDoesNot() {
         var now=0L
         val learner=LocalNetworkLearner(clock={now})

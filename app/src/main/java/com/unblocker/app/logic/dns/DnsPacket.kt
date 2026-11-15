@@ -5,6 +5,29 @@ import java.net.InetAddress
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
+/**
+ * Parsed DNS query retaining its caller-owned packet storage.
+ *
+ * Copy the DNS range before asynchronous use; equality intentionally compares only transaction ID and domain.
+ *
+ * @property transactionId DNS transaction-ID wire bits.
+ * @property domain Canonical queried hostname.
+ * @property queryType DNS QTYPE wire bits.
+ * @property queryClass DNS QCLASS wire bits.
+ * @property rawPacket Backing IP packet or DNS body; not defensively copied.
+ * @property dnsOffset Zero-based byte offset of the DNS body in rawPacket.
+ * @property dnsLength DNS body length in bytes.
+ * @property srcIp Client address bytes, four for IPv4 or sixteen for IPv6.
+ * @property dstIp Resolver destination address bytes; wire-only parsing supplies a compatibility placeholder.
+ * @property srcPort Client UDP port, or a placeholder for wire-only queries.
+ * @property dstPort DNS destination port.
+ * @property isIpv6 Whether the client uses IPv6.
+ * @property udpPayloadLimit Client DNS UDP payload limit in bytes.
+ * @property hasEdns Whether the parsed UDP query included an OPT record.
+ * @property ednsFlags Parsed EDNS flag bits.
+ * @property cacheVariant Query flag/option discriminator for cache identity.
+ * @property cacheAllowed Whether the parsed options permit cache reuse.
+ */
 data class DnsQuery(
     val transactionId: Short,
     val domain: String,
@@ -24,6 +47,12 @@ data class DnsQuery(
     val cacheVariant: String = "",
     val cacheAllowed: Boolean = true
 ) {
+    /**
+     * Compares only transaction ID and canonical domain, excluding transport and packet bytes.
+     *
+     * @param other Object to compare.
+     * @return Whether other is a DnsQuery with the same transaction ID and domain.
+     */
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -31,6 +60,9 @@ data class DnsQuery(
         return transactionId == other.transactionId && domain == other.domain
     }
 
+    /**
+     * Returns the hash of transaction ID and domain, matching the restricted equality contract.
+     */
     override fun hashCode(): Int {
         var result = transactionId.toInt()
         result = 31 * result + domain.hashCode()
@@ -39,39 +71,73 @@ data class DnsQuery(
 }
 
 /**
- * Compact, isolated DTO for asynchronous upstream DNS forwarding.
- * Decouples background upstream resolution from the TUN reader's reusable packet buffer.
+ * Owned DNS body for asynchronous forwarding after the TUN buffer is reused.
+ *
+ * @property query Query copy whose rawPacket is the isolated DNS body.
+ * @property dnsPayload Isolated DNS body, shared with query.rawPacket.
  */
 data class ForwardingDnsRequest(
     val query: DnsQuery,
     val dnsPayload: ByteArray
 )
 
+/**
+ * Copies this query DNS range and points a query copy at the isolated body.
+ *
+ * @return Forwarding request independent of the reusable original packet buffer.
+ * @throws IndexOutOfBoundsException If the declared DNS end exceeds the backing array.
+ */
 fun DnsQuery.toForwardingRequest(): ForwardingDnsRequest {
     val payload = rawPacket.copyOfRange(dnsOffset, dnsOffset + dnsLength)
     val isolatedQuery = this.copy(rawPacket = payload, dnsOffset = 0, dnsLength = payload.size)
     return ForwardingDnsRequest(isolatedQuery, payload)
 }
 
+/**
+ * Parses standard DNS queries and builds local IPv4/IPv6 UDP DNS responses.
+ */
 object DnsPacketUtil {
 
+    /**
+     * DNS A record type wire value.
+     */
     const val TYPE_A: Short = 1
+    /**
+     * DNS AAAA record type wire value.
+     */
     const val TYPE_AAAA: Short = 28
+    /**
+     * DNS Internet class wire value.
+     */
     const val CLASS_IN: Short = 1
 
-    /** Largest DNS body that can be represented by the returned IP/UDP packet. */
+    /**
+     * Computes the largest DNS body representable in the selected IP/UDP envelope.
+     *
+     * @param query Query determining IPv4 versus IPv6 overhead.
+     * @return Maximum DNS body length in bytes, excluding IP and UDP headers.
+     */
     fun maxDnsPayloadLength(query: DnsQuery): Int =
         if (query.isIpv6) 0xffff - 8 else 0xffff - 20 - 8
 
-    /** Returns the lowest positive answer TTL, or null when the payload is not cacheable. */
+    /**
+     * Reads the minimum positive answer TTL from a structurally valid successful response.
+     *
+     * @param payload DNS response body.
+     * @param length Available body length in bytes.
+     * @return Minimum answer TTL in seconds, or null for invalid, truncated, unsuccessful or zero-TTL responses.
+     */
     fun minCacheTtlSeconds(payload: ByteArray, length: Int = payload.size): Long? =
         DnsResponseValidator.parseMetadata(payload, length)
             ?.takeIf { !it.truncated && it.rcode == 0 }
             ?.minPositiveTtlSeconds
 
     /**
-     * Parse IPv4/UDP packet containing a DNS query from the TUN interface.
-     * Returns null if the packet is not IPv4 UDP DNS query.
+     * Parses a single unfragmented standard DNS query over IPv4 or supported IPv6 UDP envelopes.
+     *
+     * @param packet Reusable TUN buffer, retained by the returned query without copying.
+     * @param length Number of available IP packet bytes.
+     * @return Parsed query, or null for unsupported transport, malformed bounds or invalid DNS syntax.
      */
     fun parseIpPacket(packet: ByteArray, length: Int): DnsQuery? {
         if (length < 28 || length > packet.size) return null
@@ -212,8 +278,11 @@ object DnsPacketUtil {
     }
 
     /**
-     * Builds a synthetic DNS response returning 0.0.0.0 (or :: for AAAA)
-     * wrapped in a complete IPv4/UDP packet ready to write to the TUN interface.
+     * Builds a local IPv4/IPv6 UDP block response with zero A/AAAA answers or canary NXDOMAIN.
+     *
+     * @param query Parsed query supplying client addresses, ports, ID and question.
+     * @return Complete reply packet; non-address QTYPEs receive an empty successful answer.
+     * @throws IllegalArgumentException If query address sizes or response envelope lengths are invalid.
      */
     fun buildBlockedDnsResponsePacket(query: DnsQuery): ByteArray {
         val isDoHCanary = query.domain == "use-application-dns.net"
@@ -257,7 +326,11 @@ object DnsPacketUtil {
     }
 
     /**
-     * Builds a synthetic SERVFAIL DNS response packet on local saturation or forwarding overload.
+     * Builds a local SERVFAIL response with the original question and optional minimal OPT.
+     *
+     * @param query Parsed query supplying client addressing and DNS identity.
+     * @return Complete IPv4/IPv6 UDP reply packet.
+     * @throws IllegalArgumentException If query address sizes or response envelope lengths are invalid.
      */
     fun buildServfailDnsResponsePacket(query: DnsQuery): ByteArray {
         val questionBytes = extractQuestionSection(query.rawPacket, query.dnsOffset, query.dnsLength)
@@ -277,6 +350,12 @@ object DnsPacketUtil {
         return wrapDnsResponseInIpUdp(query, dnsResponse.array(), dnsResponseSize)
     }
 
+    /**
+     * Builds a DNS-only SERVFAIL response from an uncompressed single-question body.
+     *
+     * @param dnsWire DNS query bytes without a TCP length prefix.
+     * @return Response body, or null when the header/question cannot be extracted.
+     */
     fun buildServfailWireResponse(dnsWire: ByteArray): ByteArray? {
         if (dnsWire.size < 12) return null
         val txId = ((dnsWire[0].toInt() and 0xFF) shl 8 or (dnsWire[1].toInt() and 0xFF)).toShort()
@@ -309,6 +388,12 @@ object DnsPacketUtil {
         return dnsResponse.array()
     }
 
+    /**
+     * Builds a DNS-only block response using zero A/AAAA answers or canary NXDOMAIN.
+     *
+     * @param dnsWire DNS query bytes without a TCP length prefix.
+     * @return Response body, or null when its single question or hostname is invalid.
+     */
     fun buildBlockedWireResponse(dnsWire: ByteArray): ByteArray? {
         if (dnsWire.size < 12) return null
         val txId = ((dnsWire[0].toInt() and 0xFF) shl 8 or (dnsWire[1].toInt() and 0xFF)).toShort()
@@ -368,6 +453,16 @@ object DnsPacketUtil {
         return dnsResponse.array()
     }
 
+    /**
+     * Parses a DNS-only standard single question for TCP forwarding.
+     *
+     * This path retains the full body but does not parse additional records or EDNS negotiation.
+     *
+     * @param dnsWire DNS query body without its TCP length prefix; retained without copying.
+     * @param isIpv6 Whether the client TCP connection uses IPv6.
+     * @param clientIp Client address bytes retained in the query.
+     * @return Query with compatibility transport placeholders, or null when question parsing fails.
+     */
     fun parseWireQuery(dnsWire: ByteArray, isIpv6: Boolean, clientIp: ByteArray): DnsQuery? {
         if (dnsWire.size < 12) return null
         val txId = ((dnsWire[0].toInt() and 0xFF) shl 8 or (dnsWire[1].toInt() and 0xFF)).toShort()
@@ -419,7 +514,14 @@ object DnsPacketUtil {
         )
     }
 
-    /** Re-negotiate each transaction; never send a cached oversized UDP body. */
+    /**
+     * Restores the client ID and negotiates a fitting response or synthetic truncated reply.
+     *
+     * @param query Parsed UDP query and its EDNS payload limit.
+     * @param bytes Validated DNS response body or cached copy.
+     * @return Complete IPv4/IPv6 UDP reply packet.
+     * @throws IllegalArgumentException If response envelope lengths or query address sizes are invalid.
+     */
     fun wrapClientResponse(query:DnsQuery,bytes:ByteArray):ByteArray {
         val limit=minOf(query.udpPayloadLimit.coerceAtLeast(512),maxDnsPayloadLength(query))
         if(bytes.size<=limit) {
@@ -458,6 +560,15 @@ object DnsPacketUtil {
     }
     private fun u16(bytes:ByteArray,p:Int)=((bytes[p].toInt() and 255) shl 8) or (bytes[p+1].toInt() and 255)
 
+    /**
+     * Wraps DNS bytes in a reply envelope with swapped client/resolver addresses and ports.
+     *
+     * @param query Query supplying addresses, ports and IP version.
+     * @param dnsBytes DNS response body.
+     * @param dnsLength Number of body bytes to include from offset zero.
+     * @return Complete packet with IPv4 header checksum or IPv6 UDP checksum.
+     * @throws IllegalArgumentException If lengths exceed protocol bounds or address sizes mismatch the IP version.
+     */
     fun wrapDnsResponseInIpUdp(query: DnsQuery, dnsBytes: ByteArray, dnsLength: Int): ByteArray {
         require(dnsLength >= 0 && dnsLength <= dnsBytes.size)
         require(dnsLength <= maxDnsPayloadLength(query))
@@ -538,6 +649,14 @@ object DnsPacketUtil {
     private var errorPacketCount = 0
     private const val MAX_ERROR_PACKETS_PER_SEC = 50
 
+    /**
+     * Builds a rate-limited FORMERR or NOTIMP response for recognizable UDP DNS traffic.
+     *
+     * @param packet TUN packet storage; length must not exceed its size.
+     * @param length Available IP packet bytes.
+     * @return Complete reply packet, or null when inapplicable, too short or rate-limited.
+     * @throws IndexOutOfBoundsException If supplied bounds are inconsistent with packet storage.
+     */
     fun buildErrorResponseIfApplicable(packet: ByteArray, length: Int): ByteArray? {
         if (length < 28) return null
         val isIpv6 = (packet[0].toInt() and 0xF0) == 0x60

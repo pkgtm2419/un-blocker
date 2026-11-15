@@ -8,7 +8,14 @@ import java.nio.file.StandardCopyOption
 import javax.crypto.Mac
 import javax.crypto.SecretKey
 
-/** Bounded device-keyed domain membership with no readable domain persistence. */
+/**
+ * Bounded device-keyed domain membership with no readable domain persistence.
+ *
+ * @param key HMAC-SHA256 key for membership identifiers.
+ * @param file Optional identifier file; null keeps membership volatile.
+ * @param capacity Maximum identifier count, shared by exact and subtree entries.
+ * @throws IllegalArgumentException If capacity is not positive.
+ */
 class PrivateDomainSet(
     private val key: SecretKey,
     private val file: File? = null,
@@ -30,6 +37,12 @@ class PrivateDomainSet(
         }
     }
 
+    /**
+     * Checks exact membership and subtree membership on the host or its ancestors.
+     *
+     * @param domain Hostname to normalize and hash.
+     * @return Whether a matching identifier exists; invalid names or hashing failures do not match.
+     */
     @Synchronized fun contains(domain: String): Boolean {
         val normalized = DomainName.normalize(domain) ?: return false
         // 1. Exact match
@@ -52,16 +65,34 @@ class PrivateDomainSet(
         return false
     }
 
+    /**
+     * Checks only an exact-host identifier.
+     *
+     * @param domain Hostname to normalize and hash.
+     * @return Whether the exact identifier exists; failures return false.
+     */
     @Synchronized fun containsExact(domain: String): Boolean {
         val normalized = DomainName.normalize(domain) ?: return false
         return runCatching { identifier(normalized) in identifiers }.getOrDefault(false)
     }
 
+    /**
+     * Checks for a subtree rule rooted at the supplied hostname, without testing ancestors.
+     *
+     * @param domain Hostname to normalize and hash.
+     * @return Whether its subtree identifier exists; failures return false.
+     */
     @Synchronized fun containsSubtree(domain: String): Boolean {
         val normalized = DomainName.normalize(domain) ?: return false
         return runCatching { identifier("subtree:$normalized") in identifiers }.getOrDefault(false)
     }
 
+    /**
+     * Adds exact-host membership, evicting the oldest identifier if capacity is exceeded.
+     *
+     * @param domain Hostname to normalize and hash.
+     * @return Whether memory membership changed; persistence failures are suppressed.
+     */
     @Synchronized fun add(domain: String): Boolean {
         val normalized = DomainName.normalize(domain) ?: return false
         val id = runCatching { identifier(normalized) }.getOrNull() ?: return false
@@ -71,6 +102,12 @@ class PrivateDomainSet(
         return true
     }
 
+    /**
+     * Adds subtree membership, evicting the oldest identifier if capacity is exceeded.
+     *
+     * @param domain Hostname whose subtree is selected.
+     * @return Whether memory membership changed; persistence failures are suppressed.
+     */
     @Synchronized fun addSubtree(domain: String): Boolean {
         val normalized = DomainName.normalize(domain) ?: return false
         val id = runCatching { identifier("subtree:$normalized") }.getOrNull() ?: return false
@@ -80,6 +117,12 @@ class PrivateDomainSet(
         return true
     }
 
+    /**
+     * Removes both exact and subtree identifiers rooted at the supplied hostname.
+     *
+     * @param domain Hostname to normalize and hash.
+     * @return Whether either identifier was removed; persistence failures are suppressed.
+     */
     @Synchronized fun remove(domain: String): Boolean {
         val normalized = DomainName.normalize(domain) ?: return false
         val id = runCatching { identifier(normalized) }.getOrNull()
@@ -93,11 +136,19 @@ class PrivateDomainSet(
         return removed
     }
 
+    /**
+     * Clears memory membership and saves the empty set when file-backed.
+     *
+     * @throws java.io.IOException If creating, writing or replacing the persistence file fails.
+     */
     @Synchronized fun clear() {
         identifiers.clear()
         save()
     }
 
+    /**
+     * Returns the number of exact and subtree identifiers currently retained.
+     */
     @Synchronized fun size(): Int = identifiers.size
 
     private fun identifier(value: String): String {
@@ -120,7 +171,13 @@ class PrivateDomainSet(
         }
     }
 
+    /**
+     * Default private membership bounds.
+     */
     companion object {
+        /**
+         * Default maximum number of exact and subtree identifiers combined.
+         */
         const val DEFAULT_CAPACITY = 1000
         private const val ALGORITHM = "HmacSHA256"
         private val IDENTIFIER_PATTERN = Regex("[0-9a-f]{64}")

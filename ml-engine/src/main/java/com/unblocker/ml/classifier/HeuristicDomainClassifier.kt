@@ -5,21 +5,36 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Pure on-device deterministic heuristic domain classifier.
- * Eliminates the ~14.7 MB native TensorFlow Lite runtime dependency while maintaining
- * feature scoring across entropy, keyword hits, and subdomain structures.
+ * Deterministic on-device scoring of keyword, entropy, and domain structure features.
  */
 @Singleton
 class HeuristicDomainClassifier @Inject constructor() : DomainClassifier {
+    private companion object {
+        const val ENTROPY_INDEX = 1
+        const val HYPHEN_COUNT_INDEX = 3
+        const val SUBDOMAIN_DEPTH_INDEX = 4
+        const val KEYWORD_FLAG_INDEX = 5
+        const val ENTROPY_SIGNAL_INDEX = 6
+    }
+
+    /**
+     * Combines fixed weights over the extracted feature vector.
+     *
+     * @param domain Domain text normalized by the feature extractor.
+     * @return Heuristic score clamped to the inclusive range from 0 to 1.
+     */
     override fun predictAdProbability(domain: String): Float {
         val features = DomainFeatureExtractor.extractFeatures(domain)
         // features: [0] len, [1] entropy, [2] digit ratio, [3] hyphens, [4] subdomain depth,
         //           [5] keywordHit, [6] entropySignal, [7] labelCount, [8] longestLabel
-        val keywordScore = if (features[5] > 0.5f) 0.70f else 0.0f
-        val entropyScore = features[1] * 0.15f + features[6] * 0.10f
-        val structureScore = (features[4] * 0.05f) + (features[3] * 0.05f)
+        val keywordScore = if (features[KEYWORD_FLAG_INDEX] > 0.5f) 0.70f else 0.0f
+        val entropyScore = features[ENTROPY_INDEX] * 0.15f + features[ENTROPY_SIGNAL_INDEX] * 0.10f
+        val structureScore = (features[SUBDOMAIN_DEPTH_INDEX] * 0.05f) + (features[HYPHEN_COUNT_INDEX] * 0.05f)
         return (keywordScore + entropyScore + structureScore).coerceIn(0f, 1f)
     }
 
+    /**
+     * Completes without work because this classifier owns no interpreter or native resources.
+     */
     override fun close() {}
 }

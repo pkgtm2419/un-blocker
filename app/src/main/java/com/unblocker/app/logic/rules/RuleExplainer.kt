@@ -7,6 +7,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 
+/**
+ * Policy result with best-effort matching extension-file provenance.
+ *
+ * @property domain Original caller-supplied hostname.
+ * @property decision Current pipeline decision.
+ * @property isProtected Whether the supplied protection policy matches.
+ * @property matchingListIds Names of rule files containing a matching parsed rule.
+ * @property matchedRuleText Decision rule value, otherwise the first matching raw rule line, if available.
+ */
 data class Explanation(
     val domain: String,
     val decision: BlockingDecision,
@@ -15,11 +24,24 @@ data class Explanation(
     val matchedRuleText: String?
 )
 
+/**
+ * Evaluates policy and scans installed rule files for diagnostic provenance.
+ *
+ * @param decideBlockingUseCase Current decision pipeline; evaluation may update local evidence.
+ * @param protectedDomains Host protection policy for diagnostics.
+ * @param extensionsDirSupplier Directory containing .rules files, or null to omit provenance.
+ */
 class RuleExplainer(
     private val decideBlockingUseCase: DecideBlockingUseCase,
     private val protectedDomains: ProtectedDomains = ProtectedDomains.DEFAULT,
     private val extensionsDirSupplier: () -> File? = { null }
 ) {
+    /**
+     * Evaluates the hostname and scans matching extension lines on the IO dispatcher.
+     *
+     * @param rawDomain Hostname retained in the explanation.
+     * @return Decision and best-effort provenance; individual file-read failures are ignored.
+     */
     suspend fun explain(rawDomain: String): Explanation = withContext(Dispatchers.IO) {
         val decision = decideBlockingUseCase(rawDomain)
         val isProtected = protectedDomains.isProtected(rawDomain)

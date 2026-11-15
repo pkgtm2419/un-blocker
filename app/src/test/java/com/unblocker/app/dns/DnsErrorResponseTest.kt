@@ -8,6 +8,9 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 
+/**
+ * Regression coverage for DNS error response.
+ */
 class DnsErrorResponseTest {
 
     private fun buildSyntheticUdpPacket(txId: Short, flags: Short, payload: ByteArray): ByteArray {
@@ -35,6 +38,9 @@ class DnsErrorResponseTest {
         return buf.array()
     }
 
+    /**
+     * Verifies that test intact header invalid body returns formerr.
+     */
     @Test
     fun testIntactHeaderInvalidBodyReturnsFormerr() {
         // 12-byte DNS header with qdCount = 5 (invalid/unsupported), txId = 0x4321
@@ -63,6 +69,9 @@ class DnsErrorResponseTest {
         assertEquals("FORMERR (RCODE=1) expected", 1, rcode)
     }
 
+    /**
+     * Verifies that test non zero opcode returns not imp.
+     */
     @Test
     fun testNonZeroOpcodeReturnsNotImp() {
         // DNS header with opcode = 2 (STATUS), txId = 0x5555
@@ -88,6 +97,9 @@ class DnsErrorResponseTest {
         assertEquals("NOTIMP (RCODE=4) expected for non-zero opcode", 4, rcode)
     }
 
+    /**
+     * Verifies that test garbage under12 bytes silently dropped.
+     */
     @Test
     fun testGarbageUnder12BytesSilentlyDropped() {
         val garbagePayload = byteArrayOf(1, 2, 3, 4, 5) // Only 5 bytes

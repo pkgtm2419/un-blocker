@@ -23,6 +23,9 @@ import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * Regression coverage for DNS upstream client.
+ */
 class DnsUpstreamClientTest {
     private val loopback = InetAddress.getLoopbackAddress()
     private val request = dnsQuery("ads.example", 0x1234)
@@ -40,6 +43,9 @@ class DnsUpstreamClientTest {
         dstPort = 53
     )
 
+    /**
+     * Verifies that queued old epoch never sends UDP request.
+     */
     @Test fun queuedOldEpochNeverSendsUdpRequest() {
         TestDnsServer(loopback).use { server ->
             val registry=ResolverRegistry<String> {}
@@ -56,6 +62,9 @@ class DnsUpstreamClientTest {
         }
     }
 
+    /**
+     * Verifies that replacement after truncation suppresses TCP fallback.
+     */
     @Test fun replacementAfterTruncationSuppressesTcpFallback() {
         TestDnsServer(loopback).use { server ->
             val registry=ResolverRegistry<String> {}
@@ -75,6 +84,9 @@ class DnsUpstreamClientTest {
         }
     }
 
+    /**
+     * Verifies that returns validated UDP response without opening TCP.
+     */
     @Test fun returnsValidatedUdpResponseWithoutOpeningTcp() {
         TestDnsServer(loopback).use { server ->
             val expected = dnsResponse("ads.example")
@@ -91,6 +103,9 @@ class DnsUpstreamClientTest {
         }
     }
 
+    /**
+     * Verifies that retries truncated UDP response over length prefixed TCP.
+     */
     @Test fun retriesTruncatedUdpResponseOverLengthPrefixedTcp() {
         TestDnsServer(loopback).use { server ->
             val truncated = dnsResponse("ads.example", flags = 0x8380, includeAnswer = false)
@@ -111,6 +126,9 @@ class DnsUpstreamClientTest {
         }
     }
 
+    /**
+     * Verifies that rejects same transaction id with mismatched question.
+     */
     @Test fun rejectsSameTransactionIdWithMismatchedQuestion() {
         TestDnsServer(loopback).use { server ->
             server.serveUdpOnce { dnsResponse("other.example") }
@@ -122,6 +140,9 @@ class DnsUpstreamClientTest {
         }
     }
 
+    /**
+     * Verifies that rejects TCP frame larger than configured bound.
+     */
     @Test fun rejectsTcpFrameLargerThanConfiguredBound() {
         TestDnsServer(loopback).use { server ->
             server.serveUdpOnce { dnsResponse("ads.example", flags = 0x8380, includeAnswer = false) }
@@ -134,6 +155,9 @@ class DnsUpstreamClientTest {
         }
     }
 
+    /**
+     * Verifies that rejects short TCP frame.
+     */
     @Test fun rejectsShortTcpFrame() {
         TestDnsServer(loopback).use { server ->
             val expected = dnsResponse("ads.example")
@@ -149,6 +173,9 @@ class DnsUpstreamClientTest {
         }
     }
 
+    /**
+     * Verifies that rejects TCP response too large for IPv4 tun packet.
+     */
     @Test fun rejectsTcpResponseTooLargeForIpv4TunPacket() {
         TestDnsServer(loopback).use { server ->
             server.serveUdpOnce { dnsResponse("ads.example", flags = 0x8380, includeAnswer = false) }
@@ -164,6 +191,9 @@ class DnsUpstreamClientTest {
         }
     }
 
+    /**
+     * Verifies that closing run cancels pending TCP read without late response.
+     */
     @Test fun closingRunCancelsPendingTcpReadWithoutLateResponse() {
         TestDnsServer(loopback).use { server ->
             val tcpAccepted = CountDownLatch(1)
@@ -194,6 +224,9 @@ class DnsUpstreamClientTest {
         }
     }
 
+    /**
+     * Verifies that preferred resolver can be reset.
+     */
     @Test fun preferredResolverCanBeReset() {
         TestDnsServer(loopback).use { server ->
             val client = client(server)

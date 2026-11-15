@@ -10,6 +10,9 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * Regression coverage for forwarding DNS request.
+ */
 class ForwardingDnsRequestTest {
 
     private fun buildSyntheticQueryBuffer(txId: Short, domain: String): ByteArray {
@@ -64,6 +67,9 @@ class ForwardingDnsRequestTest {
         return buffer
     }
 
+    /**
+     * Verifies that test parse directly in pooled buffer without full copy.
+     */
     @Test
     fun testParseDirectlyInPooledBufferWithoutFullCopy() {
         val buffer = buildSyntheticQueryBuffer(0x4567.toShort(), "isolated.test.com")
@@ -76,6 +82,9 @@ class ForwardingDnsRequestTest {
         assertTrue("rawPacket in query points directly to buffer", query.rawPacket === buffer)
     }
 
+    /**
+     * Verifies that test to forwarding request isolates from subsequent buffer mutation.
+     */
     @Test
     fun testToForwardingRequestIsolatesFromSubsequentBufferMutation() {
         val buffer = buildSyntheticQueryBuffer(0x1234.toShort(), "immutable.example.org")

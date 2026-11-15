@@ -9,8 +9,14 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
+/**
+ * Regression coverage for byte array pool.
+ */
 class ByteArrayPoolTest {
 
+    /**
+     * Verifies that test acquire and release.
+     */
     @Test
     fun testAcquireAndRelease() {
         val pool = ByteArrayPool(arraySize = 4096, maxPoolSize = 10)
@@ -25,6 +31,9 @@ class ByteArrayPoolTest {
         assertEquals(initialSize, pool.currentPoolSize())
     }
 
+    /**
+     * Verifies that test pool capacity bound.
+     */
     @Test
     fun testPoolCapacityBound() {
         val pool = ByteArrayPool(arraySize = 1024, maxPoolSize = 5)
@@ -37,6 +46,9 @@ class ByteArrayPoolTest {
         assertTrue("Pool size should not exceed maxPoolSize", pool.currentPoolSize() <= 5)
     }
 
+    /**
+     * Verifies that test concurrent access.
+     */
     @Test
     fun testConcurrentAccess() {
         val pool = ByteArrayPool(arraySize = 2048, maxPoolSize = 32)

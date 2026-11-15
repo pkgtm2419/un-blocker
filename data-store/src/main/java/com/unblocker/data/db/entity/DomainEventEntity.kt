@@ -6,10 +6,16 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /**
- * Persists timestamped history for domains.
- * Bounded to at most 50 events per domain and a 7-day retention period.
+ * Timestamped local query event containing a readable domain.
  *
- * Table: `domain_events`
+ * App QueryLogSink maintenance targets 24 hours of retention and 1,000 events globally.
+ * Pruning is periodic, so these are not per-insert bounds. The DAO's 50-row read default
+ * is a display limit, not a per-domain storage cap.
+ *
+ * @property id Generated row ID; zero requests automatic assignment on insert.
+ * @property domain Readable queried domain.
+ * @property ts Observation time in milliseconds since the Unix epoch.
+ * @property decision Caller decision code: 0 for allowed or 1 for blocked.
  */
 @Entity(
     tableName = "domain_events",
@@ -29,7 +35,6 @@ data class DomainEventEntity(
     @ColumnInfo(name = "ts")
     val ts: Long,
 
-    /** 0 for ALLOWED, 1 for BLOCKED */
     @ColumnInfo(name = "decision")
     val decision: Int
 )

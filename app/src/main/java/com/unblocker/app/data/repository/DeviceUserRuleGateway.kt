@@ -15,14 +15,26 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Persists HMAC-backed user overrides and readable My domains protection entries on the IO dispatcher.
+ *
+ * @param context Application context used to access rule storage, preferences, and public-suffix assets.
+ */
 @Singleton
 class DeviceUserRuleGateway @Inject constructor(
     @ApplicationContext private val context: Context
 ) : UserRuleGateway {
     private val admission = DefaultRuleAdmission()
     private val myDomainsStore = MyDomainsStore.getInstance(context)
-    private val psl = PublicSuffixRules.from(context)
+    private val publicSuffixRules = PublicSuffixRules.from(context)
 
+    /**
+     * Normalizes and saves an exact-domain override, applying admission checks to block requests.
+     *
+     * @param domain User-entered host to normalize.
+     * @param feedback Requested allow, block, or removal feedback.
+     * @return Applied when the operation succeeds, otherwise a failure explanation.
+     */
     override suspend fun set(domain: String, feedback: UserFeedback): RuleUpdateResult = withContext(Dispatchers.IO) {
         val normalized = DomainName.normalizeUserEntry(domain)
             ?: return@withContext RuleUpdateResult.Failed("Invalid domain name: $domain")
@@ -42,10 +54,17 @@ class DeviceUserRuleGateway @Inject constructor(
         }
     }
 
+    /**
+     * Normalizes the host to its registrable site and saves a subtree override.
+     *
+     * @param domain User-entered host to normalize.
+     * @param feedback Requested allow, block, or removal feedback.
+     * @return Applied when the operation succeeds, otherwise a failure explanation.
+     */
     override suspend fun setWholeSite(domain: String, feedback: UserFeedback): RuleUpdateResult = withContext(Dispatchers.IO) {
         val normalized = DomainName.normalizeUserEntry(domain)
             ?: return@withContext RuleUpdateResult.Failed("Invalid domain name: $domain")
-        val registrable = psl.registrableDomain(normalized) ?: normalized
+        val registrable = publicSuffixRules.registrableDomain(normalized) ?: normalized
 
         if (feedback == UserFeedback.BLOCK) {
             val skip = admission.check(RuleAction.BLOCK, RuleKind.SUFFIX, registrable)
@@ -62,10 +81,16 @@ class DeviceUserRuleGateway @Inject constructor(
         }
     }
 
+    /**
+     * Adds the registrable site to the readable My domains preferences list.
+     *
+     * @param domain User-entered host to normalize.
+     * @return Applied when the operation succeeds, otherwise a failure explanation.
+     */
     override suspend fun protectDomain(domain: String): RuleUpdateResult = withContext(Dispatchers.IO) {
         val normalized = DomainName.normalizeUserEntry(domain)
             ?: return@withContext RuleUpdateResult.Failed("Invalid domain name: $domain")
-        val registrable = psl.registrableDomain(normalized) ?: normalized
+        val registrable = publicSuffixRules.registrableDomain(normalized) ?: normalized
         val added = myDomainsStore.addDomain(registrable)
         if (added) {
             RuleUpdateResult.Applied
@@ -74,10 +99,16 @@ class DeviceUserRuleGateway @Inject constructor(
         }
     }
 
+    /**
+     * Removes the host override, registrable-site override, and matching My domains entries.
+     *
+     * @param domain User-entered host to normalize.
+     * @return Applied when the operation succeeds, otherwise a failure explanation.
+     */
     override suspend fun reset(domain: String): RuleUpdateResult = withContext(Dispatchers.IO) {
         val normalized = DomainName.normalizeUserEntry(domain)
             ?: return@withContext RuleUpdateResult.Failed("Invalid domain name: $domain")
-        val registrable = psl.registrableDomain(normalized) ?: normalized
+        val registrable = publicSuffixRules.registrableDomain(normalized) ?: normalized
         try {
             DeviceLearning.setUserRule(context, normalized, UserFeedback.NONE)
             DeviceLearning.setUserRuleSubtree(context, registrable, UserFeedback.NONE)

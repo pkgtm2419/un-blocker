@@ -44,8 +44,16 @@ import com.unblocker.app.ui.theme.Slate800
 import com.unblocker.app.ui.theme.Slate900
 
 /**
- * Replit Agent-inspired diagnostic and workflow status panel.
- * Exposes live stepped engine verification pipeline with tactile control.
+ * Renders an expandable status panel inferred from service state and Private DNS inputs.
+ *
+ * The pipeline rows are presentation hints; this component does not probe each stage
+ * or measure resolver availability.
+ *
+ * @param serviceStatus Service state used for status labels and pipeline indicators.
+ * @param isPrivateDnsActive Whether Android reports active Private DNS.
+ * @param privateDnsServerName Reported Private DNS server name, if available.
+ * @param modifier Modifier for the status card.
+ * @param onOpenSettings Callback for the settings shortcut.
  */
 @Composable
 fun AgentStatusPanel(

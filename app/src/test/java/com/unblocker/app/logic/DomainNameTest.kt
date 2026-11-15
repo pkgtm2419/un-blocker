@@ -6,11 +6,20 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * Regression coverage for domain name.
+ */
 class DomainNameTest {
+    /**
+     * Verifies that normalizes case whitespace and DNS root dot.
+     */
     @Test fun normalizesCaseWhitespaceAndDnsRootDot() {
         assertEquals("ads.example.com", DomainName.normalize("  Ads.Example.COM.  "))
     }
 
+    /**
+     * Verifies that rejects non DNS and malformed inputs.
+     */
     @Test fun rejectsNonDnsAndMalformedInputs() {
         val invalid = listOf(
             "https://ads.example.com",
@@ -28,6 +37,9 @@ class DomainNameTest {
         invalid.forEach { value -> assertNull(value, DomainName.normalize(value)) }
     }
 
+    /**
+     * Verifies that detectors use the same canonical domain boundary.
+     */
     @Test fun detectorsUseTheSameCanonicalDomainBoundary() {
         val adDetector = AdDetector().apply { addDomain("doubleclick.net") }
         val adultDetector = AdultContentDetector().apply { addDomain("blocked.example") }
@@ -38,6 +50,9 @@ class DomainNameTest {
         assertFalse(adultDetector.isAdultContent("blocked.example:443").first)
     }
 
+    /**
+     * Verifies that normalize user entry converts internationalized domains to punycode.
+     */
     @Test fun normalizeUserEntryConvertsInternationalizedDomainsToPunycode() {
         assertEquals("xn--mnchen-3ya.de", DomainName.normalizeUserEntry("  München.DE.  "))
         assertEquals("xn--bcher-kva.example.com", DomainName.normalizeUserEntry("bücher.example.com"))
@@ -49,6 +64,9 @@ class DomainNameTest {
         assertNull(DomainName.normalizeUserEntry("-münchen.de"))
     }
 
+    /**
+     * Verifies that detectors support IDNA punycode canonicalization for user added domains.
+     */
     @Test fun detectorsSupportIdnaPunycodeCanonicalizationForUserAddedDomains() {
         val adDetector = AdDetector().apply { addDomain("münchen-ads.de") }
         val adultDetector = AdultContentDetector().apply { addDomain("schön.com") }

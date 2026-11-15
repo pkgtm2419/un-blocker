@@ -2,7 +2,11 @@ package com.unblocker.app.logic.analysis
 
 import kotlin.math.ln
 
-/** Stateless features; PSL limits entropy to labels controlled by the registrant. */
+/**
+ * Extracts heuristic features from labels below the registrable domain.
+ *
+ * @param suffixes Public suffix context used to isolate subdomain labels.
+ */
 class DomainFeatureExtractor(private val suffixes: PublicSuffixRules) {
     private val tokens = setOf(
         "ad", "ads", "track", "tracker", "tracking", "telemetry", "pixel",
@@ -11,6 +15,13 @@ class DomainFeatureExtractor(private val suffixes: PublicSuffixRules) {
         "adclick", "adlog", "adcounter", "popunder", "statcounter"
     )
 
+    /**
+     * Extracts lexical, entropy, cadence and structural signals.
+     *
+     * @param domain Hostname interpreted by the supplied public suffix rules.
+     * @param cadence Caller-provided cadence signal, copied without clamping.
+     * @return Features; names longer than 253 characters produce all-zero features.
+     */
     fun extract(domain: String, cadence: Float = 0f): DomainFeatures {
         if (domain.length > 253) return DomainFeatures(0f, 0f, 0f, 0f)
         val subdomain = suffixes.subdomain(domain)

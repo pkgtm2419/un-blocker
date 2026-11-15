@@ -1,6 +1,15 @@
 package com.unblocker.app.logic.analysis
 
+/**
+ * Combines feature thresholds, requiring lexical corroboration for a positive combined score.
+ */
 class HeuristicScorer {
+    /**
+     * Combines heuristic flags without observing queries or changing reputation.
+     *
+     * @param features Feature strengths to threshold.
+     * @return Score and lexical/entropy/cadence/structural bit mask.
+     */
     fun score(features: DomainFeatures): ScoredFeatures {
         var mask = 0
         if (features.lexical >= .5f) mask = mask or 1
@@ -13,8 +22,10 @@ class HeuristicScorer {
     }
 
     /**
-     * Identifies immediate high-confidence ad/tracker domains where an explicit ad token
-     * is strongly corroborated by high entropy (randomized tracking hashes) or structural nesting.
+     * Checks lexical strength corroborated by entropy or structural nesting.
+     *
+     * @param features Extracted heuristic strengths.
+     * @return Whether the high-confidence diagnostic condition is met; this alone does not authorize blocking.
      */
     fun isHighConfidenceAd(features: DomainFeatures): Boolean {
         return features.lexical >= 0.8f && (features.entropy >= 0.65f || features.structural >= 0.65f)

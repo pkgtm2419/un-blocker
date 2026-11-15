@@ -5,15 +5,14 @@ import android.os.Build
 import android.os.ParcelFileDescriptor
 
 /**
- * Builds and configures the Android VPN interface [ParcelFileDescriptor] with dual-stack
- * split-tunnel routing.
+ * Builds the library DNS-targeted VPN interface using synthetic IPv4 and IPv6 endpoints.
  *
- * Restricts interception to local DNS traffic only:
- *  - Local sinkhole addresses: 10.111.222.1/24 (IPv4) and fd00:1:fd00:1:fd00:1:fd00:1/128 (IPv6).
- *  - Specific /32 and /128 routes for DNS servers only, allowing all other traffic to remain
- *    on hardware interfaces with zero latency penalty.
- *  - The app's own package is excluded (addDisallowedApplication) to prevent routing loops.
- *  - Automatic physical network tracking (setUnderlyingNetworks(null)) across Wi-Fi, 5G, and LTE.
+ * Only the synthetic DNS endpoints are routed explicitly. The app package is excluded when
+ * possible, and underlying-network tracking is left to Android. This builder is separate from
+ * the manifest-declared app service configuration.
+ *
+ * @param service VPN service owning the builder and established descriptor.
+ * @param upstreamServers Retained configuration parameter; currently unused by [establish].
  */
 class VpnConfiguration(
     private val service: VpnService,
@@ -21,8 +20,12 @@ class VpnConfiguration(
 ) {
 
     /**
-     * Establishes the VPN interface and returns the file descriptor.
-     * Returns null if the VPN permission has been revoked or initialization fails.
+     * Configures and attempts to establish the VPN interface.
+     *
+     * IPv6, package exclusion, and underlying-network setup failures are individually ignored.
+     * The final establish call catches exceptions, but earlier uncaught builder failures propagate.
+     *
+     * @return Descriptor owned by the caller, or null when the final establishment fails or lacks consent.
      */
     fun establish(): ParcelFileDescriptor? {
         val builder = service.Builder()
@@ -60,7 +63,7 @@ class VpnConfiguration(
 
         return try {
             builder.establish()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }

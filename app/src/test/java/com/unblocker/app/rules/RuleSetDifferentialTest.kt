@@ -7,8 +7,14 @@ import org.junit.Assert.assertNotNull
 import org.junit.Test
 import kotlin.random.Random
 
+/**
+ * Regression coverage for rule set differential.
+ */
 class RuleSetDifferentialTest {
 
+    /**
+     * Verifies that differential matches oracle on synthetic edge cases.
+     */
     @Test
     fun differentialMatchesOracleOnSyntheticEdgeCases() {
         val rules = listOf(
@@ -53,6 +59,9 @@ class RuleSetDifferentialTest {
         }
     }
 
+    /**
+     * Verifies that differential matches oracle on random rule corpus.
+     */
     @Test
     fun differentialMatchesOracleOnRandomRuleCorpus() {
         val rnd = Random(42)

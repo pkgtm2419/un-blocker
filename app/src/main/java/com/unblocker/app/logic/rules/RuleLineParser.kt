@@ -4,6 +4,9 @@ import com.unblocker.app.domain.model.BlockingCategory
 import com.unblocker.app.logic.DomainName
 import com.unblocker.app.logic.analysis.PublicSuffixRules
 
+/**
+ * Reasons unsupported or unsafe filter-list lines are excluded from DNS rules.
+ */
 enum class SkipReason {
     BLANK_OR_COMMENT,
     COSMETIC,
@@ -18,31 +21,59 @@ enum class SkipReason {
     QUARANTINED
 }
 
+/**
+ * Accepted DNS rule or explicit reason why a line was skipped.
+ */
 sealed interface ParsedLine {
+    /**
+     * Accepted DNS rule.
+     *
+     * @property rule Normalized and admitted rule.
+     */
     data class Rule(val rule: DnsRule) : ParsedLine
+    /**
+     * Rejected or non-rule line.
+     *
+     * @property why Parsing or admission reason for skipping.
+     */
     data class Skipped(val why: SkipReason) : ParsedLine
 }
 
+/**
+ * Metadata controlling filter-line interpretation.
+ *
+ * @property sourceId Numeric source identifier attached to accepted rules.
+ * @property security Whether document-level block options are permitted.
+ * @property category Content category attached to accepted rules.
+ */
 data class ParseContext(
     val sourceId: Int = 0,
     val security: Boolean = false,
     val category: BlockingCategory = BlockingCategory.AD
 )
 
+/**
+ * Parses supported hosts/plain-domain and DNS-compatible filter-list syntax.
+ *
+ * @param admission Safety gate for candidate host rules.
+ * @param psl Public suffix context for resource-option restrictions.
+ */
 class RuleLineParser(
     private val admission: RuleAdmission = DefaultRuleAdmission(),
-    private val psl: PublicSuffixRules = PublicSuffixRules.fallback
+    @Suppress("unused") private val psl: PublicSuffixRules = PublicSuffixRules.fallback
 ) {
     private val cosmetic = arrayOf("##", "#@#", "#?#", "#$#", "#%#", "#@$#", "#@?#", "#@%#", "$$")
-    private val partyResource = setOf(
-        "third-party", "3p", "script", "image", "stylesheet", "css", "font", "media",
-        "xmlhttprequest", "xhr", "subdocument", "frame", "ping", "popup", "object", "other", "websocket"
-    )
-    private val docLevel = setOf("doc", "document", "all")
     private val hostsIps = setOf("0.0.0.0", "127.0.0.1", "::", "::1")
     private val metaHosts = setOf("localhost", "localhost.localdomain", "local", "broadcasthost")
     private val hostChars = Regex("[a-z0-9._-]+")
 
+    /**
+     * Parses and admits one line while rejecting unsupported cosmetic, path and option syntax.
+     *
+     * @param raw Untrusted filter-list line.
+     * @param ctx Source metadata and option policy.
+     * @return Accepted rule or a concrete skip reason.
+     */
     fun parse(raw: String, ctx: ParseContext = ParseContext()): ParsedLine {
         val s = raw.trim()
         if (s.isEmpty() || s[0] == '!' || s[0] == '[' || (s[0] == '#' && !s.startsWith("##"))) {
@@ -74,21 +105,20 @@ class RuleLineParser(
 
         val dollar = rest.indexOf('$')
         val pattern = (if (dollar >= 0) rest.substring(0, dollar) else rest).removePrefix("||").removeSuffix("^")
-        val options = if (dollar >= 0) rest.substring(dollar + 1).split(',').map { it.trim().lowercase() }.filter { it.isNotEmpty() } else emptyList()
+        val options = if (dollar >= 0) {
+            rest.substring(dollar + 1).split(',').map { it.trim().lowercase() }.filter { it.isNotEmpty() }
+        } else {
+            emptyList()
+        }
         val host = pattern.lowercase()
         if (!hostChars.matches(host)) return skip(SkipReason.PATH_OR_REGEX)
 
-        val opts = options.filter { it != "important" }
-        if (opts.isNotEmpty()) {
-            if (action == RuleAction.ALLOW) return skip(SkipReason.UNSUPPORTED_OPTIONS)
-            when {
-                opts.all { it in partyResource } -> {
-                    val reg = psl.registrableDomain(host)
-                    if (reg == null || reg == host) return skip(SkipReason.OPTIONS_ON_REGISTRABLE)
-                }
-                opts.all { it in docLevel } && ctx.security && action == RuleAction.BLOCK -> Unit
-                else -> return skip(SkipReason.UNSUPPORTED_OPTIONS)
-            }
+        // DNS filtering has no visibility into request type, initiator, or navigation
+        // context. Turning rules scoped to images/scripts/third-party/documents into
+        // domain-wide DNS blocks would break unrelated first-party functionality.
+        // A sole $important on a BLOCK rule has no additional match restrictions.
+        if (dollar >= 0 && (action != RuleAction.BLOCK || options.size != 1 || options[0] != "important")) {
+            return skip(SkipReason.UNSUPPORTED_OPTIONS)
         }
         return admit(action, RuleKind.SUFFIX, host, ctx)
     }

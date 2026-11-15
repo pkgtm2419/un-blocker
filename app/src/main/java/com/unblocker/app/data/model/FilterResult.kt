@@ -1,5 +1,8 @@
 package com.unblocker.app.data.model
 
+/**
+ * Content classification assigned by the domain filtering engine.
+ */
 enum class ContentType {
     AD,
     ADULT_CONTENT,
@@ -7,6 +10,9 @@ enum class ContentType {
     NORMAL
 }
 
+/**
+ * Rule or heuristic family credited with the domain classification.
+ */
 enum class DetectionMethod {
     STATIC_LIST,
     PATTERN_MATCH,
@@ -16,6 +22,16 @@ enum class DetectionMethod {
     NONE
 }
 
+/**
+ * Classification and decision returned by domain filtering.
+ *
+ * @property domain Domain associated with the decision.
+ * @property contentType Content category selected by the detector.
+ * @property shouldBlock Whether the query should receive a blocked response.
+ * @property reason Explanation associated with the decision.
+ * @property detectionMethod Rule or heuristic family used to classify the domain.
+ * @property confidence Detector-provided confidence score, conventionally from zero to one.
+ */
 data class FilterResult(
     val domain: String,
     val contentType: ContentType,

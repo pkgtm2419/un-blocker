@@ -6,13 +6,16 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /**
- * Persists every DNS request intercepted by the VPN tunnel.
+ * Legacy DNS request row used by the separate library analysis worker.
  *
- * Indexed on both [timestamp] (for time-range pruning) and [domain] (for deduplication
- * during ML batch analysis). The [isAnalyzed] flag is the ML worker's cursor — it prevents
- * the same domain from being re-scored across consecutive nightly runs.
+ * Domains are plaintext. The analysis flag is per row, so another row with the same name
+ * can still be analyzed later.
  *
- * Table: `dns_logs`
+ * @property id Generated row ID; zero requests automatic assignment on insert.
+ * @property domain Readable queried domain.
+ * @property timestamp Observation time in milliseconds since the Unix epoch.
+ * @property isBlocked Blocking decision supplied by the caller.
+ * @property isAnalyzed Whether this row has been marked as processed.
  */
 @Entity(
     tableName = "dns_logs",
@@ -33,11 +36,9 @@ data class DnsLogEntity(
     @ColumnInfo(name = "timestamp")
     val timestamp: Long = System.currentTimeMillis(),
 
-    /** True when the Bloom Filter matched and a NXDOMAIN response was returned. */
     @ColumnInfo(name = "is_blocked")
     val isBlocked: Boolean,
 
-    /** True once the nightly ML worker has processed this entry. */
     @ColumnInfo(name = "is_analyzed", defaultValue = "0")
     val isAnalyzed: Boolean = false
 )

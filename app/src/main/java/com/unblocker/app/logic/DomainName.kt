@@ -5,6 +5,12 @@ import java.util.Locale
 
 /** Canonical validation boundary for DNS names accepted by the filtering engine. */
 object DomainName {
+    /**
+     * Normalizes ASCII DNS names, accepting underscore labels used by DNS services.
+     *
+     * @param raw Name to trim, remove trailing dots from and lowercase with the root locale.
+     * @return Canonical name, or null when total length or label syntax is invalid.
+     */
     fun normalize(raw: String): String? {
         val domain = raw.trim().trimEnd('.').lowercase(Locale.ROOT)
         if (domain.isEmpty() || domain.length > 253) return null
@@ -19,8 +25,10 @@ object DomainName {
     }
 
     /**
-     * Canonicalizes user-entered or imported domain names into valid DNS wire ASCII.
-     * Converts internationalized domain names (IDNs) via Punycode (IDN.toASCII with STD3 rules).
+     * Converts user-entered IDNs with STD3 rules, then validates the ASCII name.
+     *
+     * @param raw User-entered or imported hostname.
+     * @return Canonical ASCII hostname, or null when conversion or validation fails.
      */
     fun normalizeUserEntry(raw: String): String? {
         val trimmed = raw.trim().trimEnd('.')
@@ -33,7 +41,14 @@ object DomainName {
         return normalize(ascii)
     }
 
-    /** Canonicalizes one DNS wire label without trimming or changing label boundaries. */
+    /**
+     * Canonicalizes one ASCII label without trimming or changing label boundaries.
+     *
+     * @param packet Packet containing the label bytes.
+     * @param offset Zero-based byte offset of the first label character.
+     * @param length Label length in bytes, from 1 through 63.
+     * @return Lowercase label, or null for invalid bounds, characters or edge hyphens.
+     */
     fun canonicalWireLabel(packet: ByteArray, offset: Int, length: Int): String? {
         if (length !in 1..63 || offset < 0 || offset > packet.size - length) return null
         val chars = CharArray(length)

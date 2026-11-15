@@ -12,27 +12,14 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * In-memory Bloom Filter for zero-latency domain blocking decisions on the VPN hot path.
+ * In-memory probabilistic domain filter with serialized database rebuilds and atomic publication.
  *
- * ## Design
- * - Uses Guava's [BloomFilter] backed by a compact [com.google.common.hash.BitArray].
- * - An [AtomicReference] holds the active filter, enabling **lock-free reads** from any
- *   number of concurrent packet-processing threads.
- * - Rebuilds (compiles) are serialized by [rebuildMutex] and atomically hot-swapped,
- *   so packet-processing threads never block and always read a complete filter.
- * - Subdomain / wildcard matching walks the domain hierarchy:
- *   `sub.ad.example.com` → `ad.example.com` → `example.com` → `com`
+ * Lookups test the exact domain and each parent suffix, including the final label. A target
+ * false-positive probability applies per Bloom lookup, not to the complete suffix-walking decision.
+ * Rebuilds exclude exact whitelist keys; ancestor rules and probabilistic hits may still match.
  *
- * ## Memory footprint
- * At the default 200,000 expected insertions and 0.1% FPP:
- *   ~**287 KB** (well within the Android process's typical 256 MB heap).
- *
- * ## Accuracy
- * False positives (a non-ad domain incorrectly reported as blocked) are bounded by [FPP].
- * False negatives are impossible: if a domain was inserted, [isBlocked] always returns true.
- *
- * @param blockRuleDao  DAO to load all blocked domains from Room.
- * @param whitelistDao  DAO to load user-whitelisted domains to exclude from the filter.
+ * @param blockRuleDao Source of readable block-rule keys.
+ * @param whitelistDao Source of exact allow keys excluded during rebuild.
  */
 @Singleton
 class BloomFilterManager @Inject constructor(
@@ -44,7 +31,7 @@ class BloomFilterManager @Inject constructor(
         private const val EXPECTED_INSERTIONS = 200_000
 
         /** Target false-positive probability (0.1%). */
-        private const val FPP = 0.001
+        private const val FALSE_POSITIVE_PROBABILITY = 0.001
     }
 
     /**
@@ -62,13 +49,10 @@ class BloomFilterManager @Inject constructor(
     // ─── Public API ───────────────────────────────────────────────────────────
 
     /**
-     * Checks whether [domain] (or any of its parent domains) is in the active filter.
+     * Tests the active filter without acquiring the rebuild mutex.
      *
-     * Called on every DNS query intercepted by the VPN service — must be **non-blocking**
-     * and complete in O(k) time where k is a small constant (Bloom Filter hash functions).
-     *
-     * @param domain  Lowercase, fully-qualified domain (e.g. "sub.ads.example.com").
-     * @return        True if the domain should be blocked (may include false positives < FPP).
+     * @param domain Domain expected to be normalized by the caller.
+     * @return Whether the domain or a parent suffix might be present; false positives are possible.
      */
     fun isBlocked(domain: String): Boolean {
         val filter = activeFilter.get() ?: return false
@@ -77,47 +61,43 @@ class BloomFilterManager @Inject constructor(
         if (filter.mightContain(domain)) return true
 
         // 2. Walk parent domains for wildcard / suffix matching
-        var sub = domain
-        while (sub.contains('.')) {
-            sub = sub.substringAfter('.')
-            if (filter.mightContain(sub)) return true
+        var parentDomain = domain
+        while (parentDomain.contains('.')) {
+            parentDomain = parentDomain.substringAfter('.')
+            if (filter.mightContain(parentDomain)) return true
         }
         return false
     }
 
     /**
-     * Inserts [domain] into the active filter immediately (no I/O).
+     * Adds a key directly to the current filter without database I/O.
      *
-     * Used for fast user-whitelist-reversal: if a whitelist entry is removed, the domain
-     * is re-added to the filter instantly without a full rebuild.
+     * A concurrent rebuild can replace this filter, so persistence requires a database mutation.
+     *
+     * @param domain Domain key to add exactly as supplied.
      */
     fun addDomain(domain: String) {
         activeFilter.get()?.put(domain)
     }
 
     /**
-     * Asynchronous rebuild: loads all blocked domains from Room (excluding whitelisted ones),
-     * compiles a new Bloom Filter, and atomically hot-swaps it.
+     * Loads block and allow keys, then atomically publishes a newly compiled filter.
      *
-     * **Callers must invoke this from a coroutine on [kotlinx.coroutines.Dispatchers.IO].**
-     *
-     * Called after:
-     * - App startup (initial load)
-     * - Nightly ML batch worker completes
-     * - User whitelists or un-whitelists a domain
+     * Rebuilds are serialized. Exact allow keys are excluded; this does not implement a separate
+     * allow check during suffix lookups. Database failures propagate to the caller.
      */
     suspend fun reloadFilterFromDatabase() = rebuildMutex.withLock {
         val blockedDomains = blockRuleDao.getAllBlockedDomains().toHashSet()
         val whitelistedDomains = whitelistDao.getAllWhitelistedDomains().toHashSet()
 
-        // Exclude whitelisted domains — they always pass through regardless of block rules
+        // Exclude exact allow keys from the new filter; suffix checks may still match an ancestor.
         val effectiveDomains = blockedDomains - whitelistedDomains
 
         val capacity = maxOf(EXPECTED_INSERTIONS, effectiveDomains.size * 2)
         val newFilter = BloomFilter.create(
             Funnels.stringFunnel(StandardCharsets.UTF_8),
             capacity,
-            FPP
+            FALSE_POSITIVE_PROBABILITY
         )
         effectiveDomains.forEach { newFilter.put(it) }
 
@@ -131,6 +111,6 @@ class BloomFilterManager @Inject constructor(
         BloomFilter.create(
             Funnels.stringFunnel(StandardCharsets.UTF_8),
             EXPECTED_INSERTIONS,
-            FPP
+            FALSE_POSITIVE_PROBABILITY
         )
 }

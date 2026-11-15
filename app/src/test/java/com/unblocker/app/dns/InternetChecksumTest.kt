@@ -5,10 +5,16 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Test
 
+/**
+ * Regression coverage for internet checksum.
+ */
 class InternetChecksumTest {
     private val source = ByteArray(16) { it.toByte() }
     private val destination = ByteArray(16) { (it + 16).toByte() }
 
+    /**
+     * Verifies that calculates known even length IPv6 UDP checksum.
+     */
     @Test fun calculatesKnownEvenLengthIpv6UdpChecksum() {
         val udp = byteArrayOf(0x00, 0x35, 0x12, 0x34, 0x00, 0x08, 0x00, 0x00)
 
@@ -17,6 +23,9 @@ class InternetChecksumTest {
         assertEquals(0xfc74, checksum.toInt() and 0xffff)
     }
 
+    /**
+     * Verifies that pads known odd length IPv6 UDP checksum.
+     */
     @Test fun padsKnownOddLengthIpv6UdpChecksum() {
         val udp = byteArrayOf(0x00, 0x35, 0x12, 0x34, 0x00, 0x09, 0x00, 0x00, 0xab.toByte())
 
@@ -25,6 +34,9 @@ class InternetChecksumTest {
         assertEquals(0x5172, checksum.toInt() and 0xffff)
     }
 
+    /**
+     * Verifies that serializes computed zero as all ones.
+     */
     @Test fun serializesComputedZeroAsAllOnes() {
         val zeroAddress = ByteArray(16)
         val udp = byteArrayOf(0xff.toByte(), 0xde.toByte(), 0, 0, 0, 8, 0, 0)
@@ -34,6 +46,9 @@ class InternetChecksumTest {
         assertEquals(0xffff, checksum.toInt() and 0xffff)
     }
 
+    /**
+     * Verifies that calculates known TCP IPv4 checksum.
+     */
     @Test fun calculatesKnownTcpIpv4Checksum() {
         val src = byteArrayOf(10, 10, 0, 2)
         val dst = byteArrayOf(10, 10, 0, 1)
@@ -54,6 +69,9 @@ class InternetChecksumTest {
         assertEquals(0xffff, verify.toInt() and 0xffff)
     }
 
+    /**
+     * Verifies that calculates known TCP IPv6 checksum.
+     */
     @Test fun calculatesKnownTcpIpv6Checksum() {
         val src = ByteArray(16) { 0x01 }
         val dst = ByteArray(16) { 0x02 }
@@ -72,6 +90,9 @@ class InternetChecksumTest {
         assertEquals(0xffff, verify.toInt() and 0xffff)
     }
 
+    /**
+     * Verifies that rejects invalid address and segment bounds.
+     */
     @Test fun rejectsInvalidAddressAndSegmentBounds() {
         val udp = ByteArray(8)
 

@@ -15,11 +15,17 @@ import org.junit.Test
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
+/**
+ * Regression coverage for primary hosts regression.
+ */
 class PrimaryHostsRegressionTest {
 
     private lateinit var decideBlockingUseCase: DecideBlockingUseCase
     private val primaryHosts = mutableListOf<String>()
 
+    /**
+     * Resets the fixture state before each test to keep assertions independent.
+     */
     @Before
     fun setup() {
         val stream = javaClass.classLoader?.getResourceAsStream("primary-hosts.tsv")
@@ -51,6 +57,9 @@ class PrimaryHostsRegressionTest {
         )
     }
 
+    /**
+     * Verifies that test all primary hosts resolve to allow in smart mode.
+     */
     @Test
     fun testAllPrimaryHostsResolveToAllowInSmartMode() = runBlocking {
         assertTrue("Corpus must not be empty", primaryHosts.isNotEmpty())

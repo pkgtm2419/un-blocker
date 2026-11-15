@@ -4,7 +4,13 @@ import com.unblocker.app.logic.dns.*
 import org.junit.Assert.*
 import org.junit.Test
 
+/**
+ * Regression coverage for advanced DNS packet.
+ */
 class AdvancedDnsPacketTest {
+    /**
+     * Verifies that bounded IPv6 extension headers and atomic fragment are supported.
+     */
     @Test fun boundedIpv6ExtensionHeadersAndAtomicFragmentAreSupported() {
         val base=DnsFixtures.packet(DnsFixtures.question(),true)
         for(type in listOf(0,43,60,44)) {
@@ -14,12 +20,18 @@ class AdvancedDnsPacketTest {
             if(type==44) { b[43]=1;assertNull(DnsPacketUtil.parseIpPacket(b,b.size)) }
         }
     }
+    /**
+     * Verifies that invalid packet lengths and IPv4 fragments are rejected.
+     */
     @Test fun invalidPacketLengthsAndIpv4FragmentsAreRejected() {
         val b=DnsFixtures.packet(DnsFixtures.question())
         assertNull(DnsPacketUtil.parseIpPacket(b,b.size+10))
         DnsFixtures.u16(b,2,29);assertNull(DnsPacketUtil.parseIpPacket(b,b.size))
         DnsFixtures.u16(b,2,b.size);b[6]=0x20;assertNull(DnsPacketUtil.parseIpPacket(b,b.size))
     }
+    /**
+     * Verifies that edns negotiation validates opt and synthetic response includes opt.
+     */
     @Test fun ednsNegotiationValidatesOptAndSyntheticResponseIncludesOpt() {
         val dns=DnsFixtures.question(additional=1)+opt(1232)
         val b=DnsFixtures.packet(dns)
@@ -32,6 +44,9 @@ class AdvancedDnsPacketTest {
         val duplicate=DnsFixtures.packet(DnsFixtures.question(additional=2)+opt(1232)+opt(1232))
         assertNull(DnsPacketUtil.parseIpPacket(duplicate,duplicate.size))
     }
+    /**
+     * Verifies that client UDP limit is per transaction and oversized replies are safely truncated.
+     */
     @Test fun clientUdpLimitIsPerTransactionAndOversizedRepliesAreSafelyTruncated() {
         val q=DnsFixtures.query()
         val body=DnsFixtures.response(q,listOf(DnsFixtures.Record(q.domain,16,ByteArray(900))))

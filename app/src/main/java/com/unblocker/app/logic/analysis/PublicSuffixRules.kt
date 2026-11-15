@@ -3,7 +3,12 @@ package com.unblocker.app.logic.analysis
 import com.unblocker.app.logic.DomainName
 import java.net.IDN
 
-/** Offline PSL is structural context, never a block/allow authority. Includes private rules. */
+/**
+ * Offline public suffix context, including supplied private rules; it does not authorize blocking.
+ *
+ * @param lines PSL-format exact, wildcard and exception entries.
+ * @throws IllegalArgumentException If an entry cannot be converted to ASCII.
+ */
 class PublicSuffixRules(lines: Sequence<String>) {
     private val exact = HashSet<String>()
     private val wildcard = HashSet<String>()
@@ -22,6 +27,12 @@ class PublicSuffixRules(lines: Sequence<String>) {
         }
     }
 
+    /**
+     * Finds the registrable hostname using exact, wildcard and exception suffix rules.
+     *
+     * @param raw Hostname to normalize.
+     * @return Registrable name, or null for invalid names or suffix-only inputs.
+     */
     fun registrableDomain(raw: String): String? {
         val domain = DomainName.normalize(raw) ?: return null
         val labels = domain.split('.')
@@ -38,12 +49,24 @@ class PublicSuffixRules(lines: Sequence<String>) {
         return if (labels.size <= suffixLength) null else labels.takeLast(suffixLength + 1).joinToString(".")
     }
 
+    /**
+     * Returns the labels below the registrable domain.
+     *
+     * @param raw Hostname to normalize.
+     * @return Subdomain labels, or empty when invalid or no labels remain.
+     */
     fun subdomain(raw: String): String {
         val domain = DomainName.normalize(raw) ?: return ""
         val base = registrableDomain(domain) ?: return ""
         return if (domain == base) "" else domain.removeSuffix(".$base")
     }
 
+    /**
+     * Checks explicit and wildcard suffixes, then the implicit single-label suffix rule.
+     *
+     * @param raw Hostname to normalize.
+     * @return Whether the hostname is a suffix; invalid input returns false.
+     */
     fun isPublicSuffix(raw: String): Boolean {
         val domain = DomainName.normalize(raw) ?: return false
         if (domain in exact) return true
@@ -55,8 +78,21 @@ class PublicSuffixRules(lines: Sequence<String>) {
         return registrableDomain(domain) == null
     }
 
+    /**
+     * Creates suffix context from packaged assets or a small fallback set.
+     */
     companion object {
+        /**
+         * Small embedded suffix context for tests and callers without Android assets.
+         */
         val fallback = PublicSuffixRules("com\nnet\norg\nco.uk\ncom.au\nco.in\nblogspot.com\ngithub.io\n*.ck\n!www.ck".lineSequence())
+        /**
+         * Loads packaged public suffix rules, using fallback only when context is null.
+         *
+         * @param context Asset context, or null to select the fallback set.
+         * @return Parsed suffix context.
+         * @throws java.io.IOException If opening or reading the asset fails.
+         */
         fun from(context: android.content.Context?): PublicSuffixRules = if (context == null) fallback else
             context.assets.open("public_suffix_list.dat").bufferedReader().use { PublicSuffixRules(it.lineSequence()) }
     }

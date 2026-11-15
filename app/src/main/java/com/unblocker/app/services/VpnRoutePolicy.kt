@@ -6,6 +6,9 @@ package com.unblocker.app.services
  * to public DNS servers (like HTTPS to 1.1.1.1:443) is never intercepted or dropped.
  */
 object VpnRoutePolicy {
+    /**
+     * Returns only synthetic DNS endpoint host routes with IPv4 /32 and IPv6 /128 prefixes.
+     */
     fun hostRoutes(): List<Pair<String, Int>> = listOf(
         TunnelDnsConfig.IPV4_DNS to 32,
         TunnelDnsConfig.IPV6_DNS to 128

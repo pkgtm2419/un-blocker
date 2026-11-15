@@ -8,7 +8,15 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  */
 object UnblockerMigrations {
 
+    /**
+     * Adds domain aggregates, events, and indices without removing version 1 tables.
+     */
     val MIGRATION_1_2 = object : Migration(1, 2) {
+        /**
+         * Creates the version 2 log tables if absent.
+         *
+         * @param db Connection supplied by Room for the migration transaction.
+         */
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("""
                 CREATE TABLE IF NOT EXISTS `domain_stats` (
@@ -41,5 +49,8 @@ object UnblockerMigrations {
         }
     }
 
+    /**
+     * Explicit migration paths registered by the database provider.
+     */
     val ALL = arrayOf(MIGRATION_1_2)
 }

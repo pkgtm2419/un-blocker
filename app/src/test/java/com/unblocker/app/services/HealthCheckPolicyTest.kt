@@ -5,12 +5,21 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * Regression coverage for health check policy.
+ */
 class HealthCheckPolicyTest {
+    /**
+     * Verifies that health work runs only while protection is desired.
+     */
     @Test fun healthWorkRunsOnlyWhileProtectionIsDesired() {
         assertTrue(HealthCheckPolicy.shouldRun(protectionEnabled = true))
         assertFalse(HealthCheckPolicy.shouldRun(protectionEnabled = false))
     }
 
+    /**
+     * Verifies that default cadence is six hours and config has no fake logging or downloads.
+     */
     @Test fun defaultCadenceIsSixHoursAndConfigHasNoFakeLoggingOrDownloads() {
         assertEquals(360, HealthCheckPolicy.DEFAULT_INTERVAL_MINUTES)
         val config = java.io.File("src/main/assets/default_config.json").readText()

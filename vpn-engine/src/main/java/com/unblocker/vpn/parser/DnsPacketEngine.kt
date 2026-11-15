@@ -1,26 +1,52 @@
 package com.unblocker.vpn.parser
 
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import java.util.Locale
 
 /**
- * High-performance dual-stack DNS packet inspection, checksum synthesis,
- * and NXDOMAIN block generator.
+ * Parses a subset of outgoing IPv4/IPv6 UDP DNS packets and builds reverse-direction responses.
  *
- * Implements strict RFC 768 (UDP), RFC 791 (IPv4), RFC 2460 / RFC 8200 (IPv6),
- * and RFC 1035 (DNS) wire formatting.
+ * The engine rejects compressed query names and IPv6 extension-header chains. Parsing validates
+ * selected lengths and flags, not every IP/DNS invariant or question field. Callers own packet
+ * storage and must provide bounds consistent with the array.
  */
 object DnsPacketEngine {
 
+    /**
+     * Standard DNS UDP destination port.
+     */
     const val DNS_PORT = 53
+    /**
+     * Minimum IPv4 header length in bytes, without options.
+     */
     const val IPV4_HEADER_MIN_LEN = 20
+    /**
+     * Fixed IPv6 header length in bytes, excluding extension headers.
+     */
     const val IPV6_HEADER_LEN = 40
+    /**
+     * UDP header length in bytes.
+     */
     const val UDP_HEADER_LEN = 8
+    /**
+     * DNS fixed header length in bytes.
+     */
     const val DNS_HEADER_LEN = 12
 
+    private const val UDP_PROTOCOL_NUMBER = 17
+    private const val MAX_DOMAIN_LENGTH = 253
+
     /**
-     * Parsed DNS query metadata containing exact packet byte offsets.
+     * Parsed query metadata with byte offsets into the original IP packet.
+     *
+     * @property domain Lowercase decoded query name with trailing dots trimmed.
+     * @property isIpv6 Whether the packet uses IPv6.
+     * @property ipHeaderLength IP header length in bytes, including IPv4 options.
+     * @property totalLength End of the declared UDP datagram, measured from the packet start in bytes.
+     * @property udpOffset UDP header byte offset from the packet start.
+     * @property dnsOffset DNS payload byte offset from the packet start.
+     * @property srcPort Original UDP source port as an unsigned 16-bit value in an Int.
+     * @property dstPort Original UDP destination port, required to be DNS_PORT by the parser.
+     * @property txId DNS transaction ID bits represented as a signed Short.
      */
     data class ParsedDnsQuery(
         val domain: String,
@@ -35,18 +61,15 @@ object DnsPacketEngine {
     )
 
     /**
-     * Inspects a raw IP packet and extracts outgoing DNS query metadata.
+     * Extracts metadata from a direct UDP DNS query without IPv6 extension headers.
      *
-     * Validates:
-     * - IPv4 / IPv6 headers and boundaries
-     * - UDP protocol (17)
-     * - Destination port 53
-     * - DNS query format (QR = 0, QDCOUNT > 0)
-     * - RFC 1035 label boundaries without pointer compression loops
+     * Requires port 53, QR=0, at least one question, and decodable uncompressed name labels. It does
+     * not validate checksums, DNS question type/class, all label characters, or all fragmentation rules.
      *
-     * @param packet Raw IP packet bytes.
-     * @param length Number of valid bytes in [packet].
-     * @return [ParsedDnsQuery] if valid, or null if non-DNS or malformed.
+     * @param packet Raw IP packet storage, stable for the duration of the call.
+     * @param length Declared valid prefix length in bytes; must not exceed [packet] size.
+     * @return Parsed metadata, or null for rejected input.
+     * @throws IndexOutOfBoundsException If declared bounds permit indexing beyond the supplied array.
      */
     fun parseOutgoingDnsPacket(packet: ByteArray, length: Int): ParsedDnsQuery? {
         if (length < IPV4_HEADER_MIN_LEN + UDP_HEADER_LEN + DNS_HEADER_LEN) return null
@@ -58,13 +81,13 @@ object DnsPacketEngine {
 
         when (ipVersion) {
             4 -> {
-                val ihl = packet[0].toInt() and 0x0F
-                ipHeaderLength = ihl * 4
-                if (ihl < 5 || length < ipHeaderLength + UDP_HEADER_LEN + DNS_HEADER_LEN) return null
+                val headerLengthWords = packet[0].toInt() and 0x0F
+                ipHeaderLength = headerLengthWords * 4
+                if (headerLengthWords < 5 || length < ipHeaderLength + UDP_HEADER_LEN + DNS_HEADER_LEN) return null
 
                 // Verify UDP protocol (17)
                 val protocol = packet[9].toInt() and 0xFF
-                if (protocol != 17) return null
+                if (protocol != UDP_PROTOCOL_NUMBER) return null
 
                 val reportedTotal = ((packet[2].toInt() and 0xFF) shl 8) or (packet[3].toInt() and 0xFF)
                 totalPacketLength = minOf(reportedTotal, length)
@@ -75,7 +98,7 @@ object DnsPacketEngine {
 
                 // Verify Next Header is UDP (17)
                 val nextHeader = packet[6].toInt() and 0xFF
-                if (nextHeader != 17) return null
+                if (nextHeader != UDP_PROTOCOL_NUMBER) return null
 
                 val payloadLength = ((packet[4].toInt() and 0xFF) shl 8) or (packet[5].toInt() and 0xFF)
                 totalPacketLength = minOf(IPV6_HEADER_LEN + payloadLength, length)
@@ -106,8 +129,8 @@ object DnsPacketEngine {
         val qdCount = ((packet[dnsOffset + 4].toInt() and 0xFF) shl 8) or (packet[dnsOffset + 5].toInt() and 0xFF)
         if (qdCount <= 0) return null
 
-        // Decode QNAME starting at dnsOffset + 12
-        val qnameStart = dnsOffset + 12
+        // Decode QNAME starting at dnsOffset + DNS_HEADER_LEN
+        val qnameStart = dnsOffset + DNS_HEADER_LEN
         val udpEnd = udpOffset + udpLength
         val domain = decodeQName(packet, qnameStart, udpEnd) ?: return null
 
@@ -125,115 +148,125 @@ object DnsPacketEngine {
     }
 
     /**
-     * Decodes DNS wire-format labels into a lowercase domain string with strict bounds
-     * and compression pointer loop protection.
+     * Decodes uncompressed labels within the declared datagram bounds, rejecting compression pointers.
      */
     private fun decodeQName(packet: ByteArray, startOffset: Int, endLimit: Int): String? {
-        val sb = StringBuilder(64)
-        var pos = startOffset
+        val domainBuilder = StringBuilder(64)
+        var position = startOffset
 
-        while (pos < endLimit) {
-            val labelLen = packet[pos].toInt() and 0xFF
-            if (labelLen == 0) {
-                pos++
+        while (position < endLimit) {
+            val labelLength = packet[position].toInt() and 0xFF
+            if (labelLength == 0) {
+                position++
                 break
             }
 
             // Reject pointer compression in incoming queries to prevent loops / evasion
-            if ((labelLen and 0xC0) != 0) {
+            if ((labelLength and 0xC0) != 0) {
                 return null
             }
 
-            pos++
-            if (pos + labelLen > endLimit) return null
+            position++
+            if (position + labelLength > endLimit) return null
 
-            if (sb.isNotEmpty()) sb.append('.')
-            for (i in 0 until labelLen) {
-                val c = packet[pos + i].toInt() and 0xFF
-                // Allowed DNS ASCII characters: a-z, 0-9, -, _, .
-                sb.append(c.toChar())
+            if (domainBuilder.isNotEmpty()) domainBuilder.append('.')
+            for (i in 0 until labelLength) {
+                val characterCode = packet[position + i].toInt() and 0xFF
+                // Preserve label bytes as characters; this decoder does not validate the character set.
+                domainBuilder.append(characterCode.toChar())
             }
-            pos += labelLen
+            position += labelLength
 
-            if (sb.length > 253) return null
+            if (domainBuilder.length > MAX_DOMAIN_LENGTH) return null
         }
 
-        val domain = sb.toString().lowercase(Locale.ROOT).trimEnd('.')
+        val domain = domainBuilder.toString().lowercase(Locale.ROOT).trimEnd('.')
         return if (domain.isNotEmpty()) domain else null
     }
 
     /**
-     * Synthesizes an immediate NXDOMAIN (RCODE=3) DNS response packet with valid IP/UDP
-     * checksums to instantly sinkhole blocked domains.
+     * Copies the query datagram, reverses addresses and ports, and sets NXDOMAIN response flags.
      *
-     * Swaps source/dest IPs and ports, sets DNS flags to 0x8183 (QR=1, RD=1, RA=1, NXDOMAIN=3),
-     * zeroes answer/authority/additional counts, and computes proper RFC 791 / RFC 2460 checksums.
+     * Answer, authority, and additional counts are cleared; bytes after those header fields remain
+     * from the original datagram. IPv4 header and IPv6 UDP checksums are recomputed, while IPv4 UDP
+     * checksum is set to zero.
+     *
+     * @param packet Original IP packet associated with [query].
+     * @param query Matching metadata previously returned by the parser.
+     * @return New reverse-direction IP/UDP packet with DNS flags 0x8183.
+     * @throws IndexOutOfBoundsException If supplied metadata does not address valid packet/header bytes.
      */
     fun synthesizeNxDomainResponse(packet: ByteArray, query: ParsedDnsQuery): ByteArray {
-        val resp = packet.copyOf(query.totalLength)
+        val responsePacket = packet.copyOf(query.totalLength)
 
         // 1. Swap Source and Destination IP addresses
         if (query.isIpv6) {
             // IPv6 src: bytes 8..23, dst: bytes 24..39
             for (i in 0 until 16) {
-                val temp = resp[8 + i]
-                resp[8 + i] = resp[24 + i]
-                resp[24 + i] = temp
+                val addressByte = responsePacket[8 + i]
+                responsePacket[8 + i] = responsePacket[24 + i]
+                responsePacket[24 + i] = addressByte
             }
         } else {
             // IPv4 src: bytes 12..15, dst: bytes 16..19
             for (i in 0 until 4) {
-                val temp = resp[12 + i]
-                resp[12 + i] = resp[16 + i]
-                resp[16 + i] = temp
+                val addressByte = responsePacket[12 + i]
+                responsePacket[12 + i] = responsePacket[16 + i]
+                responsePacket[16 + i] = addressByte
             }
         }
 
         // 2. Swap Source and Destination UDP ports
-        val u = query.udpOffset
-        val srcPortByte0 = resp[u]
-        val srcPortByte1 = resp[u + 1]
-        resp[u] = resp[u + 2]
-        resp[u + 1] = resp[u + 3]
-        resp[u + 2] = srcPortByte0
-        resp[u + 3] = srcPortByte1
+        val udpOffset = query.udpOffset
+        val srcPortByte0 = responsePacket[udpOffset]
+        val srcPortByte1 = responsePacket[udpOffset + 1]
+        responsePacket[udpOffset] = responsePacket[udpOffset + 2]
+        responsePacket[udpOffset + 1] = responsePacket[udpOffset + 3]
+        responsePacket[udpOffset + 2] = srcPortByte0
+        responsePacket[udpOffset + 3] = srcPortByte1
 
         // 3. DNS Header: Set flags = 0x8183 (Response, Recursion Desired, Recursion Available, NXDOMAIN)
-        val d = query.dnsOffset
-        resp[d + 2] = 0x81.toByte()
-        resp[d + 3] = 0x83.toByte()
+        val dnsOffset = query.dnsOffset
+        responsePacket[dnsOffset + 2] = 0x81.toByte()
+        responsePacket[dnsOffset + 3] = 0x83.toByte()
 
         // Zero out ANCOUNT (answers), NSCOUNT (authorities), ARCOUNT (additionals)
-        resp[d + 6] = 0; resp[d + 7] = 0
-        resp[d + 8] = 0; resp[d + 9] = 0
-        resp[d + 10] = 0; resp[d + 11] = 0
+        responsePacket[dnsOffset + 6] = 0; responsePacket[dnsOffset + 7] = 0
+        responsePacket[dnsOffset + 8] = 0; responsePacket[dnsOffset + 9] = 0
+        responsePacket[dnsOffset + 10] = 0; responsePacket[dnsOffset + 11] = 0
 
         // 4. Compute Checksums
         if (query.isIpv6) {
-            val udpLen = query.totalLength - query.udpOffset
-            resp[u + 6] = 0
-            resp[u + 7] = 0
-            val udpCksum = calculateIpv6UdpChecksum(resp, u, udpLen)
-            resp[u + 6] = ((udpCksum.toInt() ushr 8) and 0xFF).toByte()
-            resp[u + 7] = (udpCksum.toInt() and 0xFF).toByte()
+            val udpLength = query.totalLength - query.udpOffset
+            responsePacket[udpOffset + 6] = 0
+            responsePacket[udpOffset + 7] = 0
+            val udpChecksum = calculateIpv6UdpChecksum(responsePacket, udpOffset, udpLength)
+            responsePacket[udpOffset + 6] = ((udpChecksum.toInt() ushr 8) and 0xFF).toByte()
+            responsePacket[udpOffset + 7] = (udpChecksum.toInt() and 0xFF).toByte()
         } else {
             // IPv4 header checksum
-            resp[10] = 0
-            resp[11] = 0
-            val ipCksum = calculateIpv4Checksum(resp, 0, query.ipHeaderLength)
-            resp[10] = ((ipCksum.toInt() ushr 8) and 0xFF).toByte()
-            resp[11] = (ipCksum.toInt() and 0xFF).toByte()
+            responsePacket[10] = 0
+            responsePacket[11] = 0
+            val ipChecksum = calculateIpv4Checksum(responsePacket, 0, query.ipHeaderLength)
+            responsePacket[10] = ((ipChecksum.toInt() ushr 8) and 0xFF).toByte()
+            responsePacket[11] = (ipChecksum.toInt() and 0xFF).toByte()
 
             // UDP checksum is optional in IPv4 (0x0000 = no checksum)
-            resp[u + 6] = 0
-            resp[u + 7] = 0
+            responsePacket[udpOffset + 6] = 0
+            responsePacket[udpOffset + 7] = 0
         }
 
-        return resp
+        return responsePacket
     }
 
     /**
-     * Constructs a valid IP+UDP response packet wrapping raw upstream DNS response bytes.
+     * Constructs a reverse-direction IP/UDP packet around a caller-validated DNS payload.
+     *
+     * @param originalPacket Original query packet supplying its IP header template.
+     * @param query Matching query offsets and source/destination ports.
+     * @param upstreamDnsPayload DNS response bytes; response matching must be checked by the caller.
+     * @return New packet with swapped addresses/ports and updated lengths and checksums.
+     * @throws IndexOutOfBoundsException If the template or metadata cannot provide the required header bytes.
      */
     fun buildForwardedDnsResponse(
         originalPacket: ByteArray,
@@ -242,65 +275,73 @@ object DnsPacketEngine {
     ): ByteArray {
         val udpLength = UDP_HEADER_LEN + upstreamDnsPayload.size
         val totalLength = query.ipHeaderLength + udpLength
-        val resp = ByteArray(totalLength)
+        val responsePacket = ByteArray(totalLength)
 
         // 1. Copy and configure IP header
         if (query.isIpv6) {
             // Copy original IPv6 header template
-            System.arraycopy(originalPacket, 0, resp, 0, IPV6_HEADER_LEN)
+            System.arraycopy(originalPacket, 0, responsePacket, 0, IPV6_HEADER_LEN)
             // Swap IPv6 src and dst
             for (i in 0 until 16) {
-                resp[8 + i] = originalPacket[24 + i]
-                resp[24 + i] = originalPacket[8 + i]
+                responsePacket[8 + i] = originalPacket[24 + i]
+                responsePacket[24 + i] = originalPacket[8 + i]
             }
             // Set IPv6 payload length (bytes 4..5)
-            resp[4] = ((udpLength ushr 8) and 0xFF).toByte()
-            resp[5] = (udpLength and 0xFF).toByte()
+            responsePacket[4] = ((udpLength ushr 8) and 0xFF).toByte()
+            responsePacket[5] = (udpLength and 0xFF).toByte()
         } else {
             // Copy original IPv4 header template
-            System.arraycopy(originalPacket, 0, resp, 0, query.ipHeaderLength)
+            System.arraycopy(originalPacket, 0, responsePacket, 0, query.ipHeaderLength)
             // Swap IPv4 src and dst
             for (i in 0 until 4) {
-                resp[12 + i] = originalPacket[16 + i]
-                resp[16 + i] = originalPacket[12 + i]
+                responsePacket[12 + i] = originalPacket[16 + i]
+                responsePacket[16 + i] = originalPacket[12 + i]
             }
             // Set IPv4 total length (bytes 2..3)
-            resp[2] = ((totalLength ushr 8) and 0xFF).toByte()
-            resp[3] = (totalLength and 0xFF).toByte()
+            responsePacket[2] = ((totalLength ushr 8) and 0xFF).toByte()
+            responsePacket[3] = (totalLength and 0xFF).toByte()
         }
 
         // 2. Configure UDP header
-        val u = query.ipHeaderLength
-        resp[u] = ((query.dstPort ushr 8) and 0xFF).toByte()
-        resp[u + 1] = (query.dstPort and 0xFF).toByte()
-        resp[u + 2] = ((query.srcPort ushr 8) and 0xFF).toByte()
-        resp[u + 3] = (query.srcPort and 0xFF).toByte()
-        resp[u + 4] = ((udpLength ushr 8) and 0xFF).toByte()
-        resp[u + 5] = (udpLength and 0xFF).toByte()
-        resp[u + 6] = 0
-        resp[u + 7] = 0
+        val udpOffset = query.ipHeaderLength
+        responsePacket[udpOffset] = ((query.dstPort ushr 8) and 0xFF).toByte()
+        responsePacket[udpOffset + 1] = (query.dstPort and 0xFF).toByte()
+        responsePacket[udpOffset + 2] = ((query.srcPort ushr 8) and 0xFF).toByte()
+        responsePacket[udpOffset + 3] = (query.srcPort and 0xFF).toByte()
+        responsePacket[udpOffset + 4] = ((udpLength ushr 8) and 0xFF).toByte()
+        responsePacket[udpOffset + 5] = (udpLength and 0xFF).toByte()
+        responsePacket[udpOffset + 6] = 0
+        responsePacket[udpOffset + 7] = 0
 
         // 3. Copy DNS payload
-        System.arraycopy(upstreamDnsPayload, 0, resp, u + UDP_HEADER_LEN, upstreamDnsPayload.size)
+        System.arraycopy(upstreamDnsPayload, 0, responsePacket, udpOffset + UDP_HEADER_LEN, upstreamDnsPayload.size)
 
         // 4. Calculate Checksums
         if (query.isIpv6) {
-            val udpCksum = calculateIpv6UdpChecksum(resp, u, udpLength)
-            resp[u + 6] = ((udpCksum.toInt() ushr 8) and 0xFF).toByte()
-            resp[u + 7] = (udpCksum.toInt() and 0xFF).toByte()
+            val udpChecksum = calculateIpv6UdpChecksum(responsePacket, udpOffset, udpLength)
+            responsePacket[udpOffset + 6] = ((udpChecksum.toInt() ushr 8) and 0xFF).toByte()
+            responsePacket[udpOffset + 7] = (udpChecksum.toInt() and 0xFF).toByte()
         } else {
-            resp[10] = 0
-            resp[11] = 0
-            val ipCksum = calculateIpv4Checksum(resp, 0, query.ipHeaderLength)
-            resp[10] = ((ipCksum.toInt() ushr 8) and 0xFF).toByte()
-            resp[11] = (ipCksum.toInt() and 0xFF).toByte()
+            responsePacket[10] = 0
+            responsePacket[11] = 0
+            val ipChecksum = calculateIpv4Checksum(responsePacket, 0, query.ipHeaderLength)
+            responsePacket[10] = ((ipChecksum.toInt() ushr 8) and 0xFF).toByte()
+            responsePacket[11] = (ipChecksum.toInt() and 0xFF).toByte()
         }
 
-        return resp
+        return responsePacket
     }
 
     /**
-     * Calculates the 16-bit one's complement Internet Checksum for IPv4 headers (RFC 791).
+     * Computes a 16-bit Internet checksum over the supplied byte range.
+     *
+     * Set an existing checksum field to zero before generating a replacement checksum.
+     *
+     * @param data Header storage to read without mutation.
+     * @param offset First header byte index, expected to be nonnegative.
+     * @param length Number of bytes to include; expected to stay within [data].
+     * @return One's-complement checksum bits represented as a signed Short.
+     * @throws IndexOutOfBoundsException If the supplied range indexes outside [data].
      */
     fun calculateIpv4Checksum(data: ByteArray, offset: Int, length: Int): Short {
         var sum = 0L
@@ -320,8 +361,13 @@ object DnsPacketEngine {
     }
 
     /**
-     * Verifies that the 16-bit one's complement checksum of an IPv4 header equals 0xFFFF
-     * (meaning the sum including the checksum field evaluates to 0).
+     * Checks the folded Internet checksum sum including the stored checksum field.
+     *
+     * @param data Header storage including its existing checksum.
+     * @param offset First header byte index, expected to be nonnegative.
+     * @param length Number of bytes to include; expected to stay within [data].
+     * @return Whether the folded sum equals 0xFFFF.
+     * @throws IndexOutOfBoundsException If the supplied range indexes outside [data].
      */
     fun verifyIpv4Checksum(data: ByteArray, offset: Int = 0, length: Int): Boolean {
         var sum = 0L
@@ -341,8 +387,15 @@ object DnsPacketEngine {
     }
 
     /**
-     * Calculates the mandatory RFC 2460 UDP checksum for IPv6 packets across the
-     * IPv6 pseudo-header, UDP header, and payload.
+     * Computes the IPv6 UDP checksum using addresses at the fixed IPv6 header offsets.
+     *
+     * The UDP checksum field is excluded from summation. A zero result is encoded as 0xFFFF.
+     *
+     * @param data Packet storage containing the IPv6 header, UDP header, and payload.
+     * @param udpOffset Byte offset of the UDP header.
+     * @param udpLength UDP header plus payload length in bytes, expected to fit the packet.
+     * @return Mandatory UDP checksum bits represented as a signed Short.
+     * @throws IndexOutOfBoundsException If the required address or UDP bytes lie outside [data].
      */
     fun calculateIpv6UdpChecksum(data: ByteArray, udpOffset: Int, udpLength: Int): Short {
         var sum = 0L
@@ -365,7 +418,7 @@ object DnsPacketEngine {
         sum += (udpLength and 0xFFFF)
 
         // 4. IPv6 Pseudo-header: Next Header (32-bit: 0x0000 + 17)
-        sum += 17L
+        sum += UDP_PROTOCOL_NUMBER.toLong()
 
         // 5. UDP Header & Data (checksum field at udpOffset + 6..7 is treated as 0)
         i = udpOffset
@@ -384,8 +437,8 @@ object DnsPacketEngine {
             sum = (sum and 0xFFFFL) + (sum ushr 16)
         }
 
-        var cksum = (sum.toInt().inv() and 0xFFFF)
-        if (cksum == 0) cksum = 0xFFFF // RFC 2460: Zero checksum transmitted as 0xFFFF
-        return cksum.toShort()
+        var checksum = (sum.toInt().inv() and 0xFFFF)
+        if (checksum == 0) checksum = 0xFFFF // RFC 2460: Zero checksum transmitted as 0xFFFF
+        return checksum.toShort()
     }
 }

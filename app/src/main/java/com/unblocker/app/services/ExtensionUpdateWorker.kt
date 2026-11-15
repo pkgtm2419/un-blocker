@@ -12,14 +12,19 @@ import com.unblocker.app.data.repository.ExtensionRepository
 import java.util.concurrent.TimeUnit
 
 /**
- * Background WorkManager worker that periodically checks and updates filter extensions
- * when auto-update is enabled.
+ * WorkManager worker that updates extensions when the current auto-update setting is enabled.
+ *
+ * @param appContext Worker application context.
+ * @param workerParams WorkManager execution parameters.
  */
 class ExtensionUpdateWorker(
     appContext: Context,
     workerParams: WorkerParameters
 ) : CoroutineWorker(appContext, workerParams) {
 
+    /**
+     * Returns success when disabled or updates succeed, otherwise requests a retry.
+     */
     override suspend fun doWork(): Result {
         val repo = ExtensionRepository.getInstance(applicationContext)
         if (!repo.autoUpdateEnabled.value) {
@@ -34,9 +39,20 @@ class ExtensionUpdateWorker(
         }
     }
 
+    /**
+     * Schedules and cancels periodic extension updates.
+     */
     companion object {
+        /**
+         * Stable unique WorkManager name for periodic extension updates.
+         */
         const val WORK_NAME = "ExtensionUpdatePeriodicWorker"
 
+        /**
+         * Schedules daily update work requiring unmetered connectivity and battery-not-low state.
+         *
+         * @param context Context used to obtain WorkManager; actual execution timing is system-managed.
+         */
         fun schedule(context: Context) {
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.UNMETERED)
@@ -54,6 +70,11 @@ class ExtensionUpdateWorker(
             )
         }
 
+        /**
+         * Cancels the unique periodic extension-update work.
+         *
+         * @param context Context used to obtain WorkManager.
+         */
         fun cancel(context: Context) {
             WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
         }

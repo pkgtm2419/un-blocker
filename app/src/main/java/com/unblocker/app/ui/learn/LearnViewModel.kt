@@ -22,12 +22,22 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 import javax.inject.Inject
 
+/**
+ * Launcher application available for a local DNS recording session.
+ *
+ * @property packageName Android package identifier used for lookup and launch.
+ * @property label Display label from the package manager.
+ * @property icon Optional launcher drawable; discovery currently leaves it unset.
+ */
 data class AppItem(
     val packageName: String,
     val label: String,
     val icon: Drawable? = null
 )
 
+/**
+ * Heuristic review grouping inferred from a host name and selected package name.
+ */
 enum class DomainCategory {
     FIRST_PARTY,
     CDN_INFRA,
@@ -35,12 +45,23 @@ enum class DomainCategory {
     OTHER
 }
 
+/**
+ * User-selected override to apply after a DNS recording session.
+ */
 enum class ReviewAction {
     ALLOW,
     BLOCK,
     KEEP_DEFAULT
 }
 
+/**
+ * Observed host and proposed rule action for human review.
+ *
+ * @property domain Readable host recorded during the session.
+ * @property count Number of observations reported by the session.
+ * @property category Heuristic display grouping, not a verified ownership classification.
+ * @property action Requested rule action; keeping the default leaves existing policy untouched.
+ */
 data class ReviewedDomain(
     val domain: String,
     val count: Int,
@@ -48,7 +69,18 @@ data class ReviewedDomain(
     val action: ReviewAction = ReviewAction.KEEP_DEFAULT
 )
 
+/**
+ * Screen states for app selection, transient DNS recording, and human rule review.
+ */
 sealed interface LearnUiState {
+    /**
+     * App discovery and search state.
+     *
+     * @property installedApps Complete discovered launcher-app list.
+     * @property filteredApps Apps matching the current search.
+     * @property query Current app-label or package-name search text.
+     * @property isLoading Whether launcher app discovery is in progress.
+     */
     data class SelectingApp(
         val installedApps: List<AppItem>,
         val filteredApps: List<AppItem>,
@@ -56,12 +88,26 @@ sealed interface LearnUiState {
         val isLoading: Boolean = false
     ) : LearnUiState
 
+    /**
+     * Active local recording presentation.
+     *
+     * @property app Application selected for the session.
+     * @property elapsedSeconds Number of one-second timer updates since recording started.
+     * @property recordedDomains Current readable domain observations reported by the session.
+     */
     data class Recording(
         val app: AppItem,
         val elapsedSeconds: Int,
         val recordedDomains: List<SessionDomain>
     ) : LearnUiState
 
+    /**
+     * Recorded domains and proposed override actions awaiting review.
+     *
+     * @property app Application associated with the captured observations.
+     * @property domains Recorded hosts and their current proposed actions.
+     * @property appliedSuccess Whether rule application finished iterating; individual results are not checked here.
+     */
     data class Reviewing(
         val app: AppItem,
         val domains: List<ReviewedDomain>,
@@ -69,6 +115,12 @@ sealed interface LearnUiState {
     ) : LearnUiState
 }
 
+/**
+ * Owns launcher-app discovery, a local recording session, and the resulting rule-review state.
+ *
+ * @param application Application providing package metadata.
+ * @param userRuleGateway Destination for reviewed exact and whole-site overrides.
+ */
 @HiltViewModel
 class LearnViewModel @Inject constructor(
     application: Application,
@@ -79,6 +131,9 @@ class LearnViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<LearnUiState>(
         LearnUiState.SelectingApp(emptyList(), emptyList(), isLoading = true)
     )
+    /**
+     * Current app-selection, recording, or review state exposed as a read-only flow.
+     */
     val uiState: StateFlow<LearnUiState> = _uiState.asStateFlow()
 
     private var timerJob: Job? = null
@@ -88,23 +143,26 @@ class LearnViewModel @Inject constructor(
         loadInstalledLauncherApps()
     }
 
+    /**
+     * Asynchronously discovers launcher apps, excluding this app, and publishes a sorted selection list.
+     */
     fun loadInstalledLauncherApps() {
         viewModelScope.launch(Dispatchers.IO) {
-            val pm = getApplication<Application>().packageManager
+            val packageManager = getApplication<Application>().packageManager
             val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
             val resolveInfos = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                pm.queryIntentActivities(intent, PackageManager.ResolveInfoFlags.of(0))
+                packageManager.queryIntentActivities(intent, PackageManager.ResolveInfoFlags.of(0))
             } else {
                 @Suppress("DEPRECATION")
-                pm.queryIntentActivities(intent, 0)
+                packageManager.queryIntentActivities(intent, 0)
             }
 
-            val appList = resolveInfos.mapNotNull { ri ->
-                val pkg = ri.activityInfo?.packageName ?: return@mapNotNull null
+            val appList = resolveInfos.mapNotNull { resolveInfo ->
+                val packageName = resolveInfo.activityInfo?.packageName ?: return@mapNotNull null
                 // Don't include self
-                if (pkg == getApplication<Application>().packageName) return@mapNotNull null
-                val label = ri.loadLabel(pm).toString()
-                AppItem(packageName = pkg, label = label)
+                if (packageName == getApplication<Application>().packageName) return@mapNotNull null
+                val label = resolveInfo.loadLabel(packageManager).toString()
+                AppItem(packageName = packageName, label = label)
             }.distinctBy { it.packageName }.sortedBy { it.label.lowercase(Locale.ROOT) }
 
             allApps = appList
@@ -116,6 +174,11 @@ class LearnViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Publishes app selection filtered by case-insensitive label or package-name matching.
+     *
+     * @param query Search text; blank input shows all discovered apps.
+     */
     fun searchApps(query: String) {
         val filtered = if (query.isBlank()) {
             allApps
@@ -127,14 +190,19 @@ class LearnViewModel @Inject constructor(
         _uiState.value = LearnUiState.SelectingApp(allApps, filtered, query, isLoading = false)
     }
 
+    /**
+     * Starts a session for the selected package and updates its presentation once per second.
+     *
+     * @param app Selected launcher app; package lookup supplies the target UID or minus one on failure.
+     */
     fun startRecording(app: AppItem) {
-        val pm = getApplication<Application>().packageManager
+        val packageManager = getApplication<Application>().packageManager
         val uid = runCatching {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                pm.getApplicationInfo(app.packageName, PackageManager.ApplicationInfoFlags.of(0)).uid
+                packageManager.getApplicationInfo(app.packageName, PackageManager.ApplicationInfoFlags.of(0)).uid
             } else {
                 @Suppress("DEPRECATION")
-                pm.getApplicationInfo(app.packageName, 0).uid
+                packageManager.getApplicationInfo(app.packageName, 0).uid
             }
         }.getOrDefault(-1)
 
@@ -157,6 +225,9 @@ class LearnViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Stops the current session and builds heuristic review actions for its recorded hosts.
+     */
     fun stopRecording() {
         timerJob?.cancel()
         val current = _uiState.value
@@ -186,6 +257,12 @@ class LearnViewModel @Inject constructor(
         _uiState.value = LearnUiState.Reviewing(app, reviewed)
     }
 
+    /**
+     * Changes the proposed action for a host while in the review state.
+     *
+     * @param domain Recorded host whose proposed action should change.
+     * @param action Action to apply when review is submitted.
+     */
     fun setDomainAction(domain: String, action: ReviewAction) {
         val current = _uiState.value
         if (current is LearnUiState.Reviewing) {
@@ -196,6 +273,12 @@ class LearnViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Asynchronously submits reviewed allow actions as whole-site rules and blocks as exact rules.
+     *
+     * Keep-default entries are skipped. The completion flag is set after submission without checking
+     * individual gateway results.
+     */
     fun applyRules() {
         val current = _uiState.value
         if (current is LearnUiState.Reviewing) {
@@ -218,6 +301,9 @@ class LearnViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Stops recording, cancels timer updates, and returns to the complete app-selection list.
+     */
     fun cancelSession() {
         sessionManager.stopSession()
         timerJob?.cancel()
@@ -237,8 +323,8 @@ class LearnViewModel @Inject constructor(
         }
 
         // 2. Check First Party from package name segments
-        val pkgSegments = targetPackage.split('.').filter { it.length > 2 && it !in setOf("com", "org", "net", "app", "android") }
-        if (pkgSegments.any { lower.contains(it) }) {
+        val packageSegments = targetPackage.split('.').filter { it.length > 2 && it !in setOf("com", "org", "net", "app", "android") }
+        if (packageSegments.any { lower.contains(it) }) {
             return DomainCategory.FIRST_PARTY
         }
 

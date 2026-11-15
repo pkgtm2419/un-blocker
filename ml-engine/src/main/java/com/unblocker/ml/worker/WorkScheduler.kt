@@ -19,27 +19,22 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Encapsulates the scheduling logic for the ML batch worker.
+ * Enqueues periodic and backlog analysis through WorkManager.
  *
- * Configures the **1:00 AM** periodic schedule with `RequiresCharging` and `RequiresDeviceIdle`
- * constraints to guarantee zero impact on user battery life.
+ * Requests require a non-low battery and no network, with neither charging nor idle constraints.
+ * Execution times remain subject to WorkManager and Android scheduling.
  *
- * Also provides a throttled daytime fallback trigger ([scheduleBacklogScan]) if the
- * log backlog exceeds a threshold (e.g., if the user never charged the device overnight).
+ * @param context Application context used to obtain WorkManager.
  */
 @Singleton
 class WorkScheduler @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     /**
-     * Schedules the nightly ML batch worker.
+     * Keeps an existing periodic request or enqueues a new one repeating every 24 hours.
      *
-     * Calculates the initial delay so the first execution occurs at **1:00 AM**.
-     * Subsequent executions happen every 24 hours.
-     *
-     * Constraints:
-     * - `setRequiresCharging(true)`: Don't drain the battery.
-     * - `setRequiresDeviceIdle(true)`: Don't run while the user is actively using the phone.
+     * The initial delay targets the next local 1 AM; WorkManager does not guarantee that exact time.
+     * The request requires battery-not-low and has no charging, idle, or network requirement.
      */
     fun scheduleNightlyBatch() {
         val now = ZonedDateTime.now(ZoneId.systemDefault())
@@ -70,16 +65,10 @@ class WorkScheduler @Inject constructor(
     }
 
     /**
-     * Enqueues a one-off, throttled daytime scan.
+     * Appends a one-time, battery-not-low backlog request with the smaller batch input flag.
      *
-     * Called by the VPN engine when [com.unblocker.data.repository.LogRepository.countUnanalyzedLogs]
-     * exceeds [BatchDomainAnalysisWorker.BACKLOG_THRESHOLD].
-     *
-     * Passes `KEY_IS_BACKLOG_RUN = true` to the worker, which limits the batch size
-     * (e.g. 500 domains) to prevent thermal/UI jank during daytime use.
-     *
-     * Constraints:
-     * - `setRequiresBatteryNotLow(true)`: Don't run if the battery is critical.
+     * APPEND_OR_REPLACE preserves WorkManager chaining semantics; repeated calls can queue multiple
+     * scans. The caller decides whether the backlog warrants scheduling.
      */
     fun scheduleBacklogScan() {
         val constraints = Constraints.Builder()
@@ -96,8 +85,7 @@ class WorkScheduler @Inject constructor(
             .setInputData(inputData)
             .build()
 
-        // Use APPEND_OR_REPLACE so if a backlog scan is already running/queued, we don't
-        // pile up multiple scans.
+        // Append to the existing chain, replacing failed or cancelled prerequisites as WorkManager specifies.
         WorkManager.getInstance(context).enqueueUniqueWork(
             BatchDomainAnalysisWorker.WORK_NAME_BACKLOG,
             ExistingWorkPolicy.APPEND_OR_REPLACE,

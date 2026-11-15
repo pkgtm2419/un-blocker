@@ -13,9 +13,12 @@ import androidx.compose.ui.graphics.Path
 import com.unblocker.app.ui.theme.LocalVpnStateColors
 
 /**
- * Haikei-style mathematically generated background waves and organic mesh curves.
- * Creates an atmospheric, layered visual canvas that reacts dynamically to VPN state.
- * Uses drawWithCache to completely avoid path and brush allocations on every frame.
+ * Draws layered background waves and a halo using the current VPN-state palette.
+ *
+ * Paths and brushes are cached until drawing size or observed palette inputs invalidate them.
+ *
+ * @param modifier Modifier for the full-size background container.
+ * @param content Foreground content drawn above the decorative background.
  */
 @Composable
 fun HaikeiAtmosphericBackground(

@@ -5,7 +5,13 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * Regression coverage for tunnel DNS config.
+ */
 class TunnelDnsConfigTest {
+    /**
+     * Verifies that asserts exact four endpoint strings.
+     */
     @Test
     fun assertsExactFourEndpointStrings() {
         assertEquals("10.111.222.1", TunnelDnsConfig.IPV4_CLIENT)
@@ -14,6 +20,9 @@ class TunnelDnsConfigTest {
         assertEquals("fd00:1:fd00:1:fd00:1:fd00:2", TunnelDnsConfig.IPV6_DNS)
     }
 
+    /**
+     * Verifies that tunnel resolver addresses contains expected resolvers.
+     */
     @Test
     fun tunnelResolverAddressesContainsExpectedResolvers() {
         val addrs = TunnelDnsConfig.tunnelResolverAddresses().map { it.hostAddress }
@@ -21,6 +30,9 @@ class TunnelDnsConfigTest {
         assertTrue(addrs.any { it?.contains("fd00:1:fd00:1:fd00:1:fd00:2") == true })
     }
 
+    /**
+     * Verifies that DNS resolver policy sanitize excludes tunnel and loopback.
+     */
     @Test
     fun dnsResolverPolicySanitizeExcludesTunnelAndLoopback() {
         val inputs = listOf(

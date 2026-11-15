@@ -3,7 +3,13 @@ package com.unblocker.app.logic.dns
 import com.unblocker.app.services.ValidatedDnsResponse
 import java.util.Collections
 
-/** Bounded volatile cache; current decisions are evaluated before delivery. */
+/**
+ * Bounded volatile DNS cache; callers must evaluate current policy before delivery.
+ *
+ * @param maxEntries Maximum retained records; must be positive.
+ * @param nowMillis Monotonic clock in milliseconds used for expiry and TTL aging.
+ * @throws IllegalArgumentException If maxEntries is not positive.
+ */
 class DnsCache(
     private val maxEntries:Int=1000,
     private val nowMillis:()->Long={System.nanoTime()/1_000_000}
@@ -13,10 +19,26 @@ class DnsCache(
     private val cache=LinkedHashMap<CacheKey,Record>(16,.75f,true)
     init {require(maxEntries>0)}
 
+    /**
+     * Looks up a compatibility cache entry and copies its bytes with the requested transaction ID.
+     *
+     * @param domain Cache hostname key, used without normalization.
+     * @param queryType DNS QTYPE wire bits.
+     * @param transactionId Client transaction-ID wire bits.
+     * @param queryClass DNS QCLASS wire bits.
+     * @param isIpv6 Whether the client transport uses IPv6.
+     * @return Copied payload, or null when missing or expired.
+     */
     @Synchronized fun get(domain:String,queryType:Short,transactionId:Short,
         queryClass:Short=1,isIpv6:Boolean=false):ByteArray? =
         record(CacheKey(domain,queryType,queryClass,isIpv6))?.let { payload(it,transactionId) }
 
+    /**
+     * Retrieves cached metadata and copies bytes with aged TTLs and the client transaction ID.
+     *
+     * @param query Query including cache variant and cache-permission state.
+     * @return Cached validated response, or null when absent, expired, disabled or lacking metadata.
+     */
     @Synchronized internal fun getValidated(query:DnsQuery):ValidatedDnsResponse? {
         if(!query.cacheAllowed) return null
         val record=record(CacheKey(query.domain,query.queryType,query.queryClass,query.isIpv6,query.cacheVariant)) ?: return null
@@ -26,10 +48,26 @@ class DnsCache(
             transactionId=query.transactionId.toInt() and 0xffff,
             minPositiveTtlSeconds=metadata.minPositiveTtlSeconds?.let {(it-elapsed).coerceAtLeast(0)}))
     }
+    /**
+     * Copies a compatibility payload into the cache when its TTL is positive.
+     *
+     * @param domain Hostname cache key, used without normalization.
+     * @param queryType DNS QTYPE wire bits.
+     * @param dnsPayload DNS body to copy; this overload does not validate it.
+     * @param ttlSeconds Lifetime in seconds, capped to 600 seconds.
+     * @param queryClass DNS QCLASS wire bits.
+     * @param isIpv6 Whether the client transport uses IPv6.
+     */
     @Synchronized fun put(domain:String,queryType:Short,dnsPayload:ByteArray,ttlSeconds:Long,
         queryClass:Short=1,isIpv6:Boolean=false) {
         insert(CacheKey(domain,queryType,queryClass,isIpv6),dnsPayload,ttlSeconds,null)
     }
+    /**
+     * Caches a positive, complete matching response when metadata supplies a positive TTL.
+     *
+     * @param query Query defining identity, variant and caching permission.
+     * @param response Previously validated upstream bytes and metadata, copied for cache ownership.
+     */
     @Synchronized internal fun putValidated(query:DnsQuery,response:ValidatedDnsResponse) {
         val m=response.metadata
         if(!query.cacheAllowed || m.truncated || m.rcode!=0 || m.questionName!=query.domain ||
@@ -71,5 +109,8 @@ class DnsCache(
         }
         return b
     }
+    /**
+     * Removes all retained DNS records.
+     */
     @Synchronized fun clear()=cache.clear()
 }

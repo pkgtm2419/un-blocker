@@ -6,10 +6,19 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /**
- * Persists aggregate statistics per unique domain.
- * Exactly one row per domain, meeting the WP-3 specification.
+ * Local query aggregates keyed by the readable domain.
  *
- * Table: `domain_stats`
+ * App QueryLogSink periodically prunes aggregates older than 30 days and beyond 10,000 domains.
+ * These maintenance targets can be exceeded between runs.
+ *
+ * @property domain Readable domain primary key.
+ * @property callCount Total recorded queries.
+ * @property blockedCount Recorded blocked queries.
+ * @property allowedCount Recorded allowed queries.
+ * @property firstSeen First observation time in milliseconds since the Unix epoch.
+ * @property lastSeen Latest supplied observation time in milliseconds since the Unix epoch.
+ * @property lastDecision Latest decision code: 0 for allowed or 1 for blocked.
+ * @property lastReason Latest app-defined reason code.
  */
 @Entity(
     tableName = "domain_stats",
@@ -38,7 +47,6 @@ data class DomainStatEntity(
     @ColumnInfo(name = "last_seen")
     val lastSeen: Long,
 
-    /** 0 for ALLOWED, 1 for BLOCKED */
     @ColumnInfo(name = "last_decision")
     val lastDecision: Int,
 

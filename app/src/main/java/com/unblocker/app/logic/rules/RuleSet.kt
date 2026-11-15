@@ -9,9 +9,13 @@ import java.nio.ByteOrder
 import java.nio.channels.FileChannel
 
 /**
- * Immutable, memory-efficient rule set matching engine backed by compact UBR2 binary data.
- * Employs reversed-label binary search to provide prefix lookup over suffix domains.
- * Allocates at most one reversed domain buffer per match invocation.
+ * Binary UBR2 rule matcher using reversed labels and allow-before-block precedence.
+ *
+ * The backing buffer is shared with its creator and must not be mutated after publication.
+ *
+ * @param buffer Little-endian binary rule data.
+ * @property ruleCount Number of indexed rule entries.
+ * @param blobOffset Byte offset of the encoded entry blob.
  */
 class RuleSet private constructor(
     private val buffer: ByteBuffer,
@@ -19,11 +23,10 @@ class RuleSet private constructor(
     private val blobOffset: Int
 ) {
     /**
-     * Matches domain against rules using semantics identical to DnsRuleEngine:
-     * - ALLOW rules are checked before BLOCK rules.
-     * - EXACT matches only the exact full domain.
-     * - SUFFIX matches the full domain or any parent domain.
-     * - WILDCARD matches strict parent domains only (never the domain itself).
+     * Matches exact, suffix and strict-subdomain rules, checking allow rules first.
+     *
+     * @param raw Hostname to normalize and search.
+     * @return Matching rule, or null for invalid names, empty sets or no match.
      */
     fun match(raw: String): DnsRule? {
         val domain = DomainName.normalize(raw) ?: return null
@@ -155,7 +158,17 @@ class RuleSet private constructor(
         return keyLen.compareTo(targetLen)
     }
 
+    /**
+     * Creates rule matchers from binary data or an empty encoded set.
+     */
     companion object {
+        /**
+         * Reads the UBR2 header and retains a duplicate sharing the supplied storage.
+         *
+         * @param buffer Encoded UBR2 bytes with header at absolute offset zero.
+         * @return Matcher over the shared data.
+         * @throws IllegalArgumentException If header, magic, version, count or checked size is invalid.
+         */
         fun fromByteBuffer(buffer: ByteBuffer): RuleSet {
             val buf = buffer.duplicate().order(ByteOrder.LITTLE_ENDIAN)
             require(buf.remaining() >= 14) { "Invalid UBR2 header length" }
@@ -174,9 +187,19 @@ class RuleSet private constructor(
             return RuleSet(buf, ruleCount, headerAndOffsetsLen)
         }
 
+        /**
+         * Wraps an encoded UBR2 array without copying it.
+         *
+         * @param bytes Binary header, offset index and entry blob.
+         * @return Matcher sharing the supplied array.
+         * @throws IllegalArgumentException If the checked UBR2 header fields are invalid.
+         */
         fun fromByteArray(bytes: ByteArray): RuleSet =
             fromByteBuffer(ByteBuffer.wrap(bytes))
 
+        /**
+         * Returns a matcher over an empty valid UBR2 header.
+         */
         fun empty(): RuleSet {
             val emptyHeader = ByteBuffer.allocate(14).order(ByteOrder.LITTLE_ENDIAN).apply {
                 put('U'.code.toByte())
@@ -194,7 +217,12 @@ class RuleSet private constructor(
 }
 
 /**
- * Builds an immutable [RuleSet] from this [CompiledRuleSet].
+ * Encodes this collection as sorted UBR2 data and returns a matcher over the new buffer.
+ *
+ * Source IDs are encoded in 16 bits; non-AD categories use the adult-content encoding.
+ *
+ * @return Matcher owning the newly allocated encoded buffer.
+ * @throws IllegalArgumentException If a reversed hostname key exceeds 255 ASCII bytes.
  */
 fun CompiledRuleSet.toRuleSet(): RuleSet {
     if (rules.isEmpty()) return RuleSet.empty()
@@ -256,22 +284,47 @@ fun CompiledRuleSet.toRuleSet(): RuleSet {
 }
 
 /**
- * Process-wide thread-safe lazy holder for the compiled [RuleSet].
- * Shared between UnblockerVpnService and HealthCheckService.
+ * Most recent asset-loading outcome reported by RuleSetHolder.
  */
 sealed class RuleSetStatus {
+    /**
+     * Successfully loaded rules.
+     *
+     * @property count Number of rules in the loaded set.
+     * @property source Asset format identifier.
+     */
     data class Loaded(val count: Int, val source: String) : RuleSetStatus()
+    /**
+     * Embedded seed rules selected after a loading failure.
+     *
+     * @property reason Loading stage or error category that triggered fallback.
+     */
     data class Fallback(val reason: String) : RuleSetStatus()
+    /**
+     * Initial state before any asset-loading result has been published.
+     */
     object Failed : RuleSetStatus()
 }
 
+/**
+ * Process-shared lazy rule holder; successful loads are cached, while fallback loads may be retried.
+ */
 object RuleSetHolder {
     @Volatile
     private var cached: RuleSet? = null
     
     private val _status = kotlinx.coroutines.flow.MutableStateFlow<RuleSetStatus>(RuleSetStatus.Failed)
+    /**
+     * Most recent asset-load result; cache overrides for tests do not update this flow.
+     */
     val status: kotlinx.coroutines.flow.StateFlow<RuleSetStatus> = _status
 
+    /**
+     * Returns cached rules or loads assets, caching only a non-fallback result.
+     *
+     * @param context Application asset context.
+     * @return Loaded rule matcher or embedded fallback seed matcher.
+     */
     fun get(context: Context): RuleSet {
         val current = cached
         if (current != null) return current
@@ -284,10 +337,18 @@ object RuleSetHolder {
         }
     }
 
+    /**
+     * Overrides the cached matcher without changing load status.
+     *
+     * @param ruleSet Replacement matcher for tests.
+     */
     fun setForTesting(ruleSet: RuleSet) {
         synchronized(this) { cached = ruleSet }
     }
 
+    /**
+     * Drops the cached matcher without changing load status.
+     */
     fun clearForTesting() {
         synchronized(this) { cached = null }
     }
@@ -304,6 +365,12 @@ object RuleSetHolder {
         return loadWithOpener { name -> context.assets.open(name) }
     }
     
+    /**
+     * Loads the manifest and binary asset, checking SHA-256 when the manifest provides one.
+     *
+     * @param openAsset Opens a named asset stream; each opened stream is closed by this method.
+     * @return Loaded matcher, or embedded seeds after handled manifest, I/O, format or runtime failure.
+     */
     fun loadWithOpener(openAsset: (String) -> java.io.InputStream): RuleSet {
         var expectedSha256 = ""
         try {

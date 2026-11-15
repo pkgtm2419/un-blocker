@@ -35,12 +35,12 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 
 /**
- * Reusable motion primitives for tactile physics-based micro-interactions,
- * bouncy button presses, breathing atmospheric pulses, and smooth transitions.
- */
-
-/**
- * Modifier that applies an authentic spring bounce to any composable on press.
+ * Adds a spring press scale, optional press haptic, and click handling to this modifier.
+ *
+ * @param scaleDown Target scale while pressed, relative to the original size.
+ * @param hapticFeedbackType Haptic emitted on press, or null to omit feedback.
+ * @param onClick Action invoked when the click completes.
+ * @return Modifier with press scaling and click behavior.
  */
 fun Modifier.bounceClick(
     scaleDown: Float = 0.94f,
@@ -83,8 +83,13 @@ fun Modifier.bounceClick(
 }
 
 /**
- * Modifier creating an organic breathing pulse.
- * If disabled or reduced motion is preferred, immediately returns 1.0f without running transitions.
+ * Produces a looping decorative scale unless disabled or reduced motion was requested.
+ *
+ * @param enabled Whether to create the loop.
+ * @param minScale Lower relative scale endpoint.
+ * @param maxScale Upper relative scale endpoint.
+ * @param durationMillis Duration in milliseconds for each direction of the pulse.
+ * @return Animated scale, or one when the loop is disabled.
  */
 @Composable
 fun rememberBreathingPulse(
@@ -117,8 +122,13 @@ fun rememberBreathingPulse(
 }
 
 /**
- * Shimmer effect brush primitive for active or loading states.
- * Respects reduced motion settings and enabled flag to conserve device resources.
+ * Creates a moving diagonal highlight, or a stationary base brush when motion is disabled.
+ *
+ * @param enabled Whether the shimmer may animate.
+ * @param baseColor Background color of the shimmer.
+ * @param highlightColor Moving highlight color.
+ * @param durationMillis Duration of one shimmer sweep in milliseconds.
+ * @return Brush using the current animation position or the base color.
  */
 @Composable
 fun rememberShimmerBrush(
@@ -156,7 +166,13 @@ fun rememberShimmerBrush(
 }
 
 /**
- * Expressive container with slide and fade transitions.
+ * Shows or hides content with the supplied Compose visibility transitions.
+ *
+ * @param visible Whether content should be visible.
+ * @param modifier Modifier applied to the animated container.
+ * @param enter Transition used when content appears.
+ * @param exit Transition used when content disappears.
+ * @param content Content rendered in the animated visibility scope.
  */
 @Composable
 fun FluidVisibility(

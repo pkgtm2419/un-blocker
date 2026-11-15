@@ -13,17 +13,30 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.util.concurrent.TimeUnit
 
+/**
+ * Coordinates VPN consent checks, service commands, default settings and health work.
+ *
+ * @param context Context reduced to its application context for retained operations.
+ */
 class QuickStartManager(context: Context) {
 
     private val appContext = context.applicationContext
     private val preferences = FilteringPreferences.getInstance(appContext)
 
+    /**
+     * Shared VPN lifecycle status emitted by the service session.
+     */
     val status: StateFlow<ServiceStatus> = UnblockerVpnService.session.status
 
     init {
         loadDefaultConfiguration()
     }
 
+    /**
+     * Loads asset defaults and applies them only when preferences still require initialization.
+     *
+     * @return Asset configuration, or embedded defaults after a handled loading failure.
+     */
     fun loadDefaultConfiguration(): DefaultConfig {
         return try {
             appContext.assets.open("default_config.json").use { inputStream ->
@@ -49,15 +62,14 @@ class QuickStartManager(context: Context) {
     }
 
     /**
-     * Checks if Android VPN permission has been prepared/granted.
-     * Returns true if granted (prepare returns null).
+     * Returns whether Android VPN preparation requires no additional consent activity.
      */
     fun hasVpnPermission(): Boolean {
         return VpnService.prepare(appContext) == null
     }
 
     /**
-     * Checks if notification permission is granted on Android 13+ (API 33+).
+     * Returns whether notification permission is granted, or true before Android 13.
      */
     fun hasNotificationPermission(): Boolean {
         return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
@@ -71,7 +83,10 @@ class QuickStartManager(context: Context) {
     }
 
     /**
-     * Start all blocker services with default settings.
+     * Requests VPN startup after consent, enabling protection and advertising filtering.
+     *
+     * @param onPermissionRequired Callback invoked when the caller must obtain VPN consent.
+     * Startup exceptions publish session failure; health scheduling failure is ignored.
      */
     fun startBlockingServices(onPermissionRequired: () -> Unit) {
         if (!hasVpnPermission()) {
@@ -93,7 +108,7 @@ class QuickStartManager(context: Context) {
     }
 
     /**
-     * Stop all blocker services.
+     * Requests VPN teardown and cancels periodic health work; service-command failure marks the session failed.
      */
     fun stopBlockingServices() {
         try {
@@ -105,6 +120,11 @@ class QuickStartManager(context: Context) {
         }
     }
 
+    /**
+     * Updates unique health work using the configured interval, clamped to the six-hour minimum.
+     *
+     * Cancels existing health work when stored protection intent is disabled.
+     */
     fun scheduleHealthCheckWorker() {
         if (!HealthCheckPolicy.shouldRun(preferences.protectionEnabled.value)) {
             cancelHealthCheckWorker()
@@ -128,11 +148,20 @@ class QuickStartManager(context: Context) {
         WorkManager.getInstance(appContext).cancelUniqueWork(HEALTH_WORK_NAME)
     }
 
+    /**
+     * Process singleton for VPN startup coordination.
+     */
     companion object {
         private const val HEALTH_WORK_NAME = "unblocker_health_check_work"
         @Volatile
         private var INSTANCE: QuickStartManager? = null
 
+        /**
+         * Returns the process singleton, initializing it with the application context if needed.
+         *
+         * @param context Context supplying the application context.
+         * @return Shared quick-start coordinator.
+         */
         fun getInstance(context: Context): QuickStartManager {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: QuickStartManager(context.applicationContext).also { INSTANCE = it }

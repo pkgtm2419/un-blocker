@@ -37,9 +37,10 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.RejectedExecutionException
 
 /**
- * On-device local VPN service.
- * Intercepts DNS queries on port 53, evaluates with ContentFilterEngine locally,
- * and drops unwanted ad/tracker and adult traffic without logging any user browsing history.
+ * Foreground DNS-only VPN service for synthetic resolver endpoints.
+ *
+ * Evaluates intercepted standard DNS locally, forwards allowed queries to Android-configured resolvers,
+ * and submits domain decisions to the separately controlled local query-log sink.
  */
 class UnblockerVpnService : VpnService() {
 
@@ -98,6 +99,9 @@ class UnblockerVpnService : VpnService() {
 
     private lateinit var preferences: FilteringPreferences
 
+    /**
+     * Initializes preferences and observes usable non-VPN networks for resolver and Private DNS state.
+     */
     override fun onCreate() {
         super.onCreate()
         preferences = FilteringPreferences.getInstance(this)
@@ -120,6 +124,14 @@ class UnblockerVpnService : VpnService() {
         }
     }
 
+    /**
+     * Handles start, stop, five-minute pause and resume service commands.
+     *
+     * @param intent Requested action, or null for a system restart.
+     * @param flags Android service-start flags.
+     * @param startId Android identifier for this start request.
+     * @return START_NOT_STICKY for explicit stop, otherwise START_STICKY.
+     */
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val action = intent?.action
         if (ACTION_STOP == action) {
@@ -193,7 +205,7 @@ class UnblockerVpnService : VpnService() {
                 } catch (_: Exception) {}
             }
 
-            // Intercept IPv6 DNS to eliminate cellular and Wi-Fi dual-stack bypass
+            // Add the synthetic IPv6 resolver route when the platform supports it.
             try {
                 builder.addAddress(TunnelDnsConfig.IPV6_CLIENT, 128)
                 builder.addDnsServer(TunnelDnsConfig.IPV6_DNS)
@@ -621,6 +633,11 @@ class UnblockerVpnService : VpnService() {
         stopForeground(STOP_FOREGROUND_REMOVE)
     }
 
+    /**
+     * Clears cached DNS responses at the existing critical/moderate trim thresholds.
+     *
+     * @param level Android memory-trim level.
+     */
     @Suppress("DEPRECATION")
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
@@ -629,11 +646,17 @@ class UnblockerVpnService : VpnService() {
         }
     }
 
+    /**
+     * Clears cached DNS responses after the Android low-memory callback.
+     */
     override fun onLowMemory() {
         super.onLowMemory()
         dnsCache.clear()
     }
 
+    /**
+     * Closes the tunnel, unregisters network observation and clears resolver topology.
+     */
     override fun onDestroy() {
         stopVpn()
         if (networkCallbackRegistered) {
@@ -644,6 +667,9 @@ class UnblockerVpnService : VpnService() {
         super.onDestroy()
     }
 
+    /**
+     * Clears protection intent and requests teardown after Android revokes VPN consent.
+     */
     override fun onRevoke() {
         try { runCatching { preferences.setProtectionEnabled(false) } } finally {
             stopVpn(publishStopped = false)
@@ -651,28 +677,63 @@ class UnblockerVpnService : VpnService() {
         }
     }
 
+    /**
+     * Stable service actions and shared VPN lifecycle/coverage state.
+     */
     companion object {
+        /**
+         * Intent action requesting tunnel startup.
+         */
         const val ACTION_START = "com.unblocker.app.START_VPN"
+        /**
+         * Intent action requesting tunnel teardown and clearing protection intent.
+         */
         const val ACTION_STOP = "com.unblocker.app.STOP_VPN"
+        /**
+         * Intent action requesting a five-minute filtering pause.
+         */
         const val ACTION_PAUSE_PROTECTION = "com.unblocker.app.PAUSE_PROTECTION"
+        /**
+         * Intent action clearing the filtering pause.
+         */
         const val ACTION_RESUME_PROTECTION = "com.unblocker.app.RESUME_PROTECTION"
         private const val CHANNEL_ID = "unblocker_vpn_channel"
         private const val NOTIFICATION_ID = 1001
 
         // Shared lock serializes establish/teardown even across successive Service instances.
         private val lifecycleLock = Any()
+        /**
+         * Shared generation-aware VPN lifecycle state.
+         */
         val session = VpnSessionState { updateCoverage() }
+        /**
+         * Whether the shared session has an established active tunnel.
+         */
         val isServiceActive: StateFlow<Boolean> = session.active
 
         private val _isPrivateDnsActive = MutableStateFlow(false)
+        /**
+         * Whether the most recently inspected Android link reports active Private DNS.
+         */
         val isPrivateDnsActive: StateFlow<Boolean> = _isPrivateDnsActive.asStateFlow()
 
         private val _privateDnsServerName = MutableStateFlow<String?>(null)
+        /**
+         * Reported Private DNS server hostname, or null when inactive or unnamed.
+         */
         val privateDnsServerName: StateFlow<String?> = _privateDnsServerName.asStateFlow()
 
         private val _coverage = MutableStateFlow(ProtectionCoverage.OFF)
+        /**
+         * Derived standard-system-DNS coverage indicator; does not measure encrypted DNS interception.
+         */
         val coverage: StateFlow<ProtectionCoverage> = _coverage.asStateFlow()
 
+        /**
+         * Recomputes coverage from shared lifecycle and Private DNS state.
+         *
+         * @param hasUsableResolvers Whether configured upstream resolvers are available; defaults to true.
+         */
         fun updateCoverage(hasUsableResolvers: Boolean = true) {
             _coverage.value = ProtectionCoverage.compute(
                 status = session.status.value,
@@ -681,16 +742,34 @@ class UnblockerVpnService : VpnService() {
             )
         }
 
+        /**
+         * Checks whether a named Private DNS server warrants a warning.
+         *
+         * @param active Compatibility input; currently ignored.
+         * @param serverName Reported Private DNS hostname, or null when unnamed.
+         * @return Whether serverName is non-null.
+         */
         fun shouldWarn(active: Boolean, serverName: String?): Boolean {
             return serverName != null
         }
 
+        /**
+         * Publishes reported Private DNS state and recomputes coverage.
+         *
+         * @param active Whether Android reports active Private DNS.
+         * @param serverName Reported provider hostname; discarded when inactive.
+         */
         fun updatePrivateDnsState(active: Boolean, serverName: String?) {
             _isPrivateDnsActive.value = active
             _privateDnsServerName.value = if (active) serverName else null
             updateCoverage()
         }
 
+        /**
+         * Reads Private DNS state on Android 9 or later, otherwise publishes inactive state.
+         *
+         * @param linkProperties Current underlying-network properties, or null to clear reported state.
+         */
         fun updatePrivateDnsState(linkProperties: LinkProperties?) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 val active = linkProperties?.isPrivateDnsActive == true
@@ -701,6 +780,11 @@ class UnblockerVpnService : VpnService() {
             }
         }
 
+        /**
+         * Refreshes shared Private DNS state from the active network on Android 9 or later.
+         *
+         * @param context Context used to obtain Android connectivity state.
+         */
         fun checkPrivateDns(context: Context) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 val cm = context.getSystemService(ConnectivityManager::class.java)
@@ -710,6 +794,14 @@ class UnblockerVpnService : VpnService() {
             }
         }
 
+        /**
+         * Requests service startup; Android VPN consent must already have been obtained.
+         *
+         * @param context Context used to dispatch the service intent.
+         * @param fromBackground Whether to use startForegroundService instead of startService.
+         * @throws IllegalStateException If Android disallows the requested service start.
+         * @throws SecurityException If Android denies the service-start request.
+         */
         fun start(context: Context, fromBackground: Boolean = false) {
             val intent = Intent(context, UnblockerVpnService::class.java).apply {
                 action = ACTION_START
@@ -721,6 +813,11 @@ class UnblockerVpnService : VpnService() {
             }
         }
 
+        /**
+         * Clears protection intent and requests teardown of the current service/session.
+         *
+         * @param context Context used for preferences and service commands.
+         */
         fun stop(context: Context) {
             try { FilteringPreferences.getInstance(context).setProtectionEnabled(false) } finally {
                 val intent = Intent(context, UnblockerVpnService::class.java).apply {

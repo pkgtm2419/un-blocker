@@ -7,8 +7,14 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Test
 
+/**
+ * Regression coverage for vpn state colors.
+ */
 class VpnStateColorsTest {
 
+    /**
+     * Verifies that test vpn state colors data class integrity.
+     */
     @Test
     fun testVpnStateColorsDataClassIntegrity() {
         val colors = VpnStateColors(
@@ -30,6 +36,9 @@ class VpnStateColorsTest {
         assertEquals(AllowedGreen, colors.badgeTextColor)
     }
 
+    /**
+     * Verifies that test status transitions produce distinct semantics.
+     */
     @Test
     fun testStatusTransitionsProduceDistinctSemantics() {
         val runningStatus = ServiceStatus.RUNNING

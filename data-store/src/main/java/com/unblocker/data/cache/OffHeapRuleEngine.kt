@@ -10,30 +10,36 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * High-performance off-heap binary rule engine.
+ * Memory-mapped lookup of a sorted, big-endian signed 64-bit FNV-1a rule index.
  *
- * Evaluates domain queries against a memory-mapped 64-bit FNV-1a binary index (`rules.bin`).
- * Achieves O(log2 N) lookup times (~20 comparisons for 686k rules) with zero JVM heap allocations
- * and zero GC pauses.
+ * A new mapped buffer is published atomically. Hash collisions are not disambiguated against
+ * original domain strings, and the index format contains no separate validation header.
  */
 @Singleton
 class OffHeapRuleEngine @Inject constructor() {
 
+    private companion object {
+        const val HASH_BYTES = 8
+    }
+
     private val bufferRef = AtomicReference<MappedByteBuffer?>(null)
 
     /**
-     * Memory-maps [indexFile] and atomically swaps the reference without lock contention.
-     * If the file does not exist or contains less than 8 bytes, the engine resets to an empty state.
+     * Maps a rule file and replaces the current buffer.
+     *
+     * Missing files, files shorter than one hash, and caught mapping failures clear the current index.
+     *
+     * @param indexFile Sorted big-endian 64-bit hash file; trailing incomplete bytes are not entries.
      */
     fun reloadFromFile(indexFile: File) {
-        if (!indexFile.exists() || indexFile.length() < 8L) {
+        if (!indexFile.exists() || indexFile.length() < HASH_BYTES.toLong()) {
             bufferRef.set(null)
             return
         }
 
         runCatching {
-            FileInputStream(indexFile).use { fis ->
-                val channel = fis.channel
+            FileInputStream(indexFile).use { inputStream ->
+                val channel = inputStream.channel
                 val mapped = channel.map(FileChannel.MapMode.READ_ONLY, 0, indexFile.length()).apply {
                     order(ByteOrder.BIG_ENDIAN)
                 }
@@ -52,19 +58,19 @@ class OffHeapRuleEngine @Inject constructor() {
      */
     fun isHashBlocked(domainHash: Long): Boolean {
         val buffer = bufferRef.get() ?: return false
-        val totalEntries = buffer.capacity() / 8
+        val totalEntries = buffer.capacity() / HASH_BYTES
         if (totalEntries == 0) return false
 
         var low = 0
         var high = totalEntries - 1
 
         while (low <= high) {
-            val mid = (low + high) ushr 1
-            val midVal = buffer.getLong(mid * 8)
-            if (midVal < domainHash) {
-                low = mid + 1
-            } else if (midVal > domainHash) {
-                high = mid - 1
+            val middleIndex = (low + high) ushr 1
+            val middleHash = buffer.getLong(middleIndex * HASH_BYTES)
+            if (middleHash < domainHash) {
+                low = middleIndex + 1
+            } else if (middleHash > domainHash) {
+                high = middleIndex - 1
             } else {
                 return true
             }
@@ -93,11 +99,11 @@ class OffHeapRuleEngine @Inject constructor() {
         if (isHashBlocked(fullHash)) return true
 
         // 2. Walk domain labels from left to right at each dot separator
-        val len = domain.length
-        for (i in 0 until len) {
-            if (domain[i] == '.' && i + 1 < len) {
-                val subHash = RuleCompiler.fnv1a64(domain, i + 1, len)
-                if (isHashBlocked(subHash)) return true
+        val domainLength = domain.length
+        for (i in 0 until domainLength) {
+            if (domain[i] == '.' && i + 1 < domainLength) {
+                val suffixHash = RuleCompiler.fnv1a64(domain, i + 1, domainLength)
+                if (isHashBlocked(suffixHash)) return true
             }
         }
 
@@ -105,15 +111,19 @@ class OffHeapRuleEngine @Inject constructor() {
     }
 
     /**
-     * Returns the total number of unique 64-bit rules currently mapped into memory.
+     * Counts complete hash entries in the mapped buffer.
+     *
+     * @return Number of eight-byte entries, or zero when no index is loaded.
      */
     fun ruleCount(): Int {
         val buffer = bufferRef.get() ?: return 0
-        return buffer.capacity() / 8
+        return buffer.capacity() / HASH_BYTES
     }
 
     /**
-     * Returns true if an off-heap index is currently mapped and ready for lookups.
+     * Reports whether a buffer is mapped.
+     *
+     * @return True when a buffer is available; this does not validate its sorting or contents.
      */
     fun isLoaded(): Boolean = bufferRef.get() != null
 }

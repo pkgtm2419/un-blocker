@@ -3,8 +3,13 @@ package com.unblocker.app.services
 import com.unblocker.app.logic.dns.DnsQuery
 
 /**
- * Key identifying identical in-flight DNS resolution requests.
- * Distinguishes by domain name, query type, query class, IPv6 transport mode, and resolver epoch.
+ * Identity of one in-flight DNS resolution shared by matching requests.
+ *
+ * @property domain Canonical queried hostname.
+ * @property queryType DNS QTYPE wire bits.
+ * @property queryClass DNS QCLASS wire bits.
+ * @property isIpv6 Whether client transport uses IPv6.
+ * @property resolverEpoch Resolver topology generation at submission.
  */
 internal data class CoalesceKey(
     val domain: String,
@@ -15,12 +20,9 @@ internal data class CoalesceKey(
 )
 
 /**
- * Coalesces duplicate in-flight DNS forwarding queries into a single upstream resolution.
+ * Shares a resolution leader with a bounded number of duplicate waiting queries.
  *
- * Under bursty client traffic (e.g. parallel browser connections or app pre-connects requesting
- * the same domain concurrently), this eliminates redundant socket I/O, prevents executor queue
- * saturation, reduces mobile radio transmission, and returns responses simultaneously to all
- * waiting queries.
+ * @param maxWaitersPerKey Maximum duplicate waiters in addition to the leader.
  */
 internal class DnsRequestCoalescer(
     private val maxWaitersPerKey: Int = 32
@@ -32,17 +34,30 @@ internal class DnsRequestCoalescer(
     private val inFlight = HashMap<CoalesceKey, InFlight>()
     private val lock = Any()
 
+    /**
+     * Outcome of attaching a DNS query to an in-flight resolution.
+     */
     sealed class JoinResult {
+        /**
+         * No matching resolution existed; the caller owns upstream work.
+         */
         object Leader : JoinResult()
+        /**
+         * Query attached to an existing leader for later response delivery.
+         */
         object Joined : JoinResult()
+        /**
+         * Duplicate waiter capacity was exhausted.
+         */
         object Overflow : JoinResult()
     }
 
     /**
-     * Checks if a query for [key] is already in flight.
-     * If not, registers this query as the [JoinResult.Leader].
-     * If already in flight and within [maxWaitersPerKey], attaches to the leader as [JoinResult.Joined].
-     * If capacity for this key is exceeded, returns [JoinResult.Overflow].
+     * Registers a new leader or attaches a waiter within the per-key capacity.
+     *
+     * @param key Query identity and resolver epoch.
+     * @param query Query whose packet storage must remain valid until completion.
+     * @return Leader, joined or overflow outcome.
      */
     fun attachOrLead(key: CoalesceKey, query: DnsQuery): JoinResult = synchronized(lock) {
         val existing = inFlight[key]
@@ -58,8 +73,10 @@ internal class DnsRequestCoalescer(
     }
 
     /**
-     * Completes resolution for [key] and returns all waiting queries (leader + attached waiters).
-     * Removes the key from the in-flight map.
+     * Removes one resolution and transfers its queries to the caller for delivery.
+     *
+     * @param key Identity of the completed resolution.
+     * @return Leader followed by waiters, or an empty list when no resolution exists.
      */
     fun complete(key: CoalesceKey): List<DnsQuery> = synchronized(lock) {
         val flight = inFlight.remove(key) ?: return emptyList()
@@ -70,12 +87,14 @@ internal class DnsRequestCoalescer(
     }
 
     /**
-     * Returns the number of currently active in-flight resolution keys.
+     * Number of distinct resolution keys currently tracked.
      */
     val activeInFlightCount: Int get() = synchronized(lock) { inFlight.size }
 
     /**
-     * Clears all pending resolutions, typically called during VPN tunnel teardown.
+     * Removes all pending resolutions.
+     *
+     * @return All leaders and waiters transferred to the caller without delivering replies.
      */
     fun clear(): List<DnsQuery> = synchronized(lock) {
         val remaining = ArrayList<DnsQuery>()

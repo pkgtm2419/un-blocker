@@ -6,10 +6,16 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * Regression coverage for domain feature extractor.
+ */
 class DomainFeatureExtractorTest {
     private val suffixRules = PublicSuffixRules.fallback
     private val extractor = DomainFeatureExtractor(suffixRules)
 
+    /**
+     * Verifies that test registrable label matching prevented.
+     */
     @Test
     fun testRegistrableLabelMatchingPrevented() {
         // Domains where the token is part of the registrable domain or ccTLD, not the subdomain
@@ -30,6 +36,9 @@ class DomainFeatureExtractorTest {
         }
     }
 
+    /**
+     * Verifies that test subdomain tokens trigger lexical.
+     */
     @Test
     fun testSubdomainTokensTriggerLexical() {
         val trackerSubdomains = listOf(

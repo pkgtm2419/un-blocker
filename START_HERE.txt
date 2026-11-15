@@ -1,10 +1,21 @@
-UN-BLOCKER ANDROID APP - COMPLETE IMPROVEMENT AND QA PLANS
+UN-BLOCKER PROJECT DOCUMENTATION
 
-1. Open README.md for the overview.
-2. Open docs/superpowers/specs/ for the architecture design.
-3. Open docs/superpowers/plans/ for the 6 detailed improvement plans.
-4. Open docs/qa/ for current and earlier QA audits and the earlier test execution plan.
-5. validate_plans.py verifies documentation structure.
-6. verify_artifacts.py is provided for artifact verification when CI archives are available.
+1. README.md: application overview; docs/README.md: engineering documentation hub.
+2. AGENTS.md: workspace contract; .agents/rules/ and .agents/skills/: task guidance.
+3. docs/ARCHITECTURE.md and docs/BEHAVIOR_CONTRACTS.md: current source behavior.
+4. docs/REPO_RECONCILIATION.md: source/documentation gaps requiring follow-up.
+5. docs/references/README.md: supplied historical research, QA and proposals.
+6. docs/superpowers/specs/ and plans/: installed documentation design and plans.
+7. docs/audits/INTEGRATION_REVIEW_2026-11-14.md: integration verification record.
 
-This archive contains plans and supporting QA evidence, not compiled APKs or implemented fixes.
+From the project root, using Python 3.11 or newer:
+  python scripts/docs_sync.py --write
+  python scripts/docs_contract.py
+  python scripts/docs_sync.py --check
+  python -m unittest discover -s scripts/tests -p "test_docs_*.py" -v
+  python validate_plans.py
+
+Use a working Python executable or py -3 if python opens the Microsoft Store.
+The six older improvement plans named by the previous guide were not supplied.
+Historical audits are not current Android test results. Proposed patches and
+application improvements are not applied by installing this documentation pack.

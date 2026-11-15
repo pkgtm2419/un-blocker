@@ -35,3 +35,7 @@ jdk*/
 .env
 Screenshot_*.png
 *.csv
+
+# Local Android/style toolchain, baseline snapshots and expanded review artifacts.
+/.tooling/
+/.style-artifacts/

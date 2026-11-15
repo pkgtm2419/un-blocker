@@ -3,7 +3,13 @@ package com.unblocker.app.services
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
+/**
+ * Regression coverage for protection coverage.
+ */
 class ProtectionCoverageTest {
+    /**
+     * Verifies that computes expected protection coverage.
+     */
     @Test
     fun computesExpectedProtectionCoverage() {
         assertEquals(

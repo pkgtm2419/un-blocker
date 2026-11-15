@@ -9,33 +9,41 @@ import java.util.Arrays
 import java.util.Locale
 
 /**
- * High-performance off-heap compiler for ad/tracker rules.
+ * Compiles supported hosts, Adblock, and plain-domain lines into a signed-sorted 64-bit hash index.
  *
- * Normalizes multi-syntax rule definitions (Hosts, Adblock/uBlock, plain domains)
- * into a sorted, deduplicated 64-bit FNV-1a binary index (`rules.bin`).
+ * Parsing is syntax normalization, not the active app's complete blocklist admission policy.
  */
 object RuleCompiler {
 
+    /**
+     * Initial FNV-1a 64-bit hash state, represented as a signed Long.
+     */
     const val FNV64_OFFSET_BASIS: Long = -0x340d631b7bdddcdbL // 0xcbf29ce484222325L
+    /**
+     * FNV-1a multiplier; Long overflow intentionally wraps the hash arithmetic.
+     */
     const val FNV64_PRIME: Long = 0x100000001b3L
 
+    /**
+     * Domain keys always seeded by this compiler; their presence does not guarantee DoH coverage.
+     */
     val DOH_BOOTSTRAP_DOMAINS: List<String> = listOf(
         "use-application-dns.net",
         "dns.google",
         "cloudflare-dns.com",
         "dns.quad9.net",
-        "doh.opendns.com"
+        "bootstrapDomain.opendns.com"
     )
 
     private const val BUFFER_CAPACITY = 64 * 1024 // 64 KB direct buffer
 
     /**
-     * Extracts a normalized domain name from a raw rule line across multiple syntaxes:
-     * - Adblock/uBlock rules (`||domain^$third-party`)
-     * - Hosts file rules (`0.0.0.0 domain.com`, `127.0.0.1 domain.com`, `::1 domain.com`)
-     * - Plain domain entries
+     * Extracts a lowercase candidate from supported hosts, Adblock, or plain-domain syntax.
      *
-     * Returns null for comments, exceptions, cosmetic filters, localhost, or invalid lines.
+     * This accepts underscores and does not validate every DNS label or policy safety exception.
+     *
+     * @param rawLine Untrusted rule line to normalize.
+     * @return Candidate with a dot and permitted characters, or null for ignored or rejected input.
      */
     fun extractCleanDomain(rawLine: String): String? {
         val trimmed = rawLine.trim()
@@ -60,9 +68,9 @@ object RuleCompiler {
         // Handle Adblock / uBlock syntax (||domain^$third-party)
         if (candidate.startsWith("||")) {
             candidate = candidate.substring(2)
-            val termIdx = candidate.indexOfAny(charArrayOf('^', '$', '/'))
-            if (termIdx != -1) {
-                candidate = candidate.substring(0, termIdx)
+            val terminatorIndex = candidate.indexOfAny(charArrayOf('^', '$', '/'))
+            if (terminatorIndex != -1) {
+                candidate = candidate.substring(0, terminatorIndex)
             }
         } else {
             // Handle Hosts syntax: 0.0.0.0 domain.com, 127.0.0.1 domain.com, ::1 domain.com
@@ -94,8 +102,8 @@ object RuleCompiler {
 
         // Validate character set (RFC 1035 / DNS valid characters: a-z, 0-9, ., -, _)
         for (i in 0 until domain.length) {
-            val ch = domain[i]
-            if (ch !in 'a'..'z' && ch !in '0'..'9' && ch != '.' && ch != '-' && ch != '_') {
+            val character = domain[i]
+            if (character !in 'a'..'z' && character !in '0'..'9' && character != '.' && character != '-' && character != '_') {
                 return null
             }
         }
@@ -104,9 +112,15 @@ object RuleCompiler {
     }
 
     /**
-     * Computes the 64-bit FNV-1a hash over [domain] in index range `[start, end)`.
-     * Operates with zero allocations by reading characters directly and converting
-     * uppercase ASCII (65..90) to lowercase (+32) on the fly.
+     * Hashes a character range using FNV-1a, lowercasing ASCII uppercase characters.
+     *
+     * Only the low eight bits of each character contribute; Long overflow is intentional.
+     *
+     * @param domain Character sequence to read without copying.
+     * @param start Inclusive character index.
+     * @param end Exclusive character index.
+     * @return Signed Long representation of the 64-bit hash.
+     * @throws IllegalArgumentException If the range is reversed, negative, or exceeds [domain].
      */
     fun fnv1a64(domain: CharSequence, start: Int = 0, end: Int = domain.length): Long {
         require(start in 0..end && end <= domain.length) {
@@ -114,20 +128,23 @@ object RuleCompiler {
         }
         var hash = FNV64_OFFSET_BASIS
         for (i in start until end) {
-            val c = domain[i].code
-            val lower = if (c in 65..90) (c + 32) else c
-            hash = (hash xor (lower.toLong() and 0xFFL)) * FNV64_PRIME
+            val characterCode = domain[i].code
+            val lowercaseCode = if (characterCode in 65..90) (characterCode + 32) else characterCode
+            hash = (hash xor (lowercaseCode.toLong() and 0xFFL)) * FNV64_PRIME
         }
         return hash
     }
 
     /**
-     * Streams rules from [readers], normalizes them, and writes a sorted, deduplicated
-     * 64-bit binary index file directly to [outputFile] using off-heap buffers.
+     * Normalizes input lines and writes sorted, deduplicated hashes in big-endian order.
      *
-     * Pre-seeds DoH bootstrap domains to ensure browsers/WebViews fall back to UDP 53.
+     * Bootstrap keys are always added. Readers remain owned by the caller. Output uses a temporary
+     * file followed by delete/rename, with copy fallback; replacement is not guaranteed atomic.
      *
-     * @return The count of unique 64-bit rule hashes written to [outputFile].
+     * @param readers Open rule streams read sequentially to end-of-file without being closed here.
+     * @param outputFile Destination index file; its parent directory is created when needed.
+     * @return Number of unique hash entries written.
+     * @throws java.io.IOException If reading or writing the index fails.
      */
     fun compileStreamsToBinaryFile(readers: List<BufferedReader>, outputFile: File): Int {
         var hashes = LongArray(262_144)
@@ -141,17 +158,17 @@ object RuleCompiler {
         }
 
         // 1. Pre-seed mandatory DoH bootstrap domains
-        for (doh in DOH_BOOTSTRAP_DOMAINS) {
-            addHash(fnv1a64(doh))
+        for (bootstrapDomain in DOH_BOOTSTRAP_DOMAINS) {
+            addHash(fnv1a64(bootstrapDomain))
         }
 
         // 2. Stream all readers into primitive array
         for (reader in readers) {
             var line = reader.readLine()
             while (line != null) {
-                val clean = extractCleanDomain(line)
-                if (clean != null) {
-                    addHash(fnv1a64(clean))
+                val normalizedDomain = extractCleanDomain(line)
+                if (normalizedDomain != null) {
+                    addHash(fnv1a64(normalizedDomain))
                 }
                 line = reader.readLine()
             }
@@ -178,13 +195,13 @@ object RuleCompiler {
         // 5. Write to temporary file with a 64 KB direct ByteBuffer
         val parentDir = outputFile.parentFile ?: File(".")
         if (!parentDir.exists()) parentDir.mkdirs()
-        val tmpFile = File(parentDir, "${outputFile.name}.tmp")
-        if (tmpFile.exists()) tmpFile.delete()
+        val temporaryFile = File(parentDir, "${outputFile.name}.tmp")
+        if (temporaryFile.exists()) temporaryFile.delete()
 
         val directBuffer = ByteBuffer.allocateDirect(BUFFER_CAPACITY).order(ByteOrder.BIG_ENDIAN)
 
-        FileOutputStream(tmpFile).use { fos ->
-            val channel = fos.channel
+        FileOutputStream(temporaryFile).use { outputStream ->
+            val channel = outputStream.channel
             for (i in 0 until uniqueCount) {
                 if (directBuffer.remaining() < 8) {
                     directBuffer.flip()
@@ -205,13 +222,13 @@ object RuleCompiler {
             channel.force(true)
         }
 
-        // 6. Atomically replace target file
+        // 6. Replace the target via rename, falling back to a copy if necessary.
         if (outputFile.exists()) {
             outputFile.delete()
         }
-        if (!tmpFile.renameTo(outputFile)) {
-            tmpFile.copyTo(outputFile, overwrite = true)
-            tmpFile.delete()
+        if (!temporaryFile.renameTo(outputFile)) {
+            temporaryFile.copyTo(outputFile, overwrite = true)
+            temporaryFile.delete()
         }
 
         return uniqueCount

@@ -45,10 +45,13 @@ import com.unblocker.app.ui.theme.*
 import kotlinx.coroutines.launch
 
 /**
- * Consolidated Settings & Shields Screen.
+ * Renders filtering preferences, DNS status hints, boot settings, and local log controls.
  *
- * Houses all advanced configuration, filtering tiers, network diagnostics,
- * automation settings, data management, and about/license details in one place.
+ * @param preferences Source of persisted settings and destination for setting changes.
+ * @param quickStartManager Source of current service lifecycle status.
+ * @param onNavigateToExtensions Callback opening the extension catalog.
+ * @param contentPadding Parent navigation padding whose bottom inset is applied to scrolling content.
+ * @param logViewModel Owner of local log export and history-clearing actions.
  */
 @Composable
 fun SettingsScreen(
@@ -204,7 +207,7 @@ fun SettingsScreen(
                     modifier = Modifier.widthIn(max = 480.dp)
                 )
 
-                // 2. HOSTS & FILTER LISTS (Essential 7 + Custom lists)
+                // 2. Hosts and filter list navigation
                 SkeuomorphicCard(
                     modifier = Modifier
                         .fillMaxWidth()

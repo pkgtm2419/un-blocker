@@ -4,7 +4,11 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 
 /**
- * Wrapper around coroutine dispatchers to enable testing via injection.
+ * Injectable coroutine dispatchers; tests can supply controlled dispatchers.
+ *
+ * @property main Dispatcher for Android main-thread work.
+ * @property io Dispatcher for blocking I/O.
+ * @property default Dispatcher for CPU-bound work.
  */
 data class CoroutineDispatchers(
     val main: CoroutineDispatcher = Dispatchers.Main,

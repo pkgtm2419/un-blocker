@@ -10,10 +10,19 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 
+/**
+ * Regression coverage for private domain set.
+ */
 class PrivateDomainSetTest {
+    /**
+     * Temporary filesystem fixture isolated and cleaned up by JUnit.
+     */
     @get:Rule val temp = TemporaryFolder()
     private fun key(byte: Byte = 11) = SecretKeySpec(ByteArray(32) { byte }, "HmacSHA256")
 
+    /**
+     * Verifies that persists canonical membership without raw domains.
+     */
     @Test fun persistsCanonicalMembershipWithoutRawDomains() {
         val file = File(temp.root, "allowlist")
         val rules = PrivateDomainSet(key(), file)
@@ -25,6 +34,9 @@ class PrivateDomainSetTest {
         assertFalse(PrivateDomainSet(key(12), file).contains("ads.example.com"))
     }
 
+    /**
+     * Verifies that invalid domains are rejected and rules can be removed.
+     */
     @Test fun invalidDomainsAreRejectedAndRulesCanBeRemoved() {
         val rules = PrivateDomainSet(key(), File(temp.root, "allowlist"))
 
@@ -36,6 +48,9 @@ class PrivateDomainSetTest {
         assertFalse(rules.contains("ads.example.com"))
     }
 
+    /**
+     * Verifies that capacity evicts oldest rule and clear persists.
+     */
     @Test fun capacityEvictsOldestRuleAndClearPersists() {
         val file = File(temp.root, "allowlist")
         val rules = PrivateDomainSet(key(), file, capacity = 2)

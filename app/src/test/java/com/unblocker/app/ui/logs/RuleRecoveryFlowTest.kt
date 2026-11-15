@@ -24,6 +24,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 
+/**
+ * Regression coverage for rule recovery flow.
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
 class RuleRecoveryFlowTest {
 
@@ -89,16 +92,25 @@ class RuleRecoveryFlowTest {
         override suspend fun clearStats() {}
     }
 
+    /**
+     * Resets the fixture state before each test to keep assertions independent.
+     */
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
     }
 
+    /**
+     * Releases test resources and restores shared state after each test.
+     */
     @After
     fun tearDown() {
         Dispatchers.resetMain()
     }
 
+    /**
+     * Verifies that test allow domain applies feedback and emits message.
+     */
     @Test
     fun testAllowDomainAppliesFeedbackAndEmitsMessage() = runTest(testDispatcher) {
         val gateway = FakeUserRuleGateway()
@@ -113,6 +125,9 @@ class RuleRecoveryFlowTest {
         assertEquals("Allowed: example.com", viewModel.userMessage.value)
     }
 
+    /**
+     * Verifies that test block domain applies feedback and emits message.
+     */
     @Test
     fun testBlockDomainAppliesFeedbackAndEmitsMessage() = runTest(testDispatcher) {
         val gateway = FakeUserRuleGateway()
@@ -127,6 +142,9 @@ class RuleRecoveryFlowTest {
         assertEquals("Blocked: tracker.adnetwork.com", viewModel.userMessage.value)
     }
 
+    /**
+     * Verifies that test failed rule update surfaces error message.
+     */
     @Test
     fun testFailedRuleUpdateSurfacesErrorMessage() = runTest(testDispatcher) {
         val gateway = FakeUserRuleGateway().apply { shouldFail = true }

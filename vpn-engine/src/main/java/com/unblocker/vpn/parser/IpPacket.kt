@@ -1,16 +1,16 @@
 package com.unblocker.vpn.parser
 
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 
 /**
- * Represents a parsed IPv4 or IPv6 packet header.
+ * Parsed IP metadata with directly retained address arrays.
  *
- * @param isIpv6         True for IPv6, false for IPv4.
- * @param protocol       IP protocol number (17 = UDP, 6 = TCP).
- * @param srcIp          Source IP address bytes.
- * @param dstIp          Destination IP address bytes.
- * @param ipHeaderLength Length of the IP header in bytes.
+ * Do not mutate address arrays while relying on equality or hashing.
+ *
+ * @property isIpv6 Whether the packet uses IPv6.
+ * @property protocol Final IP protocol number, such as 17 for UDP or 6 for TCP.
+ * @property srcIp Source bytes: four for IPv4 or sixteen for IPv6.
+ * @property dstIp Destination address bytes in the same address family.
+ * @property ipHeaderLength Payload offset in bytes, including supported IPv6 extension headers.
  */
 data class IpPacket(
     val isIpv6: Boolean,
@@ -19,12 +19,22 @@ data class IpPacket(
     val dstIp: ByteArray,
     val ipHeaderLength: Int
 ) {
+    /**
+     * IP header parsing entry point and protocol constants.
+     */
     companion object {
         private const val PROTOCOL_UDP = 17
 
         /**
-         * Parses the IP header from [buffer].
-         * Returns null for unsupported or malformed packets.
+         * Reads IP addresses and the payload offset without validating all IP invariants.
+         *
+         * IPv6 walks supported hop-by-hop, routing, destination, and fragment headers. Fragment fields
+         * and IP checksums are not validated here.
+         *
+         * @param buffer Raw packet storage, stable during parsing.
+         * @param length Declared valid byte count; must not exceed [buffer] size.
+         * @return Header metadata, or null for unsupported versions or rejected lengths.
+         * @throws IndexOutOfBoundsException If declared bounds permit access outside the array.
          */
         fun parse(buffer: ByteArray, length: Int): IpPacket? {
             if (length < 20) return null
@@ -38,8 +48,8 @@ data class IpPacket(
         }
 
         private fun parseIpv4(buffer: ByteArray, length: Int): IpPacket? {
-            val ihl = (buffer[0].toInt() and 0x0F) * 4
-            if (ihl < 20 || length < ihl + 8) return null
+            val headerLength = (buffer[0].toInt() and 0x0F) * 4
+            if (headerLength < 20 || length < headerLength + 8) return null
             val protocol = buffer[9].toInt() and 0xFF
             val srcIp = buffer.copyOfRange(12, 16)
             val dstIp = buffer.copyOfRange(16, 20)
@@ -48,7 +58,7 @@ data class IpPacket(
                 protocol = protocol,
                 srcIp = srcIp,
                 dstIp = dstIp,
-                ipHeaderLength = ihl
+                ipHeaderLength = headerLength
             )
         }
 
@@ -59,10 +69,10 @@ data class IpPacket(
             var offset = 40
             while (nextHeader in setOf(0, 43, 60, 44)) {
                 if (offset + 2 > length) return null
-                val extLen = if (nextHeader == 44) 8 else ((buffer[offset + 1].toInt() and 0xFF) + 1) * 8
-                if (offset + extLen + 8 > length) return null
+                val extensionHeaderLength = if (nextHeader == 44) 8 else ((buffer[offset + 1].toInt() and 0xFF) + 1) * 8
+                if (offset + extensionHeaderLength + 8 > length) return null
                 nextHeader = buffer[offset].toInt() and 0xFF
-                offset += extLen
+                offset += extensionHeaderLength
             }
             val srcIp = buffer.copyOfRange(8, 24)
             val dstIp = buffer.copyOfRange(24, 40)
@@ -76,8 +86,17 @@ data class IpPacket(
         }
     }
 
+    /**
+     * Whether the parsed final protocol number is UDP.
+     */
     val isUdp: Boolean get() = protocol == PROTOCOL_UDP
 
+    /**
+     * Compares metadata using address array contents.
+     *
+     * @param other Value to compare.
+     * @return Whether protocol, offsets, address family, and address bytes match.
+     */
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is IpPacket) return false
@@ -86,6 +105,11 @@ data class IpPacket(
             ipHeaderLength == other.ipHeaderLength
     }
 
+    /**
+     * Hashes metadata using address array contents.
+     *
+     * @return Hash consistent with [equals] while address arrays remain unchanged.
+     */
     override fun hashCode(): Int {
         var result = isIpv6.hashCode()
         result = 31 * result + protocol

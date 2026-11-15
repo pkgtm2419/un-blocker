@@ -1,0 +1,5 @@
+interface:
+  display_name: "Kotlin Senior Code Style"
+  short_description: "Apply compatible Kotlin and Android code standards"
+policy:
+  allow_implicit_invocation: true

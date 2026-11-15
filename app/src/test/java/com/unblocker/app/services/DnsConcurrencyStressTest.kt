@@ -16,6 +16,9 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * Regression coverage for DNS concurrency stress.
+ */
 class DnsConcurrencyStressTest {
 
     private val loopback = InetAddress.getByName("127.0.0.1")
@@ -112,16 +115,25 @@ class DnsConcurrencyStressTest {
         }
     }
 
+    /**
+     * Verifies that test ten concurrent threads no rejection or timeouts.
+     */
     @Test
     fun testTenConcurrentThreadsNoRejectionOrTimeouts() {
         runConcurrencyTest(threadCount = 10, totalQueries = 100)
     }
 
+    /**
+     * Verifies that test twenty concurrent threads no rejection or timeouts.
+     */
     @Test
     fun testTwentyConcurrentThreadsNoRejectionOrTimeouts() {
         runConcurrencyTest(threadCount = 20, totalQueries = 200)
     }
 
+    /**
+     * Verifies that test fifty concurrent bursts no saturation.
+     */
     @Test
     fun testFiftyConcurrentBurstsNoSaturation() {
         runConcurrencyTest(threadCount = 50, totalQueries = 250)

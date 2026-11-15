@@ -8,65 +8,90 @@ import com.unblocker.data.db.entity.BlockRuleEntity
 import kotlinx.coroutines.flow.Flow
 
 /**
- * DAO for the `block_rules` table.
- *
- * ## Performance notes
- * - [insertRules] uses `REPLACE` to allow the ML worker to update the confidence score
- *   of an existing rule if it re-encounters a previously flagged domain with a higher score.
- * - [getAllBlockedDomains] is the hot-path query: called only during Bloom Filter rebuild
- *   (nightly batch + user whitelist override). It returns only domain strings to minimize
- *   cursor allocation.
- * - [getBlockedDomainsForSource] allows source-specific queries for diagnostics.
+ * Room access to block-rule rows. Source labels and whitelist exclusion are caller policies.
  */
 @Dao
 interface BlockRuleDao {
 
     /**
-     * Bulk-upserts block rules. `REPLACE` strategy updates the confidence score and
-     * `created_at` timestamp if the domain already exists.
+     * Replaces rows with matching domain keys in one bulk insert.
+     *
+     * @param rules Complete replacement rows, including confidence, creation time, and source.
      */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertRules(rules: List<BlockRuleEntity>)
 
-    /** Upserts a single block rule. */
+    /**
+     * Inserts or replaces a block-rule row.
+     *
+     * @param rule Complete row to persist under its domain key.
+     */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertRule(rule: BlockRuleEntity)
 
     /**
-     * Returns all blocked domain strings for Bloom Filter compilation.
-     * Excludes domains present in the whitelist table (handled at repository level).
+     * Reads all block-rule domain keys without whitelist exclusion.
+     *
+     * @return Stored domain strings in unspecified order.
      */
     @Query("SELECT domain FROM block_rules")
     suspend fun getAllBlockedDomains(): List<String>
 
     /**
-     * Returns all block rule entities for a given source, ordered by confidence score.
-     * Used by the dashboard to display ML-inferred vs. static rules separately.
+     * Observes rows for one source in descending confidence order.
+     *
+     * @param source Persisted RuleSource name.
+     * @return Flow updated when matching rule rows change.
      */
     @Query("SELECT * FROM block_rules WHERE rule_source = :source ORDER BY confidence_score DESC")
     fun getRulesBySourceFlow(source: String): Flow<List<BlockRuleEntity>>
 
+    /**
+     * Reads rows for one source.
+     *
+     * @param source Persisted RuleSource name.
+     * @return Matching rows in unspecified order.
+     */
     @Query("SELECT * FROM block_rules WHERE rule_source = :source")
     suspend fun getRulesBySource(source: String): List<BlockRuleEntity>
 
+    /**
+     * Deletes rows for one source.
+     *
+     * @param source Persisted RuleSource name to delete.
+     */
     @Query("DELETE FROM block_rules WHERE rule_source = :source")
     suspend fun deleteRulesBySource(source: String)
 
-    /** Deletes the block rule for [domain] — used when the user whitelists a domain. */
+    /**
+     * Deletes the row with this exact domain key.
+     *
+     * @param domain Stored domain key; no suffix matching is performed.
+     */
     @Query("DELETE FROM block_rules WHERE domain = :domain")
     suspend fun deleteRule(domain: String)
 
     /**
-     * Returns the count of block rules per source — used for the dashboard stats widget.
+     * Counts rows for a source.
+     *
+     * @param source Persisted RuleSource name.
+     * @return Number of matching rows.
      */
     @Query("SELECT COUNT(*) FROM block_rules WHERE rule_source = :source")
     suspend fun countBySource(source: String): Int
 
-    /** Checks whether a specific domain exists in block_rules. */
+    /**
+     * Checks exact block-rule membership without applying allow precedence.
+     *
+     * @param domain Stored domain key.
+     * @return Whether a matching block row exists.
+     */
     @Query("SELECT EXISTS(SELECT 1 FROM block_rules WHERE domain = :domain LIMIT 1)")
     suspend fun isDomainBlocked(domain: String): Boolean
 
-    /** Deletes all block rules of source "ML" — used for a full ML model reset. */
+    /**
+     * Deletes all rows whose persisted source is ML.
+     */
     @Query("DELETE FROM block_rules WHERE rule_source = 'ML'")
     suspend fun clearMlRules()
 }

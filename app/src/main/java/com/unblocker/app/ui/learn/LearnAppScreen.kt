@@ -33,6 +33,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.unblocker.app.ui.theme.TealAccent
 import com.unblocker.app.ui.theme.TealPrimary
 
+/**
+ * Renders app selection, a DNS recording session, and domain-rule review.
+ *
+ * @param onNavigateBack Callback used when leaving the app-selection state.
+ * @param viewModel Owner of app discovery, session state, and reviewed rule application.
+ * @param contentPadding Parent content insets added to the scaffold padding.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LearnAppScreen(

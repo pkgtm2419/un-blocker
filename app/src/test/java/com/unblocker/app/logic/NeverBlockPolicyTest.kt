@@ -6,8 +6,14 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
+/**
+ * Regression coverage for never block policy.
+ */
 class NeverBlockPolicyTest {
 
+    /**
+     * Resets the fixture state before each test to keep assertions independent.
+     */
     @Before
     fun setup() {
         // Inject test set of protected hosts
@@ -21,6 +27,9 @@ class NeverBlockPolicyTest {
         )
     }
 
+    /**
+     * Verifies that test never block exact match.
+     */
     @Test
     fun testNeverBlockExactMatch() {
         assertTrue(NeverBlockPolicy.isNeverBlock("connectivitycheck.gstatic.com"))
@@ -28,12 +37,18 @@ class NeverBlockPolicyTest {
         assertTrue(NeverBlockPolicy.isNeverBlock("dns.google"))
     }
 
+    /**
+     * Verifies that test never block wildcard match.
+     */
     @Test
     fun testNeverBlockWildcardMatch() {
         assertTrue(NeverBlockPolicy.isNeverBlock("mail.google.com"))
         assertTrue(NeverBlockPolicy.isNeverBlock("www.google.com"))
     }
 
+    /**
+     * Verifies that test unprotected domain returns false.
+     */
     @Test
     fun testUnprotectedDomainReturnsFalse() {
         assertFalse(NeverBlockPolicy.isNeverBlock("doubleclick.net"))

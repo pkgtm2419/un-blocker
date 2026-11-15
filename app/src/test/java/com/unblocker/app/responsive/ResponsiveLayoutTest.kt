@@ -6,6 +6,9 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * Regression coverage for responsive layout.
+ */
 class ResponsiveLayoutTest {
 
     private fun resolveWidthClass(widthDp: Float): WindowWidthClass {
@@ -24,6 +27,9 @@ class ResponsiveLayoutTest {
         }
     }
 
+    /**
+     * Verifies that test compact phone screens.
+     */
     @Test
     fun testCompactPhoneScreens() {
         // Standard phone screens: 360dp, 390dp, 412dp
@@ -36,6 +42,9 @@ class ResponsiveLayoutTest {
         assertEquals(1, resolveColumns(WindowWidthClass.COMPACT))
     }
 
+    /**
+     * Verifies that test foldable and small tablet screens.
+     */
     @Test
     fun testFoldableAndSmallTabletScreens() {
         // Foldable outer/inner screens and 7-8" tablets: 600dp, 720dp, 800dp
@@ -48,6 +57,9 @@ class ResponsiveLayoutTest {
         assertEquals(2, resolveColumns(WindowWidthClass.MEDIUM))
     }
 
+    /**
+     * Verifies that test large tablet and expanded screens.
+     */
     @Test
     fun testLargeTabletAndExpandedScreens() {
         // 10-12" tablets and desktop/chromebooks: 840dp, 1024dp, 1280dp
@@ -59,6 +71,9 @@ class ResponsiveLayoutTest {
         assertEquals(4, resolveColumns(WindowWidthClass.EXPANDED))
     }
 
+    /**
+     * Verifies that test orientation detection.
+     */
     @Test
     fun testOrientationDetection() {
         val widthPortrait = 412f

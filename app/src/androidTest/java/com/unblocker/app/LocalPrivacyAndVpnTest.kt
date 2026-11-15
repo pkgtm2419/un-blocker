@@ -27,6 +27,9 @@ import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
 
+/**
+ * Regression coverage for local privacy and vpn.
+ */
 @RunWith(AndroidJUnit4::class)
 class LocalPrivacyAndVpnTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
@@ -40,6 +43,9 @@ class LocalPrivacyAndVpnTest {
         }
     }
 
+    /**
+     * Verifies that production v3 initialization removes raw legacy learning and preserves user keys.
+     */
     @Test fun productionV3InitializationRemovesRawLegacyLearningAndPreservesUserKeys() {
         forgetLearningInstancesForUpgradeTest()
         try {
@@ -67,6 +73,9 @@ class LocalPrivacyAndVpnTest {
         } finally {forgetLearningInstancesForUpgradeTest()}
     }
 
+    /**
+     * Verifies that evidence feedback stays private and removing manual block removes authority.
+     */
     @Test fun evidenceFeedbackStaysPrivateAndRemovingManualBlockRemovesAuthority() {
         val domain="manual-feedback.example.test"
         DeviceLearning.setUserRule(context,domain,com.unblocker.app.logic.analysis.UserFeedback.BLOCK)
@@ -113,6 +122,9 @@ class LocalPrivacyAndVpnTest {
         throw AssertionError("unreachable")
     }
 
+    /**
+     * Releases test resources and restores shared state after each test.
+     */
     @After fun cleanup() {
         UnblockerVpnService.stop(context)
         shell("appops set com.unblocker.app ACTIVATE_VPN deny")
@@ -122,6 +134,9 @@ class LocalPrivacyAndVpnTest {
         instrumentation.uiAutomation.dropShellPermissionIdentity()
     }
 
+    /**
+     * Verifies that keystore store contains no raw domain and reset persists.
+     */
     @Test fun keystoreStoreContainsNoRawDomainAndResetPersists() {
         val store = DeviceLearning.store(context)
         store.put("ads.private-example.test", 0.9f)
@@ -139,6 +154,9 @@ class LocalPrivacyAndVpnTest {
         assertFalse(File(context.filesDir, "learned_trackers.txt").exists())
     }
 
+    /**
+     * Verifies that filter switch reevaluates previously allowed domain.
+     */
     @Test fun filterSwitchReevaluatesPreviouslyAllowedDomain() {
         preferences.setAdultBlockingEnabled(false)
         preferences.setAdBlockingEnabled(false)
@@ -150,6 +168,9 @@ class LocalPrivacyAndVpnTest {
         assertFalse(engine.analyzeAndFilter("pornhub.com").shouldBlock)
     }
 
+    /**
+     * Verifies that local allowlist is private persistent and applied by filter engine.
+     */
     @Test fun localAllowlistIsPrivatePersistentAndAppliedByFilterEngine() {
         val domain = "doubleclick.net"
         preferences.setAdBlockingEnabled(true)
@@ -167,6 +188,9 @@ class LocalPrivacyAndVpnTest {
         assertFalse(DeviceLearning.allowlist(context).contains(domain))
     }
 
+    /**
+     * Verifies that local blocklist is private persistent and applied by filter engine.
+     */
     @Test fun localBlocklistIsPrivatePersistentAndAppliedByFilterEngine() {
         val domain = "wikipedia.org"
         preferences.setAdBlockingEnabled(false)
@@ -185,6 +209,9 @@ class LocalPrivacyAndVpnTest {
         assertFalse(DeviceLearning.blocklist(context).contains(domain))
     }
 
+    /**
+     * Verifies that boot honors persisted user choice and consent.
+     */
     @Test fun bootHonorsPersistedUserChoiceAndConsent() {
         shell("appops set com.unblocker.app ACTIVATE_VPN allow")
         var starts = 0
@@ -207,6 +234,9 @@ class LocalPrivacyAndVpnTest {
         assertEquals(1, starts)
     }
 
+    /**
+     * Verifies that denied consent never reports active tunnel.
+     */
     @Test fun deniedConsentNeverReportsActiveTunnel() {
         openApp()
         shell("appops set com.unblocker.app ACTIVATE_VPN deny")
@@ -215,6 +245,9 @@ class LocalPrivacyAndVpnTest {
         assertFalse(UnblockerVpnService.isServiceActive.value)
     }
 
+    /**
+     * Verifies that established tunnel blocks DNS and stops cleanly.
+     */
     @Test fun establishedTunnelBlocksDnsAndStopsCleanly() {
         openApp()
         shell("appops set com.unblocker.app ACTIVATE_VPN allow")
@@ -250,6 +283,9 @@ class LocalPrivacyAndVpnTest {
         awaitState(ServiceStatus.STOPPED)
     }
 
+    /**
+     * Verifies that vpn does not publish public resolver host routes.
+     */
     @Test fun vpnDoesNotPublishPublicResolverHostRoutes() {
         openApp()
         shell("appops set com.unblocker.app ACTIVATE_VPN allow")

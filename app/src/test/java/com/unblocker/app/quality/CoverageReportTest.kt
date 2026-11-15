@@ -21,6 +21,9 @@ import java.io.File
  */
 class CoverageReportTest {
 
+    /**
+     * Verifies that evaluate coverage and zero false positives on needed.
+     */
     @Test
     fun evaluateCoverageAndZeroFalsePositivesOnNeeded() {
         val binFile = File("build/generated/dns-assets/dns-rules.bin")

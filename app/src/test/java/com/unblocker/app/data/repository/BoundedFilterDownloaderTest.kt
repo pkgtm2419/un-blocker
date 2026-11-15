@@ -13,8 +13,14 @@ import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
 import java.net.URL
 
+/**
+ * Regression coverage for bounded filter downloader.
+ */
 class BoundedFilterDownloaderTest {
 
+    /**
+     * Temporary filesystem fixture isolated and cleaned up by JUnit.
+     */
     @get:Rule
     val tempFolder = TemporaryFolder()
 
@@ -36,6 +42,9 @@ class BoundedFilterDownloaderTest {
         }
     }
 
+    /**
+     * Verifies that rejects non https URL.
+     */
     @Test
     fun rejectsNonHttpsUrl() = runBlocking {
         val dest = File(tempFolder.root, "rules.txt")
@@ -44,6 +53,9 @@ class BoundedFilterDownloaderTest {
         assertTrue("Expected InvalidSource, got $result", result is DownloadResult.InvalidSource)
     }
 
+    /**
+     * Verifies that rejects localhost target.
+     */
     @Test
     fun rejectsLocalhostTarget() = runBlocking {
         val dest = File(tempFolder.root, "rules.txt")
@@ -58,6 +70,9 @@ class BoundedFilterDownloaderTest {
         assertTrue("Expected InvalidSource for RFC1918, got $result3", result3 is DownloadResult.InvalidSource)
     }
 
+    /**
+     * Verifies that accepts exact cap bytes.
+     */
     @Test
     fun acceptsExactCapBytes() = runBlocking {
         val dest = File(tempFolder.root, "rules.txt")
@@ -77,6 +92,9 @@ class BoundedFilterDownloaderTest {
         assertTrue(dest.exists())
     }
 
+    /**
+     * Verifies that rejects cap plus one byte.
+     */
     @Test
     fun rejectsCapPlusOneByte() = runBlocking {
         val dest = File(tempFolder.root, "rules.txt")
@@ -93,6 +111,9 @@ class BoundedFilterDownloaderTest {
         assertTrue(!dest.exists())
     }
 
+    /**
+     * Verifies that rejects line longer than max line bytes.
+     */
     @Test
     fun rejectsLineLongerThanMaxLineBytes() = runBlocking {
         val dest = File(tempFolder.root, "rules.txt")
@@ -108,6 +129,9 @@ class BoundedFilterDownloaderTest {
         assertTrue(!dest.exists())
     }
 
+    /**
+     * Verifies that rejects insecure redirect to http.
+     */
     @Test
     fun rejectsInsecureRedirectToHttp() = runBlocking {
         val dest = File(tempFolder.root, "rules.txt")
@@ -124,6 +148,9 @@ class BoundedFilterDownloaderTest {
         assertTrue(!dest.exists())
     }
 
+    /**
+     * Verifies that rejects redirect missing location header.
+     */
     @Test
     fun rejectsRedirectMissingLocationHeader() = runBlocking {
         val dest = File(tempFolder.root, "rules.txt")
@@ -136,6 +163,9 @@ class BoundedFilterDownloaderTest {
         assertEquals(301, (result as DownloadResult.HttpFailure).statusCode)
     }
 
+    /**
+     * Verifies that rejects redirect loop exceeding limit.
+     */
     @Test
     fun rejectsRedirectLoopExceedingLimit() = runBlocking {
         val dest = File(tempFolder.root, "rules.txt")
@@ -150,6 +180,9 @@ class BoundedFilterDownloaderTest {
         assertTrue((result as DownloadResult.HttpFailure).message.contains("Redirect limit"))
     }
 
+    /**
+     * Verifies that timeout leaves existing file unchanged.
+     */
     @Test
     fun timeoutLeavesExistingFileUnchanged() = runBlocking {
         val dest = File(tempFolder.root, "rules.txt")
@@ -165,6 +198,9 @@ class BoundedFilterDownloaderTest {
         assertEquals(initialContent, dest.readText())
     }
 
+    /**
+     * Verifies that rejects stream with no valid rules.
+     */
     @Test
     fun rejectsStreamWithNoValidRules() = runBlocking {
         val dest = File(tempFolder.root, "rules.txt")

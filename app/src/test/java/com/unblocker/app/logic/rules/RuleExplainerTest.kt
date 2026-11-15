@@ -19,8 +19,14 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
 
+/**
+ * Regression coverage for rule explainer.
+ */
 class RuleExplainerTest {
 
+    /**
+     * Temporary filesystem fixture isolated and cleaned up by JUnit.
+     */
     @get:Rule
     val tempFolder = TemporaryFolder()
 
@@ -29,6 +35,9 @@ class RuleExplainerTest {
     private var allowlisted = emptySet<String>()
     private var blocklisted = emptySet<String>()
 
+    /**
+     * Resets the fixture state before each test to keep assertions independent.
+     */
     @Before
     fun setup() {
         rulesDir = File(tempFolder.root, "rules").apply { mkdirs() }
@@ -60,6 +69,9 @@ class RuleExplainerTest {
         )
     }
 
+    /**
+     * Verifies that test explain ad domain in multiple lists.
+     */
     @Test
     fun testExplainAdDomainInMultipleLists() = runBlocking {
         val explanation = explainer.explain("tracker.com")
@@ -70,6 +82,9 @@ class RuleExplainerTest {
         assertTrue(explanation.matchingListIds.contains("easylist"))
     }
 
+    /**
+     * Verifies that test explain protected domain.
+     */
     @Test
     fun testExplainProtectedDomain() = runBlocking {
         val explanation = explainer.explain("docs.google.com")
@@ -78,6 +93,9 @@ class RuleExplainerTest {
         assertTrue(explanation.isProtected)
     }
 
+    /**
+     * Verifies that test explain user blocked domain.
+     */
     @Test
     fun testExplainUserBlockedDomain() = runBlocking {
         blocklisted = setOf("custom-block.com")

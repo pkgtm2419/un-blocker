@@ -6,6 +6,9 @@ import com.unblocker.app.logic.analysis.*
 import org.junit.Assert.*
 import org.junit.Test
 
+/**
+ * Regression coverage for on device ad analysis.
+ */
 class OnDeviceAdAnalysisTest {
 
     private var testTime = 100_000L
@@ -21,6 +24,9 @@ class OnDeviceAdAnalysisTest {
         isAdultBlockingEnabled = { false }
     )
 
+    /**
+     * Verifies that test high confidence unlisted ad domains are auto blocked.
+     */
     @Test
     fun testHighConfidenceUnlistedAdDomainsAreAutoBlocked() {
         // Domains with explicit ad tokens and high entropy/nesting not in any static list
@@ -48,6 +54,9 @@ class OnDeviceAdAnalysisTest {
         }
     }
 
+    /**
+     * Verifies that test never block policy shields critical domains.
+     */
     @Test
     fun testNeverBlockPolicyShieldsCriticalDomains() {
         val protectedDomains = listOf(
@@ -77,6 +86,9 @@ class OnDeviceAdAnalysisTest {
         }
     }
 
+    /**
+     * Verifies that test benign lookalikes remain allowed.
+     */
     @Test
     fun testBenignLookalikesRemainAllowed() {
         val benignDomains = listOf(
@@ -93,6 +105,9 @@ class OnDeviceAdAnalysisTest {
         }
     }
 
+    /**
+     * Verifies that test excessive domain length fails safely.
+     */
     @Test
     fun testExcessiveDomainLengthFailsSafely() {
         val longDomain = "a".repeat(250) + ".example.com"

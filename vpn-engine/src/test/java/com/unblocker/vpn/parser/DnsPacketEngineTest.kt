@@ -146,6 +146,9 @@ class DnsPacketEngineTest {
         return packet
     }
 
+    /**
+     * Verifies that test parse IPv4 packet and synthesize nx domain.
+     */
     @Test
     fun testParseIpv4PacketAndSynthesizeNxDomain() {
         val domain = "googleads.g.doubleclick.net"
@@ -202,6 +205,9 @@ class DnsPacketEngineTest {
         assertEquals(0, arCount)
     }
 
+    /**
+     * Verifies that test parse IPv6 packet and synthesize nx domain.
+     */
     @Test
     fun testParseIpv6PacketAndSynthesizeNxDomain() {
         val domain = "pagead2.googlesyndication.com"
@@ -243,6 +249,9 @@ class DnsPacketEngineTest {
         assertTrue("IPv6 UDP checksum must not be 0", udpCksum != 0)
     }
 
+    /**
+     * Verifies that test non DNS packet rejected.
+     */
     @Test
     fun testNonDnsPacketRejected() {
         val rawPacket = buildSyntheticIpv4Packet("example.com", dstPort = 80) // Port 80, not DNS 53

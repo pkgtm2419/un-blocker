@@ -4,26 +4,21 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Radix Tree (Trie) implementation for exact and suffix-based domain matching.
+ * Exact domain and suffix matching through a reverse-label trie.
  *
- * Complements the [BloomFilterManager] for cases where a precise false-positive-free
- * answer is needed (e.g., verifying a Bloom Filter hit before writing a block rule).
- *
- * ## When to use
- * - During ML batch analysis: verify that a domain suspected by the Bloom Filter is
- *   genuinely blocked (eliminates false positives before DB writes).
- * - For diagnostic tooling: count exact match coverage.
- *
- * ## Thread safety
- * The trie is rebuilt atomically via [loadDomains] and thereafter read-only.
- * Concurrent reads are safe without locking.
+ * Loading builds a new root before assigning it, but publication is not synchronized or volatile.
+ * Callers must coordinate loading with readers rather than assuming concurrent reload safety.
  */
 @Singleton
 class RadixTreeFilter @Inject constructor() {
 
     private var root: TrieNode = TrieNode()
 
-    /** Replaces the entire trie with [domains]. Not thread-safe during load. */
+    /**
+     * Replaces the trie after lowercasing keys and trimming trailing dots.
+     *
+     * @param domains Complete replacement set; callers must coordinate concurrent access.
+     */
     fun loadDomains(domains: Collection<String>) {
         val newRoot = TrieNode()
         for (domain in domains) {
@@ -39,10 +34,10 @@ class RadixTreeFilter @Inject constructor() {
     }
 
     /**
-     * Returns true if [domain] matches any exact or wildcard (suffix) rule in the trie.
+     * Checks whether an exact key or a parent suffix is terminal in the trie.
      *
-     * A parent node marked `isTerminal = true` means all subdomains also match
-     * (e.g., inserting "example.com" blocks "sub.example.com").
+     * @param domain Domain lowercased and stripped of trailing dots before lookup.
+     * @return Whether an exact or suffix rule matches.
      */
     fun contains(domain: String): Boolean {
         val labels = domain.lowercase().trimEnd('.').split('.').reversed()
@@ -54,7 +49,11 @@ class RadixTreeFilter @Inject constructor() {
         return node.isTerminal
     }
 
-    /** Returns the total number of unique domain rules loaded. */
+    /**
+     * Counts terminal nodes in the current trie.
+     *
+     * @return Number of unique normalized rule keys.
+     */
     fun size(): Int {
         var count = 0
         fun traverse(node: TrieNode) {

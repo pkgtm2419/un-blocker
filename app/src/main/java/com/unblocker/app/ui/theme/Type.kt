@@ -6,6 +6,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
+/**
+ * Material typography using the system font family with app-specific sizes and line heights.
+ */
 val Typography = Typography(
     headlineLarge = TextStyle(
         fontFamily = FontFamily.Default,

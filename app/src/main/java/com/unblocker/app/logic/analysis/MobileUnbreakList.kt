@@ -1,16 +1,14 @@
 package com.unblocker.app.logic.analysis
 
 /**
- * Curated mobile app unbreak rules inspired by uBlock Origin Lite and real-world traffic audits.
+ * Curated exact-host and suffix exceptions used to preserve selected mobile app dependencies.
  *
- * Prevents breakage of mobile games, login authentication, app store updates,
- * and essential media delivery while maintaining full privacy protection.
+ * The decision pipeline applies user rules before these compatibility exceptions.
  */
 object MobileUnbreakList {
 
     /**
-     * Essential service domains that must never be blocked to prevent app breakage.
-     * Verified across 11,900+ real-world query logs.
+     * Selected exact service hostnames exempted by the mobile compatibility policy.
      */
     private val essentialAppDomains = setOf(
         // Supercell Games (Clash of Clans, Brawl Stars, Clash Royale) - Game traffic & ID login
@@ -81,7 +79,10 @@ object MobileUnbreakList {
     )
 
     /**
-     * Returns true if [domain] is an essential functional dependency for mobile apps.
+     * Checks selected exact service hosts and strict suffix exceptions.
+     *
+     * @param domain Hostname to trim and lowercase.
+     * @return Whether the mobile compatibility list matches.
      */
     fun isEssentialDomain(domain: String): Boolean {
         val lower = domain.trim().lowercase()
@@ -93,8 +94,10 @@ object MobileUnbreakList {
     }
 
     /**
-     * Returns true if [domain] is a rewarded game ad or shopping redirect endpoint
-     * preserved under BASIC filtering mode.
+     * Checks reward and shopping exceptions used by BASIC filtering.
+     *
+     * @param domain Hostname to trim and lowercase.
+     * @return Whether the hostname matches an exact entry or strict suffix exception.
      */
     fun isRewardOrShoppingDomain(domain: String): Boolean {
         val lower = domain.trim().lowercase()

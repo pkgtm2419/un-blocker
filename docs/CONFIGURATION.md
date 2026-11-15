@@ -6,7 +6,7 @@
 - `app/build.gradle.kts`: app ID `com.unblocker.app`, SDK levels, version, signing variants, generated assets, Python rule compiler hook, shrinker/R8.
 - `app/src/main/AndroidManifest.xml`: permissions, non-exported VPN service/boot receiver, backup prevention and foreground-service subtype.
 - `tools/filter-compiler/sources.json`: pinned dataset source/license/checksum metadata.
-- `app/src/main/assets/extensions/extensions_manifest.json`: preset and custom extension metadata (manifest v7, 22 entries).
+- `app/src/main/assets/extensions/extensions_manifest.json`: preset and custom extension metadata (manifest v8, 67 entries).
 - `app/src/main/assets/default_config.json`: shipped feature defaults; first-run handling in `QuickStartManager` and `FilteringPreferences`.
 
 ## Runtime

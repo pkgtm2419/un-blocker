@@ -225,6 +225,9 @@ class ExtensionRuleStoreTest {
                 "events.vungle.com",
                 "attr.appsflyer.com",
                 "log.ironsrc.com",
+                "admin.appnext.com",
+                "sspapi-prd.samsungrs.com",
+                "ketchapp.org",
             )
 
         for (domain in representativeAdDomains) {

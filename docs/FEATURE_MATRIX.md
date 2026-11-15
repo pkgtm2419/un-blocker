@@ -18,7 +18,7 @@
 | F07 | Basic/Optimal/Complete tier selection | `FilteringPreferences.kt`, `FilteringTierCard.kt` | Source-observed; specific BASIC compatibility override | 2026-11-10 (src: 8934519) |
 | F08 | Exact/whole-site private allow and block rules | `DeviceLearning.kt`, `PrivateDomainSet.kt`, `UserRuleGateway.kt` | Source-observed; allow has precedence over block | 2026-11-10 (src: 8934519) |
 | F09 | Heuristic local learning/private evidence | `LocalNetworkLearner.kt`, `PrivateEvidenceStore.kt` | Source-observed; never label it cloud AI | 2026-11-10 (src: 8934519) |
-| F10 | Preset/custom extension lists and toggles | `ExtensionRepository.kt`, `extensions_manifest.json` | Source-observed; **22 manifest entries** (1 manual_filters, 1 disabled ublock_annoyances), see [FILTERING_RULES.md](FILTERING_RULES.md) | 2026-11-10 (src: 8934519) |
+| F10 | Preset/custom extension lists and toggles | `ExtensionRepository.kt`, `extensions_manifest.json` | Source-observed; **67 manifest entries** (manifest v8), see [FILTERING_RULES.md](FILTERING_RULES.md) | 2026-11-16 |
 | F11 | Remote list HTTPS download/bounds/syntax admission | `BoundedFilterDownloader.kt`, `RuleLineParser.kt` | Source-observed; review SSRF/DNS rebinding | 2026-11-10 (src: 8934519) |
 | F12 | Local aggregate query logs, optional raw event mode | `QueryLogSink.kt`, `DomainLogDao.kt` | Source-observed; local *plaintext* domains can be stored | 2026-11-10 (src: 8934519) |
 | F13 | Log search, filters, clear/pause, CSV export & feedback | `LogViewModel.kt`, `CsvWriter.kt`, `DomainExporter.kt` | Source-observed; SAF export controlled by user | 2026-11-10 (src: 8934519) |

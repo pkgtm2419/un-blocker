@@ -16,8 +16,8 @@ Versioning follows the `versionName` / `versionCode` declared in `app/build.grad
 
 ### Added
 
-- Expanded filter extensions based on uBlock Origin (`gorhill/uBlock`) and DNS ecosystems: added uBlock Origin Resource Abuse & Crypto-Mining, Dan Pollock's Hosts File, and AdGuard DNS Filter (Mobile Optimized) into manifest v7 (22 records).
-- Pre-installed bundled seed rules expansion: added 30 mobile ad network, telemetry, and cryptomining rules in `bundled_rules.txt` for instant offline protection against CoinHive, Chartboost, Pangle, Fyber, Vungle, InMobi, and AppsFlyer.
+- Expanded filter extensions based on uBlock Origin (`gorhill/uBlock`) and AdGuard (`filters.adtidy.org`): added AdGuard DNS Filter (191k+ rules via CDN Filter 15), AdGuard Mobile Ads (Filter 11), uBlock Origin Resource Abuse, Dan Pollock's Hosts File, and official regional language filters in manifest v8 (67 clean, deduplicated records).
+- Pre-installed bundled seed rules expansion: added 54 mobile ad network, telemetry, and cryptomining rules in `bundled_rules.txt` for instant offline protection against CoinHive, Chartboost, Pangle, Fyber, Vungle, InMobi, AppsFlyer, Appnext, Samsung Ads, Ketchapp, and Yandex Mobile.
 - Added comprehensive unit test coverage verifying that all bundled rules in `bundled_rules.txt` parse cleanly and block representative mobile ad, analytics, and cryptomining domains.
 - Project-specific Antigravity agent instructions (`AGENTS.md`), scoped conditional rules and
   task-skill definitions under `.agents/`.

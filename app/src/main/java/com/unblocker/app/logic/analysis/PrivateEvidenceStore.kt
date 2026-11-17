@@ -82,9 +82,19 @@ class PrivateEvidenceStore(
      */
     fun currentBucket() = nowBucket().coerceAtLeast(0)
 
+    private fun bytesToHex(bytes: ByteArray): String {
+        val chars = CharArray(bytes.size * 2)
+        for (i in bytes.indices) {
+            val v = bytes[i].toInt() and 0xFF
+            chars[i * 2] = HEX_CHARS[v ushr 4]
+            chars[i * 2 + 1] = HEX_CHARS[v and 0x0F]
+        }
+        return String(chars)
+    }
+
     private fun id(domain: String): String {
         val bytes = mac.doFinal(("reputation-v3:" + domain).toByteArray(Charsets.UTF_8))
-        return bytes.joinToString("") { "%02x".format(it.toInt() and 255) }
+        return bytesToHex(bytes)
     }
 
     private fun stale(r: ReputationEvidence): Boolean =
@@ -262,5 +272,9 @@ class PrivateEvidenceStore(
         } catch (_: InterruptedException) {
             Thread.currentThread().interrupt()
         }
+    }
+
+    companion object {
+        private val HEX_CHARS = "0123456789abcdef".toCharArray()
     }
 }

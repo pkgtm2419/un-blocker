@@ -22,6 +22,7 @@ class PrivateDomainSet(
     private val capacity: Int = DEFAULT_CAPACITY,
 ) {
     private val identifiers = LinkedHashSet<String>()
+    private val mac = Mac.getInstance(ALGORITHM).apply { init(key) }
     private val header = "v1:${identifier("unblocker-key-check")}"
 
     init {
@@ -49,6 +50,16 @@ class PrivateDomainSet(
      */
     @Synchronized fun contains(domain: String): Boolean {
         val normalized = DomainName.normalize(domain) ?: return false
+        return containsNormalized(normalized)
+    }
+
+    /**
+     * Checks exact membership and subtree membership when the hostname is already canonicalized.
+     *
+     * @param normalized Canonical hostname to hash and check against retained identifiers.
+     * @return Whether a matching identifier exists; hashing failures do not match.
+     */
+    @Synchronized fun containsNormalized(normalized: String): Boolean {
         // 1. Exact match
         val exactId = runCatching { identifier(normalized) }.getOrNull()
         if (exactId != null && exactId in identifiers) return true
@@ -155,10 +166,20 @@ class PrivateDomainSet(
      */
     @Synchronized fun size(): Int = identifiers.size
 
+    private fun bytesToHex(bytes: ByteArray): String {
+        val chars = CharArray(bytes.size * 2)
+        for (i in bytes.indices) {
+            val v = bytes[i].toInt() and 0xFF
+            chars[i * 2] = HEX_CHARS[v ushr 4]
+            chars[i * 2 + 1] = HEX_CHARS[v and 0x0F]
+        }
+        return String(chars)
+    }
+
     private fun identifier(value: String): String {
-        val mac = Mac.getInstance(ALGORITHM)
         mac.init(key)
-        return mac.doFinal(value.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
+        val bytes = mac.doFinal(value.toByteArray(Charsets.UTF_8))
+        return bytesToHex(bytes)
     }
 
     private fun save() {
@@ -190,5 +211,6 @@ class PrivateDomainSet(
         const val DEFAULT_CAPACITY = 1000
         private const val ALGORITHM = "HmacSHA256"
         private val IDENTIFIER_PATTERN = Regex("[0-9a-f]{64}")
+        private val HEX_CHARS = "0123456789abcdef".toCharArray()
     }
 }

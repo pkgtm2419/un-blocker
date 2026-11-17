@@ -81,6 +81,8 @@ class ExtensionRepository private constructor(
      */
     val ruleUpdateState: StateFlow<RuleUpdateState> = _ruleUpdateState.asStateFlow()
 
+    private val reloadLock = Any()
+
     init {
         loadExtensions()
         reloadActiveRulesAsync()
@@ -185,39 +187,41 @@ class ExtensionRepository private constructor(
      * This performs file I/O on the calling thread; use [reloadActiveRulesAsync] from UI callers.
      */
     fun reloadActiveRules() {
-        try {
-            val builder = ExtensionRuleStore.Builder()
+        synchronized(reloadLock) {
+            try {
+                val builder = ExtensionRuleStore.Builder()
 
-            // 1. Load bundled default rules if any enabled
-            val anyEnabled = _extensions.value.any { it.isEnabled }
-            if (anyEnabled) {
-                runCatching {
-                    context.assets.open("extensions/bundled_rules.txt").use { stream ->
-                        BufferedReader(InputStreamReader(stream)).useLines { lines ->
-                            for (line in lines) {
+                // 1. Load bundled default rules if any enabled
+                val anyEnabled = _extensions.value.any { it.isEnabled }
+                if (anyEnabled) {
+                    runCatching {
+                        context.assets.open("extensions/bundled_rules.txt").use { stream ->
+                            BufferedReader(InputStreamReader(stream)).useLines { lines ->
+                                for (line in lines) {
+                                    builder.addLine(line)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 2. Load cached rule files for all currently enabled extensions
+                for (ext in _extensions.value) {
+                    if (!ext.isEnabled) continue
+                    val ruleFile = File(extensionsDir, "${ext.id}.rules")
+                    if (ruleFile.exists()) {
+                        runCatching {
+                            ruleFile.forEachLine { line ->
                                 builder.addLine(line)
                             }
                         }
                     }
                 }
-            }
 
-            // 2. Load cached rule files for all currently enabled extensions
-            for (ext in _extensions.value) {
-                if (!ext.isEnabled) continue
-                val ruleFile = File(extensionsDir, "${ext.id}.rules")
-                if (ruleFile.exists()) {
-                    runCatching {
-                        ruleFile.forEachLine { line ->
-                            builder.addLine(line)
-                        }
-                    }
-                }
+                ExtensionRuleStore.applyBuilder(builder)
+            } catch (_: Exception) {
+                // Safe fallback
             }
-
-            ExtensionRuleStore.applyBuilder(builder)
-        } catch (_: Exception) {
-            // Safe fallback
         }
     }
 

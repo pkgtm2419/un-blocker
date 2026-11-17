@@ -12,6 +12,18 @@ Versioning follows the `versionName` / `versionCode` declared in `app/build.grad
 
 ---
 
+## [2.7.1] — 2026-11-17 (versionCode 37)
+
+### Performance & Lifecycle Optimizations (Phase 1)
+
+- **Hot-Path Cryptography & Zero-Allocation Hex**: Pre-allocated and reused `Mac` instances in `PrivateDomainSet`, `PrivateReputationStore`, and `PrivateEvidenceStore`. Replaced 32 dynamic `String.format("%02x")` allocations per identifier calculation with a static `0123456789abcdef` lookup table.
+- **Normalize-Once DNS Pipeline**: Added `@Synchronized fun containsNormalized(normalized: String)` in `PrivateDomainSet`, `isProtectedNormalized` in `ProtectedDomains`, and `isNeverBlockNormalized` in `NeverBlockPolicy`. Canonicalized DNS queries once at entry in `DecideBlockingUseCase`, eliminating 5–8 redundant string allocations per query.
+- **Shared Public Suffix List Cache**: Added a thread-safe singleton cache in `PublicSuffixRules.from(context)`, ensuring `public_suffix_list.dat` is parsed exactly once across the process lifetime.
+- **Consolidated Extension Rule Rebuilds**: Added synchronization lock in `ExtensionRepository.reloadActiveRules()` and prevented redundant synchronous file re-parsing in `ContentFilterEngine` and `HealthCheckService` when rules are already resident in memory.
+- **Release CI Automation**: Restored stable test signing fallback in `.github/workflows/release.yml` so production release tags publish minified APKs reliably when dedicated release keystore secrets are not configured.
+
+---
+
 ## [2.7.0] — 2026-11-16 (versionCode 36)
 
 ### Added
@@ -126,7 +138,8 @@ Completed in five phases. All phases verified per `.gsd/ROADMAP.md`.
 
 ---
 
-[Unreleased]: https://github.com/pkgtm2419/un-blocker/compare/v2.7.0...HEAD
+[Unreleased]: https://github.com/pkgtm2419/un-blocker/compare/v2.7.1...HEAD
+[2.7.1]: https://github.com/pkgtm2419/un-blocker/compare/v2.7.0...v2.7.1
 [2.7.0]: https://github.com/pkgtm2419/un-blocker/compare/v2.6.1...v2.7.0
 [2.6.1]: https://github.com/pkgtm2419/un-blocker/compare/v2.5.0...v2.6.1
 [2.5.0]: https://github.com/pkgtm2419/un-blocker/releases/tag/v2.5.0

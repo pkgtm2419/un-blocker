@@ -30,6 +30,7 @@ class PrivateReputationStore(
     )
 
     private val records = LinkedHashMap<String, Reputation>()
+    private val mac = Mac.getInstance(ALGORITHM)
     private val keyCheck = identifier("unblocker-key-check")
     private val header = "v2:$keyCheck"
     private val legacyHeader = "v1:$keyCheck"
@@ -64,17 +65,27 @@ class PrivateReputationStore(
         }
     }
 
+    private fun bytesToHex(bytes: ByteArray): String {
+        val chars = CharArray(bytes.size * 2)
+        for (i in bytes.indices) {
+            val v = bytes[i].toInt() and 0xFF
+            chars[i * 2] = HEX_CHARS[v ushr 4]
+            chars[i * 2 + 1] = HEX_CHARS[v and 0x0F]
+        }
+        return String(chars)
+    }
+
     private fun identifier(domain: String): String {
-        val mac = Mac.getInstance("HmacSHA256")
         mac.init(key)
-        return mac
-            .doFinal(
+        val bytes =
+            mac.doFinal(
                 domain
                     .trim()
                     .trimEnd('.')
                     .lowercase(Locale.ROOT)
                     .toByteArray(Charsets.UTF_8),
-            ).joinToString("") { "%02x".format(it.toInt() and 255) }
+            )
+        return bytesToHex(bytes)
     }
 
     /**
@@ -203,6 +214,8 @@ class PrivateReputationStore(
         const val DEFAULT_CAPACITY = 20_000
         private const val WEEK_MILLIS = 7L * 24 * 60 * 60 * 1_000
         private const val DECAY_PER_WEEK = 0.95f
+        private const val ALGORITHM = "HmacSHA256"
         private val IDENTIFIER_PATTERN = Regex("[0-9a-f]{64}")
+        private val HEX_CHARS = "0123456789abcdef".toCharArray()
     }
 }

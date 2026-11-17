@@ -65,4 +65,20 @@ class PrivateDomainSetTest {
         rules.clear()
         assertEquals(0, PrivateDomainSet(key(), file).size())
     }
+
+    /**
+     * Verifies that containsNormalized matches exact and parent subtrees.
+     */
+    @Test fun containsNormalizedMatchesExactAndParentSubtrees() {
+        val rules = PrivateDomainSet(key(), File(temp.root, "allowlist"))
+        rules.addSubtree("example.com")
+        rules.add("exact.tracker.net")
+
+        assertTrue(rules.containsNormalized("example.com"))
+        assertTrue(rules.containsNormalized("sub.example.com"))
+        assertTrue(rules.containsNormalized("deep.nested.example.com"))
+        assertFalse(rules.containsNormalized("other.com"))
+        assertTrue(rules.containsNormalized("exact.tracker.net"))
+        assertFalse(rules.containsNormalized("sub.exact.tracker.net"))
+    }
 }

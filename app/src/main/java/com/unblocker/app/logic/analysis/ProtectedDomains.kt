@@ -16,6 +16,14 @@ interface ProtectedDomains {
     fun isProtected(host: String): Boolean
 
     /**
+     * Tests whether protection applies to an already-normalized canonical hostname.
+     *
+     * @param normalized Canonical DNS hostname to check.
+     * @return Whether the implementation protects that hostname.
+     */
+    fun isProtectedNormalized(normalized: String): Boolean = isProtected(normalized)
+
+    /**
      * Tests whether a proposed rule intersects protected names.
      *
      * @param kind Exact, suffix or strict-subdomain scope.
@@ -71,6 +79,16 @@ class DefaultProtectedDomains(
      */
     override fun isProtected(host: String): Boolean {
         val normalized = DomainName.normalize(host) ?: return false
+        return isProtectedNormalized(normalized)
+    }
+
+    /**
+     * Checks exact/www infrastructure names and My domains ancestors for an already-normalized hostname.
+     *
+     * @param normalized Canonical hostname to check.
+     * @return Whether protection matches.
+     */
+    override fun isProtectedNormalized(normalized: String): Boolean {
         val builtIn = builtInSupplier()
         if (builtIn.contains(normalized) ||
             (normalized.startsWith("www.") && builtIn.contains(normalized.removePrefix("www.")))

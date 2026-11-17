@@ -144,13 +144,12 @@ object NeverBlockPolicy {
     fun getProtectedHosts(): Set<String> = protectedHosts
 
     /**
-     * Checks exact hosts, the special www form and explicit wildcard subtrees.
+     * Checks exact hosts, the special www form and explicit wildcard subtrees for an already-normalized hostname.
      *
-     * @param rawDomain Hostname to normalize.
-     * @return Whether a valid hostname matches the current exception policy.
+     * @param domain Canonical hostname to check.
+     * @return Whether the hostname matches the current exception policy.
      */
-    fun isNeverBlock(rawDomain: String): Boolean {
-        val domain = DomainName.normalize(rawDomain) ?: return false
+    fun isNeverBlockNormalized(domain: String): Boolean {
         if (domain in protectedHosts) return true
         if (domain.startsWith("www.") && domain.removePrefix("www.") in protectedHosts) return true
         for (host in protectedHosts) {
@@ -160,5 +159,16 @@ object NeverBlockPolicy {
             }
         }
         return false
+    }
+
+    /**
+     * Checks exact hosts, the special www form and explicit wildcard subtrees.
+     *
+     * @param rawDomain Hostname to normalize.
+     * @return Whether a valid hostname matches the current exception policy.
+     */
+    fun isNeverBlock(rawDomain: String): Boolean {
+        val domain = DomainName.normalize(rawDomain) ?: return false
+        return isNeverBlockNormalized(domain)
     }
 }

@@ -97,22 +97,32 @@ class PublicSuffixRules(
                 "com\nnet\norg\nco.uk\ncom.au\nco.in\nblogspot.com\ngithub.io\n*.ck\n!www.ck".lineSequence(),
             )
 
+        @Volatile
+        private var cachedInstance: PublicSuffixRules? = null
+
         /**
-         * Loads packaged public suffix rules, using fallback only when context is null.
+         * Loads packaged public suffix rules, caching the parsed rules for subsequent callers,
+         * or using fallback when context is null.
          *
          * @param context Asset context, or null to select the fallback set.
          * @return Parsed suffix context.
          * @throws java.io.IOException If opening or reading the asset fails.
          */
-        fun from(context: android.content.Context?): PublicSuffixRules =
-            if (context == null) {
-                fallback
-            } else {
-                context.assets
-                    .open(
-                        "public_suffix_list.dat",
-                    ).bufferedReader()
-                    .use { PublicSuffixRules(it.lineSequence()) }
+        fun from(context: android.content.Context?): PublicSuffixRules {
+            if (context == null) return fallback
+            cachedInstance?.let { return it }
+            return synchronized(this) {
+                cachedInstance ?: run {
+                    val loaded =
+                        context.assets
+                            .open(
+                                "public_suffix_list.dat",
+                            ).bufferedReader()
+                            .use { PublicSuffixRules(it.lineSequence()) }
+                    cachedInstance = loaded
+                    loaded
+                }
             }
+        }
     }
 }

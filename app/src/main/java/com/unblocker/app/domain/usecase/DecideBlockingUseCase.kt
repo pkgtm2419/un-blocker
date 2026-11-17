@@ -135,7 +135,7 @@ class DecideBlockingUseCase(
         }
 
         // Step 6: protected (built-in exact | user "My domains" subtree) -> ALLOW(PROTECTED)
-        if (protectedDomains.isProtected(domain) || NeverBlockPolicy.isNeverBlock(domain)) {
+        if (protectedDomains.isProtectedNormalized(domain) || NeverBlockPolicy.isNeverBlockNormalized(domain)) {
             return BlockingDecision.allow("Protected infrastructure", 1.0f).copy(reasonCode = DecisionReason.PROTECTED)
         }
 
@@ -211,7 +211,7 @@ class DecideBlockingUseCase(
         // Step 8: learner: BLOCK only if registrable domain is not protected and not user-allowed -> BLOCK(LEARNED)
         if (isAdBlocking) {
             val regDomain = psl.registrableDomain(domain) ?: domain
-            if (!protectedDomains.isProtected(regDomain) && !isAllowlisted(regDomain)) {
+            if (!protectedDomains.isProtectedNormalized(regDomain) && !isAllowlisted(regDomain)) {
                 val adaptiveDecision = adaptiveBlockingEngine.evaluateDomain(domain)
                 if (adaptiveDecision.isBlocked) {
                     return adaptiveDecision

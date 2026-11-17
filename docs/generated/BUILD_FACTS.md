@@ -10,8 +10,8 @@ Read directly from **checked-out** Gradle, not README version claims.
 | `minSdk` | `26` |
 | `targetSdk` | `35` |
 | `compileSdk` | `35` |
-| `versionCode` | `36` |
-| `versionName` | `2.7.0` |
+| `versionCode` | `37` |
+| `versionName` | `2.7.1` |
 
 ## Version catalog `[versions]`
 

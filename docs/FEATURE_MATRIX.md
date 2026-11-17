@@ -1,6 +1,6 @@
 # Feature inventory and evidence matrix
 
-**Last source snapshot:** 2026-11-16, versionName **2.7.0**
+**Last source snapshot:** 2026-11-17, versionName **2.7.1**
 
 **Status meanings:** *Source-observed* = code/assets or existing tests identified; **not** equivalent to device testing, release acceptance or global efficacy. Update each row when semantics or implementation changes; create new rows for new features.
 

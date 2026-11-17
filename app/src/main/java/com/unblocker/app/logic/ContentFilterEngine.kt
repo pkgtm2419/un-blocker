@@ -51,9 +51,11 @@ class ContentFilterEngine(
 ) {
     init {
         NeverBlockPolicy.load(context)
-        com.unblocker.app.data.repository.ExtensionRepository
-            .getInstance(context)
-            .reloadActiveRules()
+        if (com.unblocker.app.logic.rules.ExtensionRuleStore.ruleCount == 0) {
+            com.unblocker.app.data.repository.ExtensionRepository
+                .getInstance(context)
+                .reloadActiveRules()
+        }
     }
 
     private val myDomainsStore = MyDomainsStore.getInstance(context)
@@ -67,7 +69,7 @@ class ContentFilterEngine(
     private val cnamePolicy =
         CnamePolicy(
             { preferences.adBlockingEnabled.value },
-            allowlistedDomains::contains,
+            allowlistedDomains::containsNormalized,
             adDetector::matchRule,
             protectedDomains,
         )
@@ -90,8 +92,8 @@ class ContentFilterEngine(
             adultContentDetector = adultContentDetector,
             adaptiveBlockingEngine = adaptiveEngine,
             preferences = preferences,
-            isAllowlisted = allowlistedDomains::contains,
-            isBlocklisted = blocklistedDomains::contains,
+            isAllowlisted = allowlistedDomains::containsNormalized,
+            isBlocklisted = blocklistedDomains::containsNormalized,
             protectedDomains = protectedDomains,
             psl = PublicSuffixRules.from(context),
         )

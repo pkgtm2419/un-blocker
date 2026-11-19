@@ -105,17 +105,17 @@ class ContentFilterEngine(
      * @return Decision, explanation and detection method for the supplied name.
      */
     fun analyzeAndFilter(rawDomain: String): FilterResult {
-        val domain = rawDomain.trim().lowercase()
-        if (domain.isBlank()) {
-            return FilterResult(
-                domain = domain,
+        // Normalize once at the entry point; the normalized value flows through the pipeline
+        // without repeated trim/lowercase/split/allocation on every classifier.
+        val domain =
+            DomainName.normalize(rawDomain) ?: return FilterResult(
+                domain = rawDomain.trim().lowercase(),
                 contentType = ContentType.NORMAL,
                 shouldBlock = false,
-                reason = "Empty domain",
+                reason = "Invalid domain",
                 detectionMethod = DetectionMethod.NONE,
                 confidence = 1.0f,
             )
-        }
 
         return evaluateDomain(domain)
     }

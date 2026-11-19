@@ -3,6 +3,7 @@ package com.unblocker.app.data.repository
 import android.content.Context
 import android.content.SharedPreferences
 import com.unblocker.app.data.model.ExtensionFilter
+import com.unblocker.app.data.model.ExtensionPreset
 import com.unblocker.app.data.model.FilterCategories
 import com.unblocker.app.logic.rules.ExtensionRuleStore
 import kotlinx.coroutines.CoroutineScope
@@ -81,6 +82,18 @@ class ExtensionRepository private constructor(
      */
     val ruleUpdateState: StateFlow<RuleUpdateState> = _ruleUpdateState.asStateFlow()
 
+    private val _appliedPreset =
+        MutableStateFlow<ExtensionPreset?>(
+            prefs.getString(KEY_APPLIED_PRESET, null)?.let { name ->
+                runCatching { ExtensionPreset.valueOf(name) }.getOrNull()
+            },
+        )
+
+    /**
+     * Currently active curated preset, or null if the user has customized individual lists.
+     */
+    val appliedPreset: StateFlow<ExtensionPreset?> = _appliedPreset.asStateFlow()
+
     private val reloadLock = Any()
 
     init {
@@ -122,6 +135,8 @@ class ExtensionRepository private constructor(
                 if (it.id == id) it.copy(isEnabled = enabled) else it
             }
         _extensions.value = updated
+        _appliedPreset.value = null
+        prefs.edit().remove(KEY_APPLIED_PRESET).apply()
         persistExtensions(updated)
         reloadActiveRulesAsync()
     }
@@ -134,7 +149,24 @@ class ExtensionRepository private constructor(
     fun setAllEnabled(enabled: Boolean) {
         val updated = _extensions.value.map { it.copy(isEnabled = enabled) }
         _extensions.value = updated
+        _appliedPreset.value = null
+        prefs.edit().remove(KEY_APPLIED_PRESET).apply()
         persistExtensions(updated)
+        reloadActiveRulesAsync()
+    }
+
+    /**
+     * Applies a curated extension preset, enabling target lists and disabling non-target ones.
+     * User-created custom filters are preserved.
+     *
+     * @param preset The curated preset to apply.
+     */
+    fun applyPreset(preset: ExtensionPreset) {
+        val updated = computePresetExtensions(_extensions.value, preset)
+        _extensions.value = updated
+        _appliedPreset.value = preset
+        persistExtensions(updated)
+        prefs.edit().putString(KEY_APPLIED_PRESET, preset.name).apply()
         reloadActiveRulesAsync()
     }
 
@@ -477,6 +509,11 @@ class ExtensionRepository private constructor(
          * Preference key holding the last incorporated bundled catalog version.
          */
         const val KEY_MANIFEST_VERSION = "key_manifest_version"
+
+        /**
+         * Preference key holding the name of the active curated preset.
+         */
+        const val KEY_APPLIED_PRESET = "key_applied_preset"
         private const val KEY_AUTO_UPDATE = "key_auto_update_extensions"
 
         /**
@@ -525,6 +562,30 @@ class ExtensionRepository private constructor(
                 }
 
             return customFilters + mergedBundled
+        }
+
+        /**
+         * Computes the updated catalog list when applying a curated preset.
+         * User-created custom filters are preserved unchanged.
+         *
+         * @param current The current list of extensions.
+         * @param preset The curated preset to apply.
+         * @param manufacturer The manufacturer string used for OEM target resolution.
+         * @return New list with enabled states updated according to the preset targets.
+         */
+        fun computePresetExtensions(
+            current: List<ExtensionFilter>,
+            preset: ExtensionPreset,
+            manufacturer: String = android.os.Build.MANUFACTURER,
+        ): List<ExtensionFilter> {
+            val targetIds = preset.resolveTargetIds(manufacturer)
+            return current.map { filter ->
+                if (filter.isCustom) {
+                    filter
+                } else {
+                    filter.copy(isEnabled = filter.id in targetIds)
+                }
+            }
         }
 
         @Volatile

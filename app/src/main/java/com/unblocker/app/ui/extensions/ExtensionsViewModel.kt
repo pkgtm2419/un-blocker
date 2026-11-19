@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.unblocker.app.data.model.ExtensionFilter
+import com.unblocker.app.data.model.ExtensionPreset
 import com.unblocker.app.data.model.FilterCategories
 import com.unblocker.app.data.repository.ExtensionRepository
 import com.unblocker.app.services.ExtensionUpdateWorker
@@ -43,6 +44,11 @@ class ExtensionsViewModel(
      * Persisted preference for periodic extension updates.
      */
     val autoUpdateEnabled: StateFlow<Boolean> = repository.autoUpdateEnabled
+
+    /**
+     * Currently active curated preset, or null if individual filter lists have been customized.
+     */
+    val appliedPreset: StateFlow<ExtensionPreset?> = repository.appliedPreset
 
     private val _searchQuery = MutableStateFlow("")
 
@@ -160,6 +166,18 @@ class ExtensionsViewModel(
      */
     fun setAllEnabled(enabled: Boolean) {
         repository.setAllEnabled(enabled)
+    }
+
+    /**
+     * Applies a curated filter preset, updating enabled lists to match target coverage.
+     *
+     * @param preset The curated preset to activate.
+     */
+    fun applyPreset(preset: ExtensionPreset) {
+        repository.applyPreset(preset)
+        viewModelScope.launch {
+            _snackbarMessage.emit("Activated ${preset.title}")
+        }
     }
 
     /**

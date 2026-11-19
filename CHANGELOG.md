@@ -12,6 +12,20 @@ Versioning follows the `versionName` / `versionCode` declared in `app/build.grad
 
 ---
 
+## [2.7.2] — 2026-11-20 (versionCode 38)
+
+### Comprehensive Ad-Blocking & System Hardening
+
+- **Curated Extension Presets**: Introduced 1-tap presets (`Essential`, `Recommended`, `Aggressive`) with dynamic OEM auto-detection targeting manufacturer telemetry for Samsung (`hagezi_native_samsung`), Xiaomi/Redmi/POCO (`hagezi_native_xiaomi`), Apple (`hagezi_native_apple`), and DoH bypass prevention (`hagezi_doh_bypass`). Preserves custom user filters upon activation.
+- **System Leak & Hardening Checklist**: Added interactive 4-pillar device audit in Settings inspecting Battery Optimization exemption, Private DNS leaks, Always-On VPN posture, and Google Advertising ID zero-out with deep-links to system settings.
+- **Beyond DNS Defense-in-Depth Hub**: Integrated companion guidance dialog and educational documentation (`docs/COMPREHENSIVE_AD_BLOCKING_GUIDE.md`) explaining multi-layered defenses for stream-stitched video ads (YouTube/Twitch), in-feed social ads, and cosmetic blank element frames via Firefox + uBlock Origin and PWAs.
+- **Private DNS Leak Banner**: Added real-time warning on the main dashboard when system Private DNS (DoT) is active, informing users that upstream queries are bypassing local VPN filtering.
+- **Connection History & Event Log Table**: Added an info icon button to the Recent Activity section of each domain card in the Logs viewer, opening a modal `ConnectionHistoryDialog` with KPI overview (Total, Allowed, Blocked, Block Rate %, First/Last Seen) and a monospace timestamped columnar table view (`#`, `Date & Time`, `Decision`).
+- **Dynamic UI Versioning**: Removed all hardcoded version strings from `SettingsScreen.kt`, dynamically reading package metadata from Android `PackageManager` across both top badge and bottom About card.
+- **DNS Engine & Threading Improvements**: Optimized `AdDetector` overlay domain lookup from linear list scan to `HashSet` exact & suffix walk; clamped DNS worker thread pool to reduce idle thread wakeups and RAM footprint on mobile devices.
+
+---
+
 ## [2.7.1] — 2026-11-17 (versionCode 37)
 
 ### Performance & Lifecycle Optimizations (Phase 1)
@@ -138,7 +152,8 @@ Completed in five phases. All phases verified per `.gsd/ROADMAP.md`.
 
 ---
 
-[Unreleased]: https://github.com/pkgtm2419/un-blocker/compare/v2.7.1...HEAD
+[Unreleased]: https://github.com/pkgtm2419/un-blocker/compare/v2.7.2...HEAD
+[2.7.2]: https://github.com/pkgtm2419/un-blocker/compare/v2.7.1...v2.7.2
 [2.7.1]: https://github.com/pkgtm2419/un-blocker/compare/v2.7.0...v2.7.1
 [2.7.0]: https://github.com/pkgtm2419/un-blocker/compare/v2.6.1...v2.7.0
 [2.6.1]: https://github.com/pkgtm2419/un-blocker/compare/v2.5.0...v2.6.1

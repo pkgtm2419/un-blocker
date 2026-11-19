@@ -31,13 +31,16 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.unblocker.app.data.preferences.FilteringPreferences
 import com.unblocker.app.services.QuickStartManager
+import com.unblocker.app.services.SystemHardeningChecker
 import com.unblocker.app.services.UnblockerVpnService
 import com.unblocker.app.ui.adaptive.LocalWindowDimensions
 import com.unblocker.app.ui.adaptive.WindowWidthClass
 import com.unblocker.app.ui.components.AgentStatusPanel
+import com.unblocker.app.ui.components.BeyondDnsHubDialog
 import com.unblocker.app.ui.components.FilteringTierCard
 import com.unblocker.app.ui.components.HaikeiAtmosphericBackground
 import com.unblocker.app.ui.components.SkeuomorphicCard
+import com.unblocker.app.ui.components.SystemHardeningWizard
 import com.unblocker.app.ui.logs.LogViewModel
 import com.unblocker.app.ui.theme.*
 import kotlinx.coroutines.launch
@@ -64,6 +67,12 @@ fun SettingsScreen(
     val dimensions = LocalWindowDimensions.current
     val coroutineScope = rememberCoroutineScope()
     val isDark = isSystemInDarkTheme()
+    val versionName =
+        remember {
+            runCatching {
+                context.packageManager.getPackageInfo(context.packageName, 0).versionName
+            }.getOrNull() ?: "2.7.2"
+        }
 
     val serviceStatus by quickStartManager.status.collectAsState()
     val filteringTier by preferences.filteringTier.collectAsState()
@@ -73,6 +82,13 @@ fun SettingsScreen(
 
     val isPrivateDnsActive by UnblockerVpnService.isPrivateDnsActive.collectAsState()
     val privateDnsServerName by UnblockerVpnService.privateDnsServerName.collectAsState()
+
+    var postureRefreshTrigger by remember { mutableStateOf(0) }
+    val posture =
+        remember(postureRefreshTrigger, isPrivateDnsActive) {
+            SystemHardeningChecker.checkPosture(context)
+        }
+    var showBeyondDnsDialog by remember { mutableStateOf(false) }
 
     var showClearConfirmDialog by remember { mutableStateOf(false) }
 
@@ -138,6 +154,12 @@ fun SettingsScreen(
         )
     }
 
+    if (showBeyondDnsDialog) {
+        BeyondDnsHubDialog(
+            onDismiss = { showBeyondDnsDialog = false },
+        )
+    }
+
     val stateColors =
         rememberVpnStateColors(
             serviceStatus = serviceStatus,
@@ -189,7 +211,7 @@ fun SettingsScreen(
                         border = BorderStroke(1.dp, if (isDark) Slate700 else Color(0xFFCBD5E1)),
                     ) {
                         Text(
-                            text = "v2.5.0",
+                            text = "v$versionName",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
@@ -407,7 +429,20 @@ fun SettingsScreen(
                     }
                 }
 
-                // 4. SYSTEM AUTOMATION & BACKGROUND HEALTH
+                // 4. SYSTEM LEAK & HARDENING CHECKLIST
+                SystemHardeningWizard(
+                    posture = posture,
+                    modifier = Modifier.widthIn(max = 480.dp),
+                    onRefreshRequested = { postureRefreshTrigger++ },
+                )
+
+                // 5. DEFENSE-IN-DEPTH COMPANION (Streams, Feeds & Cosmetic)
+                BeyondDnsCompanionCard(
+                    onOpenGuide = { showBeyondDnsDialog = true },
+                    modifier = Modifier.widthIn(max = 480.dp),
+                )
+
+                // 6. SYSTEM AUTOMATION & BACKGROUND HEALTH
                 SkeuomorphicCard(
                     modifier =
                         Modifier
@@ -646,7 +681,7 @@ fun SettingsScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Text(
-                            text = "Un-Blocker v2.5.0",
+                            text = "Un-Blocker v$versionName",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -700,6 +735,95 @@ fun SettingsScreen(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+/**
+ * Companion card linking to multi-layered solutions for video streams and in-feed ads.
+ *
+ * @param onOpenGuide Callback invoked to present the educational companion dialog.
+ * @param modifier Layout modifier applied to the root card container.
+ */
+@Composable
+fun BeyondDnsCompanionCard(
+    onOpenGuide: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    SkeuomorphicCard(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.PlayCircleOutline,
+                        contentDescription = null,
+                        tint = TealPrimary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Beyond DNS: Video & Stream Ads",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = TealPrimary.copy(alpha = 0.15f),
+                    border = BorderStroke(1.dp, TealPrimary.copy(alpha = 0.35f)),
+                ) {
+                    Text(
+                        text = "Defense-in-Depth",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TealPrimary,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text =
+                    "YouTube, Twitch, and social feed ads share content domains and bypass DNS. " +
+                        "Learn how to combine Un-Blocker with Firefox, uBlock Origin, and PWAs.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            OutlinedButton(
+                onClick = onOpenGuide,
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, TealPrimary.copy(alpha = 0.5f)),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    text = "View Multi-Layer Setup Guide",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = TealPrimary,
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = TealPrimary,
+                )
             }
         }
     }

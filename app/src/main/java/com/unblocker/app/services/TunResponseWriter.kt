@@ -3,7 +3,6 @@ package com.unblocker.app.services
 import java.io.Closeable
 import java.io.OutputStream
 import java.util.concurrent.ArrayBlockingQueue
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
@@ -53,7 +52,7 @@ internal class TunResponseWriter(
         Thread({
             while (!stopped.get() && run.running.get()) {
                 try {
-                    val packet = queue.poll(100, TimeUnit.MILLISECONDS) ?: continue
+                    val packet = queue.take()
                     if (!run.running.get() || !session.owns(run.owner) || !session.active.value) {
                         break
                     }

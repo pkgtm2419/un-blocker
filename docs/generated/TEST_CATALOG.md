@@ -15,7 +15,9 @@ Files matching `*Test.kt`; presence does not indicate tests passed.
 | `app/src/test/java/com/unblocker/app/data/export/CsvWriterTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/data/logs/QueryLogSinkTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/data/model/ExtensionFilterTest.kt` | unit |
+| `app/src/test/java/com/unblocker/app/data/model/ExtensionPresetTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/data/repository/BoundedFilterDownloaderTest.kt` | unit |
+| `app/src/test/java/com/unblocker/app/data/repository/ExtensionPresetApplicationTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/data/repository/ExtensionRepositoryTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/data/repository/ExtensionUpdateRollbackTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/dns/AdvancedDnsPacketTest.kt` | unit |
@@ -76,6 +78,7 @@ Files matching `*Test.kt`; presence does not indicate tests passed.
 | `app/src/test/java/com/unblocker/app/services/ProtectionCoverageTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/services/RecordingSessionManagerTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/services/ResolverRegistryTest.kt` | unit |
+| `app/src/test/java/com/unblocker/app/services/SystemHardeningCheckerTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/services/TunResponseWriterTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/services/TunnelDnsConfigTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/services/TunnelRunTest.kt` | unit |

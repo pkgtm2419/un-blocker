@@ -27,7 +27,7 @@ class PrivateEvidenceStore(
     private val file: File? = null,
     private val capacity: Int = 20_000,
     private val nowBucket: () -> Long = { System.currentTimeMillis() / 86_400_000 },
-    private val flushIntervalMs: Long = 15_000L,
+    private val flushIntervalMs: Long = 60_000L,
 ) : Closeable {
     private val records = LinkedHashMap<String, ReputationEvidence>(16, .75f, true)
     private val mac = Mac.getInstance("HmacSHA256").apply { init(key) }

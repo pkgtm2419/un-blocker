@@ -124,7 +124,9 @@ class DecideBlockingUseCase(
                 reasonCode = DecisionReason.USER_BLOCK,
             )
         }
-        adaptiveBlockingEngine.networkLearner.syncFeedback(domain, UserFeedback.NONE)
+        // Step 3/4 already recorded explicit user ALLOW/BLOCK feedback above and returned early.
+        // Line reached only for domains with no user rule: skip HMAC-heavy syncFeedback(NONE)
+        // for every benign query. The adaptive learner (step 8) still observes new domains.
 
         // Step 5: APPROVED_ONLY allows names without a user rule before later classifiers.
         val currentMode = blockingMode()
@@ -196,11 +198,12 @@ class DecideBlockingUseCase(
                 }
             }
 
-            val (isAdSeed, seedReason) = adDetector.isAdDomain(domain)
-            if (isAdSeed) {
+            // isAdDomain repeats matchRule internally; since matchRule above already returned null,
+            // only the Firefox DoH canary check adds new value here. Skip the redundant rule lookup.
+            if (domain == "use-application-dns.net" || domain.endsWith(".use-application-dns.net")) {
                 return BlockingDecision(
                     action = BlockingAction.BLOCK,
-                    reason = seedReason,
+                    reason = "Firefox DoH canary compatibility rule",
                     confidence = 0.98f,
                     category = BlockingCategory.AD,
                     reasonCode = DecisionReason.STATIC_RULE,

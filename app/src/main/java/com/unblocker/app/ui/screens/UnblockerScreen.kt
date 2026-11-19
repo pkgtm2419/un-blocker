@@ -18,6 +18,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -45,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import com.unblocker.app.data.preferences.FilteringPreferences
 import com.unblocker.app.services.QuickStartManager
 import com.unblocker.app.services.ServiceStatus
+import com.unblocker.app.services.UnblockerVpnService
 import com.unblocker.app.ui.adaptive.LocalWindowDimensions
 import com.unblocker.app.ui.adaptive.WindowWidthClass
 import com.unblocker.app.ui.components.HaikeiAtmosphericBackground
@@ -84,6 +87,11 @@ fun UnblockerScreen(
     val isRunning = serviceStatus == ServiceStatus.RUNNING
 
     val adultBlockingEnabled by preferences.adultBlockingEnabled.collectAsState()
+
+    // Private DNS (system DoT) bypasses the local DNS filter entirely. When active, ads and
+    // trackers can leak through even with every extension enabled. Surface an actionable warning.
+    val isPrivateDnsActive by UnblockerVpnService.isPrivateDnsActive.collectAsState()
+    val privateDnsServer by UnblockerVpnService.privateDnsServerName.collectAsState()
 
     // Dynamic state-reactive colors
     val stateColors =
@@ -279,6 +287,46 @@ fun UnblockerScreen(
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
+
+                // Private DNS bypass warning: when system Private DNS (DoT) is active, the local
+                // DNS filter cannot see or block those queries. Ads and trackers leak through.
+                if (isRunning && isPrivateDnsActive) {
+                    SkeuomorphicCard(
+                        modifier = Modifier.widthIn(max = 420.dp),
+                        shape = RoundedCornerShape(20.dp),
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            androidx.compose.material3.Icon(
+                                imageVector = Icons.Filled.Warning,
+                                contentDescription = "Private DNS active",
+                                tint = Color(0xFFF59E0B),
+                                modifier = Modifier.size(20.dp),
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Private DNS is active — filtering may leak",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text =
+                                        "System Private DNS (${privateDnsServer ?: "system resolver"}) bypasses this filter. " +
+                                            "Go to Settings → Network → Private DNS and set it to Off so blocking works.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 3,
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
 
                 // 3. BELOW LOGO: ONLY THE 18+ CONTENT TOGGLE
                 SkeuomorphicCard(

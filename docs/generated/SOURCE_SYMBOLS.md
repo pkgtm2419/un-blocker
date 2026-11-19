@@ -15,6 +15,7 @@ Only syntactically matched top-level class/interface/object declarations (not se
 | `app/src/main/java/com/unblocker/app/data/model/DefaultConfig.kt` | class | `DefaultConfig` |
 | `app/src/main/java/com/unblocker/app/data/model/ExtensionFilter.kt` | class | `ExtensionFilter` |
 | `app/src/main/java/com/unblocker/app/data/model/ExtensionFilter.kt` | object | `FilterCategories` |
+| `app/src/main/java/com/unblocker/app/data/model/ExtensionPreset.kt` | class | `ExtensionPreset` |
 | `app/src/main/java/com/unblocker/app/data/model/FilterResult.kt` | class | `ContentType` |
 | `app/src/main/java/com/unblocker/app/data/model/FilterResult.kt` | class | `DetectionMethod` |
 | `app/src/main/java/com/unblocker/app/data/model/FilterResult.kt` | class | `FilterResult` |
@@ -119,6 +120,8 @@ Only syntactically matched top-level class/interface/object declarations (not se
 | `app/src/main/java/com/unblocker/app/services/RecordingSessionManager.kt` | class | `RecordingSession` |
 | `app/src/main/java/com/unblocker/app/services/RecordingSessionManager.kt` | class | `SessionDomain` |
 | `app/src/main/java/com/unblocker/app/services/ResolverRegistry.kt` | class | `ResolverRegistry` |
+| `app/src/main/java/com/unblocker/app/services/SystemHardeningChecker.kt` | class | `HardeningPosture` |
+| `app/src/main/java/com/unblocker/app/services/SystemHardeningChecker.kt` | object | `SystemHardeningChecker` |
 | `app/src/main/java/com/unblocker/app/services/TunResponseWriter.kt` | class | `TunResponseWriter` |
 | `app/src/main/java/com/unblocker/app/services/TunnelDnsConfig.kt` | object | `TunnelDnsConfig` |
 | `app/src/main/java/com/unblocker/app/services/TunnelRun.kt` | class | `TunnelRun` |

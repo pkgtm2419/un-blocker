@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
@@ -539,6 +540,7 @@ fun DomainStatCard(
         remember(stat.lastSeen) {
             formatRelativeTime(stat.lastSeen)
         }
+    var showHistoryPopup by remember { mutableStateOf(false) }
 
     SkeuomorphicCard(
         shape = RoundedCornerShape(20.dp),
@@ -600,12 +602,29 @@ fun DomainStatCard(
                         color = MaterialTheme.colorScheme.outlineVariant,
                     )
 
-                    Text(
-                        text = "Recent Activity (Latest 50)",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(
+                            text = "Recent Activity (Latest 50)",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        IconButton(
+                            onClick = { showHistoryPopup = true },
+                            modifier = Modifier.size(24.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = "View complete connection history in table view",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -684,6 +703,14 @@ fun DomainStatCard(
                 }
             }
         }
+    }
+
+    if (showHistoryPopup) {
+        ConnectionHistoryDialog(
+            stat = stat,
+            events = events,
+            onDismiss = { showHistoryPopup = false },
+        )
     }
 }
 

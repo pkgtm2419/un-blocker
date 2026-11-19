@@ -95,15 +95,17 @@ class AdultContentDetector(
     }
 
     private fun isInstitutional(domain: String): Boolean {
-        val labels = domain.split('.')
-        for (i in 1 until labels.size) {
-            val suffix = labels.drop(i).joinToString(".")
-            if (suffix == "gov" || suffix == "edu" || suffix == "mil" || suffix == "ac" ||
+        val len = domain.length
+        var dot = domain.indexOf('.')
+        while (dot != -1) {
+            val suffix = domain.substring(dot + 1)
+            when {
+                suffix == "gov" || suffix == "edu" || suffix == "mil" || suffix == "ac" -> return true
+
                 suffix.startsWith("gov.") || suffix.startsWith("edu.") ||
-                suffix.startsWith("ac.") || suffix.startsWith("mil.")
-            ) {
-                return true
+                    suffix.startsWith("ac.") || suffix.startsWith("mil.") -> return true
             }
+            dot = domain.indexOf('.', dot + 1)
         }
         return false
     }
@@ -226,10 +228,11 @@ class AdultContentDetector(
             return AdultMatch(false, "", DecisionReason.ALLOWED)
         }
 
-        // 4. Pattern Matching on registrable domain and subdomains (exclude public suffix)
+        // 4. Pattern Matching on registrable domain only (full-domain match is redundant:
+        //    any pattern matching a subdomain also matches its registrable domain).
         val evalTarget = suffixRules.registrableDomain(domain) ?: domain
         for (pattern in adultPatterns) {
-            if (pattern.matches(evalTarget) || pattern.matches(domain)) {
+            if (pattern.matches(evalTarget)) {
                 return AdultMatch(true, "Adult Pattern Match", DecisionReason.ADULT_PATTERN)
             }
         }

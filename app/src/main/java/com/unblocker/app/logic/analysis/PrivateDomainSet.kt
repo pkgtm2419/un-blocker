@@ -177,7 +177,7 @@ class PrivateDomainSet(
     }
 
     private fun identifier(value: String): String {
-        mac.init(key)
+        // mac is already initialized in the constructor; re-init is unnecessary overhead.
         val bytes = mac.doFinal(value.toByteArray(Charsets.UTF_8))
         return bytesToHex(bytes)
     }

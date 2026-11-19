@@ -18,7 +18,11 @@ class AdDetector(
     private val ruleSet: RuleSet? = null,
     private val offHeapRuleEngine: com.unblocker.data.cache.OffHeapRuleEngine? = null,
 ) {
-    private val overlay = mutableListOf<DnsRule>()
+    /**
+     * User-added block domains (suffix rules). Stored as a HashSet for O(1) lookup
+     * instead of a linear list scan on every query.
+     */
+    private val overlay = HashSet<String>()
     private val admission: RuleAdmission = DefaultRuleAdmission()
     private val activeRuleSet: RuleSet by lazy {
         ruleSet ?: compiledRules?.toRuleSet() ?: if (context != null) RuleSetHolder.get(context) else fallbackRuleSet()
@@ -32,7 +36,7 @@ class AdDetector(
     @Synchronized fun addDomain(domain: String) {
         DomainName.normalizeUserEntry(domain)?.let {
             if (admission.check(RuleAction.BLOCK, RuleKind.SUFFIX, it) == null) {
-                overlay.add(DnsRule(RuleAction.BLOCK, RuleKind.SUFFIX, it))
+                overlay.add(it)
             }
         }
     }
@@ -46,18 +50,18 @@ class AdDetector(
     fun matchRule(domain: String): DnsRule? {
         val normalized = DomainName.normalize(domain) ?: return null
         synchronized(overlay) {
-            for (action in arrayOf(RuleAction.ALLOW, RuleAction.BLOCK)) {
-                for (r in overlay) {
-                    if (r.action == action) {
-                        if (r.kind == RuleKind.EXACT && r.value == normalized) return r
-                        if (r.kind == RuleKind.SUFFIX &&
-                            (normalized == r.value || normalized.endsWith("." + r.value))
-                        ) {
-                            return r
-                        }
-                        if (r.kind == RuleKind.WILDCARD && normalized.endsWith("." + r.value)) return r
-                    }
+            // 1. User overlay: exact and suffix match
+            if (normalized in overlay) return DnsRule(RuleAction.BLOCK, RuleKind.SUFFIX, normalized, BlockingCategory.AD)
+            // 2. Parent suffix walk for overlay rules
+            var dot = normalized.indexOf('.')
+            while (dot != -1) {
+                val nextDot = normalized.indexOf('.', dot + 1)
+                if (nextDot == -1) break
+                val parentSuffix = normalized.substring(dot + 1)
+                if (parentSuffix in overlay) {
+                    return DnsRule(RuleAction.BLOCK, RuleKind.SUFFIX, parentSuffix, BlockingCategory.AD)
                 }
+                dot = nextDot
             }
         }
         ExtensionRuleStore.matchRule(normalized)?.let { return it }

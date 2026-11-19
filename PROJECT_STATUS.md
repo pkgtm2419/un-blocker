@@ -10,15 +10,15 @@
 
 | Property | Value |
 |---|---|
-| **versionName** | `2.7.1` |
-| **versionCode** | `37` |
+| **versionName** | `2.7.2` |
+| **versionCode** | `38` |
 | **applicationId** | `com.unblocker.app` |
 | **minSdk** | `26` (Android 8.0 Oreo) |
 | **compileSdk / targetSdk** | `35` (Android 15) |
 | **Android Gradle Plugin** | `8.10.1` |
 | **Kotlin** | `2.0.21` |
 | **JVM target** | `17` |
-| **Latest published tag** | `v2.7.1` |
+| **Latest published tag** | `v2.7.2` |
 
 > [!NOTE]
 > `app/build.gradle.kts` is the authoritative source for all build properties. The root `README.md` previously contained stale version references (`2.3.0`, SDK 36); those are being corrected separately (reconciliation item R01).

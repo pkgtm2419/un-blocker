@@ -80,7 +80,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.unblocker.app.data.model.ExtensionFilter
+import com.unblocker.app.data.model.ExtensionPreset
 import com.unblocker.app.data.model.FilterCategories
+import com.unblocker.app.ui.theme.Slate700
+import com.unblocker.app.ui.theme.Slate800
+import com.unblocker.app.ui.theme.Slate900
 import kotlinx.coroutines.flow.collectLatest
 
 /**
@@ -102,6 +106,7 @@ fun ExtensionsScreen(
     val totalEnabledRulesCount by viewModel.totalEnabledRulesCount.collectAsState()
     val isUpdating by viewModel.isUpdating.collectAsState()
     val autoUpdateEnabled by viewModel.autoUpdateEnabled.collectAsState()
+    val appliedPreset by viewModel.appliedPreset.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
 
@@ -344,6 +349,15 @@ fun ExtensionsScreen(
                     .fillMaxSize()
                     .padding(innerPadding),
         ) {
+            // Curated Defense Presets Selector
+            CuratedPresetsBar(
+                activePreset = appliedPreset,
+                onPresetSelected = { preset ->
+                    viewModel.applyPreset(preset)
+                },
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp),
+            )
+
             // Horizontal Category Filtering Chips
             LazyRow(
                 modifier =
@@ -779,6 +793,121 @@ fun ExtensionCard(
                                 onDelete()
                             },
                         )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Quick-selection bar for applying curated filter list presets across the catalog.
+ *
+ * @param activePreset Currently active curated preset, or null if individual list choices are customized.
+ * @param onPresetSelected Callback when the user selects a preset.
+ * @param modifier Layout modifier applied to the container.
+ */
+@Composable
+fun CuratedPresetsBar(
+    activePreset: ExtensionPreset?,
+    onPresetSelected: (ExtensionPreset) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val isDark = isSystemInDarkTheme()
+
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = if (isDark) Slate800 else Color(0xFFF1F5F9),
+        border = BorderStroke(1.dp, if (isDark) Slate700 else Color(0xFFCBD5E1)),
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(10.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = "Curated Defense Presets",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                if (activePreset != null) {
+                    Text(
+                        text = "Active: ${activePreset.name}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                ExtensionPreset.entries.forEach { preset ->
+                    val isSelected = activePreset == preset
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color =
+                            if (isSelected) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                if (isDark) Slate900 else Color.White
+                            },
+                        border =
+                            BorderStroke(
+                                1.dp,
+                                if (isSelected) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    if (isDark) Slate700 else Color(0xFFE2E8F0)
+                                },
+                            ),
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .clickable { onPresetSelected(preset) },
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(vertical = 6.dp, horizontal = 4.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Text(
+                                text = preset.title.substringBefore(" ("),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold,
+                                color =
+                                    if (isSelected) {
+                                        MaterialTheme.colorScheme.onPrimary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface
+                                    },
+                                maxLines = 1,
+                            )
+                            Text(
+                                text =
+                                    when (preset) {
+                                        ExtensionPreset.ESSENTIAL -> "0 Breakage"
+                                        ExtensionPreset.RECOMMENDED -> "Balanced"
+                                        ExtensionPreset.AGGRESSIVE -> "Max Shield"
+                                    },
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 9.sp,
+                                color =
+                                    if (isSelected) {
+                                        MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f)
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                maxLines = 1,
+                            )
+                        }
                     }
                 }
             }

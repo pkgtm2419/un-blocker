@@ -1,6 +1,6 @@
 # Feature inventory and evidence matrix
 
-**Last source snapshot:** 2026-11-17, versionName **2.7.1**
+**Last source snapshot:** 2026-11-20, versionName **2.7.2**
 
 **Status meanings:** *Source-observed* = code/assets or existing tests identified; **not** equivalent to device testing, release acceptance or global efficacy. Update each row when semantics or implementation changes; create new rows for new features.
 
@@ -30,6 +30,9 @@
 | F19 | Rule source provenance, compiler, release and CI gates | `DATASETS.md`, `sources.json`, `.github/workflows/` | Source-observed; release assets must be checked live | 2026-11-10 (src: 8934519) |
 | F20 | My domains protected-site list | `data/preferences/MyDomainsStore.kt`, `DeviceUserRuleGateway.kt` | Source-observed; up to 500 plaintext names, distinct from HMAC sets | 2026-11-10 (src: 8934519) |
 | F21 | ML/heuristic classifier (HeuristicDomainClassifier) | `ml-engine/src/main/java/com/unblocker/ml/` | Source-observed; TFLite 2.16.1 dep is present but deterministic heuristic is used, **NOT** a trained model — see R08 in [REPO_RECONCILIATION.md](REPO_RECONCILIATION.md) | 2026-11-10 (src: 8934519) |
+| F22 | Curated Filter Presets Engine | `ExtensionPreset.kt`, `ExtensionRepository.kt`, `ExtensionsScreen.kt` | Source-observed; Essential, Recommended, Aggressive presets with dynamic OEM auto-detection | 2026-11-19 |
+| F23 | System Leak & Hardening Checklist | `SystemHardeningChecker.kt`, `SystemHardeningWizard.kt` | Source-observed; interactive battery, Private DNS, Always-On VPN and Ad ID checklist | 2026-11-19 |
+| F24 | Beyond DNS Companion Hub | `BeyondDnsHubDialog.kt`, `SettingsScreen.kt`, `COMPREHENSIVE_AD_BLOCKING_GUIDE.md` | Source-observed; in-app defense-in-depth guidance for stream ads & cosmetic filtering | 2026-11-19 |
 
 ## Change tracking contract
 

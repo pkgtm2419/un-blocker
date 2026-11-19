@@ -31,15 +31,14 @@ internal class TunnelRun(
         private val CPU_COUNT = Runtime.getRuntime().availableProcessors()
 
         /**
-         * Default core worker count derived from CPU count and clamped to 4 through 8.
-         * DNS forwarding is I/O-bound and coalesced; a large pool wastes RAM and scheduler wakeups.
+         * Default core worker count derived from CPU count and clamped to 8 through 16.
          */
-        val DEFAULT_CORE_POOL_SIZE = maxOf(4, CPU_COUNT).coerceAtMost(8)
+        val DEFAULT_CORE_POOL_SIZE = maxOf(8, CPU_COUNT * 2).coerceAtMost(16)
 
         /**
-         * Default maximum worker count, twice the core count and at most 16.
+         * Default maximum worker count, twice the core count and at most 32.
          */
-        val DEFAULT_MAX_POOL_SIZE = (DEFAULT_CORE_POOL_SIZE * 2).coerceAtMost(16)
+        val DEFAULT_MAX_POOL_SIZE = (DEFAULT_CORE_POOL_SIZE * 2).coerceAtMost(32)
 
         /**
          * Default maximum number of queued forwarding tasks.

@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: Apache-2.0
+# Synthetic/ad-domain must-block verification corpus for WP-00 (SMART mode, no user overrides).
+# host	expected_action	notes
+googleads.g.doubleclick.net	BLOCK	Google Ads / DoubleClick ad server
+pagead2.googlesyndication.com	BLOCK	Google AdSense script & ad tag host
+tpc.googlesyndication.com	BLOCK	Google AdSense third-party creative host
+static.doubleclick.net	BLOCK	DoubleClick static creative asset host
+pubads.g.doubleclick.net	BLOCK	Google Publisher Tags / IMA ad tag host
+ad.doubleclick.net	BLOCK	DoubleClick ad serving endpoint
+fundingchoicesmessages.google.com	BLOCK	Google Funding Choices consent/ad-recovery host
+ogads-pa.clients6.google.com	BLOCK	Google Ads API telemetry/ad delivery host
+imasdk.googleapis.com	BLOCK	Google Interactive Media Ads SDK endpoint
+mobile.events.data.microsoft.com	BLOCK	Microsoft mobile telemetry event collector

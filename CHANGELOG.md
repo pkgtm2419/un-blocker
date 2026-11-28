@@ -16,6 +16,7 @@ Versioning follows the `versionName` / `versionCode` declared in `app/build.grad
 
 ### Changed
 
+- **Android 16 Target SDK 36 & Compose BOM 2026.09.00 (WP-10d)**: Updated `compileSdk = 37`, `targetSdk = 36` across modules and CI workflows; updated Compose BOM to `2026.09.00`, Core KTX to `1.19.1`, Lifecycle to `2.11.1`, Activity Compose to `1.13.0`, Navigation Compose to `2.10.2`, WorkManager to `2.12.0`, and Hilt Navigation/Work extensions to `1.4.0`. Confirmed predictive back (`enableOnBackInvokedCallback="true"` + Compose `BackHandler`) and un-locked large-screen resizability.
 - **Room, AGP 9, Kotlin, KSP & Hilt Refresh (WP-10b / WP-10c)**: Upgraded Gradle wrapper to `9.8.2`, AGP to `9.5.1` (migrated from `kotlin-android` to AGP built-in Kotlin and `androidComponents.onVariants` APK output naming), Kotlin to `2.4.21`, KSP to `2.3.14`, Hilt to `2.60.1`, coroutines to `1.11.0`, and Room to `2.8.5` (verified `data-store/schemas/2.json` unchanged). Updated `RuleSet` catch block for Kotlin 2.4 impossible-type-check rule and refreshed `gradle/verification-metadata.xml`.
 - **Compose BOM Update (WP-10a)**: Updated `composeBom` from `2024.10.00` to `2025.12.01` and refreshed `gradle/verification-metadata.xml` checksums.
 

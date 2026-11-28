@@ -46,12 +46,12 @@ if (hasAnyReleaseSigningValue && !hasReleaseSigning) {
 
 android {
     namespace = "com.unblocker.app"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.unblocker.app"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 38
         versionName = "2.7.2"
 

@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.unblocker.common"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         minSdk = 26

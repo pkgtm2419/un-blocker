@@ -2,7 +2,7 @@
 
 ## Toolchain snapshot
 
-`app/build.gradle.kts`: `minSdk=26`, `compileSdk=35`, `targetSdk=35`, `versionName=2.7.2`, `versionCode=38`, JVM target 17. Version catalog `gradle/libs.versions.toml` has Android Gradle Plugin 9.5.1 (built-in Kotlin 2.4.21, KSP 2.3.14) and `gradle/wrapper/gradle-wrapper.properties` uses Gradle 9.8.2. **Gradle is authoritative for builds**. Use Python 3.11 for tooling when possible.
+`app/build.gradle.kts`: `minSdk=26`, `compileSdk=37`, `targetSdk=36`, `versionName=2.7.2`, `versionCode=38`, JVM target 17. Version catalog `gradle/libs.versions.toml` has Android Gradle Plugin 9.5.1 (built-in Kotlin 2.4.21, KSP 2.3.14) and `gradle/wrapper/gradle-wrapper.properties` uses Gradle 9.8.2. **Gradle is authoritative for builds**. Use Python 3.11 for tooling when possible.
 
 ## Quick commands
 

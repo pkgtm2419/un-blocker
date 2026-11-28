@@ -16,6 +16,7 @@ Versioning follows the `versionName` / `versionCode` declared in `app/build.grad
 
 ### Fixed
 
+- **Learn Review Safe Defaults & Ad-Allow Guard (WP-03)**: Replaced substring domain categorization in Learn an App with whole-label DNS & public-suffix matching (`LearnReviewPolicy`); changed all review rows to default to `Keep default` (no unconfirmed pre-selected ALLOW or BLOCK); added explicit "Add all list matches" button; defaulted ALLOW rules to exact-host (`UserRuleGateway.set`) with shared-platform whole-site lockouts, double-tap ad-allow warning confirmation, and cross-session "Also seen in" indicators.
 - **Isolated Per-App Learn Tunnel (WP-02)**: Rebuilds `UnblockerVpnService` via `VpnBuilderPolicy` using `addAllowedApplication(targetPackage)` (no `addDisallowedApplication` mixing) when Learn an App starts; removes UID filtering in `RecordingSessionManager`; adds 60 s idle encrypted-DNS hint, temporary non-filtering banner, and startup/crash recovery via `IsolatedSessionRecoveryPolicy`.
 - **App-Update Protection Restart (WP-01 / F25)**: Added `android.intent.action.MY_PACKAGE_REPLACED` handling to `BootReceiver` (non-exported) and `BootPolicy` so VPN protection automatically resumes after APK upgrades when `autoRestartOnBoot`, `protectionEnabled`, and existing VPN consent are present.
 

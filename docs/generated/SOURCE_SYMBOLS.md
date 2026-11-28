@@ -139,6 +139,8 @@ Only syntactically matched top-level class/interface/object declarations (not se
 | `app/src/main/java/com/unblocker/app/ui/adaptive/AdaptiveLayout.kt` | class | `WindowWidthClass` |
 | `app/src/main/java/com/unblocker/app/ui/components/FloatingPillNavBar.kt` | class | `NavItem` |
 | `app/src/main/java/com/unblocker/app/ui/extensions/ExtensionsViewModel.kt` | class | `ExtensionsViewModel` |
+| `app/src/main/java/com/unblocker/app/ui/learn/LearnReviewPolicy.kt` | class | `ApplyReviewOutcome` |
+| `app/src/main/java/com/unblocker/app/ui/learn/LearnReviewPolicy.kt` | object | `LearnReviewPolicy` |
 | `app/src/main/java/com/unblocker/app/ui/learn/LearnViewModel.kt` | class | `AppItem` |
 | `app/src/main/java/com/unblocker/app/ui/learn/LearnViewModel.kt` | class | `DomainCategory` |
 | `app/src/main/java/com/unblocker/app/ui/learn/LearnViewModel.kt` | class | `LearnViewModel` |

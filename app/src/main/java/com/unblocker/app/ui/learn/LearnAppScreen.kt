@@ -125,6 +125,8 @@ fun LearnAppScreen(
                         domains = s.domains,
                         appliedSuccess = s.appliedSuccess,
                         onSetAction = viewModel::setDomainAction,
+                        onToggleWholeSite = viewModel::setAllowWholeSite,
+                        onSelectAllListMatches = viewModel::selectAllListMatches,
                         onApplyRules = viewModel::applyRules,
                         onDone = viewModel::cancelSession,
                     )
@@ -452,9 +454,13 @@ private fun ReviewDomainsContent(
     domains: List<ReviewedDomain>,
     appliedSuccess: Boolean,
     onSetAction: (String, ReviewAction) -> Unit,
+    onToggleWholeSite: (String, Boolean) -> Unit,
+    onSelectAllListMatches: () -> Unit,
     onApplyRules: () -> Unit,
     onDone: () -> Unit,
 ) {
+    val trackerCount = domains.count { it.category == DomainCategory.TRACKER_AD }
+
     Column(
         modifier =
             Modifier
@@ -468,10 +474,19 @@ private fun ReviewDomainsContent(
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "Review domains captured during the session. Configure which to Allow or Block:",
+            text = "Nothing is pre-selected. Explicitly choose Allow or Block per domain:",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        if (trackerCount > 0) {
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = onSelectAllListMatches,
+                shape = RoundedCornerShape(10.dp),
+            ) {
+                Text("Add all list matches ($trackerCount)", fontSize = 12.sp)
+            }
+        }
         Spacer(modifier = Modifier.height(12.dp))
 
         if (appliedSuccess) {
@@ -563,6 +578,31 @@ private fun ReviewDomainsContent(
                             }
                         }
 
+                        if (item.alsoSeenIn.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Also seen in: ${item.alsoSeenIn.joinToString(", ")}",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+
+                        if (item.pendingAllowConfirmation && item.allowWarningMessage != null) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(
+                                    text = item.allowWarningMessage,
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    modifier = Modifier.padding(8.dp),
+                                )
+                            }
+                        }
+
                         Spacer(modifier = Modifier.height(6.dp))
 
                         Row(
@@ -572,7 +612,12 @@ private fun ReviewDomainsContent(
                             FilterChip(
                                 selected = item.action == ReviewAction.ALLOW,
                                 onClick = { onSetAction(item.domain, ReviewAction.ALLOW) },
-                                label = { Text("Allow", fontSize = 11.sp) },
+                                label = {
+                                    Text(
+                                        text = if (item.pendingAllowConfirmation) "Confirm Allow" else "Allow",
+                                        fontSize = 11.sp,
+                                    )
+                                },
                             )
                             FilterChip(
                                 selected = item.action == ReviewAction.BLOCK,
@@ -584,6 +629,33 @@ private fun ReviewDomainsContent(
                                 onClick = { onSetAction(item.domain, ReviewAction.KEEP_DEFAULT) },
                                 label = { Text("Default", fontSize = 11.sp) },
                             )
+                        }
+
+                        if (item.action == ReviewAction.ALLOW) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(
+                                    text =
+                                        if (item.canAllowWholeSite) {
+                                            "Whole site (subdomains included)"
+                                        } else {
+                                            "Shared platform (exact host only)"
+                                        },
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Switch(
+                                    checked = item.allowWholeSite,
+                                    enabled = item.canAllowWholeSite,
+                                    onCheckedChange = { checked ->
+                                        onToggleWholeSite(item.domain, checked)
+                                    },
+                                )
+                            }
                         }
                     }
                 }

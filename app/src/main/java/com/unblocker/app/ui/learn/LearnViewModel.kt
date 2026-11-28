@@ -9,7 +9,10 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.unblocker.app.data.preferences.FilteringPreferences
 import com.unblocker.app.data.repository.UserRuleGateway
-import com.unblocker.app.logic.analysis.UserFeedback
+import com.unblocker.app.logic.AdDetector
+import com.unblocker.app.logic.analysis.PublicSuffixRules
+import com.unblocker.app.logic.rules.RuleAction
+import com.unblocker.app.logic.rules.RuleSetHolder
 import com.unblocker.app.services.RecordingSessionManager
 import com.unblocker.app.services.SessionDomain
 import com.unblocker.app.services.UnblockerVpnService
@@ -62,13 +65,25 @@ enum class ReviewAction {
  * @property domain Readable host recorded during the session.
  * @property count Number of observations reported by the session.
  * @property category Heuristic display grouping, not a verified ownership classification.
- * @property action Requested rule action; keeping the default leaves existing policy untouched.
+ * @property action Requested rule action; defaults to [ReviewAction.KEEP_DEFAULT].
+ * @property allowWholeSite Whether an ALLOW applies to the whole registrable site (explicit toggle, off by default).
+ * @property canAllowWholeSite False for shared multi-tenant/CDN/ad platforms where broad allows are unsafe.
+ * @property pendingAllowConfirmation True when first ALLOW tap on an ad-guarded domain triggered a warning.
+ * @property confirmedAdAllow True after a second explicit tap confirms allowing a flagged ad domain.
+ * @property allowWarningMessage Explanation shown when ALLOW is blocked pending second explicit confirmation.
+ * @property alsoSeenIn Other app display labels/packages that observed this domain in prior Learn sessions.
  */
 data class ReviewedDomain(
     val domain: String,
     val count: Int,
     val category: DomainCategory,
     val action: ReviewAction = ReviewAction.KEEP_DEFAULT,
+    val allowWholeSite: Boolean = false,
+    val canAllowWholeSite: Boolean = true,
+    val pendingAllowConfirmation: Boolean = false,
+    val confirmedAdAllow: Boolean = false,
+    val allowWarningMessage: String? = null,
+    val alsoSeenIn: List<String> = emptyList(),
 )
 
 /**
@@ -143,6 +158,16 @@ class LearnViewModel
 
         private var timerJob: Job? = null
         private var allApps: List<AppItem> = emptyList()
+        private val publicSuffixRules: PublicSuffixRules by lazy {
+            PublicSuffixRules.from(getApplication())
+        }
+        private val adDetector: AdDetector by lazy {
+            val ctx = getApplication<Application>()
+            AdDetector(ctx, ruleSet = RuleSetHolder.get(ctx))
+        }
+        private val adBlockMatcher: (String) -> Boolean = { domain ->
+            adDetector.matchRule(domain)?.action == RuleAction.BLOCK
+        }
 
         init {
             loadInstalledLauncherApps()
@@ -272,29 +297,29 @@ class LearnViewModel
             } else {
                 UnblockerVpnService.stop(context)
             }
+            val labelByPkg = allApps.associate { it.packageName to it.label }
             val reviewed =
-                recorded.map { domainItem ->
-                    val category = categorizeDomain(domainItem.domain, app.packageName)
-                    val defaultAction =
-                        when (category) {
-                            DomainCategory.FIRST_PARTY -> ReviewAction.ALLOW
-                            DomainCategory.CDN_INFRA -> ReviewAction.ALLOW
-                            DomainCategory.TRACKER_AD -> ReviewAction.BLOCK
-                            DomainCategory.OTHER -> ReviewAction.KEEP_DEFAULT
-                        }
-                    ReviewedDomain(
-                        domain = domainItem.domain,
-                        count = domainItem.count,
-                        category = category,
-                        action = defaultAction,
-                    )
-                }
+                LearnReviewPolicy.buildInitialReviewList(
+                    recorded = recorded,
+                    targetPackage = app.packageName,
+                    publicSuffixRules = publicSuffixRules,
+                    isBlockedByRules = adBlockMatcher,
+                    alsoSeenInLookup = { host ->
+                        sessionManager
+                            .getOtherAppsSeeingDomain(host, app.packageName)
+                            .map { pkg -> labelByPkg[pkg] ?: pkg }
+                    },
+                )
 
             _uiState.value = LearnUiState.Reviewing(app, reviewed)
         }
 
         /**
          * Changes the proposed action for a host while in the review state.
+         *
+         * Allowing a host that matches active block rules or shipped ad seeds requires
+         * two explicit taps: the first tap shows a refusal warning without enabling ALLOW,
+         * and the second tap confirms it.
          *
          * @param domain Recorded host whose proposed action should change.
          * @param action Action to apply when review is submitted.
@@ -306,38 +331,104 @@ class LearnViewModel
             val current = _uiState.value
             if (current is LearnUiState.Reviewing) {
                 val updated =
-                    current.domains.map {
-                        if (it.domain == domain) it.copy(action = action) else it
+                    current.domains.map { item ->
+                        if (item.domain != domain) {
+                            item
+                        } else if (action == ReviewAction.ALLOW) {
+                            val warning =
+                                LearnReviewPolicy.adAllowRiskWarning(
+                                    domain = item.domain,
+                                    publicSuffixRules = publicSuffixRules,
+                                    isBlockedByRules = adBlockMatcher,
+                                )
+                            if (warning != null && !item.pendingAllowConfirmation) {
+                                item.copy(
+                                    pendingAllowConfirmation = true,
+                                    confirmedAdAllow = false,
+                                    allowWarningMessage = warning,
+                                )
+                            } else {
+                                item.copy(
+                                    action = ReviewAction.ALLOW,
+                                    pendingAllowConfirmation = false,
+                                    confirmedAdAllow = warning != null,
+                                    allowWarningMessage = null,
+                                )
+                            }
+                        } else {
+                            item.copy(
+                                action = action,
+                                pendingAllowConfirmation = false,
+                                confirmedAdAllow = false,
+                                allowWarningMessage = null,
+                            )
+                        }
                     }
-                _uiState.value = current.copy(domains = updated)
+                _uiState.value = current.copy(domains = updated, appliedSuccess = false)
             }
         }
 
         /**
-         * Asynchronously submits reviewed allow actions as whole-site rules and blocks as exact rules.
+         * Toggles exact-host vs whole-site scope for a review row when allowed by shared-platform safety.
          *
-         * Keep-default entries are skipped. The completion flag is set after submission without checking
-         * individual gateway results.
+         * @param domain Hostname to update.
+         * @param wholeSite Whether whole-site scope was requested; ignored when [ReviewedDomain.canAllowWholeSite] is false.
+         */
+        fun setAllowWholeSite(
+            domain: String,
+            wholeSite: Boolean,
+        ) {
+            val current = _uiState.value
+            if (current is LearnUiState.Reviewing) {
+                val updated =
+                    current.domains.map { item ->
+                        if (item.domain == domain) {
+                            item.copy(allowWholeSite = wholeSite && item.canAllowWholeSite)
+                        } else {
+                            item
+                        }
+                    }
+                _uiState.value = current.copy(domains = updated, appliedSuccess = false)
+            }
+        }
+
+        /**
+         * Explicitly selects [ReviewAction.BLOCK] for all captured domains categorized as [DomainCategory.TRACKER_AD].
+         */
+        fun selectAllListMatches() {
+            val current = _uiState.value
+            if (current is LearnUiState.Reviewing) {
+                val updated =
+                    current.domains.map { item ->
+                        if (item.category == DomainCategory.TRACKER_AD) {
+                            item.copy(
+                                action = ReviewAction.BLOCK,
+                                pendingAllowConfirmation = false,
+                                confirmedAdAllow = false,
+                                allowWarningMessage = null,
+                            )
+                        } else {
+                            item
+                        }
+                    }
+                _uiState.value = current.copy(domains = updated, appliedSuccess = false)
+            }
+        }
+
+        /**
+         * Asynchronously submits reviewed rules: ALLOW defaults to exact host unless whole-site is toggled
+         * on a non-shared domain; BLOCK adds exact-host blocks; KEEP_DEFAULT is untouched.
          */
         fun applyRules() {
             val current = _uiState.value
             if (current is LearnUiState.Reviewing) {
                 viewModelScope.launch {
-                    current.domains.forEach { reviewed ->
-                        when (reviewed.action) {
-                            ReviewAction.ALLOW -> {
-                                userRuleGateway.setWholeSite(reviewed.domain, UserFeedback.ALLOW)
-                            }
-
-                            ReviewAction.BLOCK -> {
-                                userRuleGateway.set(reviewed.domain, UserFeedback.BLOCK)
-                            }
-
-                            ReviewAction.KEEP_DEFAULT -> {
-                                // No custom override applied
-                            }
-                        }
-                    }
+                    LearnReviewPolicy.applyReviewedRules(
+                        domains = current.domains,
+                        userRuleGateway = userRuleGateway,
+                        publicSuffixRules = publicSuffixRules,
+                        isBlockedByRules = adBlockMatcher,
+                    )
                     _uiState.value = current.copy(appliedSuccess = true)
                 }
             }
@@ -373,61 +464,5 @@ class LearnViewModel
                     UnblockerVpnService.stop(context)
                 }
             }
-        }
-
-        private fun categorizeDomain(
-            domain: String,
-            targetPackage: String,
-        ): DomainCategory {
-            val lower = domain.lowercase(Locale.ROOT)
-            // 1. Check known CDN / Infrastructure
-            val cdnSuffixes =
-                listOf(
-                    "cloudfront.net",
-                    "akamaihd.net",
-                    "akamaiedge.net",
-                    "edgekey.net",
-                    "fastly.net",
-                    "cloudflare.com",
-                    "googleapis.com",
-                    "gstatic.com",
-                    "amazonaws.com",
-                    "1e100.net",
-                    "azureedge.net",
-                    "trafficmanager.net",
-                )
-            if (cdnSuffixes.any { lower.endsWith(it) }) {
-                return DomainCategory.CDN_INFRA
-            }
-
-            // 2. Check First Party from package name segments
-            val packageSegments =
-                targetPackage.split('.').filter {
-                    it.length > 2 &&
-                        it !in setOf("com", "org", "net", "app", "android")
-                }
-            if (packageSegments.any { lower.contains(it) }) {
-                return DomainCategory.FIRST_PARTY
-            }
-
-            // 3. Check known tracking / telemetry patterns
-            val trackerPatterns =
-                listOf(
-                    "telemetry",
-                    "analytics",
-                    "crashlytics",
-                    "track",
-                    "metrics",
-                    "ads",
-                    "doubleclick",
-                    "applovin",
-                    "unityads",
-                    "vungle",
-                )
-            if (trackerPatterns.any { lower.contains(it) }) {
-                return DomainCategory.TRACKER_AD
-            }
-
-            return DomainCategory.OTHER
         }
     }

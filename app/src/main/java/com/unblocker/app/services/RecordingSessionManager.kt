@@ -74,6 +74,7 @@ class RecordingSessionManager private constructor() {
     val domainsFlow: StateFlow<List<SessionDomain>> = _domainsFlow.asStateFlow()
 
     private val sessionDomains = ConcurrentHashMap<String, SessionDomain>()
+    private val historicalAppDomains = ConcurrentHashMap<String, Set<String>>()
 
     /**
      * Replaces the recording target and clears previous domain aggregates.
@@ -170,10 +171,46 @@ class RecordingSessionManager private constructor() {
      */
     @Synchronized
     fun stopSession(): List<SessionDomain> {
+        val currentSession = _activeSession.value
         _activeSession.value = null
         val results = sessionDomains.values.sortedByDescending { it.count }
         _domainsFlow.value = results
+        if (currentSession != null && results.isNotEmpty()) {
+            if (historicalAppDomains.size >= MAX_HISTORY_APPS && !historicalAppDomains.containsKey(currentSession.targetPackage)) {
+                val oldestKey = historicalAppDomains.keys.firstOrNull()
+                if (oldestKey != null) historicalAppDomains.remove(oldestKey)
+            }
+            historicalAppDomains[currentSession.targetPackage] = results.map { it.domain }.toSet()
+        }
         return results
+    }
+
+    /**
+     * Returns other package names whose previously finished Learn sessions also observed [domain].
+     *
+     * @param domain Hostname to look up.
+     * @param currentPackage Active review package name to exclude from the result.
+     * @return Sorted list of other app package identifiers that observed [domain].
+     */
+    fun getOtherAppsSeeingDomain(
+        domain: String,
+        currentPackage: String,
+    ): List<String> {
+        val clean = DomainName.normalize(domain) ?: return emptyList()
+        return historicalAppDomains
+            .entries
+            .asSequence()
+            .filter { (pkg, domains) -> pkg != currentPackage && clean in domains }
+            .map { it.key }
+            .sorted()
+            .toList()
+    }
+
+    /**
+     * Clears retained multi-session history; intended for isolated unit tests.
+     */
+    fun clearHistoryForTesting() {
+        historicalAppDomains.clear()
     }
 
     /**
@@ -189,6 +226,11 @@ class RecordingSessionManager private constructor() {
          * Distinct-domain admission threshold for a recording session.
          */
         const val MAX_SESSION_DOMAINS = 500
+
+        /**
+         * Maximum distinct apps kept in in-memory cross-session overlap history.
+         */
+        const val MAX_HISTORY_APPS = 25
 
         /**
          * Lazily initialized process recording coordinator.

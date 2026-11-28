@@ -8,10 +8,11 @@
 - `app/src/main/java/com/unblocker/app/logic/analysis/PrivateDomainSet.kt`
 - `app/src/main/java/com/unblocker/app/data/repository/UserRuleGateway.kt`
 - `app/src/main/java/com/unblocker/app/data/repository/LegacyUserRuleMigration.kt`
+- `app/src/main/java/com/unblocker/app/ui/learn/LearnReviewPolicy.kt`
 
 ## Current functional contract and verification
 
-Device-keyed HMAC domain identifiers back user-specific allow/block membership (nominal caps 1000 each) and whole-site/ancestor matching. User allow runs before user block; user block runs before never-block in the current decision usecase. The app cannot list original plaintext rules from HMAC; removal requires entering a domain or clearing entries.
+Device-keyed HMAC domain identifiers back user-specific allow/block membership (nominal caps 1000 each) and whole-site/ancestor matching. User allow runs before user block; user block runs before never-block in the current decision usecase. The app cannot list original plaintext rules from HMAC; removal requires entering a domain or clearing entries. From Learn-an-App review (`LearnReviewPolicy`), user ALLOW defaults to exact-host overrides (`set`), prohibits whole-site expansion on shared multi-tenant platforms, and refuses known ad/tracker ALLOWs unless explicitly confirmed twice.
 
 The separate **My domains** protection list is readable: `MyDomainsStore` uses private SharedPreferences and caps it at 500 names. `DeviceUserRuleGateway.protectDomain()` writes there; `ContentFilterEngine` supplies it to `DefaultProtectedDomains`. Do not extend the HMAC storage claim to that feature.
 

@@ -17,6 +17,7 @@ Files matching `*Test.kt`; presence does not indicate tests passed.
 | `app/src/test/java/com/unblocker/app/analysis/LearnerIntegrationTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/analysis/PublicSuffixRulesTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/data/export/CsvWriterTest.kt` | unit |
+| `app/src/test/java/com/unblocker/app/data/export/SettingsBackupCodecTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/data/logs/QueryLogSinkTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/data/model/ExtensionFilterTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/data/model/ExtensionPresetTest.kt` | unit |

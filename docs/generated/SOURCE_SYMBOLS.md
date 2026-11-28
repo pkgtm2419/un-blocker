@@ -10,6 +10,13 @@ Only syntactically matched top-level class/interface/object declarations (not se
 | `app/src/main/java/com/unblocker/app/UnblockerApplication.kt` | class | `UnblockerApplication` |
 | `app/src/main/java/com/unblocker/app/data/export/CsvWriter.kt` | object | `CsvWriter` |
 | `app/src/main/java/com/unblocker/app/data/export/DomainExporter.kt` | object | `DomainExporter` |
+| `app/src/main/java/com/unblocker/app/data/export/PureJsonCodec.kt` | object | `PureJsonCodec` |
+| `app/src/main/java/com/unblocker/app/data/export/SettingsBackupCodec.kt` | class | `CustomExtensionBackup` |
+| `app/src/main/java/com/unblocker/app/data/export/SettingsBackupCodec.kt` | class | `SettingsBackupSnapshot` |
+| `app/src/main/java/com/unblocker/app/data/export/SettingsBackupCodec.kt` | class | `UserRuleBackup` |
+| `app/src/main/java/com/unblocker/app/data/export/SettingsBackupCodec.kt` | object | `SettingsBackupCodec` |
+| `app/src/main/java/com/unblocker/app/data/export/SettingsBackupManager.kt` | class | `BackupRestoreSummary` |
+| `app/src/main/java/com/unblocker/app/data/export/SettingsBackupManager.kt` | class | `SettingsBackupManager` |
 | `app/src/main/java/com/unblocker/app/data/logs/QueryLogSink.kt` | object | `QueryLogSink` |
 | `app/src/main/java/com/unblocker/app/data/model/DefaultConfig.kt` | class | `AppConfigPayload` |
 | `app/src/main/java/com/unblocker/app/data/model/DefaultConfig.kt` | class | `DefaultConfig` |
@@ -164,6 +171,7 @@ Only syntactically matched top-level class/interface/object declarations (not se
 | `app/src/main/java/com/unblocker/app/ui/navigation/UnblockerNavigation.kt` | interface | `DeepLinkResult` |
 | `app/src/main/java/com/unblocker/app/ui/navigation/UnblockerNavigation.kt` | object | `DeepLinkParser` |
 | `app/src/main/java/com/unblocker/app/ui/navigation/UnblockerNavigation.kt` | object | `UnblockerDestinations` |
+| `app/src/main/java/com/unblocker/app/ui/settings/SettingsBackupViewModel.kt` | class | `SettingsBackupViewModel` |
 | `app/src/main/java/com/unblocker/app/ui/settings/SettingsSection.kt` | class | `SettingsSectionGroup` |
 | `app/src/main/java/com/unblocker/app/ui/settings/SettingsSection.kt` | class | `SettingsSection` |
 | `app/src/main/java/com/unblocker/app/ui/settings/SettingsSection.kt` | object | `SettingsSectionCatalog` |

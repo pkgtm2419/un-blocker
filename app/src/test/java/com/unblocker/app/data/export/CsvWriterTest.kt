@@ -67,7 +67,15 @@ class CsvWriterTest {
 
         val text = output.toString("UTF-8")
         assertTrue(text.contains("Domain,LastDecision,TotalQueries"))
+        assertTrue(text.contains("LastOutcome,FailCount,LastRule,LastSource,LastNetworkType"))
         assertTrue(text.contains("example.com,ALLOWED,10,0,10"))
         assertTrue(text.contains("tracker.com,BLOCKED,5,5,0"))
+
+        val jsonOut = ByteArrayOutputStream()
+        val jsonCount = DomainExporter.exportToJson(stats, jsonOut)
+        assertEquals(2, jsonCount)
+        val jsonText = jsonOut.toString("UTF-8")
+        assertTrue(jsonText.contains("\"version\": 2"))
+        assertTrue(jsonText.contains("\"example.com\""))
     }
 }

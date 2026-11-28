@@ -114,6 +114,7 @@ fun SettingsScreen(
     onNavigateToAbout: () -> Unit = {},
     contentPadding: PaddingValues = PaddingValues(0.dp),
     logViewModel: LogViewModel = hiltViewModel(),
+    backupViewModel: SettingsBackupViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -191,6 +192,95 @@ fun SettingsScreen(
                                 context,
                                 resources.getString(R.string.settings_export_failed_toast, e.message.orEmpty()),
                                 Toast.LENGTH_SHORT,
+                            ).show()
+                    }
+                }
+            }
+        }
+
+    val exportJsonLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.CreateDocument("application/json"),
+        ) { uri ->
+            if (uri != null) {
+                coroutineScope.launch {
+                    runCatching {
+                        context.contentResolver.openOutputStream(uri)?.use { os ->
+                            val count = logViewModel.exportLogsToJson(os)
+                            Toast
+                                .makeText(
+                                    context,
+                                    resources.getString(R.string.settings_export_json_success_toast, count),
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                        }
+                    }.onFailure { e ->
+                        Toast
+                            .makeText(
+                                context,
+                                resources.getString(R.string.settings_export_failed_toast, e.message.orEmpty()),
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                    }
+                }
+            }
+        }
+
+    val backupLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.CreateDocument("application/json"),
+        ) { uri ->
+            if (uri != null) {
+                coroutineScope.launch {
+                    runCatching {
+                        context.contentResolver.openOutputStream(uri)?.use { os ->
+                            backupViewModel.exportBackup(os)
+                        }
+                        Toast
+                            .makeText(
+                                context,
+                                resources.getString(R.string.settings_backup_saved_toast),
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                    }.onFailure { e ->
+                        Toast
+                            .makeText(
+                                context,
+                                resources.getString(R.string.settings_backup_failed_toast, e.message.orEmpty()),
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                    }
+                }
+            }
+        }
+
+    val restoreLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.OpenDocument(),
+        ) { uri ->
+            if (uri != null) {
+                coroutineScope.launch {
+                    runCatching {
+                        val summary =
+                            context.contentResolver.openInputStream(uri)?.use { ins ->
+                                backupViewModel.restoreBackup(ins)
+                            } ?: error("Unreadable backup file")
+                        Toast
+                            .makeText(
+                                context,
+                                resources.getString(
+                                    R.string.settings_backup_restored_toast,
+                                    summary.restoredRulesCount,
+                                    summary.restoredMyDomainsCount,
+                                ),
+                                Toast.LENGTH_LONG,
+                            ).show()
+                    }.onFailure { e ->
+                        Toast
+                            .makeText(
+                                context,
+                                resources.getString(R.string.settings_backup_failed_toast, e.message.orEmpty()),
+                                Toast.LENGTH_LONG,
                             ).show()
                     }
                 }
@@ -445,7 +535,24 @@ fun SettingsScreen(
                                                 .format(java.util.Date())
                                         exportLauncher.launch("unblocker_export_$timestamp.csv")
                                     },
+                                    onExportJson = {
+                                        val timestamp =
+                                            java.text
+                                                .SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US)
+                                                .format(java.util.Date())
+                                        exportJsonLauncher.launch("unblocker_export_$timestamp.json")
+                                    },
                                     onRequestClearHistory = { showClearConfirmDialog = true },
+                                    onBackupSettings = {
+                                        val timestamp =
+                                            java.text
+                                                .SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US)
+                                                .format(java.util.Date())
+                                        backupLauncher.launch("unblocker_backup_$timestamp.json")
+                                    },
+                                    onRestoreSettings = {
+                                        restoreLauncher.launch(arrayOf("application/json", "*/*"))
+                                    },
                                 )
                             }
 

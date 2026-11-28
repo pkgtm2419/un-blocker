@@ -369,6 +369,15 @@
     <string name="settings_about_open_button">Open Full About Screen</string>
     <string name="settings_badge_paused">Paused</string>
     <string name="settings_badge_active">Active</string>
+    <string name="logs_export_json">Export JSON</string>
+    <string name="settings_export_json_success_toast">Exported %1$d domains to JSON</string>
+    <string name="settings_backup_title">Settings Backup &amp; Restore</string>
+    <string name="settings_backup_desc">Export non-secret preferences, filter toggles, and user exceptions as JSON, or restore a saved backup file. Query logs and Keystore secrets are never included.</string>
+    <string name="settings_backup_button">Backup Settings</string>
+    <string name="settings_restore_button">Restore Settings</string>
+    <string name="settings_backup_saved_toast">Settings backup exported</string>
+    <string name="settings_backup_restored_toast">Restored %1$d rules &amp; %2$d protected sites</string>
+    <string name="settings_backup_failed_toast">Backup failed: %1$s</string>
 
     <!-- Secondary destinations -->
     <string name="exceptions_title">Exceptions &amp; Rules</string>

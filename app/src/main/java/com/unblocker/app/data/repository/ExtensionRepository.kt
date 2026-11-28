@@ -214,6 +214,40 @@ class ExtensionRepository private constructor(
     }
 
     /**
+     * Restores catalog enabled states and validated custom filters from a settings backup snapshot (WP-22).
+     */
+    fun restoreSelection(
+        enabledCatalogIds: Set<String>,
+        customFilters: List<com.unblocker.app.data.export.CustomExtensionBackup>,
+    ) {
+        val currentBuiltin =
+            _extensions.value
+                .filter { !it.isCustom }
+                .map { it.copy(isEnabled = it.id in enabledCatalogIds) }
+        val customEntries =
+            customFilters.map { custom ->
+                ExtensionFilter(
+                    id = custom.id,
+                    name = custom.name,
+                    url = custom.url,
+                    filterCount = 0,
+                    sizeBytes = 0L,
+                    lastUpdatedEpochMs = System.currentTimeMillis(),
+                    isEnabled = custom.isEnabled,
+                    isCustom = true,
+                    category = FilterCategories.CUSTOM,
+                    description = "Restored custom domain filter list",
+                )
+            }
+        val combined = customEntries + currentBuiltin
+        _extensions.value = combined
+        _appliedPreset.value = null
+        prefs.edit().remove(KEY_APPLIED_PRESET).apply()
+        persistExtensions(combined)
+        reloadActiveRulesAsync()
+    }
+
+    /**
      * Rebuilds active rules from bundled data and enabled cached lists. Unreadable sources are skipped.
      *
      * This performs file I/O on the calling thread; use [reloadActiveRulesAsync] from UI callers.

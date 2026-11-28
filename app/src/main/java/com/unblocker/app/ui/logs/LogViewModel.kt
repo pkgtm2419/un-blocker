@@ -345,4 +345,16 @@ class LogViewModel
             _userMessage.value = "Exported $count domains to CSV"
             return count
         }
+
+        /**
+         * Exports all local domain aggregates as schema-versioned UTF-8 JSON (WP-22 / F31).
+         */
+        suspend fun exportLogsToJson(outputStream: java.io.OutputStream): Int {
+            val stats = domainLogDao.getAllStatsForExport()
+            val count =
+                com.unblocker.app.data.export.DomainExporter
+                    .exportToJson(stats, outputStream)
+            _userMessage.value = "Exported $count domains to JSON"
+            return count
+        }
     }

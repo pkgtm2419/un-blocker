@@ -1,6 +1,6 @@
 # Dependency architecture and update policy
 
-`gradle/libs.versions.toml` is the current version catalog. Snapshot: AGP 8.10.1, Kotlin 2.0.21, Compose BOM 2024.10.00, Hilt 2.51.1, Room 2.6.1, AndroidX WorkManager 2.9.1 and Kotlin coroutines 1.8.1 (revalidate in checkout). JDK 17 and compile SDK 35 are declared in Gradle. Avoid duplicating versions in separate build scripts.
+`gradle/libs.versions.toml` is the current version catalog. Snapshot: AGP 8.10.1, Kotlin 2.0.21, Compose BOM 2025.12.01, Hilt 2.51.1, Room 2.6.1, AndroidX WorkManager 2.9.1 and Kotlin coroutines 1.8.1 (revalidate in checkout). JDK 17 and compile SDK 35 are declared in Gradle. Avoid duplicating versions in separate build scripts.
 
 ## Updating dependencies
 

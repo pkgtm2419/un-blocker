@@ -14,6 +14,10 @@ Versioning follows the `versionName` / `versionCode` declared in `app/build.grad
 
 ## [Unreleased]
 
+### Changed
+
+- **Compose BOM Update (WP-10a)**: Updated `composeBom` from `2024.10.00` to `2025.12.01` and refreshed `gradle/verification-metadata.xml` checksums.
+
 ### Fixed
 
 - **Learn Review Safe Defaults & Ad-Allow Guard (WP-03)**: Replaced substring domain categorization in Learn an App with whole-label DNS & public-suffix matching (`LearnReviewPolicy`); changed all review rows to default to `Keep default` (no unconfirmed pre-selected ALLOW or BLOCK); added explicit "Add all list matches" button; defaulted ALLOW rules to exact-host (`UserRuleGateway.set`) with shared-platform whole-site lockouts, double-tap ad-allow warning confirmation, and cross-session "Also seen in" indicators.

@@ -25,7 +25,7 @@ Read directly from **checked-out** Gradle, not README version claims.
 | `espressoCore` | `"3.6.1"` |
 | `lifecycleRuntimeKtx` | `"2.8.7"` |
 | `activityCompose` | `"1.9.3"` |
-| `composeBom` | `"2024.10.00"` |
+| `composeBom` | `"2025.12.01"` |
 | `navigationCompose` | `"2.8.3"` |
 | `workRuntimeKtx` | `"2.9.1"` |
 | `coroutines` | `"1.8.1"` |

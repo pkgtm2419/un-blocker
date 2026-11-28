@@ -16,6 +16,7 @@ Versioning follows the `versionName` / `versionCode` declared in `app/build.grad
 
 ### Fixed
 
+- **Isolated Per-App Learn Tunnel (WP-02)**: Rebuilds `UnblockerVpnService` via `VpnBuilderPolicy` using `addAllowedApplication(targetPackage)` (no `addDisallowedApplication` mixing) when Learn an App starts; removes UID filtering in `RecordingSessionManager`; adds 60 s idle encrypted-DNS hint, temporary non-filtering banner, and startup/crash recovery via `IsolatedSessionRecoveryPolicy`.
 - **App-Update Protection Restart (WP-01 / F25)**: Added `android.intent.action.MY_PACKAGE_REPLACED` handling to `BootReceiver` (non-exported) and `BootPolicy` so VPN protection automatically resumes after APK upgrades when `autoRestartOnBoot`, `protectionEnabled`, and existing VPN consent are present.
 
 ---

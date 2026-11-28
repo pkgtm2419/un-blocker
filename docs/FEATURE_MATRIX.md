@@ -22,7 +22,7 @@
 | F11 | Remote list HTTPS download/bounds/syntax admission | `BoundedFilterDownloader.kt`, `RuleLineParser.kt` | Source-observed; review SSRF/DNS rebinding | 2026-11-10 (src: 8934519) |
 | F12 | Local aggregate query logs, optional raw event mode | `QueryLogSink.kt`, `DomainLogDao.kt` | Source-observed; local *plaintext* domains can be stored | 2026-11-10 (src: 8934519) |
 | F13 | Log search, filters, clear/pause, CSV export & feedback | `LogViewModel.kt`, `CsvWriter.kt`, `DomainExporter.kt` | Source-observed; SAF export controlled by user | 2026-11-10 (src: 8934519) |
-| F14 | Per-app UID learning / review-and-apply | `RecordingSessionManager.kt`, `LearnViewModel.kt` | Source-observed; verify UID attribution on device | 2026-11-10 (src: 8934519) |
+| F14 | Isolated per-app Learn VPN tunnel / review-and-apply | `RecordingSessionManager.kt`, `VpnBuilderPolicy.kt`, `LearnViewModel.kt` | Unit-tested (`VpnBuilderPolicyTest`, `RecordingSessionManagerTest`); `addAllowedApplication` tunnel isolation; device disjoint check: NOT RUN | 2026-11-28 |
 | F15 | Boot restart intent, health and connectivity diagnostics | `BootReceiver.kt`, `HealthCheckService.kt`, `QuickStartManager.kt` | Source-observed; OEM/consent limit restart | 2026-11-10 (src: 8934519) |
 | F16 | Private DNS coverage warning/recovery | `ProtectionUiStateMapper.kt`, `UnblockerVpnService.kt` | Source-observed; warns, cannot block all DoH | 2026-11-10 (src: 8934519) |
 | F17 | Compose app, adaptive nav, settings and status UI | `ui/MainScreen.kt`, `ui/screens/`, `ui/components/` | Source-observed; accessibility/emulator verification needed | 2026-11-10 (src: 8934519) |

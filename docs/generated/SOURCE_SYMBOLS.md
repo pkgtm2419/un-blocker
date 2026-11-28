@@ -127,6 +127,9 @@ Only syntactically matched top-level class/interface/object declarations (not se
 | `app/src/main/java/com/unblocker/app/services/TunnelRun.kt` | class | `TunnelRun` |
 | `app/src/main/java/com/unblocker/app/services/UidResolver.kt` | class | `UidResolver` |
 | `app/src/main/java/com/unblocker/app/services/UnblockerVpnService.kt` | class | `UnblockerVpnService` |
+| `app/src/main/java/com/unblocker/app/services/VpnBuilderPolicy.kt` | interface | `VpnAppRoutingTarget` |
+| `app/src/main/java/com/unblocker/app/services/VpnBuilderPolicy.kt` | object | `IsolatedSessionRecoveryPolicy` |
+| `app/src/main/java/com/unblocker/app/services/VpnBuilderPolicy.kt` | object | `VpnBuilderPolicy` |
 | `app/src/main/java/com/unblocker/app/services/VpnDiagnostics.kt` | object | `VpnDiagnostics` |
 | `app/src/main/java/com/unblocker/app/services/VpnRoutePolicy.kt` | object | `VpnRoutePolicy` |
 | `app/src/main/java/com/unblocker/app/services/VpnSessionState.kt` | class | `ServiceStatus` |

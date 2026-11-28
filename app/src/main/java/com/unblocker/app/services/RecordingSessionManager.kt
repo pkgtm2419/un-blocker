@@ -22,27 +22,41 @@ data class SessionDomain(
 )
 
 /**
- * Volatile recording target and duration.
+ * Volatile recording target, duration, and activity timestamps.
  *
- * @property targetPackage Package name displayed as the recording target.
+ * @property targetPackage Package name displayed as the recording target and used for VPN builder isolation.
  * @property targetUid Target Android UID; -1 accepts any known UID.
  * @property startTimeEpochMs Session start in Unix epoch milliseconds.
  * @property maxDurationMs Allowed elapsed wall-clock duration in milliseconds.
+ * @property lastActivityEpochMs Most recent DNS query observation timestamp in Unix epoch milliseconds.
  */
 data class RecordingSession(
     val targetPackage: String,
-    val targetUid: Int,
+    val targetUid: Int = -1,
     val startTimeEpochMs: Long = System.currentTimeMillis(),
     val maxDurationMs: Long = 10 * 60 * 1000L, // 10 minutes default
+    val lastActivityEpochMs: Long = startTimeEpochMs,
 ) {
     /**
      * Returns whether wall-clock elapsed time is strictly greater than the configured duration.
      */
     fun isExpired(): Boolean = System.currentTimeMillis() - startTimeEpochMs > maxDurationMs
+
+    /**
+     * Returns whether the session has seen zero DNS activity for at least [durationMs].
+     *
+     * @param durationMs Milliseconds of inactivity to qualify as idle. Defaults to 60,000 (1 minute).
+     * @return True if elapsed time since last activity is greater than or equal to [durationMs].
+     */
+    fun isIdleFor(durationMs: Long = 60_000L): Boolean =
+        System.currentTimeMillis() - lastActivityEpochMs >= durationMs
 }
 
 /**
  * Owns one process-local recording session and readable domain aggregates.
+ *
+ * In isolated mode, all DNS traffic entering the VPN is from the target package by construction,
+ * so attribution is guaranteed without UID heuristics.
  */
 class RecordingSessionManager private constructor() {
     private val _activeSession = MutableStateFlow<RecordingSession?>(null)
@@ -64,20 +78,28 @@ class RecordingSessionManager private constructor() {
     /**
      * Replaces the recording target and clears previous domain aggregates.
      *
-     * @param targetPackage Package name used to identify the target to the UI.
-     * @param targetUid Android UID filter; -1 accepts all UIDs.
+     * @param targetPackage Package name used to isolate the target in the VPN builder and identify it to UI.
+     * @param targetUid Android UID for diagnostics; -1 if unknown.
      * @param maxDurationMs Maximum recording duration in milliseconds.
      * @return Newly active recording session.
      */
     @Synchronized
     fun startSession(
         targetPackage: String,
-        targetUid: Int,
+        targetUid: Int = -1,
         maxDurationMs: Long = 10 * 60 * 1000L,
     ): RecordingSession {
         sessionDomains.clear()
         _domainsFlow.value = emptyList()
-        val session = RecordingSession(targetPackage, targetUid, System.currentTimeMillis(), maxDurationMs)
+        val now = System.currentTimeMillis()
+        val session =
+            RecordingSession(
+                targetPackage = targetPackage,
+                targetUid = targetUid,
+                startTimeEpochMs = now,
+                maxDurationMs = maxDurationMs,
+                lastActivityEpochMs = now,
+            )
         _activeSession.value = session
         return session
     }
@@ -95,23 +117,33 @@ class RecordingSessionManager private constructor() {
     }
 
     /**
-     * Records a valid domain for an active, nonexpired session when attribution is eligible.
+     * Checks whether the active recording session has seen no DNS queries for at least [durationMs].
+     *
+     * @param durationMs Milliseconds of inactivity to qualify as idle. Defaults to 60,000 (1 minute).
+     * @return True if an active session exists and is idle; false if inactive or recent activity was observed.
+     */
+    fun isSessionIdle(durationMs: Long = 60_000L): Boolean {
+        val session = _activeSession.value ?: return false
+        return session.isIdleFor(durationMs)
+    }
+
+    /**
+     * Records a valid domain for an active, nonexpired session.
+     *
+     * In the isolated VPN tunnel, all intercepted DNS originates from the target package by construction;
+     * UID filtering is therefore not applied.
      *
      * @param domain Readable hostname to normalize.
-     * @param uid Attributed Android UID; null is accepted even for a specific target.
+     * @param uid Attributed Android UID for diagnostics; ignored for isolation filtering.
      * @return Whether the observation was recorded; new hosts beyond the capacity check are rejected.
      */
     fun recordDomain(
         domain: String,
-        uid: Int?,
+        uid: Int? = null,
     ): Boolean {
         val session = _activeSession.value ?: return false
         if (session.isExpired()) {
             stopSession()
-            return false
-        }
-        // If uid is specified and does not match targetUid, skip
-        if (uid != null && session.targetUid != -1 && uid != session.targetUid) {
             return false
         }
         val clean = DomainName.normalize(domain) ?: return false
@@ -126,6 +158,7 @@ class RecordingSessionManager private constructor() {
                 existing.copy(count = existing.count + 1, lastSeenEpochMs = now)
             }
         }
+        _activeSession.value = session.copy(lastActivityEpochMs = now)
         _domainsFlow.value = sessionDomains.values.sortedByDescending { it.count }
         return true
     }

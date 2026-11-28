@@ -7,10 +7,12 @@ import android.graphics.drawable.Drawable
 import android.os.Build
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.unblocker.app.data.preferences.FilteringPreferences
 import com.unblocker.app.data.repository.UserRuleGateway
 import com.unblocker.app.logic.analysis.UserFeedback
 import com.unblocker.app.services.RecordingSessionManager
 import com.unblocker.app.services.SessionDomain
+import com.unblocker.app.services.UnblockerVpnService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -205,7 +207,8 @@ class LearnViewModel
          * @param app Selected launcher app; package lookup supplies the target UID or minus one on failure.
          */
         fun startRecording(app: AppItem) {
-            val packageManager = getApplication<Application>().packageManager
+            val context = getApplication<Application>()
+            val packageManager = context.packageManager
             val uid =
                 runCatching {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -220,7 +223,14 @@ class LearnViewModel
                     }
                 }.getOrDefault(-1)
 
+            val prefs = FilteringPreferences.getInstance(context)
+            prefs.setIsolatedSession(true, app.packageName)
             sessionManager.startSession(app.packageName, uid)
+            if (UnblockerVpnService.isServiceActive.value) {
+                UnblockerVpnService.rebuild(context)
+            } else {
+                runCatching { UnblockerVpnService.start(context) }
+            }
             _uiState.value = LearnUiState.Recording(app, 0, emptyList())
 
             timerJob?.cancel()
@@ -245,6 +255,9 @@ class LearnViewModel
          */
         fun stopRecording() {
             timerJob?.cancel()
+            val context = getApplication<Application>()
+            val prefs = FilteringPreferences.getInstance(context)
+            prefs.setIsolatedSession(false, null)
             val current = _uiState.value
             val app =
                 when (current) {
@@ -254,6 +267,11 @@ class LearnViewModel
                 }
 
             val recorded = sessionManager.stopSession()
+            if (prefs.protectionEnabled.value) {
+                UnblockerVpnService.rebuild(context)
+            } else {
+                UnblockerVpnService.stop(context)
+            }
             val reviewed =
                 recorded.map { domainItem ->
                     val category = categorizeDomain(domainItem.domain, app.packageName)
@@ -329,9 +347,32 @@ class LearnViewModel
          * Stops recording, cancels timer updates, and returns to the complete app-selection list.
          */
         fun cancelSession() {
+            val context = getApplication<Application>()
+            val prefs = FilteringPreferences.getInstance(context)
+            prefs.setIsolatedSession(false, null)
             sessionManager.stopSession()
+            if (prefs.protectionEnabled.value) {
+                UnblockerVpnService.rebuild(context)
+            } else {
+                UnblockerVpnService.stop(context)
+            }
             timerJob?.cancel()
             _uiState.value = LearnUiState.SelectingApp(allApps, allApps)
+        }
+
+        override fun onCleared() {
+            super.onCleared()
+            val context = getApplication<Application>()
+            val prefs = FilteringPreferences.getInstance(context)
+            if (prefs.isolatedSessionActive.value) {
+                prefs.setIsolatedSession(false, null)
+                sessionManager.stopSession()
+                if (prefs.protectionEnabled.value) {
+                    UnblockerVpnService.rebuild(context)
+                } else {
+                    UnblockerVpnService.stop(context)
+                }
+            }
         }
 
         private fun categorizeDomain(

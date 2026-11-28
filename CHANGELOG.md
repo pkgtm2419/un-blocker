@@ -16,6 +16,7 @@ Versioning follows the `versionName` / `versionCode` declared in `app/build.grad
 
 ### Changed
 
+- **Room, AGP 9, Kotlin, KSP & Hilt Refresh (WP-10b / WP-10c)**: Upgraded Gradle wrapper to `9.8.2`, AGP to `9.5.1` (migrated from `kotlin-android` to AGP built-in Kotlin and `androidComponents.onVariants` APK output naming), Kotlin to `2.4.21`, KSP to `2.3.14`, Hilt to `2.60.1`, coroutines to `1.11.0`, and Room to `2.8.5` (verified `data-store/schemas/2.json` unchanged). Updated `RuleSet` catch block for Kotlin 2.4 impossible-type-check rule and refreshed `gradle/verification-metadata.xml`.
 - **Compose BOM Update (WP-10a)**: Updated `composeBom` from `2024.10.00` to `2025.12.01` and refreshed `gradle/verification-metadata.xml` checksums.
 
 ### Fixed

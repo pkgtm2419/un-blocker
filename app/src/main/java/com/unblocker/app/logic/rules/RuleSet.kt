@@ -409,8 +409,7 @@ object RuleSetHolder {
                 val json = org.json.JSONObject(text)
                 expectedSha256 = json.optString("binarySha256", "")
             }
-        } catch (e: Exception) {
-            if (e is VirtualMachineError) throw e
+        } catch (_: Exception) {
             _status.value = RuleSetStatus.Fallback("manifest")
             return fallbackRuleSet
         }

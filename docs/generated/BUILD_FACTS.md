@@ -17,8 +17,8 @@ Read directly from **checked-out** Gradle, not README version claims.
 
 | Key | Value |
 | --- | --- |
-| `agp` | `"8.10.1"` |
-| `kotlin` | `"2.0.21"` |
+| `agp` | `"9.5.1"` |
+| `kotlin` | `"2.4.21"` |
 | `coreKtx` | `"1.13.1"` |
 | `junit` | `"4.13.2"` |
 | `junitVersion` | `"1.2.1"` |
@@ -28,9 +28,9 @@ Read directly from **checked-out** Gradle, not README version claims.
 | `composeBom` | `"2025.12.01"` |
 | `navigationCompose` | `"2.8.3"` |
 | `workRuntimeKtx` | `"2.9.1"` |
-| `coroutines` | `"1.8.1"` |
-| `hilt` | `"2.51.1"` |
-| `room` | `"2.6.1"` |
+| `coroutines` | `"1.11.0"` |
+| `hilt` | `"2.60.1"` |
+| `room` | `"2.8.5"` |
 | `tflite` | `"2.16.1"` |
 | `guava` | `"33.2.1-android"` |
 | `hiltNavigationCompose` | `"1.2.0"` |

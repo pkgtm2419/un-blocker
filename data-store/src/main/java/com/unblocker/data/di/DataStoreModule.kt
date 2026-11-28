@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.unblocker.data.db.UnblockerDatabase
 import com.unblocker.data.db.dao.BlockRuleDao
 import com.unblocker.data.db.dao.DnsLogDao
+import com.unblocker.data.db.dao.UserRuleDao
 import com.unblocker.data.db.dao.WhitelistDao
 import dagger.Module
 import dagger.Provides
@@ -78,4 +79,14 @@ object DataStoreModule {
     @Provides
     @Singleton
     fun provideWhitelistDao(db: UnblockerDatabase): WhitelistDao = db.whitelistDao()
+
+    /**
+     * Provides the database-owned UserRule DAO.
+     *
+     * @param db Shared Room database.
+     * @return DAO attached to [db].
+     */
+    @Provides
+    @Singleton
+    fun provideUserRuleDao(db: UnblockerDatabase): UserRuleDao = db.userRuleDao()
 }

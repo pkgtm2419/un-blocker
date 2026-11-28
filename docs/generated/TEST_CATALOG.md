@@ -9,6 +9,7 @@ Files matching `*Test.kt`; presence does not indicate tests passed.
 | `app/src/androidTest/java/com/unblocker/app/LegacyUserRuleMigrationTest.kt` | instrumentation |
 | `app/src/androidTest/java/com/unblocker/app/LocalPrivacyAndVpnTest.kt` | instrumentation |
 | `app/src/androidTest/java/com/unblocker/app/VpnNetworkRegressionTest.kt` | instrumentation |
+| `app/src/androidTest/java/com/unblocker/app/ui/ExceptionsScreenTest.kt` | instrumentation |
 | `app/src/androidTest/java/com/unblocker/app/ui/MainScreenNavigationTest.kt` | instrumentation |
 | `app/src/androidTest/java/com/unblocker/app/ui/PseudoLocaleRenderTest.kt` | instrumentation |
 | `app/src/androidTest/java/com/unblocker/app/ui/SettingsIaNavigationTest.kt` | instrumentation |
@@ -21,6 +22,7 @@ Files matching `*Test.kt`; presence does not indicate tests passed.
 | `app/src/test/java/com/unblocker/app/data/model/ExtensionPresetTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/data/preferences/FilteringPreferencesKeyRegressionTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/data/repository/BoundedFilterDownloaderTest.kt` | unit |
+| `app/src/test/java/com/unblocker/app/data/repository/DeviceUserRuleGatewaySyncTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/data/repository/ExtensionPresetApplicationTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/data/repository/ExtensionRepositoryTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/data/repository/ExtensionUpdateRollbackTest.kt` | unit |

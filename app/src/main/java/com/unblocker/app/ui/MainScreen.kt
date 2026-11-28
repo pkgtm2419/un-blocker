@@ -36,6 +36,7 @@ import com.unblocker.app.data.preferences.FilteringPreferences
 import com.unblocker.app.services.QuickStartManager
 import com.unblocker.app.ui.components.FloatingPillNavBar
 import com.unblocker.app.ui.components.NavItem
+import com.unblocker.app.ui.exceptions.ExceptionsScreen
 import com.unblocker.app.ui.extensions.ExtensionsScreen
 import com.unblocker.app.ui.learn.LearnAppScreen
 import com.unblocker.app.ui.logs.LogViewerScreen
@@ -44,7 +45,6 @@ import com.unblocker.app.ui.navigation.DeepLinkParser
 import com.unblocker.app.ui.navigation.DeepLinkResult
 import com.unblocker.app.ui.navigation.UnblockerDestinations
 import com.unblocker.app.ui.screens.AboutScreen
-import com.unblocker.app.ui.screens.ExceptionsScreen
 import com.unblocker.app.ui.screens.OnboardingScreen
 import com.unblocker.app.ui.screens.StatisticsScreen
 import com.unblocker.app.ui.screens.UnblockerScreen

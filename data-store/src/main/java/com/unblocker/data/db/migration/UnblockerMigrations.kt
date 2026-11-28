@@ -58,7 +58,37 @@ object UnblockerMigrations {
         }
 
     /**
+     * Adds readable `user_rule` table without modifying HMAC stores or existing tables (WP-20 / D2).
+     */
+    val MIGRATION_2_3 =
+        object : Migration(2, 3) {
+            /**
+             * Creates the version 3 `user_rule` table and its lookup index if absent.
+             *
+             * @param db Connection supplied by Room for the migration transaction.
+             */
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `user_rule` (
+                        `domain` TEXT NOT NULL,
+                        `action` INTEGER NOT NULL,
+                        `is_whole_site` INTEGER NOT NULL,
+                        `source` TEXT NOT NULL,
+                        `created_at` INTEGER NOT NULL,
+                        `updated_at` INTEGER NOT NULL,
+                        PRIMARY KEY(`domain`)
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_user_rule_action_updated_at` ON `user_rule` (`action`, `updated_at`)",
+                )
+            }
+        }
+
+    /**
      * Explicit migration paths registered by the database provider.
      */
-    val ALL = arrayOf(MIGRATION_1_2)
+    val ALL = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
 }

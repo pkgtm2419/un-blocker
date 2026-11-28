@@ -7,15 +7,17 @@ import com.unblocker.data.db.converter.DateConverters
 import com.unblocker.data.db.dao.BlockRuleDao
 import com.unblocker.data.db.dao.DnsLogDao
 import com.unblocker.data.db.dao.DomainLogDao
+import com.unblocker.data.db.dao.UserRuleDao
 import com.unblocker.data.db.dao.WhitelistDao
 import com.unblocker.data.db.entity.BlockRuleEntity
 import com.unblocker.data.db.entity.DnsLogEntity
 import com.unblocker.data.db.entity.DomainEventEntity
 import com.unblocker.data.db.entity.DomainStatEntity
+import com.unblocker.data.db.entity.UserRuleEntity
 import com.unblocker.data.db.entity.WhitelistEntity
 
 /**
- * Room schema version 2 for library rules, legacy DNS logs, and readable domain statistics.
+ * Room schema version 3 for library rules, legacy DNS logs, readable domain statistics, and user exceptions.
  */
 @Database(
     entities = [
@@ -24,8 +26,9 @@ import com.unblocker.data.db.entity.WhitelistEntity
         WhitelistEntity::class,
         DomainStatEntity::class,
         DomainEventEntity::class,
+        UserRuleEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 @TypeConverters(DateConverters::class)
@@ -57,6 +60,13 @@ abstract class UnblockerDatabase : RoomDatabase() {
      * @return DAO owned by this database instance.
      */
     abstract fun whitelistDao(): WhitelistDao
+
+    /**
+     * Accesses readable user exceptions (WP-20 / D2).
+     *
+     * @return DAO owned by this database instance.
+     */
+    abstract fun userRuleDao(): UserRuleDao
 
     /**
      * Stable database file identifier.

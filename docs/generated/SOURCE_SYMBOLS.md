@@ -138,6 +138,9 @@ Only syntactically matched top-level class/interface/object declarations (not se
 | `app/src/main/java/com/unblocker/app/ui/adaptive/AdaptiveLayout.kt` | class | `WindowDimensions` |
 | `app/src/main/java/com/unblocker/app/ui/adaptive/AdaptiveLayout.kt` | class | `WindowWidthClass` |
 | `app/src/main/java/com/unblocker/app/ui/components/FloatingPillNavBar.kt` | class | `NavItem` |
+| `app/src/main/java/com/unblocker/app/ui/exceptions/ExceptionsViewModel.kt` | class | `ExceptionTab` |
+| `app/src/main/java/com/unblocker/app/ui/exceptions/ExceptionsViewModel.kt` | class | `ExceptionsUiState` |
+| `app/src/main/java/com/unblocker/app/ui/exceptions/ExceptionsViewModel.kt` | class | `ExceptionsViewModel` |
 | `app/src/main/java/com/unblocker/app/ui/extensions/ExtensionsViewModel.kt` | class | `ExtensionsViewModel` |
 | `app/src/main/java/com/unblocker/app/ui/learn/LearnReviewPolicy.kt` | class | `ApplyReviewOutcome` |
 | `app/src/main/java/com/unblocker/app/ui/learn/LearnReviewPolicy.kt` | object | `LearnReviewPolicy` |
@@ -180,11 +183,13 @@ Only syntactically matched top-level class/interface/object declarations (not se
 | `data-store/src/main/java/com/unblocker/data/db/dao/DomainLogDao.kt` | class | `DomainLogAggregate` |
 | `data-store/src/main/java/com/unblocker/data/db/dao/DomainLogDao.kt` | class | `DomainStatUpsert` |
 | `data-store/src/main/java/com/unblocker/data/db/dao/DomainLogDao.kt` | interface | `DomainLogDao` |
+| `data-store/src/main/java/com/unblocker/data/db/dao/UserRuleDao.kt` | interface | `UserRuleDao` |
 | `data-store/src/main/java/com/unblocker/data/db/dao/WhitelistDao.kt` | interface | `WhitelistDao` |
 | `data-store/src/main/java/com/unblocker/data/db/entity/BlockRuleEntity.kt` | class | `BlockRuleEntity` |
 | `data-store/src/main/java/com/unblocker/data/db/entity/DnsLogEntity.kt` | class | `DnsLogEntity` |
 | `data-store/src/main/java/com/unblocker/data/db/entity/DomainEventEntity.kt` | class | `DomainEventEntity` |
 | `data-store/src/main/java/com/unblocker/data/db/entity/DomainStatEntity.kt` | class | `DomainStatEntity` |
+| `data-store/src/main/java/com/unblocker/data/db/entity/UserRuleEntity.kt` | class | `UserRuleEntity` |
 | `data-store/src/main/java/com/unblocker/data/db/entity/WhitelistEntity.kt` | class | `WhitelistEntity` |
 | `data-store/src/main/java/com/unblocker/data/db/migration/UnblockerMigrations.kt` | object | `UnblockerMigrations` |
 | `data-store/src/main/java/com/unblocker/data/di/DataStoreModule.kt` | object | `DataStoreModule` |

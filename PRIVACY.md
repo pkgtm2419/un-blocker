@@ -18,6 +18,10 @@ learning model or cloud synchronization. No learning data is sent to the develop
   and their compatible key. New installations use `allowlist-v3`/`blocklist-v3`
   and separate purpose keys. These identifiers do not contain readable names,
   but a party able to use the key could test guessed domains.
+- User exceptions (`user_rule`): explicitly added or modified user Allow/Block
+  overrides stored locally in the backup-excluded Room database so you can
+  inspect, test, and delete exceptions in-app. Pre-v3.0 HMAC entries and learned
+  reputations remain non-enumerable and are not migrated into plaintext.
 - Volatile data: DNS packet buffers, cached DNS responses and short cadence windows
   used for classification. These disappear with the process. Raw names necessarily
   exist in RAM while DNS is processed.

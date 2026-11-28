@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Rule
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Info
@@ -41,25 +40,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.unblocker.app.R
-
-/**
- * Destination for viewing and testing user allow/block rules and My domains exceptions (WP-11; full CRUD in WP-20).
- */
-@Composable
-fun ExceptionsScreen(
-    onNavigateBack: () -> Unit,
-    onOpenLogs: () -> Unit = {},
-) {
-    SecondaryDestinationScaffold(
-        title = stringResource(R.string.exceptions_title),
-        icon = Icons.AutoMirrored.Filled.Rule,
-        headline = stringResource(R.string.exceptions_headline),
-        description = stringResource(R.string.exceptions_description),
-        primaryActionLabel = stringResource(R.string.exceptions_action),
-        onPrimaryAction = onOpenLogs,
-        onNavigateBack = onNavigateBack,
-    )
-}
 
 /**
  * Destination for local query statistics and rule-source attribution (WP-11; full charts in WP-40).

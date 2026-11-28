@@ -41,9 +41,11 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.unblocker.app.R
 import com.unblocker.app.data.preferences.FilteringPreferences
 import com.unblocker.app.services.QuickStartManager
 import com.unblocker.app.services.ServiceStatus
@@ -301,14 +303,14 @@ fun UnblockerScreen(
                         ) {
                             androidx.compose.material3.Icon(
                                 imageVector = Icons.Filled.Warning,
-                                contentDescription = "Private DNS active",
+                                contentDescription = stringResource(R.string.home_private_dns_active_chip),
                                 tint = Color(0xFFF59E0B),
                                 modifier = Modifier.size(20.dp),
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Private DNS is active — filtering may leak",
+                                    text = stringResource(R.string.home_private_dns_warning_title),
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface,
@@ -316,8 +318,10 @@ fun UnblockerScreen(
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
                                     text =
-                                        "System Private DNS (${privateDnsServer ?: "system resolver"}) bypasses this filter. " +
-                                            "Go to Settings → Network → Private DNS and set it to Off so blocking works.",
+                                        stringResource(
+                                            R.string.home_private_dns_warning_body,
+                                            privateDnsServer ?: stringResource(R.string.home_private_dns_system_resolver),
+                                        ),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 3,
@@ -341,7 +345,7 @@ fun UnblockerScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "Block 18+ Content",
+                                    text = stringResource(R.string.home_adult_block_title),
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface,
@@ -353,7 +357,7 @@ fun UnblockerScreen(
                                     border = BorderStroke(1.dp, AdultBlockedPurple.copy(alpha = 0.35f)),
                                 ) {
                                     Text(
-                                        text = "Adult",
+                                        text = stringResource(R.string.home_adult_badge),
                                         style = MaterialTheme.typography.labelSmall,
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.SemiBold,
@@ -364,7 +368,7 @@ fun UnblockerScreen(
                             }
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "Filter adult websites & explicit domains",
+                                text = stringResource(R.string.home_adult_block_subtitle),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )

@@ -1,40 +1,52 @@
 package com.unblocker.app.data.model
 
 import android.os.Build
+import androidx.annotation.StringRes
+import com.unblocker.app.R
 import java.util.Locale
 
 /**
  * Curated filter list configuration presets balancing filtering rigor, memory footprint, and app compatibility.
  *
- * @property title User-facing display title for the preset.
- * @property description Concise explanation of filtering scope, tradeoffs, and target use case.
+ * @property titleRes String resource ID for the user-facing display title.
+ * @property shortTitleRes String resource ID for the compact selector pill title.
+ * @property subtitleBadgeRes String resource ID for the compact selector pill subtitle badge.
+ * @property descriptionRes String resource ID for the filtering scope, tradeoffs, and target use case.
  */
 enum class ExtensionPreset(
-    val title: String,
-    val description: String,
+    @param:StringRes val titleRes: Int,
+    @param:StringRes val shortTitleRes: Int,
+    @param:StringRes val subtitleBadgeRes: Int,
+    @param:StringRes val descriptionRes: Int,
 ) {
     /**
      * Minimal, zero-breakage configuration preserving banking, shopping, and everyday app functionality.
      */
     ESSENTIAL(
-        title = "Essential (Zero Breakage)",
-        description = "Lightweight, zero false positives. Prevents breakage in banking, regional, and work apps.",
+        titleRes = R.string.preset_essential_title,
+        shortTitleRes = R.string.preset_essential_short,
+        subtitleBadgeRes = R.string.preset_essential_badge,
+        descriptionRes = R.string.preset_essential_desc,
     ),
 
     /**
      * Balanced master blocking with mobile ad SDK rules, DoH bypass prevention, and device OEM telemetry filters.
      */
     RECOMMENDED(
-        title = "Recommended (Balanced)",
-        description = "Optimal ad and tracker suppression with mobile SDKs, OEM telemetry, and DoH bypass blocks.",
+        titleRes = R.string.preset_recommended_title,
+        shortTitleRes = R.string.preset_recommended_short,
+        subtitleBadgeRes = R.string.preset_recommended_badge,
+        descriptionRes = R.string.preset_recommended_desc,
     ),
 
     /**
      * Maximum aggressive blocking including annoyances, social widgets, telemetry, and aggressive threat feeds.
      */
     AGGRESSIVE(
-        title = "Aggressive (Maximum Shield)",
-        description = "Full-coverage shield against mobile ads, in-app trackers, social widgets, and OEM profiling.",
+        titleRes = R.string.preset_aggressive_title,
+        shortTitleRes = R.string.preset_aggressive_short,
+        subtitleBadgeRes = R.string.preset_aggressive_badge,
+        descriptionRes = R.string.preset_aggressive_desc,
     ),
     ;
 

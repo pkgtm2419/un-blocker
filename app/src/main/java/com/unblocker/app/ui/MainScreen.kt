@@ -20,10 +20,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -31,6 +31,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.unblocker.app.R
 import com.unblocker.app.data.preferences.FilteringPreferences
 import com.unblocker.app.services.QuickStartManager
 import com.unblocker.app.ui.components.FloatingPillNavBar
@@ -158,14 +159,12 @@ fun MainScreen(
     }
 
     val navItems =
-        remember {
-            listOf(
-                NavItem(title = "Home", icon = Icons.Filled.Security),
-                NavItem(title = "Learn", icon = Icons.Filled.Apps),
-                NavItem(title = "Logs", icon = Icons.AutoMirrored.Filled.List),
-                NavItem(title = "Settings", icon = Icons.Filled.Settings),
-            )
-        }
+        listOf(
+            NavItem(title = stringResource(R.string.nav_home), icon = Icons.Filled.Security),
+            NavItem(title = stringResource(R.string.nav_learn), icon = Icons.Filled.Apps),
+            NavItem(title = stringResource(R.string.nav_logs), icon = Icons.AutoMirrored.Filled.List),
+            NavItem(title = stringResource(R.string.nav_settings), icon = Icons.Filled.Settings),
+        )
 
     val navBarBottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val contentPadding = PaddingValues(bottom = 64.dp + 16.dp + navBarBottomInset)

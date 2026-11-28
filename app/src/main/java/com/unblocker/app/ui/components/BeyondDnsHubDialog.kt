@@ -35,9 +35,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.unblocker.app.R
 import com.unblocker.app.services.SystemHardeningChecker
 import com.unblocker.app.ui.theme.Slate700
 import com.unblocker.app.ui.theme.Slate800
@@ -75,12 +77,12 @@ fun BeyondDnsHubDialog(
                 Spacer(modifier = Modifier.width(10.dp))
                 Column {
                     Text(
-                        text = "Beyond DNS: Streams & Feeds",
+                        text = stringResource(R.string.beyond_dns_dialog_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
-                        text = "Defense-in-depth for video & in-app ads",
+                        text = stringResource(R.string.beyond_dns_dialog_subtitle),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 11.sp,
@@ -97,10 +99,7 @@ fun BeyondDnsHubDialog(
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 Text(
-                    text =
-                        "DNS filtering blocks 80–90% of ads and telemetry before connections start. " +
-                            "However, some ads share identical domains with media content. " +
-                            "Here is how to defeat them at other layers:",
+                    text = stringResource(R.string.beyond_dns_dialog_intro),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
@@ -108,14 +107,10 @@ fun BeyondDnsHubDialog(
                 // Section 1: YouTube & Video Streams
                 CompanionSectionCard(
                     icon = Icons.Default.PlayCircleOutline,
-                    title = "YouTube & Media Streams",
-                    whyText =
-                        "Video and ads are served from the same CDN (googlevideo.com). " +
-                            "Blocking DNS crashes the player.",
-                    solutionText =
-                        "Use Firefox + uBlock Origin for web playback, or open-source " +
-                            "players (NewPipe, Tubular, ReVanced) with SponsorBlock.",
-                    actionLabel = "Install Firefox",
+                    title = stringResource(R.string.beyond_dns_youtube_title),
+                    whyText = stringResource(R.string.beyond_dns_youtube_why),
+                    solutionText = stringResource(R.string.beyond_dns_youtube_solution),
+                    actionLabel = stringResource(R.string.beyond_dns_youtube_action),
                     onAction = {
                         runCatching {
                             context.startActivity(SystemHardeningChecker.createPlayStoreIntent("org.mozilla.firefox"))
@@ -126,12 +121,10 @@ fun BeyondDnsHubDialog(
                 // Section 2: Browser In-Page Cosmetic Ads
                 CompanionSectionCard(
                     icon = Icons.Default.Web,
-                    title = "Web Blank Frames & Popups",
-                    whyText = "DNS drops ad connections, but websites leave empty blank frames behind.",
-                    solutionText =
-                        "Install Firefox with uBlock Origin or use Brave Browser with Shields. " +
-                            "They inject CSS rules to collapse blank ad spaces and remove cookie popups.",
-                    actionLabel = "Install Brave",
+                    title = stringResource(R.string.beyond_dns_web_title),
+                    whyText = stringResource(R.string.beyond_dns_web_why),
+                    solutionText = stringResource(R.string.beyond_dns_web_solution),
+                    actionLabel = stringResource(R.string.beyond_dns_web_action),
                     onAction = {
                         runCatching {
                             context.startActivity(SystemHardeningChecker.createPlayStoreIntent("com.brave.browser"))
@@ -148,17 +141,14 @@ fun BeyondDnsHubDialog(
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text(
-                            text = "Social Media In-Feed Promos",
+                            text = stringResource(R.string.beyond_dns_social_title),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text =
-                                "Instagram, Facebook, and Reddit feed ads arrive inside encrypted API " +
-                                    "responses. The safest solution without account ban risk is installing them " +
-                                    "as Progressive Web Apps (PWAs) inside Brave or Firefox with uBlock Origin.",
+                            text = stringResource(R.string.beyond_dns_social_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 11.sp,
@@ -170,7 +160,7 @@ fun BeyondDnsHubDialog(
         confirmButton = {
             TextButton(onClick = onDismiss) {
                 Text(
-                    text = "Close",
+                    text = stringResource(R.string.action_close),
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -263,7 +253,7 @@ private fun CompanionSectionCard(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "✓ Solution: $solutionText",
+                text = stringResource(R.string.beyond_dns_solution_format, solutionText),
                 style = MaterialTheme.typography.bodySmall,
                 color = TealPrimary,
                 fontWeight = FontWeight.Medium,

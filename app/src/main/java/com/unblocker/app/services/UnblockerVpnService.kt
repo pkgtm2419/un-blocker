@@ -690,31 +690,41 @@ class UnblockerVpnService : VpnService() {
                 pauseIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
-        val pauseActionTitle = if (isPaused) "Resume" else "Pause 5m"
+        val pauseActionTitle =
+            if (isPaused) {
+                getString(R.string.notif_action_resume)
+            } else {
+                getString(R.string.notif_action_pause_5m)
+            }
         val statusText =
             when {
-                isIsolated -> "Learning $isolatedPkg • Other apps are not filtered"
-                isPaused -> "Protection paused • Tap Resume to re-enable"
-                else -> "Local DNS protection active • No telemetry"
+                isIsolated -> getString(R.string.notif_status_isolated, isolatedPkg.orEmpty())
+                isPaused -> getString(R.string.notif_status_paused)
+                else -> getString(R.string.notif_status_active)
             }
         val subText =
             when {
-                isIsolated -> "Isolated Learn session • Max 10m"
-                isPaused -> "Paused"
-                else -> "On-device learning • No telemetry"
+                isIsolated -> getString(R.string.notif_sub_isolated)
+                isPaused -> getString(R.string.notif_sub_paused)
+                else -> getString(R.string.notif_sub_active)
             }
 
         return NotificationCompat
             .Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_blocker_notification)
-            .setContentTitle(if (isIsolated) "Un-Blocker (Isolated Learn)" else "unblocker")
-            .setContentText(statusText)
+            .setContentTitle(
+                if (isIsolated) {
+                    getString(R.string.notif_title_isolated)
+                } else {
+                    getString(R.string.notif_title_default)
+                },
+            ).setContentText(statusText)
             .setSubText(subText)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
             .setContentIntent(pendingIntent)
             .addAction(R.drawable.ic_blocker_notification, pauseActionTitle, pausePendingIntent)
-            .addAction(R.drawable.ic_blocker_notification, "Stop", stopPendingIntent)
+            .addAction(R.drawable.ic_blocker_notification, getString(R.string.notif_action_stop), stopPendingIntent)
             .build()
     }
 
@@ -727,10 +737,10 @@ class UnblockerVpnService : VpnService() {
         val channel =
             NotificationChannel(
                 CHANNEL_ID,
-                "unblocker Protection",
+                getString(R.string.notif_channel_name),
                 NotificationManager.IMPORTANCE_LOW,
             ).apply {
-                description = "Shows live status of active local network protection"
+                description = getString(R.string.notif_channel_description)
                 setShowBadge(false)
             }
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

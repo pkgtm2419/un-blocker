@@ -36,9 +36,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.unblocker.app.R
 
 /**
  * Destination for viewing and testing user allow/block rules and My domains exceptions (WP-11; full CRUD in WP-20).
@@ -49,13 +51,11 @@ fun ExceptionsScreen(
     onOpenLogs: () -> Unit = {},
 ) {
     SecondaryDestinationScaffold(
-        title = "Exceptions & Rules",
+        title = stringResource(R.string.exceptions_title),
         icon = Icons.AutoMirrored.Filled.Rule,
-        headline = "User Rules & Protected Domains",
-        description =
-            "View and manage custom Allow/Block overrides, My domains protected sites, " +
-                "and evaluate domains with the rule tester. You can also manage exceptions directly per domain in Logs.",
-        primaryActionLabel = "Open Logs to Filter Domains",
+        headline = stringResource(R.string.exceptions_headline),
+        description = stringResource(R.string.exceptions_description),
+        primaryActionLabel = stringResource(R.string.exceptions_action),
         onPrimaryAction = onOpenLogs,
         onNavigateBack = onNavigateBack,
     )
@@ -70,13 +70,11 @@ fun StatisticsScreen(
     onOpenLogs: () -> Unit = {},
 ) {
     SecondaryDestinationScaffold(
-        title = "Statistics",
+        title = stringResource(R.string.stats_title),
         icon = Icons.Default.BarChart,
-        headline = "On-Device Protection Summary",
-        description =
-            "Daily query trends, block rate percentages, top blocked domains, and per-list hit counters " +
-                "computed strictly on your device within local retention limits.",
-        primaryActionLabel = "View Detailed Domain Logs",
+        headline = stringResource(R.string.stats_headline),
+        description = stringResource(R.string.stats_description),
+        primaryActionLabel = stringResource(R.string.stats_action),
         onPrimaryAction = onOpenLogs,
         onNavigateBack = onNavigateBack,
     )
@@ -91,13 +89,11 @@ fun OnboardingScreen(
     onOpenExtensions: () -> Unit = {},
 ) {
     SecondaryDestinationScaffold(
-        title = "Guided Setup",
+        title = stringResource(R.string.onboarding_title),
         icon = Icons.Default.RocketLaunch,
-        headline = "Welcome to Un-Blocker",
-        description =
-            "On-device DNS protection with zero cloud servers and zero telemetry. " +
-                "Choose a curated filter preset in Extensions or start protection from Home.",
-        primaryActionLabel = "Browse Curated Presets",
+        headline = stringResource(R.string.onboarding_headline),
+        description = stringResource(R.string.onboarding_description),
+        primaryActionLabel = stringResource(R.string.onboarding_action),
         onPrimaryAction = onOpenExtensions,
         onNavigateBack = onNavigateBack,
     )
@@ -120,10 +116,13 @@ fun AboutScreen(onNavigateBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("About Un-Blocker", fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+                title = { Text(stringResource(R.string.about_title), fontWeight = FontWeight.Bold, fontSize = 18.sp) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.action_back),
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -152,22 +151,20 @@ fun AboutScreen(onNavigateBack: () -> Unit) {
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Un-Blocker v$versionName",
+                        text = stringResource(R.string.app_brand_version, versionName),
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "100% On-Device • Zero-Cloud • Zero-Telemetry",
+                        text = stringResource(R.string.app_privacy_pillars),
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Medium,
                         fontSize = 13.sp,
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text =
-                            "Un-Blocker inspects only DNS queries locally through Android's VpnService " +
-                                "without inspecting HTTPS bodies or transmitting telemetry off your phone.",
+                        text = stringResource(R.string.about_privacy_detail),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -192,7 +189,7 @@ fun AboutScreen(onNavigateBack: () -> Unit) {
             ) {
                 Icon(imageVector = Icons.Default.Code, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("GitHub Repository & Apache-2.0 License")
+                Text(stringResource(R.string.about_github_license))
             }
         }
     }
@@ -215,7 +212,10 @@ private fun SecondaryDestinationScaffold(
                 title = { Text(title, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.action_back),
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),

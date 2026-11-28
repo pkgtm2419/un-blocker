@@ -37,9 +37,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.unblocker.app.R
 import com.unblocker.app.services.HardeningPosture
 import com.unblocker.app.services.SystemHardeningChecker
 import com.unblocker.app.ui.theme.AdBlockedRed
@@ -99,13 +101,18 @@ fun SystemHardeningWizard(
                     Spacer(modifier = Modifier.width(10.dp))
                     Column {
                         Text(
-                            text = "System Hardening Checklist",
+                            text = stringResource(R.string.hardening_title),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
-                            text = if (posture.isFullyHardened) "Optimal defense active" else "Action recommended",
+                            text =
+                                if (posture.isFullyHardened) {
+                                    stringResource(R.string.hardening_subtitle_optimal)
+                                } else {
+                                    stringResource(R.string.hardening_subtitle_action)
+                                },
                             style = MaterialTheme.typography.bodySmall,
                             color = if (posture.isFullyHardened) AllowedGreen else AdBlockedRed,
                             fontSize = 11.sp,
@@ -132,7 +139,12 @@ fun SystemHardeningWizard(
                         ),
                 ) {
                     Text(
-                        text = if (posture.isFullyHardened) "SECURE" else "VULNERABLE",
+                        text =
+                            if (posture.isFullyHardened) {
+                                stringResource(R.string.hardening_badge_secure)
+                            } else {
+                                stringResource(R.string.hardening_badge_vulnerable)
+                            },
                         style = MaterialTheme.typography.labelSmall,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.ExtraBold,
@@ -143,9 +155,7 @@ fun SystemHardeningWizard(
             }
 
             Text(
-                text =
-                    "Android battery killers and encrypted Private DNS can silently terminate " +
-                        "the VPN or bypass local ad blocking. Ensure these 4 pillars are configured.",
+                text = stringResource(R.string.hardening_intro),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -153,15 +163,20 @@ fun SystemHardeningWizard(
             // Item 1: Battery Optimization
             HardeningItemRow(
                 icon = Icons.Default.BatteryChargingFull,
-                title = "Battery Optimization",
+                title = stringResource(R.string.hardening_battery_title),
                 description =
                     if (posture.isBatteryOptimizationIgnored) {
-                        "Unrestricted — safe from OEM background task killer"
+                        stringResource(R.string.hardening_battery_ok)
                     } else {
-                        "Optimized — system may stop VPN in background"
+                        stringResource(R.string.hardening_battery_fix)
                     },
                 isSuccess = posture.isBatteryOptimizationIgnored,
-                actionLabel = if (posture.isBatteryOptimizationIgnored) "Configured" else "Exempt",
+                actionLabel =
+                    if (posture.isBatteryOptimizationIgnored) {
+                        stringResource(R.string.hardening_battery_action_ok)
+                    } else {
+                        stringResource(R.string.hardening_battery_action_fix)
+                    },
                 onAction = {
                     runCatching {
                         context.startActivity(SystemHardeningChecker.createBatteryOptimizationIntent(context))
@@ -174,15 +189,23 @@ fun SystemHardeningWizard(
             val isPrivateDnsSafe = !posture.isPrivateDnsActive
             HardeningItemRow(
                 icon = Icons.Default.PrivacyTip,
-                title = "Private DNS (DoT) Status",
+                title = stringResource(R.string.hardening_private_dns_title),
                 description =
                     if (isPrivateDnsSafe) {
-                        "Disabled/Filtered — 100% of DNS routes through Un-Blocker"
+                        stringResource(R.string.hardening_private_dns_ok)
                     } else {
-                        "ACTIVE — encrypted queries bypass VPN (${posture.privateDnsServerName ?: "DoT"})"
+                        stringResource(
+                            R.string.hardening_private_dns_fix,
+                            posture.privateDnsServerName ?: stringResource(R.string.hardening_private_dns_dot_fallback),
+                        )
                     },
                 isSuccess = isPrivateDnsSafe,
-                actionLabel = if (isPrivateDnsSafe) "Protected" else "Turn Off",
+                actionLabel =
+                    if (isPrivateDnsSafe) {
+                        stringResource(R.string.hardening_private_dns_action_ok)
+                    } else {
+                        stringResource(R.string.hardening_private_dns_action_fix)
+                    },
                 onAction = {
                     runCatching {
                         context.startActivity(SystemHardeningChecker.createNetworkSettingsIntent())
@@ -194,10 +217,10 @@ fun SystemHardeningWizard(
             // Item 3: Always-On VPN & Lockdown
             HardeningItemRow(
                 icon = Icons.Default.Lock,
-                title = "Always-On VPN & Lockdown",
-                description = "Guarantees zero traffic leaks during reboot or network switches",
+                title = stringResource(R.string.hardening_always_on_title),
+                description = stringResource(R.string.hardening_always_on_desc),
                 isSuccess = null,
-                actionLabel = "Open VPN Settings",
+                actionLabel = stringResource(R.string.hardening_always_on_action),
                 onAction = {
                     runCatching {
                         context.startActivity(SystemHardeningChecker.createVpnSettingsIntent())
@@ -208,10 +231,10 @@ fun SystemHardeningWizard(
             // Item 4: Android Advertising ID
             HardeningItemRow(
                 icon = Icons.Default.Warning,
-                title = "Advertising ID & Telemetry",
-                description = "Delete advertising ID to stop cross-app behavioral tracking",
+                title = stringResource(R.string.hardening_ad_id_title),
+                description = stringResource(R.string.hardening_ad_id_desc),
                 isSuccess = null,
-                actionLabel = "Ad Settings",
+                actionLabel = stringResource(R.string.hardening_ad_id_action),
                 onAction = {
                     runCatching {
                         context.startActivity(SystemHardeningChecker.createAdPrivacyIntent())

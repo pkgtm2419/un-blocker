@@ -1,5 +1,6 @@
 package com.unblocker.app.ui.model
 
+import com.unblocker.app.R
 import com.unblocker.app.services.ServiceStatus
 
 /**
@@ -26,6 +27,8 @@ object ProtectionUiStateMapper {
                     detail = "Protection is off. Standard DNS queries resolve directly via your network without local filtering.",
                     action = RecoveryAction.START_VPN,
                     status = ServiceStatus.STOPPED,
+                    labelRes = R.string.protection_state_off,
+                    detailRes = R.string.protection_state_off_detail,
                 )
             }
 
@@ -35,6 +38,8 @@ object ProtectionUiStateMapper {
                     detail = "Stopping local VPN filter interface…",
                     action = null,
                     status = ServiceStatus.STOPPING,
+                    labelRes = R.string.protection_state_off,
+                    detailRes = R.string.protection_state_stopping_detail,
                 )
             }
 
@@ -44,6 +49,8 @@ object ProtectionUiStateMapper {
                     detail = "Initializing local DNS filter interface…",
                     action = null,
                     status = ServiceStatus.STARTING,
+                    labelRes = R.string.protection_state_starting,
+                    detailRes = R.string.protection_state_starting_detail,
                 )
             }
 
@@ -53,6 +60,8 @@ object ProtectionUiStateMapper {
                     detail = "Unable to establish local VPN filter interface.",
                     action = RecoveryAction.RETRY,
                     status = ServiceStatus.ERROR,
+                    labelRes = R.string.protection_state_error,
+                    detailRes = R.string.protection_state_error_detail,
                 )
             }
 
@@ -64,6 +73,8 @@ object ProtectionUiStateMapper {
                             detail = "Android Private DNS is active and sending encrypted queries directly to external servers, bypassing local filtering.",
                             action = RecoveryAction.OPEN_PRIVATE_DNS_SETTINGS,
                             status = ServiceStatus.RUNNING,
+                            labelRes = R.string.protection_state_limited_private_dns,
+                            detailRes = R.string.protection_state_limited_private_dns_detail,
                         )
                     }
 
@@ -73,6 +84,8 @@ object ProtectionUiStateMapper {
                             detail = "No active network DNS resolvers were detected. Queries cannot be resolved.",
                             action = RecoveryAction.RETRY,
                             status = ServiceStatus.RUNNING,
+                            labelRes = R.string.protection_state_limited_no_dns,
+                            detailRes = R.string.protection_state_limited_no_dns_detail,
                         )
                     }
 
@@ -82,6 +95,8 @@ object ProtectionUiStateMapper {
                             detail = "Filtering standard DNS queries on this device. Allowed queries resolve via network resolvers.",
                             action = null,
                             status = ServiceStatus.RUNNING,
+                            labelRes = R.string.protection_state_protected,
+                            detailRes = R.string.protection_state_protected_detail,
                         )
                     }
                 }

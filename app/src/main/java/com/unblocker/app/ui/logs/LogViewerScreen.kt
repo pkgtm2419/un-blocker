@@ -1,5 +1,6 @@
 package com.unblocker.app.ui.logs
 
+import android.content.res.Resources
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
@@ -26,11 +27,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.unblocker.app.R
 import com.unblocker.app.ui.components.HaikeiAtmosphericBackground
 import com.unblocker.app.ui.components.SkeuomorphicCard
 import com.unblocker.app.ui.theme.AdBlockedRed
@@ -108,10 +113,10 @@ fun LogViewerScreen(
     if (showClearConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showClearConfirmDialog = false },
-            title = { Text("Clear All History?") },
+            title = { Text(stringResource(R.string.logs_clear_dialog_title)) },
             text = {
                 Text(
-                    "This will permanently remove all intercepted domain statistics and timestamped event records.",
+                    stringResource(R.string.logs_clear_dialog_body),
                 )
             },
             confirmButton = {
@@ -121,12 +126,12 @@ fun LogViewerScreen(
                         showClearConfirmDialog = false
                     },
                 ) {
-                    Text("Clear", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.action_clear), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showClearConfirmDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.action_cancel))
                 }
             },
         )
@@ -165,7 +170,7 @@ fun LogViewerScreen(
                                         .padding(end = 12.dp),
                             ) {
                                 Text(
-                                    text = "Connection Logs",
+                                    text = stringResource(R.string.logs_title),
                                     style = MaterialTheme.typography.headlineSmall,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = MaterialTheme.colorScheme.onSurface,
@@ -173,7 +178,13 @@ fun LogViewerScreen(
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
-                                    text = "$totalDomains domains • $totalCalls queries • $totalBlocked blocked",
+                                    text =
+                                        stringResource(
+                                            R.string.logs_counts_header,
+                                            totalDomains,
+                                            totalCalls,
+                                            totalBlocked,
+                                        ),
                                     style = MaterialTheme.typography.bodySmall,
                                     fontWeight = FontWeight.Medium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -245,7 +256,7 @@ fun LogViewerScreen(
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Download,
-                                            contentDescription = "Export CSV",
+                                            contentDescription = stringResource(R.string.logs_export_csv),
                                             tint = MaterialTheme.colorScheme.primary,
                                             modifier = Modifier.size(20.dp),
                                         )
@@ -263,7 +274,7 @@ fun LogViewerScreen(
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.DeleteSweep,
-                                            contentDescription = "Clear History",
+                                            contentDescription = stringResource(R.string.logs_clear_history),
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.size(20.dp),
                                         )
@@ -278,7 +289,12 @@ fun LogViewerScreen(
                             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                         ) {
                             Text(
-                                text = "Local Protection Summary: ${summary.dnsQueries} total queries (${summary.blockedDnsQueries} blocked). Counts reflect local DNS name resolution requests, not advertisements removed or network bytes saved.",
+                                text =
+                                    stringResource(
+                                        R.string.logs_protection_summary,
+                                        summary.dnsQueries,
+                                        summary.blockedDnsQueries,
+                                    ),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(10.dp),
@@ -308,7 +324,7 @@ fun LogViewerScreen(
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = "Logging is currently paused",
+                                        text = stringResource(R.string.logs_logging_paused),
                                         style = MaterialTheme.typography.labelMedium,
                                         color = if (isDark) Color(0xFFFCA5A5) else Color(0xFF991B1B),
                                         fontWeight = FontWeight.SemiBold,
@@ -331,7 +347,7 @@ fun LogViewerScreen(
                             onValueChange = { viewModel.setSearchQuery(it) },
                             placeholder = {
                                 Text(
-                                    "Search domains…",
+                                    stringResource(R.string.logs_search_placeholder),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             },
@@ -347,7 +363,7 @@ fun LogViewerScreen(
                                     IconButton(onClick = { viewModel.setSearchQuery("") }) {
                                         Icon(
                                             Icons.Default.Clear,
-                                            contentDescription = "Clear search",
+                                            contentDescription = stringResource(R.string.action_clear_search),
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
@@ -384,7 +400,7 @@ fun LogViewerScreen(
                                 FilterChip(
                                     selected = filter == LogFilter.ALL,
                                     onClick = { viewModel.setFilter(LogFilter.ALL) },
-                                    label = { Text("All") },
+                                    label = { Text(stringResource(R.string.logs_filter_all)) },
                                     shape = CircleShape,
                                     colors =
                                         FilterChipDefaults.filterChipColors(
@@ -410,7 +426,7 @@ fun LogViewerScreen(
                                 FilterChip(
                                     selected = filter == LogFilter.BLOCKED,
                                     onClick = { viewModel.setFilter(LogFilter.BLOCKED) },
-                                    label = { Text("Blocked") },
+                                    label = { Text(stringResource(R.string.logs_filter_blocked)) },
                                     shape = CircleShape,
                                     colors =
                                         FilterChipDefaults.filterChipColors(
@@ -436,7 +452,7 @@ fun LogViewerScreen(
                                 FilterChip(
                                     selected = filter == LogFilter.ALLOWED,
                                     onClick = { viewModel.setFilter(LogFilter.ALLOWED) },
-                                    label = { Text("Allowed") },
+                                    label = { Text(stringResource(R.string.logs_filter_allowed)) },
                                     shape = CircleShape,
                                     colors =
                                         FilterChipDefaults.filterChipColors(
@@ -543,9 +559,10 @@ fun DomainStatCard(
     onBlock: () -> Unit,
     onReset: () -> Unit = {},
 ) {
+    val resources = LocalResources.current
     val relativeTime =
-        remember(stat.lastSeen) {
-            formatRelativeTime(stat.lastSeen)
+        remember(stat.lastSeen, resources) {
+            formatRelativeTime(resources, stat.lastSeen)
         }
     var showHistoryPopup by remember { mutableStateOf(false) }
 
@@ -579,7 +596,13 @@ fun DomainStatCard(
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "${stat.callCount} calls • ${stat.blockedCount} blocked • $relativeTime",
+                        text =
+                            stringResource(
+                                R.string.logs_item_meta,
+                                stat.callCount,
+                                stat.blockedCount,
+                                relativeTime,
+                            ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -590,7 +613,12 @@ fun DomainStatCard(
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(
                         imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        contentDescription = if (isExpanded) "Collapse" else "Expand",
+                        contentDescription =
+                            if (isExpanded) {
+                                stringResource(R.string.action_collapse)
+                            } else {
+                                stringResource(R.string.action_expand)
+                            },
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -615,7 +643,7 @@ fun DomainStatCard(
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Text(
-                            text = "Recent Activity (Latest 50)",
+                            text = stringResource(R.string.logs_recent_activity_title),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.primary,
@@ -626,7 +654,7 @@ fun DomainStatCard(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Info,
-                                contentDescription = "View complete connection history in table view",
+                                contentDescription = stringResource(R.string.logs_history_button_desc),
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(16.dp),
                             )
@@ -637,7 +665,12 @@ fun DomainStatCard(
 
                     if (events.isEmpty()) {
                         Text(
-                            text = "Aggregated statistics: ${stat.callCount} total queries (${stat.blockedCount} blocked). Query events are summarized for maximum privacy.",
+                            text =
+                                stringResource(
+                                    R.string.logs_aggregated_empty,
+                                    stat.callCount,
+                                    stat.blockedCount,
+                                ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -689,7 +722,7 @@ fun DomainStatCard(
                             onClick = onReset,
                             modifier = Modifier.padding(end = 6.dp),
                         ) {
-                            Text("Reset", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.logs_action_reset), color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         OutlinedButton(
                             onClick = onAllow,
@@ -697,14 +730,14 @@ fun DomainStatCard(
                             border = BorderStroke(1.dp, allowColor),
                             modifier = Modifier.padding(end = 8.dp),
                         ) {
-                            Text("Always Allow", color = allowColor)
+                            Text(stringResource(R.string.logs_action_always_allow), color = allowColor)
                         }
                         Button(
                             onClick = onBlock,
                             shape = CircleShape,
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                         ) {
-                            Text("Block Domain", color = Color.White)
+                            Text(stringResource(R.string.logs_action_block_domain), color = Color.White)
                         }
                     }
                 }
@@ -737,7 +770,7 @@ fun StatusChip(
         when {
             blockedCount > 0 && allowedCount > 0 -> {
                 Triple(
-                    "Mixed",
+                    stringResource(R.string.logs_filter_mixed),
                     if (isDark) Color(0x33F59E0B) else Color(0xFFFEF3C7),
                     if (isDark) Color(0xFFFBBF24) else Color(0xFFB45309),
                 )
@@ -745,7 +778,7 @@ fun StatusChip(
 
             blockedCount > 0 -> {
                 Triple(
-                    "Blocked",
+                    stringResource(R.string.logs_filter_blocked),
                     if (isDark) Color(0x33EF4444) else Color(0xFFFEE2E2),
                     if (isDark) Color(0xFFF87171) else Color(0xFFDC2626),
                 )
@@ -753,7 +786,7 @@ fun StatusChip(
 
             else -> {
                 Triple(
-                    "Allowed",
+                    stringResource(R.string.logs_filter_allowed),
                     if (isDark) Color(0x3310B981) else Color(0xFFD1FAE5),
                     if (isDark) AllowedGreen else Color(0xFF047857),
                 )
@@ -775,15 +808,18 @@ fun StatusChip(
     }
 }
 
-private fun formatRelativeTime(epochMillis: Long): String {
+private fun formatRelativeTime(
+    resources: Resources,
+    epochMillis: Long,
+): String {
     val elapsedMillis = System.currentTimeMillis() - epochMillis
-    if (elapsedMillis < 0) return "just now"
+    if (elapsedMillis < 0) return resources.getString(R.string.time_just_now)
     val seconds = elapsedMillis / 1000
-    if (seconds < 60) return "${seconds}s ago"
+    if (seconds < 60) return resources.getString(R.string.time_seconds_ago, seconds)
     val minutes = seconds / 60
-    if (minutes < 60) return "${minutes}m ago"
+    if (minutes < 60) return resources.getString(R.string.time_minutes_ago, minutes)
     val hours = minutes / 60
-    if (hours < 24) return "${hours}h ago"
+    if (hours < 24) return resources.getString(R.string.time_hours_ago, hours)
     val days = hours / 24
-    return "${days}d ago"
+    return resources.getString(R.string.time_days_ago, days)
 }

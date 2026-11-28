@@ -10,6 +10,7 @@ Files matching `*Test.kt`; presence does not indicate tests passed.
 | `app/src/androidTest/java/com/unblocker/app/LocalPrivacyAndVpnTest.kt` | instrumentation |
 | `app/src/androidTest/java/com/unblocker/app/VpnNetworkRegressionTest.kt` | instrumentation |
 | `app/src/androidTest/java/com/unblocker/app/ui/MainScreenNavigationTest.kt` | instrumentation |
+| `app/src/androidTest/java/com/unblocker/app/ui/PseudoLocaleRenderTest.kt` | instrumentation |
 | `app/src/test/java/com/unblocker/app/analysis/EvidenceLearningTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/analysis/LearnerIntegrationTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/analysis/PublicSuffixRulesTest.kt` | unit |

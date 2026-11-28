@@ -35,6 +35,7 @@
 | F24 | Beyond DNS Companion Hub | `BeyondDnsHubDialog.kt`, `SettingsScreen.kt`, `COMPREHENSIVE_AD_BLOCKING_GUIDE.md` | Source-observed; in-app defense-in-depth guidance for stream ads & cosmetic filtering | 2026-11-19 |
 | F25 | App-update VPN restart (`MY_PACKAGE_REPLACED`) | `BootReceiver.kt`, `AndroidManifest.xml`, `BootPolicy` in `VpnSessionState.kt` | Unit-tested in `BootReceiverTest`; requires existing VPN consent and honors `autoRestartOnBoot`/`protectionEnabled`; `adb install -r` device test: NOT RUN | 2026-11-28 |
 | F26 | Navigation Compose graph & `unblocker://` deep-link router | `UnblockerNavigation.kt`, `MainScreen.kt`, `MainActivity.kt`, `SecondaryDestinations.kt` | Unit-tested (`NavGraphTest`, `DeepLinkParserTest`); validates parameters strictly, never silent-starts on `://start`; instrumentation test `MainScreenNavigationTest` compiled, emulator run: NOT RUN | 2026-11-29 |
+| F27 | Externalized strings, plural resources & i18n guardrails | `res/values/strings.xml`, `app/build.gradle.kts`, `scripts/check_hardcoded_strings.py`, `.github/workflows/kotlin-style.yml`, `PseudoLocaleRenderTest.kt` | Verified 0 hardcoded UI strings by CI guard and Android Lint (`MissingTranslation`, `HardcodedText`), debug pseudo-locales enabled (`en-XA`, `ar-XB`); `PseudoLocaleRenderTest` compiled, emulator run: NOT RUN | 2026-11-29 |
 
 ## Change tracking contract
 

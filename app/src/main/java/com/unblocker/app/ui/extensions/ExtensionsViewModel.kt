@@ -3,6 +3,7 @@ package com.unblocker.app.ui.extensions
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.unblocker.app.R
 import com.unblocker.app.data.model.ExtensionFilter
 import com.unblocker.app.data.model.ExtensionPreset
 import com.unblocker.app.data.model.FilterCategories
@@ -175,8 +176,11 @@ class ExtensionsViewModel(
      */
     fun applyPreset(preset: ExtensionPreset) {
         repository.applyPreset(preset)
+        val app = getApplication<Application>()
         viewModelScope.launch {
-            _snackbarMessage.emit("Activated ${preset.title}")
+            _snackbarMessage.emit(
+                app.getString(R.string.extensions_snackbar_preset_activated, app.getString(preset.titleRes)),
+            )
         }
     }
 
@@ -187,15 +191,16 @@ class ExtensionsViewModel(
      */
     fun setAutoUpdateEnabled(enabled: Boolean) {
         repository.setAutoUpdateEnabled(enabled)
+        val app = getApplication<Application>()
         if (enabled) {
-            ExtensionUpdateWorker.schedule(getApplication())
+            ExtensionUpdateWorker.schedule(app)
             viewModelScope.launch {
-                _snackbarMessage.emit("Auto-update enabled (periodic check scheduled)")
+                _snackbarMessage.emit(app.getString(R.string.extensions_snackbar_auto_update_on))
             }
         } else {
-            ExtensionUpdateWorker.cancel(getApplication())
+            ExtensionUpdateWorker.cancel(app)
             viewModelScope.launch {
-                _snackbarMessage.emit("Auto-update disabled")
+                _snackbarMessage.emit(app.getString(R.string.extensions_snackbar_auto_update_off))
             }
         }
     }
@@ -204,14 +209,16 @@ class ExtensionsViewModel(
      * Launches updates for all entries with URLs and emits an aggregate result message.
      */
     fun updateAll() {
+        val app = getApplication<Application>()
         viewModelScope.launch {
-            _snackbarMessage.emit("Updating all extensions from internet…")
+            _snackbarMessage.emit(app.getString(R.string.extensions_snackbar_updating_all))
             val result = repository.updateAll()
             if (result.isSuccess) {
                 val count = result.getOrThrow()
-                _snackbarMessage.emit("Successfully updated $count extension(s)")
+                _snackbarMessage.emit(app.getString(R.string.extensions_snackbar_updated_all, count))
             } else {
-                _snackbarMessage.emit("Update failed: ${result.exceptionOrNull()?.message ?: "Network error"}")
+                val reason = result.exceptionOrNull()?.message ?: app.getString(R.string.extensions_snackbar_network_error)
+                _snackbarMessage.emit(app.getString(R.string.extensions_snackbar_update_failed, reason))
             }
         }
     }
@@ -222,14 +229,15 @@ class ExtensionsViewModel(
      * @param id Catalog entry identifier to update.
      */
     fun updateExtension(id: String) {
+        val app = getApplication<Application>()
         viewModelScope.launch {
             val extension = extensions.value.find { it.id == id } ?: return@launch
-            _snackbarMessage.emit("Updating ${extension.name}…")
+            _snackbarMessage.emit(app.getString(R.string.extensions_snackbar_updating_one, extension.name))
             val result = repository.updateExtension(id)
             if (result.isSuccess) {
-                _snackbarMessage.emit("Successfully updated ${extension.name}")
+                _snackbarMessage.emit(app.getString(R.string.extensions_snackbar_updated_one, extension.name))
             } else {
-                _snackbarMessage.emit("Failed to update ${extension.name}")
+                _snackbarMessage.emit(app.getString(R.string.extensions_snackbar_failed_one, extension.name))
             }
         }
     }
@@ -245,9 +253,10 @@ class ExtensionsViewModel(
         url: String,
     ) {
         if (name.isBlank()) return
+        val app = getApplication<Application>()
         repository.addCustomFilter(name, url)
         viewModelScope.launch {
-            _snackbarMessage.emit("Added filter: $name")
+            _snackbarMessage.emit(app.getString(R.string.extensions_snackbar_added_custom, name))
         }
     }
 
@@ -257,9 +266,10 @@ class ExtensionsViewModel(
      * @param id Catalog identifier passed to the repository for removal.
      */
     fun removeCustomFilter(id: String) {
+        val app = getApplication<Application>()
         repository.removeCustomFilter(id)
         viewModelScope.launch {
-            _snackbarMessage.emit("Removed custom filter")
+            _snackbarMessage.emit(app.getString(R.string.extensions_snackbar_removed_custom))
         }
     }
 

@@ -74,11 +74,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.unblocker.app.R
 import com.unblocker.app.data.model.ExtensionFilter
 import com.unblocker.app.data.model.ExtensionPreset
 import com.unblocker.app.data.model.FilterCategories
@@ -148,7 +150,7 @@ fun ExtensionsScreen(
                             onValueChange = viewModel::onSearchQueryChange,
                             placeholder = {
                                 Text(
-                                    "Search filters…",
+                                    stringResource(R.string.extensions_search_placeholder),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     fontSize = 14.sp,
                                 )
@@ -169,7 +171,7 @@ fun ExtensionsScreen(
                                 }) {
                                     Icon(
                                         Icons.Default.Close,
-                                        contentDescription = "Close search",
+                                        contentDescription = stringResource(R.string.action_close_search),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
@@ -181,7 +183,7 @@ fun ExtensionsScreen(
                         )
                     } else {
                         Text(
-                            text = "Hosts & filters",
+                            text = stringResource(R.string.extensions_title),
                             color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
@@ -192,7 +194,7 @@ fun ExtensionsScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back to home",
+                            contentDescription = stringResource(R.string.action_back_to_home),
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
@@ -202,7 +204,7 @@ fun ExtensionsScreen(
                         IconButton(onClick = { isSearchActive = true }) {
                             Icon(
                                 Icons.Default.Search,
-                                contentDescription = "Search filters",
+                                contentDescription = stringResource(R.string.extensions_search_desc),
                                 tint = MaterialTheme.colorScheme.onSurface,
                             )
                         }
@@ -215,7 +217,7 @@ fun ExtensionsScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
-                            contentDescription = "Update all filters from internet",
+                            contentDescription = stringResource(R.string.extensions_update_all_desc),
                             tint = if (isUpdating) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                             modifier = if (isUpdating) Modifier.rotate(spinRotation) else Modifier,
                         )
@@ -225,7 +227,7 @@ fun ExtensionsScreen(
                     IconButton(onClick = { showAddDialog = true }) {
                         Icon(
                             Icons.Default.Add,
-                            contentDescription = "Add custom filter",
+                            contentDescription = stringResource(R.string.extensions_add_custom_desc),
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
@@ -235,7 +237,7 @@ fun ExtensionsScreen(
                         IconButton(onClick = { showMenu = true }) {
                             Icon(
                                 Icons.Default.MoreVert,
-                                contentDescription = "More options",
+                                contentDescription = stringResource(R.string.action_more_options),
                                 tint = MaterialTheme.colorScheme.onSurface,
                             )
                         }
@@ -252,7 +254,7 @@ fun ExtensionsScreen(
                                         modifier = Modifier.fillMaxWidth(),
                                     ) {
                                         Text(
-                                            text = "Auto-update extensions",
+                                            text = stringResource(R.string.extensions_auto_update),
                                             color = MaterialTheme.colorScheme.onSurface,
                                             fontSize = 14.sp,
                                             modifier = Modifier.weight(1f),
@@ -280,7 +282,7 @@ fun ExtensionsScreen(
                             DropdownMenuItem(
                                 text = {
                                     Text(
-                                        "Update all extensions",
+                                        stringResource(R.string.extensions_update_all),
                                         color = MaterialTheme.colorScheme.onSurface,
                                         fontSize = 14.sp,
                                     )
@@ -294,7 +296,7 @@ fun ExtensionsScreen(
                             DropdownMenuItem(
                                 text = {
                                     Text(
-                                        "Enable all",
+                                        stringResource(R.string.extensions_enable_all),
                                         color = MaterialTheme.colorScheme.onSurface,
                                         fontSize = 14.sp,
                                     )
@@ -308,7 +310,7 @@ fun ExtensionsScreen(
                             DropdownMenuItem(
                                 text = {
                                     Text(
-                                        "Disable all",
+                                        stringResource(R.string.extensions_disable_all),
                                         color = MaterialTheme.colorScheme.onSurface,
                                         fontSize = 14.sp,
                                     )
@@ -337,7 +339,7 @@ fun ExtensionsScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.Save,
-                    contentDescription = "Save & Sync Filters",
+                    contentDescription = stringResource(R.string.extensions_save_sync_desc),
                     tint = MaterialTheme.colorScheme.onPrimary,
                 )
             }
@@ -425,7 +427,7 @@ fun ExtensionsScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "Application & Video Ad Protection",
+                                    text = stringResource(R.string.extensions_banner_title),
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface,
@@ -437,7 +439,7 @@ fun ExtensionsScreen(
                                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
                                 ) {
                                     Text(
-                                        text = "uBlock + Mobile",
+                                        text = stringResource(R.string.extensions_banner_badge),
                                         style = MaterialTheme.typography.labelSmall,
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Bold,
@@ -450,7 +452,7 @@ fun ExtensionsScreen(
                     }
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "In-app banner ads, popups, interstitials, rewarded ads, and video mediation networks (AdMob, Unity, AppLovin, ironSource, Vungle) are blocked network-wide across installed apps. Video ad telemetry & tracking beacons are blocked automatically while media playback remains uninterrupted.",
+                        text = stringResource(R.string.extensions_banner_body),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 11.sp,
                         lineHeight = 15.sp,
@@ -481,7 +483,7 @@ fun ExtensionsScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "High rule count (~$totalEnabledRulesCount rules). Large heap is active, but enabling too many massive lists may impact device performance.",
+                            text = stringResource(R.string.extensions_high_rule_warning, totalEnabledRulesCount),
                             color = if (isDark) Color(0xFFFEF3C7) else Color(0xFF92400E),
                             fontSize = 11.sp,
                         )
@@ -499,14 +501,14 @@ fun ExtensionsScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Total active filters: $activeFilterCount",
+                    text = stringResource(R.string.extensions_total_active, activeFilterCount),
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = FontWeight.Medium,
                 )
                 if (totalEnabledRulesCount > 0) {
                     Text(
-                        text = "Rules: ~$totalEnabledRulesCount",
+                        text = stringResource(R.string.extensions_rules_approx, totalEnabledRulesCount),
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Medium,
@@ -544,7 +546,7 @@ fun ExtensionsScreen(
             onDismissRequest = { showAddDialog = false },
             title = {
                 Text(
-                    "Add custom filter",
+                    stringResource(R.string.extensions_add_dialog_title),
                     color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold,
                 )
@@ -554,7 +556,12 @@ fun ExtensionsScreen(
                     OutlinedTextField(
                         value = name,
                         onValueChange = { name = it },
-                        label = { Text("Filter Name", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                        label = {
+                            Text(
+                                stringResource(R.string.extensions_field_name),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        },
                         singleLine = true,
                         colors =
                             OutlinedTextFieldDefaults.colors(
@@ -568,7 +575,12 @@ fun ExtensionsScreen(
                     OutlinedTextField(
                         value = url,
                         onValueChange = { url = it },
-                        label = { Text("Filter URL (optional)", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                        label = {
+                            Text(
+                                stringResource(R.string.extensions_field_url),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        },
                         singleLine = true,
                         colors =
                             OutlinedTextFieldDefaults.colors(
@@ -590,12 +602,16 @@ fun ExtensionsScreen(
                         }
                     },
                 ) {
-                    Text("Add", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                    Text(
+                        stringResource(R.string.action_add),
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold,
+                    )
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showAddDialog = false }) {
-                    Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.action_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
             containerColor = MaterialTheme.colorScheme.surface,
@@ -688,7 +704,7 @@ fun ExtensionCard(
                             modifier = Modifier.padding(start = 2.dp),
                         ) {
                             Text(
-                                text = "Browser-only",
+                                text = stringResource(R.string.extensions_browser_only),
                                 color = MaterialTheme.colorScheme.onErrorContainer,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Medium,
@@ -713,7 +729,7 @@ fun ExtensionCard(
                 if (item.browserOnly && item.isEnabled) {
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "Warning: May break apps if enabled in system-wide VPN",
+                        text = stringResource(R.string.extensions_browser_only_warning),
                         color = MaterialTheme.colorScheme.error,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
@@ -725,9 +741,9 @@ fun ExtensionCard(
                 Text(
                     text =
                         if (item.isCustom && item.filterCount == 0 && item.sizeBytes == 0L) {
-                            "Filters: 0   N/A"
+                            stringResource(R.string.extensions_filters_empty_meta)
                         } else {
-                            "Filters: ${item.filterCount}   Size: ${item.formattedSize()}"
+                            stringResource(R.string.extensions_filters_meta, item.filterCount, item.formattedSize())
                         },
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 12.sp,
@@ -765,7 +781,7 @@ fun ExtensionCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.MoreVert,
-                        contentDescription = "Item actions",
+                        contentDescription = stringResource(R.string.action_item_actions),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp),
                     )
@@ -778,7 +794,7 @@ fun ExtensionCard(
                 ) {
                     if (item.url.isNotBlank()) {
                         DropdownMenuItem(
-                            text = { Text("Update", color = MaterialTheme.colorScheme.onSurface) },
+                            text = { Text(stringResource(R.string.action_update), color = MaterialTheme.colorScheme.onSurface) },
                             onClick = {
                                 showItemMenu = false
                                 onUpdate()
@@ -787,7 +803,7 @@ fun ExtensionCard(
                     }
                     if (item.isCustom) {
                         DropdownMenuItem(
-                            text = { Text("Delete", color = Color(0xFFEF4444)) },
+                            text = { Text(stringResource(R.string.action_delete), color = Color(0xFFEF4444)) },
                             onClick = {
                                 showItemMenu = false
                                 onDelete()
@@ -828,14 +844,14 @@ fun CuratedPresetsBar(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
-                    text = "Curated Defense Presets",
+                    text = stringResource(R.string.extensions_presets_title),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 if (activePreset != null) {
                     Text(
-                        text = "Active: ${activePreset.name}",
+                        text = stringResource(R.string.extensions_preset_active, stringResource(activePreset.shortTitleRes)),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary,
                         fontSize = 10.sp,
@@ -879,7 +895,7 @@ fun CuratedPresetsBar(
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
                             Text(
-                                text = preset.title.substringBefore(" ("),
+                                text = stringResource(preset.shortTitleRes),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold,
                                 color =
@@ -891,12 +907,7 @@ fun CuratedPresetsBar(
                                 maxLines = 1,
                             )
                             Text(
-                                text =
-                                    when (preset) {
-                                        ExtensionPreset.ESSENTIAL -> "0 Breakage"
-                                        ExtensionPreset.RECOMMENDED -> "Balanced"
-                                        ExtensionPreset.AGGRESSIVE -> "Max Shield"
-                                    },
+                                text = stringResource(preset.subtitleBadgeRes),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontSize = 9.sp,
                                 color =

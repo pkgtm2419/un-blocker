@@ -1,4 +1,330 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">unblocker</string>
     <string name="app_tagline">unwanted network blocker</string>
+    <string name="app_brand_version">Un-Blocker v%1$s</string>
+    <string name="app_privacy_pillars">100% On-Device • Zero-Cloud • Zero-Telemetry</string>
+
+    <!-- Bottom navigation & common actions -->
+    <string name="nav_home">Home</string>
+    <string name="nav_learn">Learn</string>
+    <string name="nav_logs">Logs</string>
+    <string name="nav_settings">Settings</string>
+    <string name="action_back">Back</string>
+    <string name="action_back_to_home">Back to home</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_clear">Clear</string>
+    <string name="action_close">Close</string>
+    <string name="action_add">Add</string>
+    <string name="action_update">Update</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_done">Done</string>
+    <string name="action_fix">Fix</string>
+    <string name="action_clear_search">Clear search</string>
+    <string name="action_close_search">Close search</string>
+    <string name="action_expand">Expand</string>
+    <string name="action_collapse">Collapse</string>
+    <string name="action_more_options">More options</string>
+    <string name="action_item_actions">Item actions</string>
+
+    <!-- Notification & foreground service -->
+    <string name="notif_channel_name">unblocker Protection</string>
+    <string name="notif_channel_description">Shows live status of active local network protection</string>
+    <string name="notif_title_default">unblocker</string>
+    <string name="notif_title_isolated">Un-Blocker (Isolated Learn)</string>
+    <string name="notif_status_isolated">Learning %1$s • Other apps are not filtered</string>
+    <string name="notif_status_paused">Protection paused • Tap Resume to re-enable</string>
+    <string name="notif_status_active">Local DNS protection active • No telemetry</string>
+    <string name="notif_sub_isolated">Isolated Learn session • Max 10m</string>
+    <string name="notif_sub_paused">Paused</string>
+    <string name="notif_sub_active">On-device learning • No telemetry</string>
+    <string name="notif_action_resume">Resume</string>
+    <string name="notif_action_pause_5m">Pause 5m</string>
+    <string name="notif_action_stop">Stop</string>
+
+    <!-- Protection state mapper -->
+    <string name="protection_state_off">Off</string>
+    <string name="protection_state_off_detail">Protection is off. Standard DNS queries resolve directly via your network without local filtering.</string>
+    <string name="protection_state_stopping_detail">Stopping local VPN filter interface…</string>
+    <string name="protection_state_starting">Starting</string>
+    <string name="protection_state_starting_detail">Initializing local DNS filter interface…</string>
+    <string name="protection_state_error">Error</string>
+    <string name="protection_state_error_detail">Unable to establish local VPN filter interface.</string>
+    <string name="protection_state_limited_private_dns">Limited coverage (Private DNS)</string>
+    <string name="protection_state_limited_private_dns_detail">Android Private DNS is active and sending encrypted queries directly to external servers, bypassing local filtering.</string>
+    <string name="protection_state_limited_no_dns">Limited coverage (no DNS servers)</string>
+    <string name="protection_state_limited_no_dns_detail">No active network DNS resolvers were detected. Queries cannot be resolved.</string>
+    <string name="protection_state_protected">Protected (standard DNS)</string>
+    <string name="protection_state_protected_detail">Filtering standard DNS queries on this device. Allowed queries resolve via network resolvers.</string>
+
+    <!-- Home / Unblocker screen -->
+    <string name="home_private_dns_active_chip">Private DNS active</string>
+    <string name="home_private_dns_warning_title">Private DNS is active — filtering may leak</string>
+    <string name="home_private_dns_warning_body">System Private DNS (%1$s) bypasses this filter. Go to Settings → Network → Private DNS and set it to Off so blocking works.</string>
+    <string name="home_private_dns_system_resolver">system resolver</string>
+    <string name="home_adult_block_title">Block 18+ Content</string>
+    <string name="home_adult_badge">Adult</string>
+    <string name="home_adult_block_subtitle">Filter adult websites &amp; explicit domains</string>
+
+    <!-- Filtering tier card -->
+    <string name="tier_card_title">Protection Level</string>
+    <string name="tier_basic_title">Basic</string>
+    <string name="tier_basic_subtitle">Game &amp; shopping friendly</string>
+    <string name="tier_optimal_title">Optimal</string>
+    <string name="tier_optimal_subtitle">Balanced shield</string>
+    <string name="tier_complete_title">Complete</string>
+    <string name="tier_complete_subtitle">Strict shield</string>
+
+    <!-- Agent runtime panel -->
+    <string name="agent_runtime_label">AGENT RUNTIME</string>
+    <string name="agent_badge_limited">LIMITED</string>
+    <string name="agent_badge_active">ACTIVE</string>
+    <string name="agent_badge_starting">STARTING</string>
+    <string name="agent_badge_stopping">STOPPING</string>
+    <string name="agent_badge_fault">FAULT</string>
+    <string name="agent_badge_standby">STANDBY</string>
+    <string name="agent_link_extensions">Extensions &amp; Filter Settings</string>
+    <string name="agent_status_stopping">Stopping</string>
+    <string name="agent_execution_pipeline">EXECUTION PIPELINE</string>
+    <string name="agent_step_01_title">VPN TUNNEL INTERFACE</string>
+    <string name="agent_step_01_detail_running">Bound to %1$s:53 &amp; %2$s:53</string>
+    <string name="agent_step_01_detail_offline">Offline (0 packet flows)</string>
+    <string name="agent_step_02_title">CONTENT FILTER CORE</string>
+    <string name="agent_step_02_detail_running">RuleSet compiled (Ad + Adult heuristics active)</string>
+    <string name="agent_step_02_detail_standby">Standby</string>
+    <string name="agent_step_03_title">UPSTREAM DNS GATEWAY</string>
+    <string name="agent_step_03_detail_private_dns">Encrypted Private DNS active (%1$s)</string>
+    <string name="agent_step_03_detail_system">Delegating to configured system resolvers</string>
+    <string name="agent_step_04_title">LOCAL EVIDENCE LEARNER</string>
+    <string name="agent_step_04_detail">Hardware Keystore HMAC • Zero remote telemetry</string>
+    <string name="agent_private_dns_warning_title">Private DNS mode active</string>
+    <string name="agent_private_dns_warning_body">Android may send queries over DoT bypassing local filter.</string>
+
+    <!-- System hardening wizard -->
+    <string name="hardening_title">System Hardening Checklist</string>
+    <string name="hardening_subtitle_optimal">Optimal defense active</string>
+    <string name="hardening_subtitle_action">Action recommended</string>
+    <string name="hardening_badge_secure">SECURE</string>
+    <string name="hardening_badge_vulnerable">VULNERABLE</string>
+    <string name="hardening_intro">Android battery killers and encrypted Private DNS can silently terminate the VPN or bypass local ad blocking. Ensure these 4 pillars are configured.</string>
+    <string name="hardening_battery_title">Battery Optimization</string>
+    <string name="hardening_battery_ok">Unrestricted — safe from OEM background task killer</string>
+    <string name="hardening_battery_fix">Optimized — system may stop VPN in background</string>
+    <string name="hardening_battery_action_ok">Configured</string>
+    <string name="hardening_battery_action_fix">Exempt</string>
+    <string name="hardening_private_dns_title">Private DNS (DoT) Status</string>
+    <string name="hardening_private_dns_ok">Disabled/Filtered — 100% of DNS routes through Un-Blocker</string>
+    <string name="hardening_private_dns_fix">ACTIVE — encrypted queries bypass VPN (%1$s)</string>
+    <string name="hardening_private_dns_dot_fallback">DoT</string>
+    <string name="hardening_private_dns_action_ok">Protected</string>
+    <string name="hardening_private_dns_action_fix">Turn Off</string>
+    <string name="hardening_always_on_title">Always-On VPN &amp; Lockdown</string>
+    <string name="hardening_always_on_desc">Guarantees zero traffic leaks during reboot or network switches</string>
+    <string name="hardening_always_on_action">Open VPN Settings</string>
+    <string name="hardening_ad_id_title">Advertising ID &amp; Telemetry</string>
+    <string name="hardening_ad_id_desc">Delete advertising ID to stop cross-app behavioral tracking</string>
+    <string name="hardening_ad_id_action">Ad Settings</string>
+
+    <!-- Beyond DNS dialog & card -->
+    <string name="beyond_dns_dialog_title">Beyond DNS: Streams &amp; Feeds</string>
+    <string name="beyond_dns_dialog_subtitle">Defense-in-depth for video &amp; in-app ads</string>
+    <string name="beyond_dns_dialog_intro">DNS filtering blocks 80–90% of ads and telemetry before connections start. However, some ads share identical domains with media content. Here is how to defeat them at other layers:</string>
+    <string name="beyond_dns_youtube_title">YouTube &amp; Media Streams</string>
+    <string name="beyond_dns_youtube_why">Video and ads are served from the same CDN (googlevideo.com). Blocking DNS crashes the player.</string>
+    <string name="beyond_dns_youtube_solution">Use Firefox + uBlock Origin for web playback, or open-source players (NewPipe, Tubular, ReVanced) with SponsorBlock.</string>
+    <string name="beyond_dns_youtube_action">Install Firefox</string>
+    <string name="beyond_dns_web_title">Web Blank Frames &amp; Popups</string>
+    <string name="beyond_dns_web_why">DNS drops ad connections, but websites leave empty blank frames behind.</string>
+    <string name="beyond_dns_web_solution">Install Firefox with uBlock Origin or use Brave Browser with Shields. They inject CSS rules to collapse blank ad spaces and remove cookie popups.</string>
+    <string name="beyond_dns_web_action">Install Brave</string>
+    <string name="beyond_dns_social_title">Social Media In-Feed Promos</string>
+    <string name="beyond_dns_social_desc">Instagram, Facebook, and Reddit feed ads arrive inside encrypted API responses. The safest solution without account ban risk is installing them as Progressive Web Apps (PWAs) inside Brave or Firefox with uBlock Origin.</string>
+    <string name="beyond_dns_solution_format">✓ Solution: %1$s</string>
+    <string name="beyond_dns_card_title">Beyond DNS: Video &amp; Stream Ads</string>
+    <string name="beyond_dns_card_badge">Defense-in-Depth</string>
+    <string name="beyond_dns_card_body">YouTube, Twitch, and social feed ads share content domains and bypass DNS. Learn how to combine Un-Blocker with Firefox, uBlock Origin, and PWAs.</string>
+    <string name="beyond_dns_card_button">View Multi-Layer Setup Guide</string>
+
+    <!-- Extensions / Filter lists screen -->
+    <string name="extensions_title">Hosts &amp; filters</string>
+    <string name="extensions_search_placeholder">Search filters…</string>
+    <string name="extensions_search_desc">Search filters</string>
+    <string name="extensions_update_all_desc">Update all filters from internet</string>
+    <string name="extensions_add_custom_desc">Add custom filter</string>
+    <string name="extensions_auto_update">Auto-update extensions</string>
+    <string name="extensions_update_all">Update all extensions</string>
+    <string name="extensions_enable_all">Enable all</string>
+    <string name="extensions_disable_all">Disable all</string>
+    <string name="extensions_save_sync_desc">Save &amp; Sync Filters</string>
+    <string name="extensions_banner_title">Application &amp; Video Ad Protection</string>
+    <string name="extensions_banner_badge">uBlock + Mobile</string>
+    <string name="extensions_banner_body">In-app banner ads, popups, interstitials, rewarded ads, and video mediation networks (AdMob, Unity, AppLovin, ironSource, Vungle) are blocked network-wide across installed apps. Video ad telemetry &amp; tracking beacons are blocked automatically while media playback remains uninterrupted.</string>
+    <string name="extensions_high_rule_warning">High rule count (~%1$d rules). Large heap is active, but enabling too many massive lists may impact device performance.</string>
+    <string name="extensions_total_active">Total active filters: %1$d</string>
+    <string name="extensions_rules_approx">Rules: ~%1$d</string>
+    <string name="extensions_add_dialog_title">Add custom filter</string>
+    <string name="extensions_field_name">Filter Name</string>
+    <string name="extensions_field_url">Filter URL (optional)</string>
+    <string name="extensions_browser_only">Browser-only</string>
+    <string name="extensions_browser_only_warning">Warning: May break apps if enabled in system-wide VPN</string>
+    <string name="extensions_filters_empty_meta">Filters: 0   N/A</string>
+    <string name="extensions_filters_meta">Filters: %1$d   Size: %2$s</string>
+    <string name="extensions_presets_title">Curated Defense Presets</string>
+    <string name="extensions_preset_active">Active: %1$s</string>
+    <string name="preset_essential_title">Essential (Zero Breakage)</string>
+    <string name="preset_essential_short">Essential</string>
+    <string name="preset_essential_badge">0 Breakage</string>
+    <string name="preset_essential_desc">Lightweight, zero false positives. Prevents breakage in banking, regional, and work apps.</string>
+    <string name="preset_recommended_title">Recommended (Balanced)</string>
+    <string name="preset_recommended_short">Recommended</string>
+    <string name="preset_recommended_badge">Balanced</string>
+    <string name="preset_recommended_desc">Optimal ad and tracker suppression with mobile SDKs, OEM telemetry, and DoH bypass blocks.</string>
+    <string name="preset_aggressive_title">Aggressive (Maximum Shield)</string>
+    <string name="preset_aggressive_short">Aggressive</string>
+    <string name="preset_aggressive_badge">Max Shield</string>
+    <string name="preset_aggressive_desc">Full-coverage shield against mobile ads, in-app trackers, social widgets, and OEM profiling.</string>
+    <string name="extensions_snackbar_preset_activated">Activated %1$s</string>
+    <string name="extensions_snackbar_auto_update_on">Auto-update enabled (periodic check scheduled)</string>
+    <string name="extensions_snackbar_auto_update_off">Auto-update disabled</string>
+    <string name="extensions_snackbar_updating_all">Updating all extensions from internet…</string>
+    <string name="extensions_snackbar_updated_all">Successfully updated %1$d extension(s)</string>
+    <string name="extensions_snackbar_update_failed">Update failed: %1$s</string>
+    <string name="extensions_snackbar_network_error">Network error</string>
+    <string name="extensions_snackbar_updating_one">Updating %1$s…</string>
+    <string name="extensions_snackbar_updated_one">Successfully updated %1$s</string>
+    <string name="extensions_snackbar_failed_one">Failed to update %1$s</string>
+    <string name="extensions_snackbar_added_custom">Added filter: %1$s</string>
+    <string name="extensions_snackbar_removed_custom">Removed custom filter</string>
+
+    <!-- Learn app screen -->
+    <string name="learn_topbar_selecting">Learn an App</string>
+    <string name="learn_topbar_recording">Recording Traffic</string>
+    <string name="learn_topbar_reviewing">Review App Domains</string>
+    <string name="learn_title">Learn</string>
+    <string name="learn_pick_intro">Select an app to isolate and learn its network connections. Un-Blocker monitors DNS queries specifically while you use it.</string>
+    <string name="learn_search_placeholder">Search installed apps...</string>
+    <string name="learn_loading_apps">Loading installed applications…</string>
+    <string name="learn_action_learn">Learn</string>
+    <string name="learn_isolation_banner">Learning %1$s. Other apps are not filtered until you stop (max 10 min).</string>
+    <string name="learn_recording_title">Recording: %1$s</string>
+    <string name="learn_time_elapsed">Time elapsed: %1$s / 10:00 (Auto-stops at 10m)</string>
+    <string name="learn_open_app">Open %1$s</string>
+    <string name="learn_stop_review">Stop &amp; Review</string>
+    <string name="learn_idle_encrypted_title">App may be idle or use its own encrypted DNS</string>
+    <string name="learn_idle_encrypted_body">Tap \"learn why\" if the app is active yet nothing shows here.</string>
+    <string name="learn_idle_encrypted_link">Learn why encrypted DNS can bypass monitoring (dns-bypass-matrix.md)</string>
+    <string name="learn_captured_domains">Captured Domains (%1$d):</string>
+    <string name="learn_waiting_queries">Waiting for network queries from %1$s...\nTap \'Open %2$s\' to trigger requests.</string>
+    <string name="learn_domain_count">%1$dx</string>
+    <string name="learn_results_title">Results for %1$s</string>
+    <string name="learn_results_subtitle">Nothing is pre-selected. Explicitly choose Allow or Block per domain:</string>
+    <string name="learn_select_all_trackers">Add all list matches (%1$d)</string>
+    <string name="learn_rules_saved_toast">Rules saved successfully to your device!</string>
+    <string name="learn_cat_first_party">First Party</string>
+    <string name="learn_cat_cdn_infra">CDN / Infra</string>
+    <string name="learn_cat_tracker_ad">Tracker / Ad</string>
+    <string name="learn_cat_other">Other</string>
+    <string name="learn_also_seen_in">Also seen in: %1$s</string>
+    <string name="learn_choice_allow">Allow</string>
+    <string name="learn_choice_block">Block</string>
+    <string name="learn_choice_default">Default</string>
+    <string name="learn_choice_confirm_allow">Confirm Allow</string>
+    <string name="learn_whole_site_toggle">Whole site (subdomains included)</string>
+    <string name="learn_shared_platform_note">Shared platform (exact host only)</string>
+    <string name="learn_apply_rules">Apply Rules</string>
+
+    <!-- Logs & connection history -->
+    <string name="logs_clear_dialog_title">Clear All History?</string>
+    <string name="logs_clear_dialog_body">This will permanently remove all intercepted domain statistics and timestamped event records.</string>
+    <string name="logs_title">Connection Logs</string>
+    <string name="logs_counts_header">%1$d domains • %2$d queries • %3$d blocked</string>
+    <string name="logs_export_csv">Export CSV</string>
+    <string name="logs_clear_history">Clear History</string>
+    <string name="logs_protection_summary">Local Protection Summary: %1$d total queries (%2$d blocked). Counts reflect local DNS name resolution requests, not advertisements removed or network bytes saved.</string>
+    <string name="logs_logging_paused">Logging is currently paused</string>
+    <string name="logs_search_placeholder">Search domains…</string>
+    <string name="logs_filter_all">All</string>
+    <string name="logs_filter_blocked">Blocked</string>
+    <string name="logs_filter_allowed">Allowed</string>
+    <string name="logs_filter_mixed">Mixed</string>
+    <string name="logs_item_meta">%1$d calls • %2$d blocked • %3$s</string>
+    <string name="logs_recent_activity_title">Recent Activity (Latest 50)</string>
+    <string name="logs_history_button_desc">View complete connection history in table view</string>
+    <string name="logs_aggregated_empty">Aggregated statistics: %1$d total queries (%2$d blocked). Query events are summarized for maximum privacy.</string>
+    <string name="logs_action_reset">Reset</string>
+    <string name="logs_action_always_allow">Always Allow</string>
+    <string name="logs_action_block_domain">Block Domain</string>
+    <string name="logs_history_dialog_subtitle">Connection History &amp; Event Log</string>
+    <string name="logs_history_overview">Connection Overview</string>
+    <string name="logs_history_total_queries">Total Queries</string>
+    <string name="logs_history_block_rate">Block Rate</string>
+    <string name="logs_history_unknown">Unknown</string>
+    <string name="logs_history_first_seen">First Seen: %1$s</string>
+    <string name="logs_history_last_seen">Last Seen: %1$s</string>
+    <string name="logs_history_table_title">Event Log Table (Recent 24h: %1$d)</string>
+    <string name="logs_history_empty">No individual query events stored for the last 24 hours. Individual timestamps are kept for up to 24 hours to protect storage and privacy, while lifetime totals remain preserved in the overview above.</string>
+    <string name="logs_history_col_datetime">Date &amp; Time</string>
+    <string name="logs_history_col_decision">Decision</string>
+    <string name="logs_history_decision_blocked">BLOCKED</string>
+    <string name="logs_history_decision_allowed">ALLOWED</string>
+    <string name="time_just_now">just now</string>
+    <string name="time_seconds_ago">%1$ds ago</string>
+    <string name="time_minutes_ago">%1$dm ago</string>
+    <string name="time_hours_ago">%1$dh ago</string>
+    <string name="time_days_ago">%1$dd ago</string>
+
+    <!-- Settings screen -->
+    <string name="settings_title">Settings &amp; Shields</string>
+    <string name="settings_subtitle">Configure protection levels, DNS &amp; app controls</string>
+    <string name="settings_version_badge">v%1$s</string>
+    <string name="settings_export_success_toast">Exported %1$d domains to CSV</string>
+    <string name="settings_export_failed_toast">Export failed: %1$s</string>
+    <string name="settings_history_cleared_toast">Query history cleared</string>
+    <string name="settings_clear_dialog_title">Clear All Query History?</string>
+    <string name="settings_clear_dialog_body">This will permanently delete all logged DNS queries and domain statistics from your device. This action cannot be undone.</string>
+    <string name="settings_hosts_title">Hosts &amp; Filter Lists</string>
+    <string name="settings_hosts_badge">Essential 7 Active</string>
+    <string name="settings_hosts_desc">AdGuard Base, EasyList, EasyPrivacy, Peter Lowe, Dan Pollock, Steven Black, and Adult threat lists compiled into high-performance Trie indexes.</string>
+    <string name="settings_manage_filters">Manage Filter Lists &amp; Extensions</string>
+    <string name="settings_private_dns_warning">Private DNS is active — encrypted queries may bypass local filtering</string>
+    <string name="settings_open_network_settings">Open Network Settings</string>
+    <string name="settings_always_on_vpn">Always-on VPN system settings</string>
+    <string name="settings_automation_title">Automation &amp; Reliability</string>
+    <string name="settings_auto_boot_title">Auto-Start on Boot</string>
+    <string name="settings_auto_boot_subtitle">Resume protection automatically when phone restarts</string>
+    <string name="settings_watchdog_title">Watchdog Health Check</string>
+    <string name="settings_watchdog_subtitle">Monitors DNS pipeline health &amp; auto-heals silent stalls</string>
+    <string name="settings_watchdog_interval">Every %1$dm</string>
+    <string name="settings_privacy_title">Data &amp; Privacy Controls</string>
+    <string name="settings_pause_logging_title">Pause Query Logging</string>
+    <string name="settings_pause_logging_subtitle">Temporarily suspend recording DNS queries to disk</string>
+    <string name="settings_about_desc">Designed for extreme battery efficiency and comprehensive privacy. All DNS queries are inspected in memory and never leave your phone.</string>
+    <string name="settings_github_license">GitHub Repository &amp; License</string>
+
+    <!-- Secondary destinations -->
+    <string name="exceptions_title">Exceptions &amp; Rules</string>
+    <string name="exceptions_headline">User Rules &amp; Protected Domains</string>
+    <string name="exceptions_description">View and manage custom Allow/Block overrides, My domains protected sites, and evaluate domains with the rule tester. You can also manage exceptions directly per domain in Logs.</string>
+    <string name="exceptions_action">Open Logs to Filter Domains</string>
+    <string name="stats_title">Statistics</string>
+    <string name="stats_headline">On-Device Protection Summary</string>
+    <string name="stats_description">Daily query trends, block rate percentages, top blocked domains, and per-list hit counters computed strictly on your device within local retention limits.</string>
+    <string name="stats_action">View Detailed Domain Logs</string>
+    <string name="onboarding_title">Guided Setup</string>
+    <string name="onboarding_headline">Welcome to Un-Blocker</string>
+    <string name="onboarding_description">On-device DNS protection with zero cloud servers and zero telemetry. Choose a curated filter preset in Extensions or start protection from Home.</string>
+    <string name="onboarding_action">Browse Curated Presets</string>
+    <string name="about_title">About Un-Blocker</string>
+    <string name="about_privacy_detail">Un-Blocker inspects only DNS queries locally through Android\'s VpnService interface without inspecting HTTPS bodies or transmitting telemetry off your phone.</string>
+    <string name="about_github_license">GitHub Repository &amp; Apache-2.0 License</string>
+
+    <!-- Plural resources -->
+    <plurals name="learn_domain_queries">
+        <item quantity="one">%1$d query</item>
+        <item quantity="other">%1$d queries</item>
+    </plurals>
+    <plurals name="extensions_rule_count">
+        <item quantity="one">%1$d rule</item>
+        <item quantity="other">%1$d rules</item>
+    </plurals>
 </resources>

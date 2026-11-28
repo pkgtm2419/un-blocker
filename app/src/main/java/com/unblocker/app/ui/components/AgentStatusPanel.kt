@@ -20,10 +20,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.unblocker.app.R
 import com.unblocker.app.services.ServiceStatus
 import com.unblocker.app.services.TunnelDnsConfig
 import com.unblocker.app.ui.motion.FluidVisibility
@@ -102,7 +104,7 @@ fun AgentStatusPanel(
                 Column {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "AGENT RUNTIME",
+                            text = stringResource(R.string.agent_runtime_label),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             fontFamily = FontFamily.Monospace,
@@ -117,11 +119,29 @@ fun AgentStatusPanel(
                             Text(
                                 text =
                                     when (serviceStatus) {
-                                        ServiceStatus.RUNNING -> if (isPrivateDnsActive) "LIMITED" else "ACTIVE"
-                                        ServiceStatus.STARTING -> "STARTING"
-                                        ServiceStatus.STOPPING -> "STOPPING"
-                                        ServiceStatus.ERROR -> "FAULT"
-                                        ServiceStatus.STOPPED -> "STANDBY"
+                                        ServiceStatus.RUNNING -> {
+                                            if (isPrivateDnsActive) {
+                                                stringResource(R.string.agent_badge_limited)
+                                            } else {
+                                                stringResource(R.string.agent_badge_active)
+                                            }
+                                        }
+
+                                        ServiceStatus.STARTING -> {
+                                            stringResource(R.string.agent_badge_starting)
+                                        }
+
+                                        ServiceStatus.STOPPING -> {
+                                            stringResource(R.string.agent_badge_stopping)
+                                        }
+
+                                        ServiceStatus.ERROR -> {
+                                            stringResource(R.string.agent_badge_fault)
+                                        }
+
+                                        ServiceStatus.STOPPED -> {
+                                            stringResource(R.string.agent_badge_standby)
+                                        }
                                     },
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.ExtraBold,
@@ -137,11 +157,25 @@ fun AgentStatusPanel(
                     Text(
                         text =
                             when (protectionState.status) {
-                                ServiceStatus.RUNNING -> if (isPrivateDnsActive) protectionState.label else "Protected (standard DNS)"
-                                ServiceStatus.STARTING -> protectionState.label
-                                ServiceStatus.STOPPING -> "Stopping"
-                                ServiceStatus.ERROR -> protectionState.label
-                                ServiceStatus.STOPPED -> protectionState.label
+                                ServiceStatus.RUNNING -> {
+                                    if (isPrivateDnsActive && protectionState.labelRes != 0) {
+                                        stringResource(protectionState.labelRes)
+                                    } else {
+                                        stringResource(R.string.protection_state_protected)
+                                    }
+                                }
+
+                                ServiceStatus.STOPPING -> {
+                                    stringResource(R.string.agent_status_stopping)
+                                }
+
+                                else -> {
+                                    if (protectionState.labelRes != 0) {
+                                        stringResource(protectionState.labelRes)
+                                    } else {
+                                        protectionState.label
+                                    }
+                                }
                             },
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
@@ -156,7 +190,7 @@ fun AgentStatusPanel(
             ) {
                 Icon(
                     imageVector = Icons.Default.Settings,
-                    contentDescription = "Extensions & Filter Settings",
+                    contentDescription = stringResource(R.string.agent_link_extensions),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -176,7 +210,7 @@ fun AgentStatusPanel(
                 )
 
                 Text(
-                    text = "EXECUTION PIPELINE",
+                    text = stringResource(R.string.agent_execution_pipeline),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Monospace,
@@ -189,8 +223,17 @@ fun AgentStatusPanel(
                 // Step 1: Tunnel Interface
                 PipelineStepRow(
                     stepNumber = "01",
-                    title = "VPN TUNNEL INTERFACE",
-                    detail = if (isRunning) "Bound to ${TunnelDnsConfig.IPV4_DNS}:53 & ${TunnelDnsConfig.IPV6_DNS}:53" else "Offline (0 packet flows)",
+                    title = stringResource(R.string.agent_step_01_title),
+                    detail =
+                        if (isRunning) {
+                            stringResource(
+                                R.string.agent_step_01_detail_running,
+                                TunnelDnsConfig.IPV4_DNS,
+                                TunnelDnsConfig.IPV6_DNS,
+                            )
+                        } else {
+                            stringResource(R.string.agent_step_01_detail_offline)
+                        },
                     isSuccess = isRunning,
                     isWarning = false,
                 )
@@ -198,8 +241,13 @@ fun AgentStatusPanel(
                 // Step 2: Content Filter Engine
                 PipelineStepRow(
                     stepNumber = "02",
-                    title = "CONTENT FILTER CORE",
-                    detail = if (isRunning) "RuleSet compiled (Ad + Adult heuristics active)" else "Standby",
+                    title = stringResource(R.string.agent_step_02_title),
+                    detail =
+                        if (isRunning) {
+                            stringResource(R.string.agent_step_02_detail_running)
+                        } else {
+                            stringResource(R.string.agent_step_02_detail_standby)
+                        },
                     isSuccess = isRunning,
                     isWarning = false,
                 )
@@ -207,8 +255,16 @@ fun AgentStatusPanel(
                 // Step 3: Upstream DNS Gateway
                 PipelineStepRow(
                     stepNumber = "03",
-                    title = "UPSTREAM DNS GATEWAY",
-                    detail = if (isPrivateDnsActive) "Encrypted Private DNS active ($privateDnsServerName)" else "Delegating to configured system resolvers",
+                    title = stringResource(R.string.agent_step_03_title),
+                    detail =
+                        if (isPrivateDnsActive) {
+                            stringResource(
+                                R.string.agent_step_03_detail_private_dns,
+                                privateDnsServerName.orEmpty(),
+                            )
+                        } else {
+                            stringResource(R.string.agent_step_03_detail_system)
+                        },
                     isSuccess = isRunning && !isPrivateDnsActive,
                     isWarning = isPrivateDnsActive,
                 )
@@ -216,8 +272,8 @@ fun AgentStatusPanel(
                 // Step 4: Evidence Learner
                 PipelineStepRow(
                     stepNumber = "04",
-                    title = "LOCAL EVIDENCE LEARNER",
-                    detail = "Hardware Keystore HMAC • Zero remote telemetry",
+                    title = stringResource(R.string.agent_step_04_title),
+                    detail = stringResource(R.string.agent_step_04_detail),
                     isSuccess = true,
                     isWarning = false,
                 )
@@ -248,13 +304,13 @@ fun AgentStatusPanel(
                             Spacer(modifier = Modifier.width(8.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Private DNS mode active",
+                                    text = stringResource(R.string.agent_private_dns_warning_title),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (isDark) Color(0xFFFDE68A) else Color(0xFF92400E),
                                 )
                                 Text(
-                                    text = "Android may send queries over DoT bypassing local filter.",
+                                    text = stringResource(R.string.agent_private_dns_warning_body),
                                     fontSize = 11.sp,
                                     color = if (isDark) Color(0xFFFDE68A).copy(alpha = 0.8f) else Color(0xFFB45309),
                                 )
@@ -271,7 +327,7 @@ fun AgentStatusPanel(
                                 },
                             ) {
                                 Text(
-                                    text = "Fix",
+                                    text = stringResource(R.string.action_fix),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (isDark) Color(0xFFFBBF24) else Color(0xFFB45309),

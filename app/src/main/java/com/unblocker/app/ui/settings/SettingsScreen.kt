@@ -24,11 +24,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.unblocker.app.R
 import com.unblocker.app.data.preferences.FilteringPreferences
 import com.unblocker.app.services.QuickStartManager
 import com.unblocker.app.services.SystemHardeningChecker
@@ -106,6 +109,8 @@ fun SettingsScreen(
         UnblockerVpnService.checkPrivateDns(context)
     }
 
+    val resources = LocalResources.current
+
     // Export query logs launcher
     val exportLauncher =
         rememberLauncherForActivityResult(
@@ -116,10 +121,20 @@ fun SettingsScreen(
                     runCatching {
                         context.contentResolver.openOutputStream(uri)?.use { os ->
                             val count = logViewModel.exportLogsToCsv(os)
-                            Toast.makeText(context, "Exported $count domains to CSV", Toast.LENGTH_SHORT).show()
+                            Toast
+                                .makeText(
+                                    context,
+                                    resources.getString(R.string.settings_export_success_toast, count),
+                                    Toast.LENGTH_SHORT,
+                                ).show()
                         }
                     }.onFailure { e ->
-                        Toast.makeText(context, "Export failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                        Toast
+                            .makeText(
+                                context,
+                                resources.getString(R.string.settings_export_failed_toast, e.message.orEmpty()),
+                                Toast.LENGTH_SHORT,
+                            ).show()
                     }
                 }
             }
@@ -131,13 +146,13 @@ fun SettingsScreen(
             onDismissRequest = { showClearConfirmDialog = false },
             title = {
                 Text(
-                    text = "Clear All Query History?",
+                    text = stringResource(R.string.settings_clear_dialog_title),
                     fontWeight = FontWeight.Bold,
                 )
             },
             text = {
                 Text(
-                    text = "This will permanently delete all logged DNS queries and domain statistics from your device. This action cannot be undone.",
+                    text = stringResource(R.string.settings_clear_dialog_body),
                     style = MaterialTheme.typography.bodyMedium,
                 )
             },
@@ -150,15 +165,20 @@ fun SettingsScreen(
                     onClick = {
                         logViewModel.clearAllLogs()
                         showClearConfirmDialog = false
-                        Toast.makeText(context, "Query history cleared", Toast.LENGTH_SHORT).show()
+                        Toast
+                            .makeText(
+                                context,
+                                resources.getString(R.string.settings_history_cleared_toast),
+                                Toast.LENGTH_SHORT,
+                            ).show()
                     },
                 ) {
-                    Text("Clear", color = MaterialTheme.colorScheme.onError)
+                    Text(stringResource(R.string.action_clear), color = MaterialTheme.colorScheme.onError)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showClearConfirmDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.action_cancel))
                 }
             },
         )
@@ -202,14 +222,14 @@ fun SettingsScreen(
                 ) {
                     Column {
                         Text(
-                            text = "Settings & Shields",
+                            text = stringResource(R.string.settings_title),
                             style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.ExtraBold,
                             color = MaterialTheme.colorScheme.onBackground,
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "Configure protection levels, DNS & app controls",
+                            text = stringResource(R.string.settings_subtitle),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -221,7 +241,7 @@ fun SettingsScreen(
                         border = BorderStroke(1.dp, if (isDark) Slate700 else Color(0xFFCBD5E1)),
                     ) {
                         Text(
-                            text = "v$versionName",
+                            text = stringResource(R.string.settings_version_badge, versionName),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
@@ -263,7 +283,7 @@ fun SettingsScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Hosts & Filter Lists",
+                                    text = stringResource(R.string.settings_hosts_title),
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface,
@@ -276,7 +296,7 @@ fun SettingsScreen(
                                 border = BorderStroke(1.dp, TealPrimary.copy(alpha = 0.35f)),
                             ) {
                                 Text(
-                                    text = "Essential 7 Active",
+                                    text = stringResource(R.string.settings_hosts_badge),
                                     style = MaterialTheme.typography.labelSmall,
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
@@ -289,7 +309,7 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.height(8.dp))
 
                         Text(
-                            text = "AdGuard Base, EasyList, EasyPrivacy, Peter Lowe, Dan Pollock, Steven Black, and Adult threat lists compiled into high-performance Trie indexes.",
+                            text = stringResource(R.string.settings_hosts_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -306,7 +326,7 @@ fun SettingsScreen(
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text(
-                                text = "Manage Filter Lists & Extensions",
+                                text = stringResource(R.string.settings_manage_filters),
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary,
@@ -365,7 +385,7 @@ fun SettingsScreen(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
                                 Text(
-                                    text = "Private DNS is active — encrypted queries may bypass local filtering",
+                                    text = stringResource(R.string.settings_private_dns_warning),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = if (isDark) Color(0xFFFDE68A) else Color(0xFF92400E),
                                     textAlign = TextAlign.Center,
@@ -383,7 +403,7 @@ fun SettingsScreen(
                                     },
                                 ) {
                                     Text(
-                                        text = "Open Network Settings",
+                                        text = stringResource(R.string.settings_open_network_settings),
                                         color = if (isDark) Color(0xFFFBBF24) else Color(0xFFB45309),
                                         fontWeight = FontWeight.Bold,
                                     )
@@ -431,7 +451,7 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Always-on VPN system settings",
+                            text = stringResource(R.string.settings_always_on_vpn),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -470,7 +490,7 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Automation & Reliability",
+                                text = stringResource(R.string.settings_automation_title),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface,
@@ -487,13 +507,13 @@ fun SettingsScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Auto-Start on Boot",
+                                    text = stringResource(R.string.settings_auto_boot_title),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Text(
-                                    text = "Resume protection automatically when phone restarts",
+                                    text = stringResource(R.string.settings_auto_boot_subtitle),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -526,13 +546,13 @@ fun SettingsScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Watchdog Health Check",
+                                    text = stringResource(R.string.settings_watchdog_title),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Text(
-                                    text = "Monitors DNS pipeline health & auto-heals silent stalls",
+                                    text = stringResource(R.string.settings_watchdog_subtitle),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -544,7 +564,7 @@ fun SettingsScreen(
                                 border = BorderStroke(1.dp, if (isDark) Slate700 else Color(0xFFCBD5E1)),
                             ) {
                                 Text(
-                                    text = "Every ${healthCheckMinutes}m",
+                                    text = stringResource(R.string.settings_watchdog_interval, healthCheckMinutes),
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface,
@@ -573,7 +593,7 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Data & Privacy Controls",
+                                text = stringResource(R.string.settings_privacy_title),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface,
@@ -590,13 +610,13 @@ fun SettingsScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Pause Query Logging",
+                                    text = stringResource(R.string.settings_pause_logging_title),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Text(
-                                    text = "Temporarily suspend recording DNS queries to disk",
+                                    text = stringResource(R.string.settings_pause_logging_subtitle),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -646,7 +666,7 @@ fun SettingsScreen(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "Export CSV",
+                                    text = stringResource(R.string.logs_export_csv),
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.SemiBold,
                                 )
@@ -669,7 +689,7 @@ fun SettingsScreen(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "Clear History",
+                                    text = stringResource(R.string.logs_clear_history),
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.SemiBold,
                                 )
@@ -691,21 +711,21 @@ fun SettingsScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Text(
-                            text = "Un-Blocker v$versionName",
+                            text = stringResource(R.string.app_brand_version, versionName),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "100% On-Device • Zero-Cloud • Zero-Telemetry",
+                            text = stringResource(R.string.app_privacy_pillars),
                             style = MaterialTheme.typography.labelSmall,
                             color = TealPrimary,
                             fontWeight = FontWeight.SemiBold,
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Designed for extreme battery efficiency and comprehensive privacy. All DNS queries are inspected in memory and never leave your phone.",
+                            text = stringResource(R.string.settings_about_desc),
                             style = MaterialTheme.typography.bodySmall,
                             textAlign = TextAlign.Center,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -737,7 +757,7 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "GitHub Repository & License",
+                                text = stringResource(R.string.settings_github_license),
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface,
@@ -780,7 +800,7 @@ fun BeyondDnsCompanionCard(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Beyond DNS: Video & Stream Ads",
+                        text = stringResource(R.string.beyond_dns_card_title),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -793,7 +813,7 @@ fun BeyondDnsCompanionCard(
                     border = BorderStroke(1.dp, TealPrimary.copy(alpha = 0.35f)),
                 ) {
                     Text(
-                        text = "Defense-in-Depth",
+                        text = stringResource(R.string.beyond_dns_card_badge),
                         style = MaterialTheme.typography.labelSmall,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
@@ -806,9 +826,7 @@ fun BeyondDnsCompanionCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text =
-                    "YouTube, Twitch, and social feed ads share content domains and bypass DNS. " +
-                        "Learn how to combine Un-Blocker with Firefox, uBlock Origin, and PWAs.",
+                text = stringResource(R.string.beyond_dns_card_body),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -822,7 +840,7 @@ fun BeyondDnsCompanionCard(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = "View Multi-Layer Setup Guide",
+                    text = stringResource(R.string.beyond_dns_card_button),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = TealPrimary,

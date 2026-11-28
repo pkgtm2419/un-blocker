@@ -82,6 +82,7 @@ android {
 
     buildTypes {
         debug {
+            isPseudoLocalesEnabled = true
             if (hasStableTestSigning) {
                 signingConfig = signingConfigs.getByName("stableTest")
             }
@@ -111,6 +112,7 @@ android {
         abortOnError = true
         checkReleaseBuilds = false
         ignoreWarnings = false
+        error += setOf("MissingTranslation", "HardcodedText")
         disable +=
             setOf(
                 "GradleDependency",

@@ -30,12 +30,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.unblocker.app.R
 import com.unblocker.app.ui.theme.AdBlockedRed
 import com.unblocker.app.ui.theme.AllowedGreen
 import com.unblocker.app.ui.theme.Slate700
@@ -95,7 +97,7 @@ fun ConnectionHistoryDialog(
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
-                        text = "Connection History & Event Log",
+                        text = stringResource(R.string.logs_history_dialog_subtitle),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 11.sp,
@@ -120,7 +122,7 @@ fun ConnectionHistoryDialog(
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text(
-                            text = "Connection Overview",
+                            text = stringResource(R.string.logs_history_overview),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
@@ -131,16 +133,16 @@ fun ConnectionHistoryDialog(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
-                            MetricCell(label = "Total Queries", value = "${stat.callCount}")
-                            MetricCell(label = "Allowed", value = "${stat.allowedCount}", color = AllowedGreen)
-                            MetricCell(label = "Blocked", value = "${stat.blockedCount}", color = AdBlockedRed)
+                            MetricCell(label = stringResource(R.string.logs_history_total_queries), value = "${stat.callCount}")
+                            MetricCell(label = stringResource(R.string.logs_filter_allowed), value = "${stat.allowedCount}", color = AllowedGreen)
+                            MetricCell(label = stringResource(R.string.logs_filter_blocked), value = "${stat.blockedCount}", color = AdBlockedRed)
                             val blockRate =
                                 if (stat.callCount > 0) {
                                     stat.blockedCount * 100 / stat.callCount
                                 } else {
                                     0
                                 }
-                            MetricCell(label = "Block Rate", value = "$blockRate%")
+                            MetricCell(label = stringResource(R.string.logs_history_block_rate), value = "$blockRate%")
                         }
 
                         HorizontalDivider(
@@ -152,13 +154,13 @@ fun ConnectionHistoryDialog(
                             if (stat.firstSeen > 0) {
                                 shortDateFormat.format(Date(stat.firstSeen))
                             } else {
-                                "Unknown"
+                                stringResource(R.string.logs_history_unknown)
                             }
                         val lastSeenText =
                             if (stat.lastSeen > 0) {
                                 shortDateFormat.format(Date(stat.lastSeen))
                             } else {
-                                "Unknown"
+                                stringResource(R.string.logs_history_unknown)
                             }
 
                         Row(
@@ -166,7 +168,7 @@ fun ConnectionHistoryDialog(
                             horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
                             Text(
-                                text = "First Seen: $firstSeenText",
+                                text = stringResource(R.string.logs_history_first_seen, firstSeenText),
                                 style = MaterialTheme.typography.bodySmall,
                                 fontSize = 10.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -178,7 +180,7 @@ fun ConnectionHistoryDialog(
                             horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
                             Text(
-                                text = "Last Seen: $lastSeenText",
+                                text = stringResource(R.string.logs_history_last_seen, lastSeenText),
                                 style = MaterialTheme.typography.bodySmall,
                                 fontSize = 10.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -189,7 +191,7 @@ fun ConnectionHistoryDialog(
 
                 // Table View of Events
                 Text(
-                    text = "Event Log Table (Recent 24h: ${events.size})",
+                    text = stringResource(R.string.logs_history_table_title, events.size),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -203,10 +205,7 @@ fun ConnectionHistoryDialog(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text(
-                            text =
-                                "No individual query events stored for the last 24 hours. " +
-                                    "Individual timestamps are kept for up to 24 hours to protect storage and privacy, " +
-                                    "while lifetime totals remain preserved in the overview above.",
+                            text = stringResource(R.string.logs_history_empty),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(12.dp),
@@ -239,14 +238,14 @@ fun ConnectionHistoryDialog(
                                     modifier = Modifier.width(26.dp),
                                 )
                                 Text(
-                                    text = "Date & Time",
+                                    text = stringResource(R.string.logs_history_col_datetime),
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.weight(1f),
                                 )
                                 Text(
-                                    text = "Decision",
+                                    text = stringResource(R.string.logs_history_col_decision),
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface,
@@ -299,7 +298,12 @@ fun ConnectionHistoryDialog(
                                         modifier = Modifier.width(68.dp),
                                     ) {
                                         Text(
-                                            text = if (isBlocked) "BLOCKED" else "ALLOWED",
+                                            text =
+                                                if (isBlocked) {
+                                                    stringResource(R.string.logs_history_decision_blocked)
+                                                } else {
+                                                    stringResource(R.string.logs_history_decision_allowed)
+                                                },
                                             style = MaterialTheme.typography.labelSmall,
                                             fontWeight = FontWeight.ExtraBold,
                                             fontSize = 9.sp,
@@ -324,7 +328,7 @@ fun ConnectionHistoryDialog(
         confirmButton = {
             TextButton(onClick = onDismiss) {
                 Text(
-                    text = "Close",
+                    text = stringResource(R.string.action_close),
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
                 )

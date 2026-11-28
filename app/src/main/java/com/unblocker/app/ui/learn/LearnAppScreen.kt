@@ -22,11 +22,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.unblocker.app.R
 
 /**
  * Renders app selection, a DNS recording session, and domain-rule review.
@@ -60,9 +62,9 @@ fun LearnAppScreen(
                     Text(
                         text =
                             when (state) {
-                                is LearnUiState.SelectingApp -> "Learn an App"
-                                is LearnUiState.Recording -> "Recording Traffic"
-                                is LearnUiState.Reviewing -> "Review App Domains"
+                                is LearnUiState.SelectingApp -> stringResource(R.string.learn_topbar_selecting)
+                                is LearnUiState.Recording -> stringResource(R.string.learn_topbar_recording)
+                                is LearnUiState.Reviewing -> stringResource(R.string.learn_topbar_reviewing)
                             },
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
@@ -76,7 +78,10 @@ fun LearnAppScreen(
                             is LearnUiState.SelectingApp -> onNavigateBack()
                         }
                     }) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.action_back),
+                        )
                     }
                 },
                 colors =
@@ -147,7 +152,7 @@ private fun AppSelectionContent(
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Select an app to isolate and learn its network connections. Un-Blocker monitors DNS queries specifically while you use it.",
+            text = stringResource(R.string.learn_pick_intro),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -156,7 +161,7 @@ private fun AppSelectionContent(
         OutlinedTextField(
             value = query,
             onValueChange = onQueryChange,
-            placeholder = { Text("Search installed apps...") },
+            placeholder = { Text(stringResource(R.string.learn_search_placeholder)) },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -177,7 +182,7 @@ private fun AppSelectionContent(
                     CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Loading installed applications…",
+                        text = stringResource(R.string.learn_loading_apps),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -243,7 +248,7 @@ private fun AppSelectionContent(
                                     modifier = Modifier.size(16.dp),
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Learn", fontSize = 13.sp)
+                                Text(stringResource(R.string.learn_action_learn), fontSize = 13.sp)
                             }
                         }
                     }
@@ -289,7 +294,7 @@ private fun RecordingContent(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Learning ${app.label}. Other apps are not filtered until you stop (max 10 min).",
+                    text = stringResource(R.string.learn_isolation_banner, app.label),
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                     fontWeight = FontWeight.Medium,
@@ -304,14 +309,14 @@ private fun RecordingContent(
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "Recording: ${app.label}",
+                    text = stringResource(R.string.learn_recording_title, app.label),
                     fontWeight = FontWeight.Bold,
                     fontSize = 17.sp,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Time elapsed: $timeFormatted / 10:00 (Auto-stops at 10m)",
+                    text = stringResource(R.string.learn_time_elapsed, timeFormatted),
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -327,7 +332,7 @@ private fun RecordingContent(
                             modifier = Modifier.size(16.dp),
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Open ${app.label}")
+                        Text(stringResource(R.string.learn_open_app, app.label))
                     }
                     OutlinedButton(
                         onClick = onStopRecording,
@@ -335,7 +340,7 @@ private fun RecordingContent(
                     ) {
                         Icon(Icons.Default.Stop, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Stop & Review")
+                        Text(stringResource(R.string.learn_stop_review))
                     }
                 }
             }
@@ -358,7 +363,7 @@ private fun RecordingContent(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "App may be idle or use its own encrypted DNS",
+                            text = stringResource(R.string.learn_idle_encrypted_title),
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onErrorContainer,
@@ -383,7 +388,7 @@ private fun RecordingContent(
                         contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
                     ) {
                         Text(
-                            text = "Learn why encrypted DNS can bypass monitoring (dns-bypass-matrix.md)",
+                            text = stringResource(R.string.learn_idle_encrypted_link),
                             fontSize = 12.sp,
                         )
                     }
@@ -394,7 +399,7 @@ private fun RecordingContent(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Captured Domains (${domains.size}):",
+            text = stringResource(R.string.learn_captured_domains, domains.size),
             fontWeight = FontWeight.SemiBold,
             fontSize = 14.sp,
         )
@@ -406,7 +411,7 @@ private fun RecordingContent(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "Waiting for network queries from ${app.label}...\nTap 'Open ${app.label}' to trigger requests.",
+                    text = stringResource(R.string.learn_waiting_queries, app.label, app.label),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 14.sp,
                 )
@@ -435,7 +440,7 @@ private fun RecordingContent(
                                 overflow = TextOverflow.Ellipsis,
                             )
                             Text(
-                                text = "${d.count}x",
+                                text = stringResource(R.string.learn_domain_count, d.count),
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary,
@@ -468,13 +473,13 @@ private fun ReviewDomainsContent(
                 .padding(16.dp),
     ) {
         Text(
-            text = "Results for ${app.label}",
+            text = stringResource(R.string.learn_results_title, app.label),
             fontWeight = FontWeight.Bold,
             fontSize = 18.sp,
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "Nothing is pre-selected. Explicitly choose Allow or Block per domain:",
+            text = stringResource(R.string.learn_results_subtitle),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -484,7 +489,7 @@ private fun ReviewDomainsContent(
                 onClick = onSelectAllListMatches,
                 shape = RoundedCornerShape(10.dp),
             ) {
-                Text("Add all list matches ($trackerCount)", fontSize = 12.sp)
+                Text(stringResource(R.string.learn_select_all_trackers, trackerCount), fontSize = 12.sp)
             }
         }
         Spacer(modifier = Modifier.height(12.dp))
@@ -502,7 +507,7 @@ private fun ReviewDomainsContent(
                     Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Rules saved successfully to your device!",
+                        text = stringResource(R.string.learn_rules_saved_toast),
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         fontWeight = FontWeight.Medium,
                         fontSize = 14.sp,
@@ -537,10 +542,10 @@ private fun ReviewDomainsContent(
                             )
                             val catBadge =
                                 when (item.category) {
-                                    DomainCategory.FIRST_PARTY -> "First Party"
-                                    DomainCategory.CDN_INFRA -> "CDN / Infra"
-                                    DomainCategory.TRACKER_AD -> "Tracker / Ad"
-                                    DomainCategory.OTHER -> "Other"
+                                    DomainCategory.FIRST_PARTY -> stringResource(R.string.learn_cat_first_party)
+                                    DomainCategory.CDN_INFRA -> stringResource(R.string.learn_cat_cdn_infra)
+                                    DomainCategory.TRACKER_AD -> stringResource(R.string.learn_cat_tracker_ad)
+                                    DomainCategory.OTHER -> stringResource(R.string.learn_cat_other)
                                 }
                             Surface(
                                 shape = RoundedCornerShape(4.dp),
@@ -581,7 +586,7 @@ private fun ReviewDomainsContent(
                         if (item.alsoSeenIn.isNotEmpty()) {
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Also seen in: ${item.alsoSeenIn.joinToString(", ")}",
+                                text = stringResource(R.string.learn_also_seen_in, item.alsoSeenIn.joinToString(", ")),
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -614,7 +619,12 @@ private fun ReviewDomainsContent(
                                 onClick = { onSetAction(item.domain, ReviewAction.ALLOW) },
                                 label = {
                                     Text(
-                                        text = if (item.pendingAllowConfirmation) "Confirm Allow" else "Allow",
+                                        text =
+                                            if (item.pendingAllowConfirmation) {
+                                                stringResource(R.string.learn_choice_confirm_allow)
+                                            } else {
+                                                stringResource(R.string.learn_choice_allow)
+                                            },
                                         fontSize = 11.sp,
                                     )
                                 },
@@ -622,12 +632,12 @@ private fun ReviewDomainsContent(
                             FilterChip(
                                 selected = item.action == ReviewAction.BLOCK,
                                 onClick = { onSetAction(item.domain, ReviewAction.BLOCK) },
-                                label = { Text("Block", fontSize = 11.sp) },
+                                label = { Text(stringResource(R.string.learn_choice_block), fontSize = 11.sp) },
                             )
                             FilterChip(
                                 selected = item.action == ReviewAction.KEEP_DEFAULT,
                                 onClick = { onSetAction(item.domain, ReviewAction.KEEP_DEFAULT) },
-                                label = { Text("Default", fontSize = 11.sp) },
+                                label = { Text(stringResource(R.string.learn_choice_default), fontSize = 11.sp) },
                             )
                         }
 
@@ -641,9 +651,9 @@ private fun ReviewDomainsContent(
                                 Text(
                                     text =
                                         if (item.canAllowWholeSite) {
-                                            "Whole site (subdomains included)"
+                                            stringResource(R.string.learn_whole_site_toggle)
                                         } else {
-                                            "Shared platform (exact host only)"
+                                            stringResource(R.string.learn_shared_platform_note)
                                         },
                                     fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -673,13 +683,13 @@ private fun ReviewDomainsContent(
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(12.dp),
             ) {
-                Text("Apply Rules")
+                Text(stringResource(R.string.learn_apply_rules))
             }
             OutlinedButton(
                 onClick = onDone,
                 shape = RoundedCornerShape(12.dp),
             ) {
-                Text("Done")
+                Text(stringResource(R.string.action_done))
             }
         }
     }

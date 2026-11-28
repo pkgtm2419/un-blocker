@@ -14,10 +14,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.unblocker.app.R
 import com.unblocker.app.data.preferences.FilteringTier
 
 /**
@@ -53,7 +55,7 @@ fun FilteringTierCard(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Protection Level",
+                    text = stringResource(R.string.tier_card_title),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -68,9 +70,20 @@ fun FilteringTierCard(
                     val isSelected = tier == currentTier
                     val (label, description) =
                         when (tier) {
-                            FilteringTier.BASIC -> "Basic" to "Game & shopping friendly"
-                            FilteringTier.OPTIMAL -> "Optimal" to "Balanced shield"
-                            FilteringTier.COMPLETE -> "Complete" to "Strict shield"
+                            FilteringTier.BASIC -> {
+                                stringResource(R.string.tier_basic_title) to
+                                    stringResource(R.string.tier_basic_subtitle)
+                            }
+
+                            FilteringTier.OPTIMAL -> {
+                                stringResource(R.string.tier_optimal_title) to
+                                    stringResource(R.string.tier_optimal_subtitle)
+                            }
+
+                            FilteringTier.COMPLETE -> {
+                                stringResource(R.string.tier_complete_title) to
+                                    stringResource(R.string.tier_complete_subtitle)
+                            }
                         }
                     Surface(
                         modifier =

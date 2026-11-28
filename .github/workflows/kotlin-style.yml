@@ -28,3 +28,7 @@ jobs:
         run: python3 -m unittest discover -s scripts/tests -p 'test_kotlin_style.py' -v
       - name: Check Kotlin source and build scripts
         run: python3 scripts/kotlin_style.py --download-tool
+      - name: Check for hardcoded Compose UI strings
+        run: |
+          python3 -m unittest discover -s scripts/tests -p 'test_check_hardcoded_strings.py' -v
+          python3 scripts/check_hardcoded_strings.py

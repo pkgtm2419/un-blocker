@@ -150,6 +150,8 @@ Only syntactically matched top-level class/interface/object declarations (not se
 | `app/src/main/java/com/unblocker/app/ui/learn/LearnViewModel.kt` | class | `ReviewAction` |
 | `app/src/main/java/com/unblocker/app/ui/learn/LearnViewModel.kt` | class | `ReviewedDomain` |
 | `app/src/main/java/com/unblocker/app/ui/learn/LearnViewModel.kt` | interface | `LearnUiState` |
+| `app/src/main/java/com/unblocker/app/ui/logs/DecisionExplainer.kt` | class | `DecisionExplanation` |
+| `app/src/main/java/com/unblocker/app/ui/logs/DecisionExplainer.kt` | object | `DecisionExplainer` |
 | `app/src/main/java/com/unblocker/app/ui/logs/LogViewModel.kt` | class | `LogFilter` |
 | `app/src/main/java/com/unblocker/app/ui/logs/LogViewModel.kt` | class | `LogSort` |
 | `app/src/main/java/com/unblocker/app/ui/logs/LogViewModel.kt` | class | `LogViewModel` |

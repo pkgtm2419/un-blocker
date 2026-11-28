@@ -136,13 +136,21 @@ fun ConnectionHistoryDialog(
                             MetricCell(label = stringResource(R.string.logs_history_total_queries), value = "${stat.callCount}")
                             MetricCell(label = stringResource(R.string.logs_filter_allowed), value = "${stat.allowedCount}", color = AllowedGreen)
                             MetricCell(label = stringResource(R.string.logs_filter_blocked), value = "${stat.blockedCount}", color = AdBlockedRed)
-                            val blockRate =
-                                if (stat.callCount > 0) {
-                                    stat.blockedCount * 100 / stat.callCount
-                                } else {
-                                    0
-                                }
-                            MetricCell(label = stringResource(R.string.logs_history_block_rate), value = "$blockRate%")
+                            if (stat.failCount > 0L) {
+                                MetricCell(
+                                    label = stringResource(R.string.logs_history_failed_kpi),
+                                    value = "${stat.failCount}",
+                                    color = Color(0xFFF59E0B),
+                                )
+                            } else {
+                                val blockRate =
+                                    if (stat.callCount > 0) {
+                                        stat.blockedCount * 100 / stat.callCount
+                                    } else {
+                                        0
+                                    }
+                                MetricCell(label = stringResource(R.string.logs_history_block_rate), value = "$blockRate%")
+                            }
                         }
 
                         HorizontalDivider(
@@ -183,6 +191,66 @@ fun ConnectionHistoryDialog(
                                 text = stringResource(R.string.logs_history_last_seen, lastSeenText),
                                 style = MaterialTheme.typography.bodySmall,
                                 fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+
+                val explanation = remember(stat) { DecisionExplainer.explain(stat) }
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (isDark) Slate800 else Color(0xFFF8FAFC),
+                    border = BorderStroke(1.dp, if (isDark) Slate700 else Color(0xFFE2E8F0)),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.logs_why_section_title),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Text(
+                            text = stringResource(R.string.logs_why_outcome_label, stringResource(explanation.outcomeTitleRes)),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            text = stringResource(explanation.reasonTitleRes),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            text = stringResource(explanation.reasonDetailRes),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        if (stat.lastRule.isNotBlank()) {
+                            Text(
+                                text = stringResource(R.string.logs_why_rule_label, stat.lastRule),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontFamily = FontFamily.Monospace,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        if (stat.lastSource.isNotBlank()) {
+                            Text(
+                                text = stringResource(R.string.logs_why_source_label, stat.lastSource),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        if (stat.lastNetworkType.isNotBlank()) {
+                            Text(
+                                text = stringResource(R.string.logs_why_network_label, stat.lastNetworkType),
+                                style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
@@ -289,8 +357,16 @@ fun ConnectionHistoryDialog(
                                         color = MaterialTheme.colorScheme.onSurface,
                                         modifier = Modifier.weight(1f),
                                     )
+                                    val isFailed =
+                                        event.decision ==
+                                            com.unblocker.data.db.entity.DomainStatEntity.OUTCOME_UPSTREAM_FAIL
                                     val isBlocked = event.decision == 1
-                                    val badgeColor = if (isBlocked) AdBlockedRed else AllowedGreen
+                                    val badgeColor =
+                                        when {
+                                            isFailed -> Color(0xFFF59E0B)
+                                            isBlocked -> AdBlockedRed
+                                            else -> AllowedGreen
+                                        }
                                     Surface(
                                         shape = RoundedCornerShape(4.dp),
                                         color = badgeColor.copy(alpha = 0.15f),
@@ -299,10 +375,10 @@ fun ConnectionHistoryDialog(
                                     ) {
                                         Text(
                                             text =
-                                                if (isBlocked) {
-                                                    stringResource(R.string.logs_history_decision_blocked)
-                                                } else {
-                                                    stringResource(R.string.logs_history_decision_allowed)
+                                                when {
+                                                    isFailed -> stringResource(R.string.logs_history_decision_failed)
+                                                    isBlocked -> stringResource(R.string.logs_history_decision_blocked)
+                                                    else -> stringResource(R.string.logs_history_decision_allowed)
                                                 },
                                             style = MaterialTheme.typography.labelSmall,
                                             fontWeight = FontWeight.ExtraBold,

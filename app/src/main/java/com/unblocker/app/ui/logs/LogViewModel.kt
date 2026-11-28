@@ -27,6 +27,7 @@ enum class LogFilter(
     ALL(0),
     BLOCKED(1),
     ALLOWED(2),
+    FAILED(3),
 }
 
 /**

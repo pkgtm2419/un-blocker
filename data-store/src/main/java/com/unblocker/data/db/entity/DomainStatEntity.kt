@@ -18,7 +18,12 @@ import androidx.room.PrimaryKey
  * @property firstSeen First observation time in milliseconds since the Unix epoch.
  * @property lastSeen Latest supplied observation time in milliseconds since the Unix epoch.
  * @property lastDecision Latest decision code: 0 for allowed or 1 for blocked.
- * @property lastReason Latest app-defined reason code.
+ * @property lastReason Latest app-defined reason code (e.g., [DecisionReason.ordinal] or [DetectionMethod.ordinal]).
+ * @property lastOutcome Latest execution outcome ([OUTCOME_ALLOWED], [OUTCOME_BLOCKED], [OUTCOME_UPSTREAM_FAIL]).
+ * @property lastRule Matched rule pattern or host associated with the latest decision, when available.
+ * @property lastSource Matched list/policy attribution label associated with the latest decision.
+ * @property failCount Cumulative upstream resolution failures recorded for this domain.
+ * @property lastNetworkType Transport classification (`wifi`, `cellular`, `other`) when observed.
  */
 @Entity(
     tableName = "domain_stats",
@@ -45,4 +50,23 @@ data class DomainStatEntity(
     val lastDecision: Int,
     @ColumnInfo(name = "last_reason")
     val lastReason: Int,
-)
+    @ColumnInfo(name = "last_outcome", defaultValue = "0")
+    val lastOutcome: Int = OUTCOME_ALLOWED,
+    @ColumnInfo(name = "last_rule", defaultValue = "")
+    val lastRule: String = "",
+    @ColumnInfo(name = "last_source", defaultValue = "")
+    val lastSource: String = "",
+    @ColumnInfo(name = "fail_count", defaultValue = "0")
+    val failCount: Long = 0L,
+    @ColumnInfo(name = "last_network_type", defaultValue = "")
+    val lastNetworkType: String = "",
+) {
+    /**
+     * Execution outcome constants recorded in [lastOutcome].
+     */
+    companion object {
+        const val OUTCOME_ALLOWED: Int = 0
+        const val OUTCOME_BLOCKED: Int = 1
+        const val OUTCOME_UPSTREAM_FAIL: Int = 2
+    }
+}

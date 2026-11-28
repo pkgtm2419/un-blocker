@@ -2,6 +2,7 @@ package com.unblocker.app.data.logs
 
 import com.unblocker.app.services.VpnDiagnostics
 import com.unblocker.data.db.dao.DomainLogDao
+import com.unblocker.data.db.dao.DomainStatUpsert
 import com.unblocker.data.db.entity.DomainEventEntity
 import com.unblocker.data.db.entity.DomainStatEntity
 import kotlinx.coroutines.flow.Flow
@@ -22,6 +23,7 @@ class QueryLogSinkTest {
         private val throwOnInsertEvents: Boolean = false,
     ) : DomainLogDao {
         val upsertedStats = mutableListOf<String>()
+        val recordedUpserts = mutableListOf<DomainStatUpsert>()
         val insertedEvents = mutableListOf<DomainEventEntity>()
         var cleared = false
 
@@ -33,9 +35,30 @@ class QueryLogSinkTest {
             ts: Long,
             lastDecision: Int,
             lastReason: Int,
+            failDelta: Long,
+            lastOutcome: Int,
+            lastRule: String,
+            lastSource: String,
+            lastNetworkType: String,
         ) {
             if (throwOnUpsert) throw RuntimeException("Simulated SQLite write error")
             upsertedStats.add(domain)
+            recordedUpserts.add(
+                DomainStatUpsert(
+                    domain = domain,
+                    callDelta = callDelta,
+                    blockedDelta = blockedDelta,
+                    allowedDelta = allowedDelta,
+                    ts = ts,
+                    lastDecision = lastDecision,
+                    lastReason = lastReason,
+                    failDelta = failDelta,
+                    lastOutcome = lastOutcome,
+                    lastRule = lastRule,
+                    lastSource = lastSource,
+                    lastNetworkType = lastNetworkType,
+                ),
+            )
         }
 
         override suspend fun insertEvents(events: List<DomainEventEntity>) {
@@ -276,5 +299,41 @@ class QueryLogSinkTest {
                     fakeDao.prunedStatsCutoff!! in (before - expectedThirtyDays)..(after - expectedThirtyDays),
             )
             assertEquals(10_000, fakeDao.prunedStatsCap)
+        }
+
+    /**
+     * Verifies upstream resolution failures increment fail_count cleanly without inflating allowed/blocked counts.
+     */
+    @Test
+    fun testUpstreamFailIncrementsFailCountAndPreservesAttribution() =
+        runBlocking {
+            val fakeDao = FakeDomainLogDao()
+            QueryLogSink.init(fakeDao)
+
+            val batch =
+                listOf(
+                    QueryLogSink.LogItem(
+                        domain = "broken-upstream.example.com",
+                        decision = 0,
+                        reason = 10,
+                        ts = 5000L,
+                        generation = 1L,
+                        outcome = DomainStatEntity.OUTCOME_UPSTREAM_FAIL,
+                        matchedRule = "",
+                        sourceLabel = "upstream_dns",
+                        networkType = "wifi",
+                    ),
+                )
+            QueryLogSink.flushBatch(batch)
+
+            val upsert = fakeDao.recordedUpserts.single()
+            assertEquals("broken-upstream.example.com", upsert.domain)
+            assertEquals(1L, upsert.callDelta)
+            assertEquals(0L, upsert.allowedDelta)
+            assertEquals(0L, upsert.blockedDelta)
+            assertEquals(1L, upsert.failDelta)
+            assertEquals(DomainStatEntity.OUTCOME_UPSTREAM_FAIL, upsert.lastOutcome)
+            assertEquals("upstream_dns", upsert.lastSource)
+            assertEquals("wifi", upsert.lastNetworkType)
         }
 }

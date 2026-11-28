@@ -475,6 +475,30 @@ fun LogViewerScreen(
                                                 },
                                         ),
                                 )
+                                FilterChip(
+                                    selected = filter == LogFilter.FAILED,
+                                    onClick = { viewModel.setFilter(LogFilter.FAILED) },
+                                    label = { Text(stringResource(R.string.logs_filter_failed)) },
+                                    shape = CircleShape,
+                                    colors =
+                                        FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = Color(0x33F59E0B),
+                                            selectedLabelColor = Color(0xFFB45309),
+                                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        ),
+                                    border =
+                                        FilterChipDefaults.filterChipBorder(
+                                            enabled = true,
+                                            selected = filter == LogFilter.FAILED,
+                                            borderColor =
+                                                if (filter == LogFilter.FAILED) {
+                                                    Color(0xFFF59E0B)
+                                                } else {
+                                                    MaterialTheme.colorScheme.outlineVariant
+                                                },
+                                        ),
+                                )
                             }
 
                             // Sort toggle button
@@ -609,7 +633,12 @@ fun DomainStatCard(
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    StatusChip(blockedCount = stat.blockedCount, allowedCount = stat.allowedCount)
+                    StatusChip(
+                        blockedCount = stat.blockedCount,
+                        allowedCount = stat.allowedCount,
+                        failCount = stat.failCount,
+                        lastOutcome = stat.lastOutcome,
+                    )
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(
                         imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
@@ -719,8 +748,14 @@ fun DomainStatCard(
                         horizontalArrangement = Arrangement.End,
                     ) {
                         TextButton(
+                            onClick = { showHistoryPopup = true },
+                            modifier = Modifier.padding(end = 4.dp),
+                        ) {
+                            Text(stringResource(R.string.logs_action_why), color = MaterialTheme.colorScheme.primary)
+                        }
+                        TextButton(
                             onClick = onReset,
-                            modifier = Modifier.padding(end = 6.dp),
+                            modifier = Modifier.padding(end = 4.dp),
                         ) {
                             Text(stringResource(R.string.logs_action_reset), color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
@@ -755,19 +790,32 @@ fun DomainStatCard(
 }
 
 /**
- * Renders mixed, blocked, or allowed status from aggregate decision counts.
+ * Renders failed, mixed, blocked, or allowed status from aggregate decision counts and latest outcome.
  *
  * @param blockedCount Number of blocked observations.
- * @param allowedCount Number of allowed observations; both zero render the allowed label.
+ * @param allowedCount Number of allowed observations.
+ * @param failCount Number of upstream DNS resolution failures.
+ * @param lastOutcome Latest recorded outcome code.
  */
 @Composable
 fun StatusChip(
     blockedCount: Long,
     allowedCount: Long,
+    failCount: Long = 0L,
+    lastOutcome: Int = DomainStatEntity.OUTCOME_ALLOWED,
 ) {
     val isDark = isSystemInDarkTheme()
     val (label, backgroundColor, textColor) =
         when {
+            lastOutcome == DomainStatEntity.OUTCOME_UPSTREAM_FAIL ||
+                (failCount > 0L && blockedCount == 0L && allowedCount == 0L) -> {
+                Triple(
+                    stringResource(R.string.logs_filter_failed),
+                    if (isDark) Color(0x33F59E0B) else Color(0xFFFEF3C7),
+                    if (isDark) Color(0xFFFBBF24) else Color(0xFFB45309),
+                )
+            }
+
             blockedCount > 0 && allowedCount > 0 -> {
                 Triple(
                     stringResource(R.string.logs_filter_mixed),

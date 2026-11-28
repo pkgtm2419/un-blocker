@@ -75,6 +75,12 @@ object QueryLogSink {
      * @property reason Filtering reason code recorded with the latest decision.
      * @property ts Observation timestamp in Unix epoch milliseconds.
      * @property generation Clear-barrier generation captured when the item was queued.
+     * @property outcome Execution outcome code ([com.unblocker.data.db.entity.DomainStatEntity.OUTCOME_ALLOWED],
+     *   [com.unblocker.data.db.entity.DomainStatEntity.OUTCOME_BLOCKED], or
+     *   [com.unblocker.data.db.entity.DomainStatEntity.OUTCOME_UPSTREAM_FAIL]).
+     * @property matchedRule Matched rule pattern or host associated with this decision.
+     * @property sourceLabel List or policy attribution label.
+     * @property networkType Observed network transport label (`wifi`, `cellular`, `other`).
      */
     data class LogItem(
         val domain: String,
@@ -82,6 +88,10 @@ object QueryLogSink {
         val reason: Int,
         val ts: Long,
         val generation: Long = 1L,
+        val outcome: Int = decision,
+        val matchedRule: String = "",
+        val sourceLabel: String = "",
+        val networkType: String = "",
     )
 
     private val queue = ArrayBlockingQueue<LogItem>(QUEUE_CAPACITY)
@@ -175,6 +185,10 @@ object QueryLogSink {
         decision: Int,
         reason: Int,
         tsMillis: Long = System.currentTimeMillis(),
+        outcome: Int = decision,
+        matchedRule: String = "",
+        sourceLabel: String = "",
+        networkType: String = "",
     ) {
         if (isLoggingPaused.get()) return
         val normalized = DomainName.normalize(rawDomain) ?: return
@@ -188,6 +202,10 @@ object QueryLogSink {
                 reason = reason,
                 ts = tsMillis,
                 generation = generation,
+                outcome = outcome,
+                matchedRule = matchedRule,
+                sourceLabel = sourceLabel,
+                networkType = networkType,
             )
         if (!queue.offer(item)) {
             // Queue full: evict oldest entry to prevent latency spikes on the network loop
@@ -288,9 +306,14 @@ object QueryLogSink {
                 var calls: Long = 0,
                 var blocked: Long = 0,
                 var allowed: Long = 0,
+                var failed: Long = 0,
                 var latestTs: Long = 0,
                 var latestDecision: Int = 0,
                 var latestReason: Int = 0,
+                var latestOutcome: Int = 0,
+                var latestRule: String = "",
+                var latestSource: String = "",
+                var latestNetworkType: String = "",
             )
 
             val aggregated = HashMap<String, DomainAggregation>()
@@ -300,14 +323,28 @@ object QueryLogSink {
             for (item in validItems) {
                 val entry = aggregated.getOrPut(item.domain) { DomainAggregation() }
                 entry.calls++
-                if (item.decision == 1) entry.blocked++ else entry.allowed++
+                when (item.outcome) {
+                    com.unblocker.data.db.entity.DomainStatEntity.OUTCOME_UPSTREAM_FAIL -> entry.failed++
+                    com.unblocker.data.db.entity.DomainStatEntity.OUTCOME_BLOCKED -> entry.blocked++
+                    else -> if (item.decision == 1) entry.blocked++ else entry.allowed++
+                }
                 if (item.ts >= entry.latestTs) {
                     entry.latestTs = item.ts
                     entry.latestDecision = item.decision
                     entry.latestReason = item.reason
+                    entry.latestOutcome = item.outcome
+                    entry.latestRule = item.matchedRule
+                    entry.latestSource = item.sourceLabel
+                    entry.latestNetworkType = item.networkType
                 }
                 if (shouldStoreEvents) {
-                    events?.add(DomainEventEntity(domain = item.domain, ts = item.ts, decision = item.decision))
+                    val eventCode =
+                        if (item.outcome == com.unblocker.data.db.entity.DomainStatEntity.OUTCOME_UPSTREAM_FAIL) {
+                            com.unblocker.data.db.entity.DomainStatEntity.OUTCOME_UPSTREAM_FAIL
+                        } else {
+                            item.decision
+                        }
+                    events?.add(DomainEventEntity(domain = item.domain, ts = item.ts, decision = eventCode))
                 }
             }
 
@@ -321,6 +358,11 @@ object QueryLogSink {
                         ts = aggregation.latestTs,
                         lastDecision = aggregation.latestDecision,
                         lastReason = aggregation.latestReason,
+                        failDelta = aggregation.failed,
+                        lastOutcome = aggregation.latestOutcome,
+                        lastRule = aggregation.latestRule,
+                        lastSource = aggregation.latestSource,
+                        lastNetworkType = aggregation.latestNetworkType,
                     )
                 }
 

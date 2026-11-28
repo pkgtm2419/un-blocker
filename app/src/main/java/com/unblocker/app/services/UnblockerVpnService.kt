@@ -308,20 +308,31 @@ class UnblockerVpnService : VpnService() {
                             RecordingSessionManager.instance.recordDomain(wireQuery.domain)
                         }
                         val filterResult = filterEngine.analyzeAndFilter(wireQuery.domain)
-                        val wireDecision = if (filterResult.shouldBlock) 1 else 0
-                        com.unblocker.app.data.logs.QueryLogSink.record(
-                            wireQuery.domain,
-                            wireDecision,
-                            filterResult.detectionMethod.ordinal,
-                        )
                         if (filterResult.shouldBlock) {
+                            recordDecisionLog(
+                                domain = wireQuery.domain,
+                                filterResult = filterResult,
+                                outcome = com.unblocker.data.db.entity.DomainStatEntity.OUTCOME_BLOCKED,
+                            )
                             DnsPacketUtil.buildBlockedWireResponse(dnsWireBytes)
                         } else {
                             val cached = dnsCache.getValidated(wireQuery)
                             if (cached != null) {
-                                if (filterEngine.blockedAlias(wireQuery.domain, cached.metadata.aliases) != null) {
+                                val aliasBlocked = filterEngine.blockedAlias(wireQuery.domain, cached.metadata.aliases)
+                                if (aliasBlocked != null) {
+                                    recordDecisionLog(
+                                        domain = wireQuery.domain,
+                                        filterResult = filterResult,
+                                        outcome = com.unblocker.data.db.entity.DomainStatEntity.OUTCOME_BLOCKED,
+                                        ruleOverride = aliasBlocked,
+                                    )
                                     DnsPacketUtil.buildBlockedWireResponse(dnsWireBytes)
                                 } else {
+                                    recordDecisionLog(
+                                        domain = wireQuery.domain,
+                                        filterResult = filterResult,
+                                        outcome = com.unblocker.data.db.entity.DomainStatEntity.OUTCOME_ALLOWED,
+                                    )
                                     cached.bytes
                                 }
                             } else {
@@ -332,6 +343,12 @@ class UnblockerVpnService : VpnService() {
                                         code = VpnDiagnostics.FailureCode.UPSTREAM_TIMEOUT,
                                         exceptionClass = "NoResolversAvailable",
                                         resolverCount = 0,
+                                    )
+                                    recordDecisionLog(
+                                        domain = wireQuery.domain,
+                                        filterResult = filterResult,
+                                        outcome = com.unblocker.data.db.entity.DomainStatEntity.OUTCOME_UPSTREAM_FAIL,
+                                        sourceOverride = "upstream_dns",
                                     )
                                     return@TcpDnsResponder DnsPacketUtil.buildServfailWireResponse(dnsWireBytes)
                                 }
@@ -351,11 +368,22 @@ class UnblockerVpnService : VpnService() {
                                         },
                                     )
                                 if (response != null) {
-                                    if (filterEngine.blockedAlias(wireQuery.domain, response.metadata.aliases) !=
-                                        null
-                                    ) {
+                                    val aliasBlocked =
+                                        filterEngine.blockedAlias(wireQuery.domain, response.metadata.aliases)
+                                    if (aliasBlocked != null) {
+                                        recordDecisionLog(
+                                            domain = wireQuery.domain,
+                                            filterResult = filterResult,
+                                            outcome = com.unblocker.data.db.entity.DomainStatEntity.OUTCOME_BLOCKED,
+                                            ruleOverride = aliasBlocked,
+                                        )
                                         DnsPacketUtil.buildBlockedWireResponse(dnsWireBytes)
                                     } else {
+                                        recordDecisionLog(
+                                            domain = wireQuery.domain,
+                                            filterResult = filterResult,
+                                            outcome = com.unblocker.data.db.entity.DomainStatEntity.OUTCOME_ALLOWED,
+                                        )
                                         dnsCache.putValidated(wireQuery, response)
                                         response.bytes
                                     }
@@ -364,6 +392,12 @@ class UnblockerVpnService : VpnService() {
                                         code = VpnDiagnostics.FailureCode.UPSTREAM_TIMEOUT,
                                         exceptionClass = "UpstreamResolutionNull",
                                         resolverCount = resolvers.size,
+                                    )
+                                    recordDecisionLog(
+                                        domain = wireQuery.domain,
+                                        filterResult = filterResult,
+                                        outcome = com.unblocker.data.db.entity.DomainStatEntity.OUTCOME_UPSTREAM_FAIL,
+                                        sourceOverride = "upstream_dns",
                                     )
                                     DnsPacketUtil.buildServfailWireResponse(dnsWireBytes)
                                 }
@@ -415,14 +449,13 @@ class UnblockerVpnService : VpnService() {
                             RecordingSessionManager.instance.recordDomain(query.domain)
                         }
                         val result = filterEngine.analyzeAndFilter(query.domain)
-                        val queryDecision = if (result.shouldBlock) 1 else 0
-                        com.unblocker.app.data.logs.QueryLogSink.record(
-                            query.domain,
-                            queryDecision,
-                            result.detectionMethod.ordinal,
-                        )
 
                         if (result.shouldBlock) {
+                            recordDecisionLog(
+                                domain = query.domain,
+                                filterResult = result,
+                                outcome = com.unblocker.data.db.entity.DomainStatEntity.OUTCOME_BLOCKED,
+                            )
                             // Local blocked response.
                             val responsePacket = DnsPacketUtil.buildBlockedDnsResponsePacket(query)
                             responseWriter.offer(responsePacket)
@@ -433,10 +466,22 @@ class UnblockerVpnService : VpnService() {
                             if (cached != null) {
                                 val cachedPayload = cached.bytes
                                 val metadata = cached.metadata
+                                val aliasBlocked = filterEngine.blockedAlias(query.domain, metadata.aliases)
                                 val wrappedResponse =
-                                    if (filterEngine.blockedAlias(query.domain, metadata.aliases) != null) {
+                                    if (aliasBlocked != null) {
+                                        recordDecisionLog(
+                                            domain = query.domain,
+                                            filterResult = result,
+                                            outcome = com.unblocker.data.db.entity.DomainStatEntity.OUTCOME_BLOCKED,
+                                            ruleOverride = aliasBlocked,
+                                        )
                                         DnsPacketUtil.buildBlockedDnsResponsePacket(query)
                                     } else {
+                                        recordDecisionLog(
+                                            domain = query.domain,
+                                            filterResult = result,
+                                            outcome = com.unblocker.data.db.entity.DomainStatEntity.OUTCOME_ALLOWED,
+                                        )
                                         DnsPacketUtil.wrapClientResponse(query, cachedPayload)
                                     }
                                 responseWriter.offer(wrappedResponse)
@@ -453,10 +498,16 @@ class UnblockerVpnService : VpnService() {
                                 when (coalescer.attachOrLead(coalesceKey, query)) {
                                     DnsRequestCoalescer.JoinResult.Joined -> {
                                         VpnDiagnostics.recordCoalesced()
-                                        // Attached to active in-flight resolution; response delivered when leader completes
+                                        // Attached to active in-flight resolution; response & log delivered when leader completes
                                     }
 
                                     DnsRequestCoalescer.JoinResult.Overflow -> {
+                                        recordDecisionLog(
+                                            domain = query.domain,
+                                            filterResult = result,
+                                            outcome = com.unblocker.data.db.entity.DomainStatEntity.OUTCOME_UPSTREAM_FAIL,
+                                            sourceOverride = "upstream_dns",
+                                        )
                                         responseWriter.offer(DnsPacketUtil.buildServfailDnsResponsePacket(query))
                                     }
 
@@ -469,6 +520,7 @@ class UnblockerVpnService : VpnService() {
                                                     resolveAndForward(
                                                         run,
                                                         forwardingRequest,
+                                                        result,
                                                         responseWriter,
                                                         filterEngine,
                                                         resolverSnapshot,
@@ -478,6 +530,12 @@ class UnblockerVpnService : VpnService() {
                                                 } catch (e: Exception) {
                                                     val all = coalescer.complete(coalesceKey)
                                                     for (q in all) {
+                                                        recordDecisionLog(
+                                                            domain = q.domain,
+                                                            filterResult = result,
+                                                            outcome = com.unblocker.data.db.entity.DomainStatEntity.OUTCOME_UPSTREAM_FAIL,
+                                                            sourceOverride = "upstream_dns",
+                                                        )
                                                         responseWriter.offer(
                                                             DnsPacketUtil.buildServfailDnsResponsePacket(q),
                                                         )
@@ -497,6 +555,12 @@ class UnblockerVpnService : VpnService() {
                                                 resolverCount = resolverSnapshot.resolvers.size,
                                             )
                                             for (q in all) {
+                                                recordDecisionLog(
+                                                    domain = q.domain,
+                                                    filterResult = result,
+                                                    outcome = com.unblocker.data.db.entity.DomainStatEntity.OUTCOME_UPSTREAM_FAIL,
+                                                    sourceOverride = "upstream_dns",
+                                                )
                                                 val servfailPacket = DnsPacketUtil.buildServfailDnsResponsePacket(q)
                                                 responseWriter.offer(servfailPacket)
                                             }
@@ -551,9 +615,33 @@ class UnblockerVpnService : VpnService() {
         }
     }
 
+    @Volatile
+    private var activeNetworkType: String = ""
+
+    private fun recordDecisionLog(
+        domain: String,
+        filterResult: com.unblocker.app.data.model.FilterResult,
+        outcome: Int,
+        ruleOverride: String = "",
+        sourceOverride: String = "",
+    ) {
+        val decisionCode =
+            if (outcome == com.unblocker.data.db.entity.DomainStatEntity.OUTCOME_BLOCKED) 1 else 0
+        com.unblocker.app.data.logs.QueryLogSink.record(
+            rawDomain = domain,
+            decision = decisionCode,
+            reason = filterResult.reasonCode.ordinal,
+            outcome = outcome,
+            matchedRule = ruleOverride.ifBlank { filterResult.matchedRule },
+            sourceLabel = sourceOverride.ifBlank { filterResult.sourceLabel },
+            networkType = activeNetworkType,
+        )
+    }
+
     private fun resolveAndForward(
         run: TunnelRun,
         request: ForwardingDnsRequest,
+        filterResult: com.unblocker.app.data.model.FilterResult,
         responseWriter: TunResponseWriter,
         filterEngine: ContentFilterEngine,
         resolverSnapshot: ResolverRegistry.Snapshot,
@@ -579,6 +667,12 @@ class UnblockerVpnService : VpnService() {
                 )
                 val allQueries = coalescer.complete(coalesceKey)
                 for (q in allQueries) {
+                    recordDecisionLog(
+                        domain = q.domain,
+                        filterResult = filterResult,
+                        outcome = com.unblocker.data.db.entity.DomainStatEntity.OUTCOME_UPSTREAM_FAIL,
+                        sourceOverride = "upstream_dns",
+                    )
                     responseWriter.offer(DnsPacketUtil.buildServfailDnsResponsePacket(q))
                 }
                 return
@@ -605,6 +699,12 @@ class UnblockerVpnService : VpnService() {
                     resolverCount = resolvers.size,
                 )
                 for (q in allQueries) {
+                    recordDecisionLog(
+                        domain = q.domain,
+                        filterResult = filterResult,
+                        outcome = com.unblocker.data.db.entity.DomainStatEntity.OUTCOME_UPSTREAM_FAIL,
+                        sourceOverride = "upstream_dns",
+                    )
                     responseWriter.offer(DnsPacketUtil.buildServfailDnsResponsePacket(q))
                 }
                 return
@@ -612,19 +712,31 @@ class UnblockerVpnService : VpnService() {
             if (!isRunning.get() || !session.owns(run.owner)) return
 
             val aliasBlocked =
-                response.metadata.rcode == 0 &&
-                    filterEngine.blockedAlias(query.domain, response.metadata.aliases) != null
+                if (response.metadata.rcode == 0) {
+                    filterEngine.blockedAlias(query.domain, response.metadata.aliases)
+                } else {
+                    null
+                }
 
             for (q in allQueries) {
-                val wrappedResponse =
-                    if (aliasBlocked) {
-                        DnsPacketUtil.buildBlockedDnsResponsePacket(q)
-                    } else {
-                        DnsPacketUtil.wrapClientResponse(q, response.bytes)
-                    }
-                responseWriter.offer(wrappedResponse)
+                if (aliasBlocked != null) {
+                    recordDecisionLog(
+                        domain = q.domain,
+                        filterResult = filterResult,
+                        outcome = com.unblocker.data.db.entity.DomainStatEntity.OUTCOME_BLOCKED,
+                        ruleOverride = aliasBlocked,
+                    )
+                    responseWriter.offer(DnsPacketUtil.buildBlockedDnsResponsePacket(q))
+                } else {
+                    recordDecisionLog(
+                        domain = q.domain,
+                        filterResult = filterResult,
+                        outcome = com.unblocker.data.db.entity.DomainStatEntity.OUTCOME_ALLOWED,
+                    )
+                    responseWriter.offer(DnsPacketUtil.wrapClientResponse(q, response.bytes))
+                }
             }
-            if (!aliasBlocked) dnsCache.putValidated(query, response)
+            if (aliasBlocked == null) dnsCache.putValidated(query, response)
         } finally {
             VpnDiagnostics.forwardingActiveDecrement()
         }
@@ -637,11 +749,18 @@ class UnblockerVpnService : VpnService() {
             networkResolvers.update(network, linkProperties.dnsServers)
             if (network == connectivityManager.activeNetwork) {
                 updatePrivateDnsState(linkProperties)
+                activeNetworkType =
+                    when {
+                        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> "wifi"
+                        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> "cellular"
+                        else -> "other"
+                    }
             }
         } else {
             networkResolvers.remove(network)
             if (network == connectivityManager.activeNetwork) {
                 updatePrivateDnsState(null)
+                activeNetworkType = ""
             }
         }
     }

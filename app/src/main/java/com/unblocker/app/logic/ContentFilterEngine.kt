@@ -155,8 +155,35 @@ class ContentFilterEngine(
             reason = decision.reason,
             detectionMethod = method,
             confidence = decision.confidence,
+            reasonCode = decision.reasonCode,
+            matchedRule = decision.ruleValue.orEmpty(),
+            sourceLabel = resolveSourceLabel(decision),
         )
     }
+
+    private fun resolveSourceLabel(decision: com.unblocker.app.domain.model.BlockingDecision): String =
+        when (decision.reasonCode) {
+            com.unblocker.app.domain.model.DecisionReason.USER_ALLOW -> "user_allow"
+
+            com.unblocker.app.domain.model.DecisionReason.USER_BLOCK -> "user_block"
+
+            com.unblocker.app.domain.model.DecisionReason.PROTECTED -> "protected_domains"
+
+            com.unblocker.app.domain.model.DecisionReason.PAUSED -> "protection_paused"
+
+            com.unblocker.app.domain.model.DecisionReason.LEARNED_EVIDENCE -> "local_evidence"
+
+            com.unblocker.app.domain.model.DecisionReason.ADULT_STATIC,
+            com.unblocker.app.domain.model.DecisionReason.ADULT_TLD,
+            com.unblocker.app.domain.model.DecisionReason.ADULT_PATTERN,
+            -> "adult_filter"
+
+            com.unblocker.app.domain.model.DecisionReason.STATIC_RULE,
+            com.unblocker.app.domain.model.DecisionReason.ALLOWED,
+            -> decision.sourceId?.let { "list_$it" } ?: "bundled_filter"
+
+            else -> ""
+        }
 
     /**
      * Loads the optional installed off-heap rule file.

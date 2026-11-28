@@ -28,6 +28,11 @@ data class DomainStatUpsert(
     val ts: Long,
     val lastDecision: Int,
     val lastReason: Int,
+    val failDelta: Long = 0L,
+    val lastOutcome: Int = lastDecision,
+    val lastRule: String = "",
+    val lastSource: String = "",
+    val lastNetworkType: String = "",
 )
 
 /**
@@ -67,15 +72,26 @@ interface DomainLogDao {
      */
     @Query(
         """
-        INSERT INTO domain_stats (domain, call_count, blocked_count, allowed_count, first_seen, last_seen, last_decision, last_reason)
-        VALUES (:domain, :callDelta, :blockedDelta, :allowedDelta, :ts, :ts, :lastDecision, :lastReason)
+        INSERT INTO domain_stats (
+            domain, call_count, blocked_count, allowed_count, first_seen, last_seen,
+            last_decision, last_reason, last_outcome, last_rule, last_source, fail_count, last_network_type
+        )
+        VALUES (
+            :domain, :callDelta, :blockedDelta, :allowedDelta, :ts, :ts,
+            :lastDecision, :lastReason, :lastOutcome, :lastRule, :lastSource, :failDelta, :lastNetworkType
+        )
         ON CONFLICT(domain) DO UPDATE SET
             call_count = call_count + :callDelta,
             blocked_count = blocked_count + :blockedDelta,
             allowed_count = allowed_count + :allowedDelta,
             last_seen = :ts,
             last_decision = :lastDecision,
-            last_reason = :lastReason
+            last_reason = :lastReason,
+            last_outcome = :lastOutcome,
+            last_rule = :lastRule,
+            last_source = :lastSource,
+            fail_count = fail_count + :failDelta,
+            last_network_type = CASE WHEN :lastNetworkType != '' THEN :lastNetworkType ELSE last_network_type END
     """,
     )
     suspend fun upsertStat(
@@ -86,6 +102,11 @@ interface DomainLogDao {
         ts: Long,
         lastDecision: Int,
         lastReason: Int,
+        failDelta: Long = 0L,
+        lastOutcome: Int = lastDecision,
+        lastRule: String = "",
+        lastSource: String = "",
+        lastNetworkType: String = "",
     )
 
     /**
@@ -104,6 +125,11 @@ interface DomainLogDao {
                 ts = stat.ts,
                 lastDecision = stat.lastDecision,
                 lastReason = stat.lastReason,
+                failDelta = stat.failDelta,
+                lastOutcome = stat.lastOutcome,
+                lastRule = stat.lastRule,
+                lastSource = stat.lastSource,
+                lastNetworkType = stat.lastNetworkType,
             )
         }
     }
@@ -119,7 +145,7 @@ interface DomainLogDao {
     /**
      * Observes matching aggregates ordered by descending query count.
      *
-     * @param filter 0 selects all rows, 1 rows with blocks, 2 rows with allows.
+     * @param filter 0 selects all rows, 1 rows with blocks, 2 rows with allows, 3 rows with upstream failures.
      * @param query Nullable domain prefix used by SQLite LIKE, including any caller wildcard characters.
      * @param limit Maximum rows requested from SQLite.
      * @return Matching aggregates updated when the table changes.
@@ -127,7 +153,12 @@ interface DomainLogDao {
     @Query(
         """
         SELECT * FROM domain_stats
-        WHERE (:filter = 0 OR (:filter = 1 AND blocked_count > 0) OR (:filter = 2 AND allowed_count > 0))
+        WHERE (
+            :filter = 0
+            OR (:filter = 1 AND blocked_count > 0)
+            OR (:filter = 2 AND allowed_count > 0)
+            OR (:filter = 3 AND (fail_count > 0 OR last_outcome = 2))
+        )
           AND (:query IS NULL OR domain LIKE :query || '%')
         ORDER BY call_count DESC
         LIMIT :limit
@@ -142,7 +173,7 @@ interface DomainLogDao {
     /**
      * Observes matching aggregates ordered by descending last-seen time.
      *
-     * @param filter 0 selects all rows, 1 rows with blocks, 2 rows with allows.
+     * @param filter 0 selects all rows, 1 rows with blocks, 2 rows with allows, 3 rows with upstream failures.
      * @param query Nullable domain prefix used by SQLite LIKE, including any caller wildcard characters.
      * @param limit Maximum rows requested from SQLite.
      * @return Matching aggregates updated when the table changes.
@@ -150,7 +181,12 @@ interface DomainLogDao {
     @Query(
         """
         SELECT * FROM domain_stats
-        WHERE (:filter = 0 OR (:filter = 1 AND blocked_count > 0) OR (:filter = 2 AND allowed_count > 0))
+        WHERE (
+            :filter = 0
+            OR (:filter = 1 AND blocked_count > 0)
+            OR (:filter = 2 AND allowed_count > 0)
+            OR (:filter = 3 AND (fail_count > 0 OR last_outcome = 2))
+        )
           AND (:query IS NULL OR domain LIKE :query || '%')
         ORDER BY last_seen DESC
         LIMIT :limit

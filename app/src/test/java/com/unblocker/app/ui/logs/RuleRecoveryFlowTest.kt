@@ -84,6 +84,11 @@ class RuleRecoveryFlowTest {
             ts: Long,
             lastDecision: Int,
             lastReason: Int,
+            failDelta: Long,
+            lastOutcome: Int,
+            lastRule: String,
+            lastSource: String,
+            lastNetworkType: String,
         ) {}
 
         override suspend fun insertEvents(events: List<DomainEventEntity>) {}

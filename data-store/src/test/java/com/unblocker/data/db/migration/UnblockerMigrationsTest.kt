@@ -66,4 +66,34 @@ class UnblockerMigrationsTest {
         assertTrue(executedSql.any { it.contains("CREATE INDEX IF NOT EXISTS `index_user_rule_action_updated_at`") })
         assertTrue(executedSql.none { it.contains("DROP TABLE", ignoreCase = true) })
     }
+
+    /**
+     * Verifies that migration 3 to 4 adds WP-21 explainer and upstream failure columns non-destructively.
+     */
+    @Test
+    fun testMigration3To4AddsExplainerAndFailColumns() {
+        assertEquals(3, UnblockerMigrations.MIGRATION_3_4.startVersion)
+        assertEquals(4, UnblockerMigrations.MIGRATION_3_4.endVersion)
+
+        val executedSql = mutableListOf<String>()
+        val db =
+            Proxy.newProxyInstance(
+                SupportSQLiteDatabase::class.java.classLoader,
+                arrayOf(SupportSQLiteDatabase::class.java),
+            ) { _, method, args ->
+                if (method.name == "execSQL" && args != null && args.isNotEmpty()) {
+                    executedSql.add(args[0] as String)
+                }
+                null
+            } as SupportSQLiteDatabase
+
+        UnblockerMigrations.MIGRATION_3_4.migrate(db)
+
+        assertTrue(executedSql.any { it.contains("ADD COLUMN `last_outcome`") })
+        assertTrue(executedSql.any { it.contains("ADD COLUMN `last_rule`") })
+        assertTrue(executedSql.any { it.contains("ADD COLUMN `last_source`") })
+        assertTrue(executedSql.any { it.contains("ADD COLUMN `fail_count`") })
+        assertTrue(executedSql.any { it.contains("ADD COLUMN `last_network_type`") })
+        assertTrue(executedSql.none { it.contains("DROP TABLE", ignoreCase = true) })
+    }
 }

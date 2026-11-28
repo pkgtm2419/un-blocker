@@ -28,7 +28,7 @@ import com.unblocker.data.db.entity.WhitelistEntity
         DomainEventEntity::class,
         UserRuleEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 @TypeConverters(DateConverters::class)

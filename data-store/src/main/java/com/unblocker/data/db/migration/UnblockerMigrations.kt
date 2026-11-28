@@ -88,7 +88,21 @@ object UnblockerMigrations {
         }
 
     /**
+     * Adds `last_outcome`, `last_rule`, `last_source`, `fail_count`, and `last_network_type` to `domain_stats` (WP-21).
+     */
+    val MIGRATION_3_4 =
+        object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `domain_stats` ADD COLUMN `last_outcome` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE `domain_stats` ADD COLUMN `last_rule` TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE `domain_stats` ADD COLUMN `last_source` TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE `domain_stats` ADD COLUMN `fail_count` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE `domain_stats` ADD COLUMN `last_network_type` TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
+    /**
      * Explicit migration paths registered by the database provider.
      */
-    val ALL = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
+    val ALL = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
 }

@@ -397,6 +397,48 @@ class FilteringPreferences(
         _isQueryLoggingPaused.value = paused
     }
 
+    private val _isolatedSessionActive = MutableStateFlow(prefs.getBoolean(KEY_ISOLATED_SESSION_ACTIVE, false))
+
+    /**
+     * Whether an isolated Learn recording session was active; persisted solely to restore
+     * normal full-device VPN filtering after process death or unexpected crash.
+     */
+    val isolatedSessionActive: StateFlow<Boolean> = _isolatedSessionActive.asStateFlow()
+
+    private val _isolatedSessionPackage = MutableStateFlow(prefs.getString(KEY_ISOLATED_SESSION_PACKAGE, null))
+
+    /**
+     * Target package of an isolated Learn session, or null when inactive.
+     */
+    val isolatedSessionPackage: StateFlow<String?> = _isolatedSessionPackage.asStateFlow()
+
+    /**
+     * Persists and publishes whether an isolated Learn session is active.
+     *
+     * @param active True if an isolated Learn tunnel is running, false when restored to normal mode.
+     * @param targetPackage Target application package being learned, or null.
+     */
+    fun setIsolatedSession(
+        active: Boolean,
+        targetPackage: String? = null,
+    ) {
+        val pkg = if (active) targetPackage else null
+        prefs
+            .edit()
+            .putBoolean(KEY_ISOLATED_SESSION_ACTIVE, active)
+            .putString(KEY_ISOLATED_SESSION_PACKAGE, pkg)
+            .apply()
+        _isolatedSessionActive.value = active
+        _isolatedSessionPackage.value = pkg
+    }
+
+    /**
+     * Persists and publishes whether an isolated Learn session is active.
+     *
+     * @param active True if an isolated Learn tunnel is running, false when restored to normal mode.
+     */
+    fun setIsolatedSessionActive(active: Boolean) = setIsolatedSession(active, null)
+
     /**
      * Persisted preference keys and the application-scoped store accessor.
      */
@@ -415,6 +457,8 @@ class FilteringPreferences(
         private const val KEY_FILTERING_TIER = "filtering_tier"
         private const val KEY_PAUSED_UNTIL = "paused_until"
         private const val KEY_BLOCK_ANALYTICS_BREAKAGE = "block_analytics_breakage"
+        private const val KEY_ISOLATED_SESSION_ACTIVE = "isolated_session_active"
+        private const val KEY_ISOLATED_SESSION_PACKAGE = "isolated_session_package"
 
         @Volatile
         private var INSTANCE: FilteringPreferences? = null

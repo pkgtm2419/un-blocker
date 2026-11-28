@@ -85,6 +85,7 @@ Files matching `*Test.kt`; presence does not indicate tests passed.
 | `app/src/test/java/com/unblocker/app/services/TunnelDnsConfigTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/services/TunnelRunTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/services/UnblockerVpnServiceTest.kt` | unit |
+| `app/src/test/java/com/unblocker/app/services/VpnBuilderPolicyTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/services/VpnDiagnosticsTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/services/VpnRoutePolicyTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/services/VpnSessionStateTest.kt` | unit |

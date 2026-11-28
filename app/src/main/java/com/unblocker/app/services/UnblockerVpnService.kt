@@ -28,7 +28,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.net.InetAddress
 import java.util.concurrent.RejectedExecutionException
 
 /**
@@ -112,6 +111,13 @@ class UnblockerVpnService : VpnService() {
     override fun onCreate() {
         super.onCreate()
         preferences = FilteringPreferences.getInstance(this)
+        IsolatedSessionRecoveryPolicy.recoverOnStartup(
+            isolatedSessionWasActive = preferences.isolatedSessionActive.value,
+            protectionEnabled = preferences.protectionEnabled.value,
+            clearIsolatedState = { preferences.setIsolatedSession(false, null) },
+            stopRecordingSession = { RecordingSessionManager.instance.stopSession() },
+            stopService = { stopSelf() },
+        )
         connectivityManager = getSystemService(ConnectivityManager::class.java)
         connectivityManager.activeNetwork?.let { net ->
             refreshNetworkResolvers(net)
@@ -154,6 +160,15 @@ class UnblockerVpnService : VpnService() {
                 stopSelf(startId)
             }
             return START_NOT_STICKY
+        }
+        if (ACTION_REBUILD_TUNNEL == action) {
+            if (activeRun?.running?.get() == true) {
+                stopVpn(publishStopped = false)
+                startVpn(startId)
+            } else if (preferences.isolatedSessionActive.value) {
+                startVpn(startId)
+            }
+            return START_STICKY
         }
         if (ACTION_PAUSE_PROTECTION == action) {
             preferences.pauseProtection(5 * 60 * 1000L)
@@ -207,7 +222,6 @@ class UnblockerVpnService : VpnService() {
         try {
             // Asset loading, Keystore and migration stay off the main/foreground deadline path.
             val filterEngine = ContentFilterEngine(this, preferences = preferences)
-            val uidResolver = UidResolver(this)
             val builder =
                 Builder()
                     .setSession("Un-Blocker DNS Shield")
@@ -237,11 +251,20 @@ class UnblockerVpnService : VpnService() {
                 // Graceful fallback on devices with no IPv6 support
             }
 
-            // Exclude our own app process to avoid VPN routing loops
-            try {
-                builder.addDisallowedApplication(packageName)
-            } catch (_: Exception) {
-            }
+            // Application routing: in isolated Learn sessions, route ONLY target app without mixing allowed/disallowed lists
+            val activeLearnSession = RecordingSessionManager.instance.activeSession.value
+            val isolatedPkg =
+                if (preferences.isolatedSessionActive.value) {
+                    preferences.isolatedSessionPackage.value ?: activeLearnSession?.targetPackage
+                } else {
+                    null
+                }
+            VpnBuilderPolicy.applyToBuilder(
+                builder = builder,
+                ownPackage = packageName,
+                isolatedPackage = isolatedPkg,
+                excludedPackages = emptySet(),
+            )
 
             // Automatic Physical Network Tracking across Wi-Fi, 5G, and LTE switches
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -282,19 +305,7 @@ class UnblockerVpnService : VpnService() {
                         val wireQuery =
                             DnsPacketUtil.parseWireQuery(dnsWireBytes, isIpv6, clientIp) ?: return@TcpDnsResponder null
                         if (RecordingSessionManager.instance.isRecordingActive()) {
-                            try {
-                                val clientAddr = java.net.InetAddress.getByAddress(clientIp)
-                                val srcAddr = java.net.InetSocketAddress(clientAddr, 0)
-                                val dstAddr = java.net.InetSocketAddress(clientAddr, 53)
-                                val uid =
-                                    uidResolver.resolveUid(
-                                        android.system.OsConstants.IPPROTO_TCP,
-                                        srcAddr,
-                                        dstAddr,
-                                    )
-                                RecordingSessionManager.instance.recordDomain(wireQuery.domain, uid)
-                            } catch (_: Exception) {
-                            }
+                            RecordingSessionManager.instance.recordDomain(wireQuery.domain)
                         }
                         val filterResult = filterEngine.analyzeAndFilter(wireQuery.domain)
                         val wireDecision = if (filterResult.shouldBlock) 1 else 0
@@ -401,26 +412,7 @@ class UnblockerVpnService : VpnService() {
                         // Autonomous local analysis
                         if (!isRunning.get()) break
                         if (RecordingSessionManager.instance.isRecordingActive()) {
-                            try {
-                                val srcAddr =
-                                    java.net.InetSocketAddress(
-                                        java.net.InetAddress.getByAddress(query.srcIp),
-                                        query.srcPort,
-                                    )
-                                val dstAddr =
-                                    java.net.InetSocketAddress(
-                                        java.net.InetAddress.getByAddress(query.dstIp),
-                                        query.dstPort,
-                                    )
-                                val uid =
-                                    uidResolver.resolveUid(
-                                        android.system.OsConstants.IPPROTO_UDP,
-                                        srcAddr,
-                                        dstAddr,
-                                    )
-                                RecordingSessionManager.instance.recordDomain(query.domain, uid)
-                            } catch (_: Exception) {
-                            }
+                            RecordingSessionManager.instance.recordDomain(query.domain)
                         }
                         val result = filterEngine.analyzeAndFilter(query.domain)
                         val queryDecision = if (result.shouldBlock) 1 else 0
@@ -537,6 +529,10 @@ class UnblockerVpnService : VpnService() {
                 if (failed && session.owns(run.owner)) {
                     session.failed(run.owner)
                     preferences.setServiceRunning(false)
+                    if (preferences.isolatedSessionActive.value) {
+                        preferences.setIsolatedSession(false, null)
+                        RecordingSessionManager.instance.stopSession()
+                    }
                     stopSelf(run.startId)
                 }
             }
@@ -680,6 +676,8 @@ class UnblockerVpnService : VpnService() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
 
+        val isIsolated = preferences.isolatedSessionActive.value
+        val isolatedPkg = preferences.isolatedSessionPackage.value
         val isPaused = preferences.isPaused()
         val pauseIntent =
             Intent(this, UnblockerVpnService::class.java).apply {
@@ -693,14 +691,25 @@ class UnblockerVpnService : VpnService() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
         val pauseActionTitle = if (isPaused) "Resume" else "Pause 5m"
-        val statusText = if (isPaused) "Protection paused • Tap Resume to re-enable" else "Local DNS protection active • No telemetry"
+        val statusText =
+            when {
+                isIsolated -> "Learning $isolatedPkg • Other apps are not filtered"
+                isPaused -> "Protection paused • Tap Resume to re-enable"
+                else -> "Local DNS protection active • No telemetry"
+            }
+        val subText =
+            when {
+                isIsolated -> "Isolated Learn session • Max 10m"
+                isPaused -> "Paused"
+                else -> "On-device learning • No telemetry"
+            }
 
         return NotificationCompat
             .Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_blocker_notification)
-            .setContentTitle("unblocker")
+            .setContentTitle(if (isIsolated) "Un-Blocker (Isolated Learn)" else "unblocker")
             .setContentText(statusText)
-            .setSubText(if (isPaused) "Paused" else "On-device learning • No telemetry")
+            .setSubText(subText)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
             .setContentIntent(pendingIntent)
@@ -818,6 +827,11 @@ class UnblockerVpnService : VpnService() {
          * Intent action clearing the filtering pause.
          */
         const val ACTION_RESUME_PROTECTION = "com.unblocker.app.RESUME_PROTECTION"
+
+        /**
+         * Intent action requesting VPN tunnel rebuild (e.g. switching between normal and isolated Learn mode).
+         */
+        const val ACTION_REBUILD_TUNNEL = "com.unblocker.app.REBUILD_TUNNEL"
         private const val CHANNEL_ID = "unblocker_vpn_channel"
         private const val NOTIFICATION_ID = 1001
 
@@ -975,6 +989,22 @@ class UnblockerVpnService : VpnService() {
                     context.stopService(intent)
                     session.stop()
                 }
+            }
+        }
+
+        /**
+         * Rebuilds the active VPN tunnel to apply updated package routing rules (e.g. isolated Learn mode).
+         *
+         * @param context Context used to deliver the rebuild command.
+         */
+        fun rebuild(context: Context) {
+            val intent =
+                Intent(context, UnblockerVpnService::class.java).apply {
+                    action = ACTION_REBUILD_TUNNEL
+                }
+            try {
+                context.startService(intent)
+            } catch (_: Exception) {
             }
         }
     }

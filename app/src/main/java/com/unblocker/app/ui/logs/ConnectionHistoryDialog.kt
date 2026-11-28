@@ -5,6 +5,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,6 +24,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -57,11 +60,17 @@ import java.util.Locale
  * @param events Individual timestamped query events observed for the domain.
  * @param onDismiss Callback invoked when the user closes or dismisses the dialog.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ConnectionHistoryDialog(
     stat: DomainStatEntity,
     events: List<DomainEventEntity>,
     onDismiss: () -> Unit,
+    onAllow: (() -> Unit)? = null,
+    onBlock: (() -> Unit)? = null,
+    onAllowWholeSite: (() -> Unit)? = null,
+    onProtectDomain: (() -> Unit)? = null,
+    onReset: (() -> Unit)? = null,
 ) {
     val isDark = isSystemInDarkTheme()
     val fullDateFormat = remember { SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()) }
@@ -395,6 +404,76 @@ fun ConnectionHistoryDialog(
                                         thickness = 0.5.dp,
                                     )
                                 }
+                            }
+                        }
+                    }
+                }
+
+                if (onAllow != null || onBlock != null || onAllowWholeSite != null || onProtectDomain != null || onReset != null) {
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Text(
+                        text = stringResource(R.string.logs_detail_quick_actions_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(bottom = 8.dp),
+                    )
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        val allowTint = if (isDark) AllowedGreen else Color(0xFF047857)
+                        if (onAllow != null) {
+                            OutlinedButton(
+                                onClick = {
+                                    onAllow()
+                                    onDismiss()
+                                },
+                                border = BorderStroke(1.dp, allowTint),
+                            ) {
+                                Text(stringResource(R.string.logs_action_always_allow), color = allowTint)
+                            }
+                        }
+                        if (onAllowWholeSite != null) {
+                            OutlinedButton(
+                                onClick = {
+                                    onAllowWholeSite()
+                                    onDismiss()
+                                },
+                            ) {
+                                Text(stringResource(R.string.logs_detail_action_allow_site))
+                            }
+                        }
+                        if (onProtectDomain != null) {
+                            OutlinedButton(
+                                onClick = {
+                                    onProtectDomain()
+                                    onDismiss()
+                                },
+                            ) {
+                                Text(stringResource(R.string.logs_detail_action_protect_site))
+                            }
+                        }
+                        if (onBlock != null) {
+                            OutlinedButton(
+                                onClick = {
+                                    onBlock()
+                                    onDismiss()
+                                },
+                                border = BorderStroke(1.dp, AdBlockedRed),
+                            ) {
+                                Text(stringResource(R.string.logs_action_block_domain), color = AdBlockedRed)
+                            }
+                        }
+                        if (onReset != null) {
+                            TextButton(
+                                onClick = {
+                                    onReset()
+                                    onDismiss()
+                                },
+                            ) {
+                                Text(stringResource(R.string.logs_action_reset))
                             }
                         }
                     }

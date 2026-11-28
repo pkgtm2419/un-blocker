@@ -423,6 +423,20 @@
     <string name="excluded_apps_search_hint">Search installed apps or package name…</string>
     <string name="excluded_apps_empty">No matching launcher apps found.</string>
     <string name="excluded_apps_clear_all">Clear All</string>
+    <string name="logs_prune_expired_desc">Prune expired logs</string>
+    <string name="logs_selected_count">%1$d selected</string>
+    <string name="logs_select_all">Select all</string>
+    <string name="logs_clear_selection">Clear</string>
+    <string name="logs_batch_allow">Allow</string>
+    <string name="logs_batch_block">Block</string>
+    <string name="logs_batch_reset">Reset</string>
+    <string name="logs_detail_quick_actions_title">Quick Rule Actions</string>
+    <string name="logs_detail_action_allow_site">Allow whole site</string>
+    <string name="logs_detail_action_protect_site">Protect site</string>
+    <string name="logs_pause_desc">Pause Logging</string>
+    <string name="logs_resume_desc">Resume Logging</string>
+    <string name="logs_empty_all">No connections logged yet</string>
+    <string name="logs_empty_search">No matching domains found</string>
 
     <!-- Plural resources -->
     <plurals name="learn_domain_queries">

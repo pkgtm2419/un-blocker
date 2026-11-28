@@ -100,6 +100,7 @@ Files matching `*Test.kt`; presence does not indicate tests passed.
 | `app/src/test/java/com/unblocker/app/ui/learn/LearnApplyRulesTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/ui/learn/LearnCategorizerTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/ui/logs/DecisionExplainerTest.kt` | unit |
+| `app/src/test/java/com/unblocker/app/ui/logs/LogViewModelBatchTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/ui/logs/RuleRecoveryFlowTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/ui/logs/UserRuleActionTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/ui/model/LocalProtectionSummaryTest.kt` | unit |

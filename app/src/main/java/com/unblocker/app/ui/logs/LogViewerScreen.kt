@@ -5,7 +5,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,6 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Download
@@ -72,6 +74,7 @@ fun LogViewerScreen(
     val expandedDomain by viewModel.expandedDomain.collectAsState()
     val domainEvents by viewModel.domainEvents.collectAsState()
     val isLoggingPaused by viewModel.isLoggingPaused.collectAsState()
+    val selectedDomains by viewModel.selectedDomains.collectAsState()
 
     val totalDomains by viewModel.totalDomains.collectAsState()
     val totalCalls by viewModel.totalCalls.collectAsState()
@@ -224,7 +227,14 @@ fun LogViewerScreen(
                                     ) {
                                         Icon(
                                             imageVector = if (isLoggingPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
-                                            contentDescription = if (isLoggingPaused) "Resume Logging" else "Pause Logging",
+                                            contentDescription =
+                                                stringResource(
+                                                    if (isLoggingPaused) {
+                                                        R.string.logs_resume_desc
+                                                    } else {
+                                                        R.string.logs_pause_desc
+                                                    },
+                                                ),
                                             tint =
                                                 if (isLoggingPaused) {
                                                     Color(
@@ -258,6 +268,24 @@ fun LogViewerScreen(
                                             imageVector = Icons.Default.Download,
                                             contentDescription = stringResource(R.string.logs_export_csv),
                                             tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp),
+                                        )
+                                    }
+                                }
+                                Surface(
+                                    shape = CircleShape,
+                                    color = MaterialTheme.colorScheme.surfaceVariant,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                    modifier = Modifier.size(42.dp),
+                                ) {
+                                    IconButton(
+                                        onClick = { viewModel.pruneExpiredLogs() },
+                                        modifier = Modifier.fillMaxSize(),
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.CleaningServices,
+                                            contentDescription = stringResource(R.string.logs_prune_expired_desc),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.size(20.dp),
                                         )
                                     }
@@ -521,6 +549,64 @@ fun LogViewerScreen(
                 }
 
                 // Domain List Rows
+                if (selectedDomains.isNotEmpty()) {
+                    item {
+                        val visibleDomains = domainStats.take(150).map { it.domain }
+                        SkeuomorphicCard(shape = RoundedCornerShape(18.dp), elevation = 4.dp) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.logs_selected_count, selectedDomains.size),
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        TextButton(onClick = { viewModel.selectVisibleDomains(visibleDomains) }) {
+                                            Text(stringResource(R.string.logs_select_all))
+                                        }
+                                        TextButton(onClick = { viewModel.clearSelection() }) {
+                                            Text(stringResource(R.string.logs_clear_selection))
+                                        }
+                                    }
+                                }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    OutlinedButton(
+                                        onClick = { viewModel.batchAllowSelected() },
+                                        modifier = Modifier.weight(1f),
+                                    ) {
+                                        Text(stringResource(R.string.logs_batch_allow))
+                                    }
+                                    Button(
+                                        onClick = { viewModel.batchBlockSelected() },
+                                        colors =
+                                            ButtonDefaults.buttonColors(
+                                                containerColor = MaterialTheme.colorScheme.error,
+                                            ),
+                                        modifier = Modifier.weight(1f),
+                                    ) {
+                                        Text(stringResource(R.string.logs_batch_block), color = Color.White)
+                                    }
+                                    TextButton(
+                                        onClick = { viewModel.batchResetSelected() },
+                                    ) {
+                                        Text(stringResource(R.string.logs_batch_reset))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if (domainStats.isEmpty()) {
                     item {
                         Box(
@@ -531,13 +617,21 @@ fun LogViewerScreen(
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
-                                text = if (searchQuery.isEmpty()) "No connections logged yet" else "No matching domains found",
+                                text =
+                                    stringResource(
+                                        if (searchQuery.isEmpty()) {
+                                            R.string.logs_empty_all
+                                        } else {
+                                            R.string.logs_empty_search
+                                        },
+                                    ),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
                 } else {
+                    val selectionMode = selectedDomains.isNotEmpty()
                     items(domainStats.take(150), key = { it.domain }) { stat ->
                         DomainStatCard(
                             stat = stat,
@@ -547,6 +641,11 @@ fun LogViewerScreen(
                             onAllow = { viewModel.allowDomain(stat.domain) },
                             onBlock = { viewModel.blockDomain(stat.domain) },
                             onReset = { viewModel.resetDomain(stat.domain) },
+                            onAllowWholeSite = { viewModel.allowWholeSite(stat.domain) },
+                            onProtectDomain = { viewModel.protectDomain(stat.domain) },
+                            isSelected = selectedDomains.contains(stat.domain),
+                            selectionMode = selectionMode,
+                            onToggleSelect = { viewModel.toggleSelectDomain(stat.domain) },
                         )
                     }
                 }
@@ -573,6 +672,7 @@ fun LogViewerScreen(
  * @param onBlock Callback requesting an exact-domain block override.
  * @param onReset Callback requesting removal of the exact-domain override.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DomainStatCard(
     stat: DomainStatEntity,
@@ -582,6 +682,11 @@ fun DomainStatCard(
     onAllow: () -> Unit,
     onBlock: () -> Unit,
     onReset: () -> Unit = {},
+    onAllowWholeSite: () -> Unit = {},
+    onProtectDomain: () -> Unit = {},
+    isSelected: Boolean = false,
+    selectionMode: Boolean = false,
+    onToggleSelect: () -> Unit = {},
 ) {
     val resources = LocalResources.current
     val relativeTime =
@@ -602,13 +707,23 @@ fun DomainStatCard(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .clickable { onToggleExpand() },
+                    .combinedClickable(
+                        onClick = { if (selectionMode) onToggleSelect() else onToggleExpand() },
+                        onLongClick = onToggleSelect,
+                    ),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                if (selectionMode) {
+                    Checkbox(
+                        checked = isSelected,
+                        onCheckedChange = { onToggleSelect() },
+                        modifier = Modifier.padding(end = 4.dp),
+                    )
+                }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = stat.domain,
@@ -785,6 +900,11 @@ fun DomainStatCard(
             stat = stat,
             events = events,
             onDismiss = { showHistoryPopup = false },
+            onAllow = onAllow,
+            onBlock = onBlock,
+            onAllowWholeSite = onAllowWholeSite,
+            onProtectDomain = onProtectDomain,
+            onReset = onReset,
         )
     }
 }

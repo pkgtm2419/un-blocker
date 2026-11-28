@@ -92,6 +92,13 @@ class LogViewModel
          */
         val domainEvents: StateFlow<List<DomainEventEntity>> = _domainEvents.asStateFlow()
 
+        private val _selectedDomains = MutableStateFlow<Set<String>>(emptySet())
+
+        /**
+         * Currently selected readable domains for multi-select batch rule operations (WP-24 / F33).
+         */
+        val selectedDomains: StateFlow<Set<String>> = _selectedDomains.asStateFlow()
+
         private val _isLoggingPaused = MutableStateFlow(preferences.isQueryLoggingPaused.value)
 
         /**
@@ -234,6 +241,82 @@ class LogViewModel
                 QueryLogSink.clearHistoryAndBarrier()
                 _expandedDomain.value = null
                 _domainEvents.value = emptyList()
+                _selectedDomains.value = emptySet()
+            }
+        }
+
+        /**
+         * Triggers immediate enforcement of local event and aggregate retention limits.
+         */
+        fun pruneExpiredLogs() {
+            viewModelScope.launch {
+                QueryLogSink.pruneOldLogs()
+                _userMessage.value = "Expired logs pruned per retention policy"
+            }
+        }
+
+        /**
+         * Toggles inclusion of [domain] inside [selectedDomains] for batch actions.
+         */
+        fun toggleSelectDomain(domain: String) {
+            val updated = _selectedDomains.value.toMutableSet()
+            if (!updated.add(domain)) {
+                updated.remove(domain)
+            }
+            _selectedDomains.value = updated
+        }
+
+        /**
+         * Replaces [selectedDomains] with all currently displayed [domains].
+         */
+        fun selectVisibleDomains(domains: List<String>) {
+            _selectedDomains.value = domains.toSet()
+        }
+
+        /**
+         * Clears the current multi-select batch selection.
+         */
+        fun clearSelection() {
+            _selectedDomains.value = emptySet()
+        }
+
+        /**
+         * Applies exact-domain allow overrides across all domains in [selectedDomains].
+         */
+        fun batchAllowSelected() = batchSetRule(UserFeedback.ALLOW, "Allowed")
+
+        /**
+         * Applies exact-domain block overrides across all domains in [selectedDomains].
+         */
+        fun batchBlockSelected() = batchSetRule(UserFeedback.BLOCK, "Blocked")
+
+        /**
+         * Removes exact-domain overrides across all domains in [selectedDomains].
+         */
+        fun batchResetSelected() = batchSetRule(UserFeedback.NONE, "Reset")
+
+        private fun batchSetRule(
+            feedback: UserFeedback,
+            verb: String,
+        ) {
+            val targets = _selectedDomains.value.sorted()
+            if (targets.isEmpty()) return
+            viewModelScope.launch {
+                var applied = 0
+                var failed = 0
+                for (domain in targets) {
+                    when (userRuleGateway.set(domain, feedback)) {
+                        is RuleUpdateResult.Applied -> applied++
+                        is RuleUpdateResult.Failed -> failed++
+                    }
+                }
+                _selectedDomains.value = emptySet()
+                _userMessage.value =
+                    if (failed == 0) {
+                        "$verb $applied selected domains"
+                    } else {
+                        "$verb $applied domains ($failed skipped)"
+                    }
             }
         }
 

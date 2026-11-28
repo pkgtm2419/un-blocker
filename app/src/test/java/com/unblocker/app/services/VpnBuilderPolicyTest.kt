@@ -35,11 +35,11 @@ class VpnBuilderPolicyTest {
             target = target,
             ownPackage = "com.unblocker.app",
             isolatedPackage = null,
-            excludedPackages = setOf("com.bank.app", "com.unblocker.app", " "),
+            excludedPackages = setOf("com.bank.app", "com.lan.printer", "com.unblocker.app", " "),
         )
 
         assertTrue(target.allowed.isEmpty())
-        assertEquals(listOf("com.unblocker.app", "com.bank.app"), target.disallowed)
+        assertEquals(listOf("com.unblocker.app", "com.bank.app", "com.lan.printer"), target.disallowed)
     }
 
     @Test

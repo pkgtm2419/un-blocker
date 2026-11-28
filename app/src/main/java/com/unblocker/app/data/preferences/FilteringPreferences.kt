@@ -439,6 +439,51 @@ class FilteringPreferences(
      */
     fun setIsolatedSessionActive(active: Boolean) = setIsolatedSession(active, null)
 
+    private val ownPackageName: String = runCatching { context.packageName }.getOrNull().orEmpty()
+
+    private val _excludedPackages =
+        MutableStateFlow(
+            normalizeExcludedPackages(
+                raw = prefs.getStringSet(KEY_EXCLUDED_PACKAGES, emptySet()),
+                ownPackage = ownPackageName,
+            ),
+        )
+
+    /**
+     * Normalized package names bypassed from local VPN DNS interception during normal protection.
+     */
+    val excludedPackages: StateFlow<Set<String>> = _excludedPackages.asStateFlow()
+
+    /**
+     * Replaces the persisted excluded-application package set after validation and self-exclusion.
+     *
+     * @param packages Raw candidate application package names.
+     */
+    fun setExcludedPackages(packages: Set<String>) {
+        val normalized = normalizeExcludedPackages(packages, ownPackageName)
+        prefs.edit().putStringSet(KEY_EXCLUDED_PACKAGES, normalized.toSet()).apply()
+        _excludedPackages.value = normalized
+    }
+
+    /**
+     * Adds or removes a single application package from [excludedPackages].
+     *
+     * @param packageName Android application package identifier.
+     * @param excluded True to bypass local VPN DNS routing for [packageName]; false to re-enable filtering.
+     */
+    fun setPackageExcluded(
+        packageName: String,
+        excluded: Boolean,
+    ) {
+        val updated = _excludedPackages.value.toMutableSet()
+        if (excluded) {
+            updated.add(packageName)
+        } else {
+            updated.remove(packageName.trim())
+        }
+        setExcludedPackages(updated)
+    }
+
     /**
      * Persisted preference keys and the application-scoped store accessor.
      */
@@ -459,6 +504,28 @@ class FilteringPreferences(
         private const val KEY_BLOCK_ANALYTICS_BREAKAGE = "block_analytics_breakage"
         private const val KEY_ISOLATED_SESSION_ACTIVE = "isolated_session_active"
         private const val KEY_ISOLATED_SESSION_PACKAGE = "isolated_session_package"
+        private const val KEY_EXCLUDED_PACKAGES = "excluded_packages"
+        private val PACKAGE_NAME_REGEX = Regex("^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+$")
+
+        /**
+         * Validates and deduplicates candidate Android package names while never retaining [ownPackage].
+         */
+        fun normalizeExcludedPackages(
+            raw: Set<String>?,
+            ownPackage: String,
+        ): Set<String> {
+            if (raw.isNullOrEmpty()) return emptySet()
+            val cleanOwn = ownPackage.trim()
+            return raw
+                .asSequence()
+                .map { it.trim() }
+                .filter { pkg ->
+                    pkg.isNotEmpty() &&
+                        pkg != cleanOwn &&
+                        pkg.length <= 200 &&
+                        PACKAGE_NAME_REGEX.matches(pkg)
+                }.toSortedSet()
+        }
 
         @Volatile
         private var INSTANCE: FilteringPreferences? = null

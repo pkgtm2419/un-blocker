@@ -263,7 +263,7 @@ class UnblockerVpnService : VpnService() {
                 builder = builder,
                 ownPackage = packageName,
                 isolatedPackage = isolatedPkg,
-                excludedPackages = emptySet(),
+                excludedPackages = preferences.excludedPackages.value,
             )
 
             // Automatic Physical Network Tracking across Wi-Fi, 5G, and LTE switches

@@ -75,6 +75,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.unblocker.app.R
 import com.unblocker.app.data.preferences.FilteringPreferences
 import com.unblocker.app.services.QuickStartManager
+import com.unblocker.app.services.ServiceStatus
 import com.unblocker.app.services.SystemHardeningChecker
 import com.unblocker.app.services.UnblockerVpnService
 import com.unblocker.app.ui.adaptive.LocalWindowDimensions
@@ -154,6 +155,7 @@ fun SettingsScreen(
     val autoRestartOnBoot by preferences.autoRestartOnBoot.collectAsState()
     val healthCheckMinutes by preferences.healthCheckIntervalMinutes.collectAsState()
     val isQueryLoggingPaused by preferences.isQueryLoggingPaused.collectAsState()
+    val excludedPackages by preferences.excludedPackages.collectAsState()
 
     val isPrivateDnsActive by UnblockerVpnService.isPrivateDnsActive.collectAsState()
     val privateDnsServerName by UnblockerVpnService.privateDnsServerName.collectAsState()
@@ -165,6 +167,8 @@ fun SettingsScreen(
         }
     var showBeyondDnsDialog by remember { mutableStateOf(false) }
     var showClearConfirmDialog by remember { mutableStateOf(false) }
+    var showExcludedAppsDialog by remember { mutableStateOf(false) }
+    var excludedAppsModifiedWhileDialogOpen by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         UnblockerVpnService.checkPrivateDns(context)
@@ -265,6 +269,9 @@ fun SettingsScreen(
                             context.contentResolver.openInputStream(uri)?.use { ins ->
                                 backupViewModel.restoreBackup(ins)
                             } ?: error("Unreadable backup file")
+                        if (serviceStatus == ServiceStatus.RUNNING) {
+                            UnblockerVpnService.rebuild(context)
+                        }
                         Toast
                             .makeText(
                                 context,
@@ -329,6 +336,29 @@ fun SettingsScreen(
 
     if (showBeyondDnsDialog) {
         BeyondDnsHubDialog(onDismiss = { showBeyondDnsDialog = false })
+    }
+
+    if (showExcludedAppsDialog) {
+        ExcludedAppsDialog(
+            excludedPackages = excludedPackages,
+            onTogglePackage = { packageName, excluded ->
+                preferences.setPackageExcluded(packageName, excluded)
+                excludedAppsModifiedWhileDialogOpen = true
+            },
+            onClearAll = {
+                preferences.setExcludedPackages(emptySet())
+                excludedAppsModifiedWhileDialogOpen = true
+            },
+            onDismiss = {
+                showExcludedAppsDialog = false
+                if (excludedAppsModifiedWhileDialogOpen) {
+                    excludedAppsModifiedWhileDialogOpen = false
+                    if (serviceStatus == ServiceStatus.RUNNING) {
+                        UnblockerVpnService.rebuild(context)
+                    }
+                }
+            },
+        )
     }
 
     val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
@@ -512,7 +542,11 @@ fun SettingsScreen(
                             }
 
                             SettingsSection.RULES -> {
-                                RulesSectionContent(onNavigateToExceptions = onNavigateToExceptions)
+                                RulesSectionContent(
+                                    onNavigateToExceptions = onNavigateToExceptions,
+                                    excludedAppsCount = excludedPackages.size,
+                                    onManageExcludedApps = { showExcludedAppsDialog = true },
+                                )
                             }
 
                             SettingsSection.LEARNING -> {

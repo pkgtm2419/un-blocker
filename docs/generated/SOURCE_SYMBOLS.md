@@ -145,6 +145,8 @@ Only syntactically matched top-level class/interface/object declarations (not se
 | `app/src/main/java/com/unblocker/app/ui/adaptive/AdaptiveLayout.kt` | class | `WindowDimensions` |
 | `app/src/main/java/com/unblocker/app/ui/adaptive/AdaptiveLayout.kt` | class | `WindowWidthClass` |
 | `app/src/main/java/com/unblocker/app/ui/components/FloatingPillNavBar.kt` | class | `NavItem` |
+| `app/src/main/java/com/unblocker/app/ui/components/LauncherAppCatalog.kt` | class | `LauncherAppInfo` |
+| `app/src/main/java/com/unblocker/app/ui/components/LauncherAppCatalog.kt` | object | `LauncherAppCatalog` |
 | `app/src/main/java/com/unblocker/app/ui/exceptions/ExceptionsViewModel.kt` | class | `ExceptionTab` |
 | `app/src/main/java/com/unblocker/app/ui/exceptions/ExceptionsViewModel.kt` | class | `ExceptionsUiState` |
 | `app/src/main/java/com/unblocker/app/ui/exceptions/ExceptionsViewModel.kt` | class | `ExceptionsViewModel` |

@@ -44,6 +44,7 @@ data class SettingsBackupSnapshot(
     val customExtensions: List<CustomExtensionBackup>,
     val userRules: List<UserRuleBackup>,
     val myDomains: List<String>,
+    val excludedPackages: Set<String> = emptySet(),
 )
 
 /**
@@ -64,8 +65,10 @@ object SettingsBackupCodec {
     private const val MAX_CUSTOM_EXTENSIONS = 100
     private const val MAX_USER_RULES = 2_000
     private const val MAX_MY_DOMAINS = 500
+    private const val MAX_EXCLUDED_PACKAGES = 500
     private const val MAX_NAME_LEN = 120
     private const val MAX_URL_LEN = 512
+    private val PACKAGE_NAME_REGEX = Regex("^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+$")
 
     /**
      * Serializes [snapshot] into formatted UTF-8 JSON.
@@ -109,6 +112,7 @@ object SettingsBackupCodec {
                 "customExtensions" to customList,
                 "userRules" to rulesList,
                 "myDomains" to snapshot.myDomains,
+                "excludedPackages" to snapshot.excludedPackages.sorted(),
             )
         return PureJsonCodec.stringifyObject(root)
     }
@@ -231,6 +235,17 @@ object SettingsBackupCodec {
             }
         }
 
+        val excludedPackages = linkedSetOf<String>()
+        val excludedArray = PureJsonCodec.optArray(root, "excludedPackages")
+        if (excludedArray != null) {
+            for (rawItem in excludedArray.take(MAX_EXCLUDED_PACKAGES)) {
+                val pkg = (rawItem as? String).orEmpty().trim()
+                if (pkg.length <= 200 && PACKAGE_NAME_REGEX.matches(pkg)) {
+                    excludedPackages.add(pkg)
+                }
+            }
+        }
+
         return SettingsBackupSnapshot(
             adBlockingEnabled = PureJsonCodec.optBoolean(prefsObj, "adBlockingEnabled", true),
             adultBlockingEnabled = PureJsonCodec.optBoolean(prefsObj, "adultBlockingEnabled", true),
@@ -244,6 +259,7 @@ object SettingsBackupCodec {
             customExtensions = customExtensions,
             userRules = userRules,
             myDomains = myDomains.toList(),
+            excludedPackages = excludedPackages,
         )
     }
 

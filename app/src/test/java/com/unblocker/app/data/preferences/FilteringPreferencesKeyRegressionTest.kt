@@ -44,6 +44,7 @@ class FilteringPreferencesKeyRegressionTest {
         store.setFilteringTier(FilteringTier.COMPLETE)
         store.setBlockAnalyticsBreakage(false)
         store.setIsolatedSession(active = true, targetPackage = "com.example.app")
+        store.setExcludedPackages(setOf("com.example.bank"))
         store.pauseProtection(durationMs = 60_000L)
 
         val data = backingPrefs.snapshot()
@@ -61,6 +62,7 @@ class FilteringPreferencesKeyRegressionTest {
         assertFalse(data["block_analytics_breakage"] as Boolean)
         assertTrue(data["isolated_session_active"] as Boolean)
         assertEquals("com.example.app", data["isolated_session_package"])
+        assertEquals(setOf("com.example.bank"), data["excluded_packages"])
         assertTrue((data["paused_until"] as Long) > 0L)
     }
 

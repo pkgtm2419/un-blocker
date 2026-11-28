@@ -41,6 +41,7 @@ class SettingsBackupCodecTest {
                         UserRuleBackup("ads.example.net", UserRuleEntity.ACTION_BLOCK, isWholeSite = true),
                     ),
                 myDomains = listOf("bank.example.org"),
+                excludedPackages = setOf("com.example.bank", "org.example.printer"),
             )
 
         val encoded = SettingsBackupCodec.encode(original)
@@ -66,7 +67,8 @@ class SettingsBackupCodecTest {
                 { "domain": "not a domain!", "action": "BLOCK", "isWholeSite": false },
                 { "domain": "tracker.example.com", "action": "BLOCK", "isWholeSite": false }
               ],
-              "myDomains": ["bank.org", "bad domain"]
+              "myDomains": ["bank.org", "bad domain"],
+              "excludedPackages": ["com.example.ok", "not a package!"]
             }
             """.trimIndent()
 
@@ -74,6 +76,7 @@ class SettingsBackupCodecTest {
         assertEquals(listOf("custom_3"), decoded.customExtensions.map { it.id })
         assertEquals(listOf("tracker.example.com"), decoded.userRules.map { it.domain })
         assertEquals(listOf("bank.org"), decoded.myDomains)
+        assertEquals(setOf("com.example.ok"), decoded.excludedPackages)
 
         val hugeBytes = ("{\"version\":1,\"preferences\":{},\"pad\":\"" + "a".repeat(1_050_000) + "\"}").toByteArray()
         val oversized = runCatching { SettingsBackupCodec.decode(ByteArrayInputStream(hugeBytes)) }

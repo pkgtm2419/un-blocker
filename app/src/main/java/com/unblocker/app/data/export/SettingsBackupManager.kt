@@ -71,6 +71,7 @@ class SettingsBackupManager
                         customExtensions = customExtensions,
                         userRules = rules,
                         myDomains = myDomainsStore.domains.value.sorted(),
+                        excludedPackages = preferences.excludedPackages.value,
                     )
                 val encoded = SettingsBackupCodec.encode(snapshot)
                 OutputStreamWriter(outputStream, Charsets.UTF_8).use { writer ->
@@ -94,6 +95,7 @@ class SettingsBackupManager
                 preferences.setHealthCheckIntervalMinutes(snapshot.healthCheckIntervalMinutes)
                 preferences.setBlockAnalyticsBreakage(snapshot.blockAnalyticsBreakage)
                 preferences.setQueryLoggingPaused(snapshot.isQueryLoggingPaused)
+                preferences.setExcludedPackages(snapshot.excludedPackages)
 
                 extensionRepository.restoreSelection(snapshot.enabledExtensionIds, snapshot.customExtensions)
 

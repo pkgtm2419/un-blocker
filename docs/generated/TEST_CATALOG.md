@@ -21,6 +21,7 @@ Files matching `*Test.kt`; presence does not indicate tests passed.
 | `app/src/test/java/com/unblocker/app/data/logs/QueryLogSinkTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/data/model/ExtensionFilterTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/data/model/ExtensionPresetTest.kt` | unit |
+| `app/src/test/java/com/unblocker/app/data/preferences/ExcludedPackagesPreferenceTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/data/preferences/FilteringPreferencesKeyRegressionTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/data/repository/BoundedFilterDownloaderTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/data/repository/DeviceUserRuleGatewaySyncTest.kt` | unit |

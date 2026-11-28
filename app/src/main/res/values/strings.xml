@@ -414,6 +414,15 @@
     <string name="about_title">About Un-Blocker</string>
     <string name="about_privacy_detail">Un-Blocker inspects only DNS queries locally through Android\'s VpnService interface without inspecting HTTPS bodies or transmitting telemetry off your phone.</string>
     <string name="about_github_license">GitHub Repository &amp; Apache-2.0 License</string>
+    <string name="settings_excluded_apps_title">Excluded Apps (Split-Tunnel)</string>
+    <string name="settings_excluded_apps_count_badge">%1$d bypassed</string>
+    <string name="settings_excluded_apps_desc">Bypass the local DNS tunnel for trusted apps such as banking or LAN tools. Ignored while isolated app learning is active.</string>
+    <string name="settings_excluded_apps_button">Manage Excluded Apps</string>
+    <string name="excluded_apps_dialog_title">Excluded Apps</string>
+    <string name="excluded_apps_dialog_desc">Selected apps bypass local DNS filtering in normal mode. Changes apply cleanly to the active VPN tunnel when closed.</string>
+    <string name="excluded_apps_search_hint">Search installed apps or package name…</string>
+    <string name="excluded_apps_empty">No matching launcher apps found.</string>
+    <string name="excluded_apps_clear_all">Clear All</string>
 
     <!-- Plural resources -->
     <plurals name="learn_domain_queries">

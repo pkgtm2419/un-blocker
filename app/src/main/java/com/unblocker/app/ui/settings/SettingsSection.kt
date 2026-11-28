@@ -68,7 +68,7 @@ enum class SettingsSection(
         titleRes = R.string.settings_section_rules_title,
         subtitleRes = R.string.settings_section_rules_subtitle,
         icon = Icons.AutoMirrored.Filled.Rule,
-        searchKeywords = listOf("exceptions", "allowlist", "whitelist", "blacklist", "custom", "domains"),
+        searchKeywords = listOf("exceptions", "allowlist", "whitelist", "blacklist", "custom", "domains", "excluded", "apps", "split", "bypass", "packages"),
     ),
     LEARNING(
         slug = "learning",

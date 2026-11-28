@@ -6,7 +6,7 @@ This is a syntactic inventory, **not runtime reachability analysis**.
 
 | Module | Production Kotlin files | Unit `*Test.kt` | Instrumentation `*Test.kt` | Build file |
 | --- | ---: | ---: | ---: | --- |
-| `:app` | 120 | 96 | 7 | `app/build.gradle.kts` |
+| `:app` | 122 | 97 | 7 | `app/build.gradle.kts` |
 | `:common` | 5 | 0 | 0 | `common/build.gradle.kts` |
 | `:data-store` | 21 | 2 | 0 | `data-store/build.gradle.kts` |
 | `:ml-engine` | 8 | 0 | 0 | `ml-engine/build.gradle.kts` |

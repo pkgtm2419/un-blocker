@@ -1,0 +1,22 @@
+v2.7.2 (versionCode 38) — System integrations and automation
+
+New in this release:
+• Quick Settings tile: toggle or pause protection from your notification shade
+• Home-screen widget: live status, start/stop toggle, and 5-minute pause button
+• Static launcher shortcuts: Home, Logs, Learn, and Exceptions
+• Opt-in broadcast automation with token authentication (Tasker-compatible)
+• Hide from recent apps toggle (Privacy & data settings)
+• Per-app split-tunnel exclusions — choose apps whose DNS traffic is not filtered
+• Logs: long-press multi-select for batch Allow / Block / Reset; inline Quick Rule actions in domain detail
+• Decision explainer ("Why?"): every blocked or allowed row now shows the matched rule and source list
+• Export v2: CSV with rule attribution columns; JSON export; settings backup and restore
+• Exceptions screen: list, search, test, and remove your allow / block exceptions
+• Modular searchable Settings with 9 focused sections
+• Jetpack Navigation Compose with validated unblocker:// deep links
+• Android 16 target SDK 36, Compose BOM 2026.09.00, Room 2.8.5, Kotlin 2.4.21
+
+Bug fixes and hardening:
+• Isolated per-app Learn recording — other apps are excluded from the tunnel during a session
+• Learn review defaults: nothing pre-selected; ad-domain Allow requires explicit confirmation
+• Auto-restart protection after app updates (MY_PACKAGE_REPLACED)
+• Honest UPSTREAM_FAIL status: upstream DNS timeouts recorded separately from allowed traffic

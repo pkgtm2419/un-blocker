@@ -47,6 +47,7 @@
 | F36 | Standard `RemoteViews` Homescreen Widget | `ProtectionWidgetProvider.kt`, `res/layout/widget_protection.xml`, `res/xml/protection_widget_info.xml` | Pure Android `RemoteViews` (zero Glance dependency) with live status label, start/stop toggle, and 5-minute pause/resume actions | 2026-11-29 |
 | F37 | Opt-in Token-Authenticated Broadcast Automation | `AutomationReceiver.kt`, `AutomationPolicy.kt`, `SettingsScreen.kt` | Unit-tested (`AutomationCommandPolicyTest`); disabled by default, requires random local hex token compared with `MessageDigest.isEqual`, respects VPN consent, and excludes token from backups | 2026-11-29 |
 | F38 | Hide from Recents & pause countdown notification polish | `MainActivity.kt`, `UnblockerVpnService.kt`, `FilteringPreferences.kt` | Applies `setExcludeFromRecents` dynamically from Privacy settings and shows remaining pause minutes in ongoing service notifications | 2026-11-29 |
+| F39 | F-Droid / IzzyOnDroid distribution readiness | `fastlane/metadata/android/en-US/`, `fastlane/Fastfile`, `fastlane/Appfile`, `docs/FDROID_SUBMISSION.md` | Fastlane standard metadata (title, descriptions, changelog versionCode 38), draft fdroiddata YAML, anti-feature review, proprietary-dependency scan instructions; reproducible-build check: NOT RUN (owner action required) | 2026-11-29 |
 
 ## Change tracking contract
 

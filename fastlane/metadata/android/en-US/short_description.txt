@@ -1,0 +1,1 @@
+Local DNS blocker — 100% on-device, zero cloud, zero telemetry.

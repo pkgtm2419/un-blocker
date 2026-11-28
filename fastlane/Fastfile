@@ -1,0 +1,46 @@
+# Un-Blocker Fastfile
+# Requires fastlane >= 2.220 and a working JDK 17+ on PATH.
+# Signing: set KEYSTORE_PATH, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD environment variables
+# for the release lane. Never commit credentials here.
+
+default_platform(:android)
+
+platform :android do
+  desc "Run all JVM unit tests"
+  lane :test do
+    gradle(
+      task: "testDebugUnitTest",
+      flags: "--no-daemon",
+    )
+  end
+
+  desc "Run lint on the debug variant"
+  lane :lint do
+    gradle(
+      task: "lintDebug",
+      flags: "--no-daemon",
+    )
+  end
+
+  desc "Assemble a debug APK"
+  lane :build_debug do
+    gradle(
+      task: "assembleDebug",
+      flags: "--no-daemon",
+    )
+  end
+
+  desc "Assemble a signed release APK (requires signing env vars)"
+  lane :build_release do
+    gradle(
+      task: "assembleRelease",
+      flags: "--no-daemon",
+      properties: {
+        "android.injected.signing.store.file"     => ENV["KEYSTORE_PATH"],
+        "android.injected.signing.store.password" => ENV["KEYSTORE_PASSWORD"],
+        "android.injected.signing.key.alias"      => ENV["KEY_ALIAS"],
+        "android.injected.signing.key.password"   => ENV["KEY_PASSWORD"],
+      },
+    )
+  end
+end

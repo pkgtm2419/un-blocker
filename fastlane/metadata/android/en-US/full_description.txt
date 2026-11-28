@@ -1,0 +1,34 @@
+Un-Blocker is a local-first Android DNS filter that inspects intercepted DNS traffic through the Android VpnService API — without proxying, intercepting TLS, or installing user certificate authorities.
+
+Every DNS query is evaluated in memory on your device using advertising, tracking, and optional adult-content domain rule lists. Nothing leaves your phone.
+
+**How it works**
+Un-Blocker intercepts DNS traffic (port 53) via the Android VPN framework. Matching domain names receive a synthesised NXDOMAIN response, stopping the app from contacting the blocked server. Non-matching queries are forwarded to your existing system resolvers.
+
+**Privacy guarantees**
+• Zero telemetry — no analytics SDK, no crash reporter, no account system.
+• Zero cloud — all filtering happens on-device; rule lists are downloaded once and cached locally.
+• DNS query history is never uploaded, logged to Logcat in readable form, or shared with any service.
+• Domain statistics are stored in an encrypted on-device database with configurable 30-day retention.
+• Settings backups exclude all sensitive data (Keystore keys, raw domain logs).
+
+**Features**
+• SMART / STRICT / ESSENTIAL / CUSTOM filtering modes with configurable tiers
+• Optional adult-content filter
+• Exceptions: allow or block specific domains; test a domain to see the decision and reason
+• Per-app split-tunnel exclusions — exclude chosen apps from DNS filtering
+• Learn an app: isolated one-app VPN session to review and approve its DNS traffic
+• Decision explainer ("Why?") — see which rule and list matched each blocked or allowed query
+• Export logs as CSV or JSON; settings backup and restore via SAF
+• Quick Settings tile, home-screen widget, and static launcher shortcuts
+• Opt-in token-authenticated broadcast automation (compatible with Tasker)
+• System hardening checklist: Private DNS leak detection, battery optimisation exemption
+• Auto-restart after device boot and after app updates
+• Hide from recent apps (optional privacy toggle)
+• Pause protection for 5 minutes with countdown notification
+
+**What it does not do**
+Un-Blocker is a DNS filter, not an anonymity VPN. It does not intercept HTTPS, install user CAs, provide WireGuard tunnelling, or claim to block ads delivered over the same domain as first-party content (e.g. YouTube in-stream ads).
+
+**Open source**
+Un-Blocker is published under the Apache 2.0 license. Source code and detailed documentation are available on GitHub.

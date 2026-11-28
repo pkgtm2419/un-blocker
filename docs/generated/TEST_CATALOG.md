@@ -62,6 +62,7 @@ Files matching `*Test.kt`; presence does not indicate tests passed.
 | `app/src/test/java/com/unblocker/app/quality/CoverageReportTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/quality/RuntimeInferenceAvailabilityTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/quality/SeedListProvenanceTest.kt` | unit |
+| `app/src/test/java/com/unblocker/app/receivers/BootReceiverTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/regression/PrimaryHostsRegressionTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/responsive/ResponsiveLayoutTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/rules/CnamePolicyTest.kt` | unit |

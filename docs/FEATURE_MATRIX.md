@@ -33,6 +33,7 @@
 | F22 | Curated Filter Presets Engine | `ExtensionPreset.kt`, `ExtensionRepository.kt`, `ExtensionsScreen.kt` | Source-observed; Essential, Recommended, Aggressive presets with dynamic OEM auto-detection | 2026-11-19 |
 | F23 | System Leak & Hardening Checklist | `SystemHardeningChecker.kt`, `SystemHardeningWizard.kt` | Source-observed; interactive battery, Private DNS, Always-On VPN and Ad ID checklist | 2026-11-19 |
 | F24 | Beyond DNS Companion Hub | `BeyondDnsHubDialog.kt`, `SettingsScreen.kt`, `COMPREHENSIVE_AD_BLOCKING_GUIDE.md` | Source-observed; in-app defense-in-depth guidance for stream ads & cosmetic filtering | 2026-11-19 |
+| F25 | App-update VPN restart (`MY_PACKAGE_REPLACED`) | `BootReceiver.kt`, `AndroidManifest.xml`, `BootPolicy` in `VpnSessionState.kt` | Unit-tested in `BootReceiverTest`; requires existing VPN consent and honors `autoRestartOnBoot`/`protectionEnabled`; `adb install -r` device test: NOT RUN | 2026-11-28 |
 
 ## Change tracking contract
 

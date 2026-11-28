@@ -12,6 +12,14 @@ Versioning follows the `versionName` / `versionCode` declared in `app/build.grad
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+- **App-Update Protection Restart (WP-01 / F25)**: Added `android.intent.action.MY_PACKAGE_REPLACED` handling to `BootReceiver` (non-exported) and `BootPolicy` so VPN protection automatically resumes after APK upgrades when `autoRestartOnBoot`, `protectionEnabled`, and existing VPN consent are present.
+
+---
+
 ## [2.7.2] — 2026-11-20 (versionCode 38)
 
 ### Comprehensive Ad-Blocking & System Hardening

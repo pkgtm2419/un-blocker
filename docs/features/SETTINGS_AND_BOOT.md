@@ -11,9 +11,9 @@
 
 ## Current functional contract and verification
 
-Settings include ad/adult toggles, `SMART`/`APPROVED_ONLY`, `BASIC`/`OPTIMAL`/`COMPLETE`, boot intent, health cadence, query-log paused state and 5-minute pause. Startup applies bundled `default_config.json` on first initialization. Android may deny/revoke VPN consent, notification or boot-start capability; service actual state must be reflected without false optimism.
+Settings include ad/adult toggles, `SMART`/`APPROVED_ONLY`, `BASIC`/`OPTIMAL`/`COMPLETE`, boot intent, health cadence, query-log paused state and 5-minute pause. Startup applies bundled `default_config.json` on first initialization. `BootReceiver` handles `BOOT_COMPLETED`, `QUICKBOOT_POWERON`, and `MY_PACKAGE_REPLACED` while staying `android:exported="false"`, honoring `autoRestartOnBoot`, `protectionEnabled`, and existing prior VPN consent (`VpnService.prepare(context) == null` — never prompting from a receiver). Android may deny/revoke VPN consent, notification, background FGS or boot-start capability; service actual state must be reflected without false optimism.
 
-**Regressions:** first install vs upgrade settings, toggles do not unexpectedly stop service, pause expiry, reboot with consent, force-stop, OEM restriction, health checks use synthetic domains and must not train persistent learner.
+**Regressions:** first install vs upgrade settings, toggles do not unexpectedly stop service, pause expiry, reboot with consent, app-update replacement (`MY_PACKAGE_REPLACED` — unit tested in `BootReceiverTest`; device `adb install -r` check: `NOT RUN`), force-stop, OEM restriction, health checks use synthetic domains and must not train persistent learner.
 
 ## Maintaining this page
 

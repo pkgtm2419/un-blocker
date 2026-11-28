@@ -57,6 +57,7 @@ Files matching `*Test.kt`; presence does not indicate tests passed.
 | `app/src/test/java/com/unblocker/app/privacy/PrivateEvidenceStoreTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/privacy/PrivateReputationStoreTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/privacy/ReviewPrivacyRegressionTest.kt` | unit |
+| `app/src/test/java/com/unblocker/app/quality/AdHostsMustBlockTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/quality/BlockingRegressionCorpusTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/quality/CoverageReportTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/quality/RuntimeInferenceAvailabilityTest.kt` | unit |

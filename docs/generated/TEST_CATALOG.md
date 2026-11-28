@@ -11,6 +11,7 @@ Files matching `*Test.kt`; presence does not indicate tests passed.
 | `app/src/androidTest/java/com/unblocker/app/VpnNetworkRegressionTest.kt` | instrumentation |
 | `app/src/androidTest/java/com/unblocker/app/ui/MainScreenNavigationTest.kt` | instrumentation |
 | `app/src/androidTest/java/com/unblocker/app/ui/PseudoLocaleRenderTest.kt` | instrumentation |
+| `app/src/androidTest/java/com/unblocker/app/ui/SettingsIaNavigationTest.kt` | instrumentation |
 | `app/src/test/java/com/unblocker/app/analysis/EvidenceLearningTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/analysis/LearnerIntegrationTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/analysis/PublicSuffixRulesTest.kt` | unit |
@@ -18,6 +19,7 @@ Files matching `*Test.kt`; presence does not indicate tests passed.
 | `app/src/test/java/com/unblocker/app/data/logs/QueryLogSinkTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/data/model/ExtensionFilterTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/data/model/ExtensionPresetTest.kt` | unit |
+| `app/src/test/java/com/unblocker/app/data/preferences/FilteringPreferencesKeyRegressionTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/data/repository/BoundedFilterDownloaderTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/data/repository/ExtensionPresetApplicationTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/data/repository/ExtensionRepositoryTest.kt` | unit |
@@ -101,6 +103,7 @@ Files matching `*Test.kt`; presence does not indicate tests passed.
 | `app/src/test/java/com/unblocker/app/ui/navigation/DeepLinkParserTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/ui/navigation/NavGraphTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/ui/navigation/NavigationAndSettingsTest.kt` | unit |
+| `app/src/test/java/com/unblocker/app/ui/settings/SettingsSectionCatalogTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/ui/theme/VpnStateColorsTest.kt` | unit |
 | `data-store/src/test/java/com/unblocker/data/cache/RuleCompilerTest.kt` | unit |
 | `data-store/src/test/java/com/unblocker/data/db/migration/UnblockerMigrationsTest.kt` | unit |

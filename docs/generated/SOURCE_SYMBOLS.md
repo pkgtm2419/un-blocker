@@ -159,6 +159,9 @@ Only syntactically matched top-level class/interface/object declarations (not se
 | `app/src/main/java/com/unblocker/app/ui/navigation/UnblockerNavigation.kt` | interface | `DeepLinkResult` |
 | `app/src/main/java/com/unblocker/app/ui/navigation/UnblockerNavigation.kt` | object | `DeepLinkParser` |
 | `app/src/main/java/com/unblocker/app/ui/navigation/UnblockerNavigation.kt` | object | `UnblockerDestinations` |
+| `app/src/main/java/com/unblocker/app/ui/settings/SettingsSection.kt` | class | `SettingsSectionGroup` |
+| `app/src/main/java/com/unblocker/app/ui/settings/SettingsSection.kt` | class | `SettingsSection` |
+| `app/src/main/java/com/unblocker/app/ui/settings/SettingsSection.kt` | object | `SettingsSectionCatalog` |
 | `app/src/main/java/com/unblocker/app/ui/theme/VpnStateColors.kt` | class | `StatePalette` |
 | `app/src/main/java/com/unblocker/app/ui/theme/VpnStateColors.kt` | class | `VpnStateColors` |
 | `common/src/main/java/com/unblocker/common/dispatcher/CoroutineDispatchers.kt` | class | `CoroutineDispatchers` |

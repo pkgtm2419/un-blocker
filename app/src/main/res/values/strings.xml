@@ -301,6 +301,48 @@
     <string name="settings_about_desc">Designed for extreme battery efficiency and comprehensive privacy. All DNS queries are inspected in memory and never leave your phone.</string>
     <string name="settings_github_license">GitHub Repository &amp; License</string>
 
+    <!-- Settings IA sections & search (WP-13) -->
+    <string name="settings_search_placeholder">Search settings…</string>
+    <string name="settings_search_empty">No settings match \"%1$s\"</string>
+    <string name="settings_group_core">Core Protection</string>
+    <string name="settings_group_data">Intelligence &amp; Privacy</string>
+    <string name="settings_group_system">System, Experience &amp; Info</string>
+    <string name="settings_section_protection_title">Protection &amp; Policy</string>
+    <string name="settings_section_protection_subtitle">Protection tiers, ad &amp; adult filtering, policy mode</string>
+    <string name="settings_section_filters_title">Filter Lists &amp; Extensions</string>
+    <string name="settings_section_filters_subtitle">Bundled tries, curated presets &amp; custom filter URLs</string>
+    <string name="settings_section_rules_title">Exceptions &amp; Rules</string>
+    <string name="settings_section_rules_subtitle">User allow/block overrides &amp; protected domains</string>
+    <string name="settings_section_learning_title">On-Device Learning &amp; Stats</string>
+    <string name="settings_section_learning_subtitle">Local evidence learner &amp; protection analytics</string>
+    <string name="settings_section_privacy_title">Data &amp; Privacy</string>
+    <string name="settings_section_privacy_subtitle">Pause query logging, CSV export &amp; history retention</string>
+    <string name="settings_section_automation_title">Automation &amp; Boot</string>
+    <string name="settings_section_automation_subtitle">Boot auto-restart &amp; DNS pipeline watchdog</string>
+    <string name="settings_section_appearance_title">Setup, Guide &amp; Display</string>
+    <string name="settings_section_appearance_subtitle">Beyond-DNS companion guide &amp; guided onboarding</string>
+    <string name="settings_section_health_title">Diagnostics &amp; Hardening</string>
+    <string name="settings_section_health_subtitle">Agent runtime, Private DNS &amp; Always-on VPN audit</string>
+    <string name="settings_section_about_title">About &amp; License</string>
+    <string name="settings_section_about_subtitle">App version, privacy guarantees &amp; Apache-2.0 source</string>
+    <string name="settings_policy_mode_title">Filtering Policy Mode</string>
+    <string name="settings_policy_mode_smart">Smart Filter (Recommended)</string>
+    <string name="settings_policy_mode_smart_desc">Blocks matched ads, trackers, and optional adult rules while honoring user exceptions</string>
+    <string name="settings_policy_mode_approved_only">User Overrides Only</string>
+    <string name="settings_policy_mode_approved_only_desc">Applies your allow/block rules; unmatched domains pass through without blocklist matching</string>
+    <string name="settings_ad_blocking_title">Block Ads &amp; Trackers</string>
+    <string name="settings_ad_blocking_subtitle">Evaluate host blocklists and tracker rules on-device</string>
+    <string name="settings_rules_card_desc">Review custom Allow/Block overrides and manage protected domains stored on this device.</string>
+    <string name="settings_rules_open_button">Open Exceptions &amp; Rules</string>
+    <string name="settings_learning_age">Active on-device learning window: day %1$d</string>
+    <string name="settings_learning_breakage_title">Strict Analytics Blocking</string>
+    <string name="settings_learning_breakage_subtitle">Block deep telemetry endpoints even if some apps fall back slowly</string>
+    <string name="settings_stats_open_button">View Protection Statistics</string>
+    <string name="settings_onboarding_open_button">Launch Guided Setup</string>
+    <string name="settings_about_open_button">Open Full About Screen</string>
+    <string name="settings_badge_paused">Paused</string>
+    <string name="settings_badge_active">Active</string>
+
     <!-- Secondary destinations -->
     <string name="exceptions_title">Exceptions &amp; Rules</string>
     <string name="exceptions_headline">User Rules &amp; Protected Domains</string>

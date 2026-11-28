@@ -4,20 +4,62 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.PlayCircleOutline
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -27,7 +69,6 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -38,23 +79,22 @@ import com.unblocker.app.services.SystemHardeningChecker
 import com.unblocker.app.services.UnblockerVpnService
 import com.unblocker.app.ui.adaptive.LocalWindowDimensions
 import com.unblocker.app.ui.adaptive.WindowWidthClass
-import com.unblocker.app.ui.components.AgentStatusPanel
 import com.unblocker.app.ui.components.BeyondDnsHubDialog
-import com.unblocker.app.ui.components.FilteringTierCard
 import com.unblocker.app.ui.components.HaikeiAtmosphericBackground
 import com.unblocker.app.ui.components.SkeuomorphicCard
-import com.unblocker.app.ui.components.SystemHardeningWizard
 import com.unblocker.app.ui.logs.LogViewModel
-import com.unblocker.app.ui.theme.*
+import com.unblocker.app.ui.theme.Slate700
+import com.unblocker.app.ui.theme.Slate800
+import com.unblocker.app.ui.theme.TealPrimary
 import kotlinx.coroutines.launch
 
 /**
- * Renders filtering preferences, DNS status hints, boot settings, and local log controls.
+ * Renders grouped, searchable filtering preferences, system diagnostics, and modular sub-screens (WP-13 / F28).
  *
  * @param preferences Source of persisted settings and destination for setting changes.
  * @param quickStartManager Source of current service lifecycle status.
  * @param onNavigateToExtensions Callback opening the extension catalog.
- * @param initialSection Optional highlighted section identifier from a deep link.
+ * @param initialSection Optional section slug routed from deep link (`unblocker://settings/<slug>`).
  * @param onNavigateToExceptions Callback opening user exceptions and rule tester.
  * @param onNavigateToStatistics Callback opening protection statistics.
  * @param onNavigateToOnboarding Callback opening guided onboarding setup.
@@ -76,6 +116,7 @@ fun SettingsScreen(
     logViewModel: LogViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val haptic = LocalHapticFeedback.current
     val dimensions = LocalWindowDimensions.current
     val coroutineScope = rememberCoroutineScope()
@@ -87,8 +128,28 @@ fun SettingsScreen(
             }.getOrNull() ?: "2.7.2"
         }
 
+    var activeSectionSlug by rememberSaveable {
+        mutableStateOf(SettingsSectionCatalog.resolveSection(initialSection)?.slug)
+    }
+    LaunchedEffect(initialSection) {
+        val resolved = SettingsSectionCatalog.resolveSection(initialSection)
+        if (resolved != null) {
+            activeSectionSlug = resolved.slug
+        }
+    }
+    val activeSection = remember(activeSectionSlug) { SettingsSectionCatalog.resolveSection(activeSectionSlug) }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+
+    BackHandler(enabled = activeSection != null) {
+        activeSectionSlug = null
+    }
+
     val serviceStatus by quickStartManager.status.collectAsState()
     val filteringTier by preferences.filteringTier.collectAsState()
+    val adBlockingEnabled by preferences.adBlockingEnabled.collectAsState()
+    val adultBlockingEnabled by preferences.adultBlockingEnabled.collectAsState()
+    val blockingMode by preferences.blockingMode.collectAsState()
+    val blockAnalyticsBreakage by preferences.blockAnalyticsBreakage.collectAsState()
     val autoRestartOnBoot by preferences.autoRestartOnBoot.collectAsState()
     val healthCheckMinutes by preferences.healthCheckIntervalMinutes.collectAsState()
     val isQueryLoggingPaused by preferences.isQueryLoggingPaused.collectAsState()
@@ -96,22 +157,18 @@ fun SettingsScreen(
     val isPrivateDnsActive by UnblockerVpnService.isPrivateDnsActive.collectAsState()
     val privateDnsServerName by UnblockerVpnService.privateDnsServerName.collectAsState()
 
-    var postureRefreshTrigger by remember { mutableStateOf(0) }
+    var postureRefreshTrigger by remember { mutableIntStateOf(0) }
     val posture =
         remember(postureRefreshTrigger, isPrivateDnsActive) {
             SystemHardeningChecker.checkPosture(context)
         }
     var showBeyondDnsDialog by remember { mutableStateOf(false) }
-
     var showClearConfirmDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         UnblockerVpnService.checkPrivateDns(context)
     }
 
-    val resources = LocalResources.current
-
-    // Export query logs launcher
     val exportLauncher =
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.CreateDocument("text/csv"),
@@ -140,7 +197,6 @@ fun SettingsScreen(
             }
         }
 
-    // Clear confirmation dialog
     if (showClearConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showClearConfirmDialog = false },
@@ -158,10 +214,7 @@ fun SettingsScreen(
             },
             confirmButton = {
                 Button(
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error,
-                        ),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                     onClick = {
                         logViewModel.clearAllLogs()
                         showClearConfirmDialog = false
@@ -185,214 +238,242 @@ fun SettingsScreen(
     }
 
     if (showBeyondDnsDialog) {
-        BeyondDnsHubDialog(
-            onDismiss = { showBeyondDnsDialog = false },
-        )
+        BeyondDnsHubDialog(onDismiss = { showBeyondDnsDialog = false })
     }
 
-    val stateColors =
-        rememberVpnStateColors(
-            serviceStatus = serviceStatus,
-            isDarkTheme = isDark,
-        )
+    val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val horizontalPadding = if (dimensions.widthClass != WindowWidthClass.COMPACT) 32.dp else 16.dp
 
-    CompositionLocalProvider(LocalVpnStateColors provides stateColors) {
-        HaikeiAtmosphericBackground {
+    HaikeiAtmosphericBackground {
+        Box(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier =
                     Modifier
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .windowInsetsPadding(WindowInsets.safeDrawing)
                         .padding(
-                            horizontal = if (dimensions.widthClass == WindowWidthClass.COMPACT) 20.dp else 40.dp,
-                            vertical = 24.dp,
-                        ).padding(bottom = contentPadding.calculateBottomPadding() + 64.dp),
+                            start = horizontalPadding,
+                            end = horizontalPadding,
+                            top = statusBarPadding + 16.dp,
+                            bottom = contentPadding.calculateBottomPadding() + 88.dp,
+                        ),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                // Top Header
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .widthIn(max = 480.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Column {
-                        Text(
-                            text = stringResource(R.string.settings_title),
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = MaterialTheme.colorScheme.onBackground,
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = stringResource(R.string.settings_subtitle),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-
-                    Surface(
-                        shape = CircleShape,
-                        color = if (isDark) Slate800 else Color(0xFFF1F5F9),
-                        border = BorderStroke(1.dp, if (isDark) Slate700 else Color(0xFFCBD5E1)),
+                if (activeSection == null) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().widthIn(max = 480.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        Text(
-                            text = stringResource(R.string.settings_version_badge, versionName),
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                        )
-                    }
-                }
-
-                // 1. PROTECTION LEVEL (FilteringTierCard)
-                FilteringTierCard(
-                    currentTier = filteringTier,
-                    onTierSelected = { tier ->
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        preferences.setFilteringTier(tier)
-                    },
-                    modifier = Modifier.widthIn(max = 480.dp),
-                )
-
-                // 2. Hosts and filter list navigation
-                SkeuomorphicCard(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .widthIn(max = 480.dp),
-                    shape = RoundedCornerShape(20.dp),
-                ) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.FilterList,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(20.dp),
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = stringResource(R.string.settings_hosts_title),
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                            }
-
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = TealPrimary.copy(alpha = 0.15f),
-                                border = BorderStroke(1.dp, TealPrimary.copy(alpha = 0.35f)),
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.settings_hosts_badge),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = TealPrimary,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                                )
-                            }
+                        Column {
+                            Text(
+                                text = stringResource(R.string.settings_title),
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.onBackground,
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = stringResource(R.string.settings_subtitle),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
 
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Text(
-                            text = stringResource(R.string.settings_hosts_desc),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-
-                        Spacer(modifier = Modifier.height(14.dp))
-
-                        OutlinedButton(
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                onNavigateToExtensions()
-                            },
-                            shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
-                            modifier = Modifier.fillMaxWidth(),
+                        Surface(
+                            shape = CircleShape,
+                            color = if (isDark) Slate800 else Color(0xFFF1F5F9),
+                            border = BorderStroke(1.dp, if (isDark) Slate700 else Color(0xFFCBD5E1)),
                         ) {
                             Text(
-                                text = stringResource(R.string.settings_manage_filters),
-                                style = MaterialTheme.typography.labelMedium,
+                                text = stringResource(R.string.settings_version_badge, versionName),
+                                style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary,
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                             )
                         }
                     }
-                }
 
-                // 3. NETWORK DIAGNOSTICS & PRIVATE DNS
-                Column(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .widthIn(max = 480.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    AgentStatusPanel(
-                        serviceStatus = serviceStatus,
-                        isPrivateDnsActive = isPrivateDnsActive,
-                        privateDnsServerName = privateDnsServerName,
-                        onOpenSettings = {
-                            runCatching {
-                                context.startActivity(
-                                    Intent(Settings.ACTION_WIRELESS_SETTINGS).apply {
-                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                    },
-                                )
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text(stringResource(R.string.settings_search_placeholder)) },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { searchQuery = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Clear,
+                                        contentDescription = stringResource(R.string.action_clear_search),
+                                    )
+                                }
                             }
                         },
+                        singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
+                        colors =
+                            OutlinedTextFieldDefaults.colors(
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        modifier = Modifier.fillMaxWidth().widthIn(max = 480.dp),
                     )
 
-                    // Standalone Private DNS Warning Card if detected
-                    if (UnblockerVpnService.shouldWarn(isPrivateDnsActive, privateDnsServerName)) {
-                        Card(
-                            shape = RoundedCornerShape(18.dp),
-                            colors =
-                                CardDefaults.cardColors(
-                                    containerColor = if (isDark) Color(0xFF451A03) else Color(0xFFFFFBEB),
-                                ),
-                            border =
-                                BorderStroke(
-                                    1.dp,
-                                    if (isDark) Color(0xFFD97706) else Color(0xFFF59E0B),
-                                ),
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(16.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.settings_private_dns_warning),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = if (isDark) Color(0xFFFDE68A) else Color(0xFF92400E),
-                                    textAlign = TextAlign.Center,
+                    val filtered =
+                        SettingsSectionCatalog.filterSections(
+                            query = searchQuery,
+                            titleForSection = { resources.getString(it.titleRes) },
+                            subtitleForSection = { resources.getString(it.subtitleRes) },
+                        )
+
+                    if (filtered.isEmpty()) {
+                        Text(
+                            text = stringResource(R.string.settings_search_empty, searchQuery),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 24.dp),
+                        )
+                    } else {
+                        SettingsSectionGroup.entries.forEach { group ->
+                            val groupSections = filtered.filter { it.group == group }
+                            if (groupSections.isNotEmpty()) {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth().widthIn(max = 480.dp),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                                ) {
+                                    Text(
+                                        text = stringResource(group.titleRes),
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.padding(horizontal = 4.dp),
+                                    )
+
+                                    groupSections.forEach { section ->
+                                        SettingsSectionSummaryCard(
+                                            section = section,
+                                            badgeText =
+                                                sectionBadgeText(
+                                                    section = section,
+                                                    versionName = versionName,
+                                                    isQueryLoggingPaused = isQueryLoggingPaused,
+                                                    tierName = filteringTier.name,
+                                                ),
+                                            onClick = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                activeSectionSlug = section.slug
+                                            },
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().widthIn(max = 480.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        IconButton(onClick = { activeSectionSlug = null }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.action_back),
+                                tint = MaterialTheme.colorScheme.onBackground,
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(activeSection.titleRes),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.onBackground,
+                            )
+                            Text(
+                                text = stringResource(activeSection.subtitleRes),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+
+                    Box(modifier = Modifier.fillMaxWidth().widthIn(max = 480.dp)) {
+                        when (activeSection) {
+                            SettingsSection.PROTECTION -> {
+                                ProtectionSectionContent(
+                                    filteringTier = filteringTier,
+                                    onTierSelected = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        preferences.setFilteringTier(it)
+                                    },
+                                    adBlockingEnabled = adBlockingEnabled,
+                                    onAdBlockingChanged = { preferences.setAdBlockingEnabled(it) },
+                                    adultBlockingEnabled = adultBlockingEnabled,
+                                    onAdultBlockingChanged = { preferences.setAdultBlockingEnabled(it) },
+                                    blockingMode = blockingMode,
+                                    onBlockingModeSelected = { preferences.setBlockingMode(it) },
                                 )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                TextButton(
-                                    onClick = {
+                            }
+
+                            SettingsSection.FILTERS -> {
+                                FiltersSectionContent(onNavigateToExtensions = onNavigateToExtensions)
+                            }
+
+                            SettingsSection.RULES -> {
+                                RulesSectionContent(onNavigateToExceptions = onNavigateToExceptions)
+                            }
+
+                            SettingsSection.LEARNING -> {
+                                LearningSectionContent(
+                                    daysSinceInstall = preferences.getDaysSinceInstall(),
+                                    blockAnalyticsBreakage = blockAnalyticsBreakage,
+                                    onBlockAnalyticsBreakageChanged = { preferences.setBlockAnalyticsBreakage(it) },
+                                    onNavigateToStatistics = onNavigateToStatistics,
+                                )
+                            }
+
+                            SettingsSection.PRIVACY -> {
+                                PrivacySectionContent(
+                                    isQueryLoggingPaused = isQueryLoggingPaused,
+                                    onQueryLoggingPausedChanged = { preferences.setQueryLoggingPaused(it) },
+                                    onExportCsv = {
+                                        val timestamp =
+                                            java.text
+                                                .SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US)
+                                                .format(java.util.Date())
+                                        exportLauncher.launch("unblocker_export_$timestamp.csv")
+                                    },
+                                    onRequestClearHistory = { showClearConfirmDialog = true },
+                                )
+                            }
+
+                            SettingsSection.AUTOMATION -> {
+                                AutomationSectionContent(
+                                    isDark = isDark,
+                                    autoRestartOnBoot = autoRestartOnBoot,
+                                    onAutoRestartOnBootChanged = { preferences.setAutoRestartOnBoot(it) },
+                                    healthCheckMinutes = healthCheckMinutes,
+                                )
+                            }
+
+                            SettingsSection.APPEARANCE -> {
+                                AppearanceSectionContent(
+                                    onOpenBeyondDnsGuide = { showBeyondDnsDialog = true },
+                                    onNavigateToOnboarding = onNavigateToOnboarding,
+                                )
+                            }
+
+                            SettingsSection.HEALTH -> {
+                                HealthSectionContent(
+                                    isDark = isDark,
+                                    serviceStatus = serviceStatus,
+                                    isPrivateDnsActive = isPrivateDnsActive,
+                                    privateDnsServerName = privateDnsServerName,
+                                    posture = posture,
+                                    onRefreshPosture = { postureRefreshTrigger++ },
+                                    onOpenNetworkSettings = {
                                         runCatching {
                                             context.startActivity(
                                                 Intent(Settings.ACTION_WIRELESS_SETTINGS).apply {
@@ -401,367 +482,32 @@ fun SettingsScreen(
                                             )
                                         }
                                     },
-                                ) {
-                                    Text(
-                                        text = stringResource(R.string.settings_open_network_settings),
-                                        color = if (isDark) Color(0xFFFBBF24) else Color(0xFFB45309),
-                                        fontWeight = FontWeight.Bold,
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    // Always-on VPN button
-                    OutlinedButton(
-                        onClick = {
-                            runCatching {
-                                context.startActivity(
-                                    Intent(Settings.ACTION_VPN_SETTINGS).apply {
-                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    onOpenVpnSettings = {
+                                        runCatching {
+                                            context.startActivity(SystemHardeningChecker.createVpnSettingsIntent())
+                                        }
                                     },
                                 )
                             }
-                        },
-                        shape = RoundedCornerShape(14.dp),
-                        border =
-                            BorderStroke(
-                                1.dp,
-                                if (isDark) Slate700.copy(alpha = 0.7f) else MaterialTheme.colorScheme.outline,
-                            ),
-                        colors =
-                            ButtonDefaults.outlinedButtonColors(
-                                containerColor =
-                                    if (isDark) {
-                                        Slate900.copy(
-                                            alpha = 0.5f,
-                                        )
-                                    } else {
-                                        MaterialTheme.colorScheme.surface
+
+                            SettingsSection.ABOUT -> {
+                                AboutSectionContent(
+                                    versionName = versionName,
+                                    onNavigateToAbout = onNavigateToAbout,
+                                    onOpenRepository = {
+                                        runCatching {
+                                            context.startActivity(
+                                                Intent(
+                                                    Intent.ACTION_VIEW,
+                                                    Uri.parse("https://github.com/pkgtm2419/un-blocker"),
+                                                ).apply {
+                                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                                },
+                                            )
+                                        }
                                     },
-                                contentColor = MaterialTheme.colorScheme.onSurface,
-                            ),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.VpnKey,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = stringResource(R.string.settings_always_on_vpn),
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
-                }
-
-                // 4. SYSTEM LEAK & HARDENING CHECKLIST
-                SystemHardeningWizard(
-                    posture = posture,
-                    modifier = Modifier.widthIn(max = 480.dp),
-                    onRefreshRequested = { postureRefreshTrigger++ },
-                )
-
-                // 5. DEFENSE-IN-DEPTH COMPANION (Streams, Feeds & Cosmetic)
-                BeyondDnsCompanionCard(
-                    onOpenGuide = { showBeyondDnsDialog = true },
-                    modifier = Modifier.widthIn(max = 480.dp),
-                )
-
-                // 6. SYSTEM AUTOMATION & BACKGROUND HEALTH
-                SkeuomorphicCard(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .widthIn(max = 480.dp),
-                    shape = RoundedCornerShape(20.dp),
-                ) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Build,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp),
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = stringResource(R.string.settings_automation_title),
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(14.dp))
-
-                        // Auto-start on boot switch
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = stringResource(R.string.settings_auto_boot_title),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                                Text(
-                                    text = stringResource(R.string.settings_auto_boot_subtitle),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Switch(
-                                checked = autoRestartOnBoot,
-                                onCheckedChange = { enable ->
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    preferences.setAutoRestartOnBoot(enable)
-                                },
-                                colors =
-                                    SwitchDefaults.colors(
-                                        checkedThumbColor = Color.White,
-                                        checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                    ),
-                            )
-                        }
-
-                        HorizontalDivider(
-                            modifier = Modifier.padding(vertical = 12.dp),
-                            color = if (isDark) Slate800 else Color(0xFFE2E8F0),
-                        )
-
-                        // DNS Watchdog Interval Display
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = stringResource(R.string.settings_watchdog_title),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                                Text(
-                                    text = stringResource(R.string.settings_watchdog_subtitle),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = if (isDark) Slate800 else Color(0xFFF1F5F9),
-                                border = BorderStroke(1.dp, if (isDark) Slate700 else Color(0xFFCBD5E1)),
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.settings_watchdog_interval, healthCheckMinutes),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // 5. DATA, LOGS & PRIVACY
-                SkeuomorphicCard(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .widthIn(max = 480.dp),
-                    shape = RoundedCornerShape(20.dp),
-                ) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Shield,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp),
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = stringResource(R.string.settings_privacy_title),
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(14.dp))
-
-                        // Pause Query Logging Switch
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = stringResource(R.string.settings_pause_logging_title),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                                Text(
-                                    text = stringResource(R.string.settings_pause_logging_subtitle),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Switch(
-                                checked = isQueryLoggingPaused,
-                                onCheckedChange = { paused ->
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    preferences.setQueryLoggingPaused(paused)
-                                },
-                                colors =
-                                    SwitchDefaults.colors(
-                                        checkedThumbColor = Color.White,
-                                        checkedTrackColor = TealAccent,
-                                    ),
-                            )
-                        }
-
-                        HorizontalDivider(
-                            modifier = Modifier.padding(vertical = 12.dp),
-                            color = if (isDark) Slate800 else Color(0xFFE2E8F0),
-                        )
-
-                        // Export CSV & Clear History Buttons
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        ) {
-                            OutlinedButton(
-                                onClick = {
-                                    val timestamp =
-                                        java.text
-                                            .SimpleDateFormat(
-                                                "yyyyMMdd_HHmmss",
-                                                java.util.Locale.US,
-                                            ).format(java.util.Date())
-                                    exportLauncher.launch("unblocker_export_$timestamp.csv")
-                                },
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.FileDownload,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp),
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = stringResource(R.string.logs_export_csv),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                )
-                            }
-
-                            Button(
-                                onClick = { showClearConfirmDialog = true },
-                                colors =
-                                    ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                                    ),
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.DeleteOutline,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp),
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = stringResource(R.string.logs_clear_history),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // 6. ABOUT & SYSTEM INFO
-                SkeuomorphicCard(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .widthIn(max = 480.dp),
-                    shape = RoundedCornerShape(20.dp),
-                ) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.app_brand_version, versionName),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = stringResource(R.string.app_privacy_pillars),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = TealPrimary,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = stringResource(R.string.settings_about_desc),
-                            style = MaterialTheme.typography.bodySmall,
-                            textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-
-                        Spacer(modifier = Modifier.height(14.dp))
-
-                        OutlinedButton(
-                            onClick = {
-                                runCatching {
-                                    context.startActivity(
-                                        Intent(
-                                            Intent.ACTION_VIEW,
-                                            Uri.parse("https://github.com/pkgtm2419/un-blocker"),
-                                        ).apply {
-                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                        },
-                                    )
-                                }
-                            },
-                            shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(1.dp, if (isDark) Slate700 else Color(0xFFCBD5E1)),
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Code,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.primary,
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = stringResource(R.string.settings_github_license),
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
                         }
                     }
                 }
@@ -769,6 +515,107 @@ fun SettingsScreen(
         }
     }
 }
+
+@Composable
+private fun SettingsSectionSummaryCard(
+    section: SettingsSection,
+    badgeText: String?,
+    onClick: () -> Unit,
+) {
+    SkeuomorphicCard(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = RoundedCornerShape(18.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .size(38.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                            shape = RoundedCornerShape(10.dp),
+                        ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = section.icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(section.titleRes),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = stringResource(section.subtitleRes),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (!badgeText.isNullOrBlank()) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = TealPrimary.copy(alpha = 0.14f),
+                    border = BorderStroke(1.dp, TealPrimary.copy(alpha = 0.3f)),
+                ) {
+                    Text(
+                        text = badgeText,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TealPrimary,
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(4.dp))
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun sectionBadgeText(
+    section: SettingsSection,
+    versionName: String,
+    isQueryLoggingPaused: Boolean,
+    tierName: String,
+): String? =
+    when (section) {
+        SettingsSection.PROTECTION -> {
+            tierName
+        }
+
+        SettingsSection.PRIVACY -> {
+            if (isQueryLoggingPaused) {
+                stringResource(R.string.settings_badge_paused)
+            } else {
+                stringResource(R.string.settings_badge_active)
+            }
+        }
+
+        SettingsSection.ABOUT -> {
+            stringResource(R.string.settings_version_badge, versionName)
+        }
+
+        else -> {
+            null
+        }
+    }
 
 /**
  * Companion card linking to multi-layered solutions for video streams and in-feed ads.

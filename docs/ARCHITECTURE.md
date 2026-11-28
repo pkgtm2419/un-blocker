@@ -126,21 +126,26 @@ WorkManager is used for **bounded background actions** only (extension list upda
 
 ## Navigation
 
-Navigation is implemented with **Jetpack Navigation Compose 2.8.3**.
+Navigation is implemented with **Jetpack Navigation Compose 2.10.2** (`NavHost` + `UnblockerNavigation.kt` routes) and **`DeepLinkParser`** (`unblocker://home`, `://logs?domain=<d>`, `://learn`, `://settings/<section>`, `://exceptions`, `://stats`, `://extensions`, `://onboarding`, `://about`, `://start` which opens the app without silently starting the VPN).
 
 `MainScreen.kt` owns:
-- The active tab state (bottom navigation selection)
+- `NavHost` destination graph with per-tab state preservation across top-level tabs
+- `DeepLinkParser` dispatch from `MainActivity`
 - The VPN consent launcher (`ActivityResultLauncher` for `VpnService.prepare()`)
 
 ### Screens
 
 | Route | Composable | Purpose |
 |---|---|---|
-| Protection | `UnblockerScreen` | VPN toggle, quick-start, status |
-| Logs | `LogViewerScreen` | Filtered DNS event log |
-| Learn | `LearnAppScreen` | Per-app learning controls |
-| Extensions | `ExtensionsScreen` | Extension list management |
-| Settings | `SettingsScreen` | Filtering mode, preferences |
+| `home` | `UnblockerScreen` | VPN toggle, quick-start, status |
+| `learn` | `LearnAppScreen` | Isolated per-app learning controls |
+| `logs?domain={domain}` | `LogViewerScreen` | Filtered DNS event log |
+| `settings?section={section}` | `SettingsScreen` | Filtering mode, preferences |
+| `extensions` | `ExtensionsScreen` | Extension list management |
+| `exceptions` | `ExceptionsScreen` | User exceptions & rule tester destination |
+| `stats` | `StatisticsScreen` | On-device statistics destination |
+| `onboarding` | `OnboardingScreen` | Guided setup destination |
+| `about` | `AboutScreen` | App metadata, privacy contract, source links |
 
 Navigation UI uses a **`FloatingPillNavBar`** component (custom bottom tab bar with pill indicator).
 

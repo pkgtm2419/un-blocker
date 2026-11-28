@@ -160,9 +160,9 @@ class LocalPrivacyAndVpnTest {
     @After fun cleanup() {
         UnblockerVpnService.stop(context)
         shell("appops set com.unblocker.app ACTIVATE_VPN deny")
-        DeviceLearning.clear(context)
-        DeviceLearning.clearAllowlist(context)
-        DeviceLearning.clearBlocklist(context)
+        DeviceLearning.store(context).clear()
+        DeviceLearning.allowlist(context).clear()
+        DeviceLearning.blocklist(context).clear()
         instrumentation.uiAutomation.dropShellPermissionIdentity()
     }
 
@@ -183,7 +183,7 @@ class LocalPrivacyAndVpnTest {
         assertFalse(file.readText().contains("private-example"))
         assertEquals(0.9f, store.get("ads.private-example.test")!!, 0f)
         assertEquals(0.9f, PrivateReputationStore(key, file).get("ads.private-example.test")!!, 0f)
-        DeviceLearning.clear(context)
+        DeviceLearning.store(context).clear()
         assertNull(store.get("ads.private-example.test"))
         assertEquals(0, PrivateReputationStore(key, file).size())
         assertFalse(File(context.filesDir, "learned_trackers.txt").exists())
@@ -226,7 +226,7 @@ class LocalPrivacyAndVpnTest {
                 .shouldBlock,
         )
 
-        DeviceLearning.clearAllowlist(context)
+        DeviceLearning.allowlist(context).clear()
         assertFalse(DeviceLearning.allowlist(context).contains(domain))
     }
 
@@ -254,7 +254,7 @@ class LocalPrivacyAndVpnTest {
                 .shouldBlock,
         )
 
-        DeviceLearning.clearBlocklist(context)
+        DeviceLearning.blocklist(context).clear()
         assertFalse(DeviceLearning.blocklist(context).contains(domain))
     }
 

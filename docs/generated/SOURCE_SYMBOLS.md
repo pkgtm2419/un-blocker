@@ -155,6 +155,10 @@ Only syntactically matched top-level class/interface/object declarations (not se
 | `app/src/main/java/com/unblocker/app/ui/model/ProtectionUiState.kt` | class | `RecoveryAction` |
 | `app/src/main/java/com/unblocker/app/ui/model/ProtectionUiStateMapper.kt` | object | `ProtectionUiStateMapper` |
 | `app/src/main/java/com/unblocker/app/ui/motion/ReducedMotionPolicy.kt` | class | `ReducedMotionPolicy` |
+| `app/src/main/java/com/unblocker/app/ui/navigation/UnblockerNavigation.kt` | class | `AppRoute` |
+| `app/src/main/java/com/unblocker/app/ui/navigation/UnblockerNavigation.kt` | interface | `DeepLinkResult` |
+| `app/src/main/java/com/unblocker/app/ui/navigation/UnblockerNavigation.kt` | object | `DeepLinkParser` |
+| `app/src/main/java/com/unblocker/app/ui/navigation/UnblockerNavigation.kt` | object | `UnblockerDestinations` |
 | `app/src/main/java/com/unblocker/app/ui/theme/VpnStateColors.kt` | class | `StatePalette` |
 | `app/src/main/java/com/unblocker/app/ui/theme/VpnStateColors.kt` | class | `VpnStateColors` |
 | `common/src/main/java/com/unblocker/common/dispatcher/CoroutineDispatchers.kt` | class | `CoroutineDispatchers` |

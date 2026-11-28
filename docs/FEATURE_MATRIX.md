@@ -34,6 +34,7 @@
 | F23 | System Leak & Hardening Checklist | `SystemHardeningChecker.kt`, `SystemHardeningWizard.kt` | Source-observed; interactive battery, Private DNS, Always-On VPN and Ad ID checklist | 2026-11-19 |
 | F24 | Beyond DNS Companion Hub | `BeyondDnsHubDialog.kt`, `SettingsScreen.kt`, `COMPREHENSIVE_AD_BLOCKING_GUIDE.md` | Source-observed; in-app defense-in-depth guidance for stream ads & cosmetic filtering | 2026-11-19 |
 | F25 | App-update VPN restart (`MY_PACKAGE_REPLACED`) | `BootReceiver.kt`, `AndroidManifest.xml`, `BootPolicy` in `VpnSessionState.kt` | Unit-tested in `BootReceiverTest`; requires existing VPN consent and honors `autoRestartOnBoot`/`protectionEnabled`; `adb install -r` device test: NOT RUN | 2026-11-28 |
+| F26 | Navigation Compose graph & `unblocker://` deep-link router | `UnblockerNavigation.kt`, `MainScreen.kt`, `MainActivity.kt`, `SecondaryDestinations.kt` | Unit-tested (`NavGraphTest`, `DeepLinkParserTest`); validates parameters strictly, never silent-starts on `://start`; instrumentation test `MainScreenNavigationTest` compiled, emulator run: NOT RUN | 2026-11-29 |
 
 ## Change tracking contract
 

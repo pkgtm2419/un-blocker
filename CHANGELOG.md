@@ -14,6 +14,10 @@ Versioning follows the `versionName` / `versionCode` declared in `app/build.grad
 
 ## [Unreleased]
 
+### Added
+
+- **Navigation Compose & Deep-Link Router (WP-11 / F26)**: Migrated `MainScreen` from manual `selectedTab`/`isExtensionsOpen` flags to Jetpack Navigation Compose (`NavHost` + `AppRoute` + `FloatingPillNavBar` tab state saving) with Extensions, Exceptions, Statistics, Onboarding, and About destinations; added `DeepLinkParser` and singleTop `unblocker://` VIEW intent filter on `MainActivity` with strict URI/domain/section validation (`unblocker://start` only opens the app); added `DeepLinkParserTest`, `NavGraphTest`, and `MainScreenNavigationTest`.
+
 ### Changed
 
 - **Android 16 Target SDK 36 & Compose BOM 2026.09.00 (WP-10d)**: Updated `compileSdk = 37`, `targetSdk = 36` across modules and CI workflows; updated Compose BOM to `2026.09.00`, Core KTX to `1.19.1`, Lifecycle to `2.11.1`, Activity Compose to `1.13.0`, Navigation Compose to `2.10.2`, WorkManager to `2.12.0`, and Hilt Navigation/Work extensions to `1.4.0`. Confirmed predictive back (`enableOnBackInvokedCallback="true"` + Compose `BackHandler`) and un-locked large-screen resizability.

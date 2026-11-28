@@ -9,6 +9,7 @@ Files matching `*Test.kt`; presence does not indicate tests passed.
 | `app/src/androidTest/java/com/unblocker/app/LegacyUserRuleMigrationTest.kt` | instrumentation |
 | `app/src/androidTest/java/com/unblocker/app/LocalPrivacyAndVpnTest.kt` | instrumentation |
 | `app/src/androidTest/java/com/unblocker/app/VpnNetworkRegressionTest.kt` | instrumentation |
+| `app/src/androidTest/java/com/unblocker/app/ui/MainScreenNavigationTest.kt` | instrumentation |
 | `app/src/test/java/com/unblocker/app/analysis/EvidenceLearningTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/analysis/LearnerIntegrationTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/analysis/PublicSuffixRulesTest.kt` | unit |
@@ -96,6 +97,8 @@ Files matching `*Test.kt`; presence does not indicate tests passed.
 | `app/src/test/java/com/unblocker/app/ui/model/LocalProtectionSummaryTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/ui/model/ProtectionUiStateMapperTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/ui/motion/ReducedMotionPolicyTest.kt` | unit |
+| `app/src/test/java/com/unblocker/app/ui/navigation/DeepLinkParserTest.kt` | unit |
+| `app/src/test/java/com/unblocker/app/ui/navigation/NavGraphTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/ui/navigation/NavigationAndSettingsTest.kt` | unit |
 | `app/src/test/java/com/unblocker/app/ui/theme/VpnStateColorsTest.kt` | unit |
 | `data-store/src/test/java/com/unblocker/data/cache/RuleCompilerTest.kt` | unit |

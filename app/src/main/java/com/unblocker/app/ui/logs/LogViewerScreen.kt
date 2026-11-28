@@ -46,13 +46,20 @@ import java.util.Locale
  * Renders local aggregate DNS logs, filters, optional event details, export, and history controls.
  *
  * @param contentPadding Parent navigation padding whose bottom inset is applied to the list and snackbar.
+ * @param initialDomain Optional initial domain query supplied by navigation/deep-link arguments.
  * @param viewModel Owner of log queries, rule feedback, and local-history operations.
  */
 @Composable
 fun LogViewerScreen(
     contentPadding: PaddingValues = PaddingValues(0.dp),
+    initialDomain: String? = null,
     viewModel: LogViewModel = hiltViewModel(),
 ) {
+    LaunchedEffect(initialDomain) {
+        if (!initialDomain.isNullOrBlank()) {
+            viewModel.setSearchQuery(initialDomain)
+        }
+    }
     val domainStats by viewModel.domainStats.collectAsState()
     val filter by viewModel.filter.collectAsState()
     val sort by viewModel.sort.collectAsState()

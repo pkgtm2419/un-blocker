@@ -95,6 +95,15 @@ class LegacyUserRuleMigrationTest {
             applied[domain] = feedback
             return RuleUpdateResult.Applied
         }
+
+        override suspend fun setWholeSite(
+            domain: String,
+            feedback: UserFeedback,
+        ): RuleUpdateResult = RuleUpdateResult.Applied
+
+        override suspend fun protectDomain(domain: String): RuleUpdateResult = RuleUpdateResult.Applied
+
+        override suspend fun reset(domain: String): RuleUpdateResult = RuleUpdateResult.Applied
     }
 
     /**
@@ -166,6 +175,15 @@ class LegacyUserRuleMigrationTest {
                         applied[domain] = feedback
                         return RuleUpdateResult.Applied
                     }
+
+                    override suspend fun setWholeSite(
+                        domain: String,
+                        feedback: UserFeedback,
+                    ): RuleUpdateResult = RuleUpdateResult.Applied
+
+                    override suspend fun protectDomain(domain: String): RuleUpdateResult = RuleUpdateResult.Applied
+
+                    override suspend fun reset(domain: String): RuleUpdateResult = RuleUpdateResult.Applied
                 }
 
             val migration = LegacyUserRuleMigration(context, whitelistDao, blockRuleDao, gateway)

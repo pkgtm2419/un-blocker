@@ -51,6 +51,11 @@ import kotlinx.coroutines.launch
  * @param preferences Source of persisted settings and destination for setting changes.
  * @param quickStartManager Source of current service lifecycle status.
  * @param onNavigateToExtensions Callback opening the extension catalog.
+ * @param initialSection Optional highlighted section identifier from a deep link.
+ * @param onNavigateToExceptions Callback opening user exceptions and rule tester.
+ * @param onNavigateToStatistics Callback opening protection statistics.
+ * @param onNavigateToOnboarding Callback opening guided onboarding setup.
+ * @param onNavigateToAbout Callback opening dedicated About screen.
  * @param contentPadding Parent navigation padding whose bottom inset is applied to scrolling content.
  * @param logViewModel Owner of local log export and history-clearing actions.
  */
@@ -59,6 +64,11 @@ fun SettingsScreen(
     preferences: FilteringPreferences,
     quickStartManager: QuickStartManager,
     onNavigateToExtensions: () -> Unit,
+    initialSection: String? = null,
+    onNavigateToExceptions: () -> Unit = {},
+    onNavigateToStatistics: () -> Unit = {},
+    onNavigateToOnboarding: () -> Unit = {},
+    onNavigateToAbout: () -> Unit = {},
     contentPadding: PaddingValues = PaddingValues(0.dp),
     logViewModel: LogViewModel = hiltViewModel(),
 ) {

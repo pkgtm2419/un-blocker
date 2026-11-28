@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="open_home"
+        android:enabled="true"
+        android:icon="@drawable/ic_blocker_notification"
+        android:shortcutShortLabel="@string/shortcut_home_short"
+        android:shortcutLongLabel="@string/shortcut_home_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="unblocker://home"
+            android:targetPackage="com.unblocker.app"
+            android:targetClass="com.unblocker.app.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="open_logs"
+        android:enabled="true"
+        android:icon="@drawable/ic_blocker_notification"
+        android:shortcutShortLabel="@string/shortcut_logs_short"
+        android:shortcutLongLabel="@string/shortcut_logs_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="unblocker://logs"
+            android:targetPackage="com.unblocker.app"
+            android:targetClass="com.unblocker.app.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="open_learn"
+        android:enabled="true"
+        android:icon="@drawable/ic_blocker_notification"
+        android:shortcutShortLabel="@string/shortcut_learn_short"
+        android:shortcutLongLabel="@string/shortcut_learn_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="unblocker://learn"
+            android:targetPackage="com.unblocker.app"
+            android:targetClass="com.unblocker.app.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="open_exceptions"
+        android:enabled="true"
+        android:icon="@drawable/ic_blocker_notification"
+        android:shortcutShortLabel="@string/shortcut_exceptions_short"
+        android:shortcutLongLabel="@string/shortcut_exceptions_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="unblocker://exceptions"
+            android:targetPackage="com.unblocker.app"
+            android:targetClass="com.unblocker.app.MainActivity" />
+    </shortcut>
+</shortcuts>

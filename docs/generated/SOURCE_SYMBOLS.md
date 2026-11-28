@@ -107,6 +107,9 @@ Only syntactically matched top-level class/interface/object declarations (not se
 | `app/src/main/java/com/unblocker/app/logic/rules/RuleSet.kt` | class | `RuleSetStatus` |
 | `app/src/main/java/com/unblocker/app/logic/rules/RuleSet.kt` | class | `RuleSet` |
 | `app/src/main/java/com/unblocker/app/logic/rules/RuleSet.kt` | object | `RuleSetHolder` |
+| `app/src/main/java/com/unblocker/app/receivers/AutomationPolicy.kt` | class | `AutomationCommand` |
+| `app/src/main/java/com/unblocker/app/receivers/AutomationPolicy.kt` | object | `AutomationCommandPolicy` |
+| `app/src/main/java/com/unblocker/app/receivers/AutomationReceiver.kt` | class | `AutomationReceiver` |
 | `app/src/main/java/com/unblocker/app/receivers/BootReceiver.kt` | class | `BootReceiver` |
 | `app/src/main/java/com/unblocker/app/services/BlockingRegressionCheck.kt` | class | `BlockingRegressionCase` |
 | `app/src/main/java/com/unblocker/app/services/BlockingRegressionCheck.kt` | class | `BlockingRegressionCheck` |
@@ -133,10 +136,13 @@ Only syntactically matched top-level class/interface/object declarations (not se
 | `app/src/main/java/com/unblocker/app/services/TunnelDnsConfig.kt` | object | `TunnelDnsConfig` |
 | `app/src/main/java/com/unblocker/app/services/TunnelRun.kt` | class | `TunnelRun` |
 | `app/src/main/java/com/unblocker/app/services/UidResolver.kt` | class | `UidResolver` |
+| `app/src/main/java/com/unblocker/app/services/UnblockerTileService.kt` | class | `UnblockerTileService` |
 | `app/src/main/java/com/unblocker/app/services/UnblockerVpnService.kt` | class | `UnblockerVpnService` |
 | `app/src/main/java/com/unblocker/app/services/VpnBuilderPolicy.kt` | interface | `VpnAppRoutingTarget` |
 | `app/src/main/java/com/unblocker/app/services/VpnBuilderPolicy.kt` | object | `IsolatedSessionRecoveryPolicy` |
 | `app/src/main/java/com/unblocker/app/services/VpnBuilderPolicy.kt` | object | `VpnBuilderPolicy` |
+| `app/src/main/java/com/unblocker/app/services/VpnControlActions.kt` | class | `TileClickDecision` |
+| `app/src/main/java/com/unblocker/app/services/VpnControlActions.kt` | object | `VpnControlActions` |
 | `app/src/main/java/com/unblocker/app/services/VpnDiagnostics.kt` | object | `VpnDiagnostics` |
 | `app/src/main/java/com/unblocker/app/services/VpnRoutePolicy.kt` | object | `VpnRoutePolicy` |
 | `app/src/main/java/com/unblocker/app/services/VpnSessionState.kt` | class | `ServiceStatus` |
@@ -179,6 +185,7 @@ Only syntactically matched top-level class/interface/object declarations (not se
 | `app/src/main/java/com/unblocker/app/ui/settings/SettingsSection.kt` | object | `SettingsSectionCatalog` |
 | `app/src/main/java/com/unblocker/app/ui/theme/VpnStateColors.kt` | class | `StatePalette` |
 | `app/src/main/java/com/unblocker/app/ui/theme/VpnStateColors.kt` | class | `VpnStateColors` |
+| `app/src/main/java/com/unblocker/app/widgets/ProtectionWidgetProvider.kt` | class | `ProtectionWidgetProvider` |
 | `common/src/main/java/com/unblocker/common/dispatcher/CoroutineDispatchers.kt` | class | `CoroutineDispatchers` |
 | `common/src/main/java/com/unblocker/common/dispatcher/DispatcherModule.kt` | object | `DispatcherModule` |
 | `common/src/main/java/com/unblocker/common/model/DnsPacket.kt` | class | `DnsPacket` |

@@ -156,6 +156,9 @@ fun SettingsScreen(
     val healthCheckMinutes by preferences.healthCheckIntervalMinutes.collectAsState()
     val isQueryLoggingPaused by preferences.isQueryLoggingPaused.collectAsState()
     val excludedPackages by preferences.excludedPackages.collectAsState()
+    val hideFromRecents by preferences.hideFromRecents.collectAsState()
+    val automationEnabled by preferences.automationEnabled.collectAsState()
+    val automationToken by preferences.automationToken.collectAsState()
 
     val isPrivateDnsActive by UnblockerVpnService.isPrivateDnsActive.collectAsState()
     val privateDnsServerName by UnblockerVpnService.privateDnsServerName.collectAsState()
@@ -562,6 +565,8 @@ fun SettingsScreen(
                                 PrivacySectionContent(
                                     isQueryLoggingPaused = isQueryLoggingPaused,
                                     onQueryLoggingPausedChanged = { preferences.setQueryLoggingPaused(it) },
+                                    hideFromRecents = hideFromRecents,
+                                    onHideFromRecentsChanged = { preferences.setHideFromRecents(it) },
                                     onExportCsv = {
                                         val timestamp =
                                             java.text
@@ -596,6 +601,30 @@ fun SettingsScreen(
                                     autoRestartOnBoot = autoRestartOnBoot,
                                     onAutoRestartOnBootChanged = { preferences.setAutoRestartOnBoot(it) },
                                     healthCheckMinutes = healthCheckMinutes,
+                                    automationEnabled = automationEnabled,
+                                    onAutomationEnabledChanged = { preferences.setAutomationEnabled(it) },
+                                    automationToken = automationToken,
+                                    onCopyAutomationToken = {
+                                        val cm =
+                                            context.getSystemService(
+                                                android.content.Context.CLIPBOARD_SERVICE,
+                                            ) as? android.content.ClipboardManager
+                                        cm?.setPrimaryClip(
+                                            android.content.ClipData.newPlainText(
+                                                "unblocker_automation_token",
+                                                automationToken,
+                                            ),
+                                        )
+                                        Toast
+                                            .makeText(
+                                                context,
+                                                resources.getString(R.string.settings_automation_token_copied),
+                                                Toast.LENGTH_SHORT,
+                                            ).show()
+                                    },
+                                    onRegenerateAutomationToken = {
+                                        preferences.regenerateAutomationToken()
+                                    },
                                 )
                             }
 

@@ -375,6 +375,8 @@ internal fun LearningSectionContent(
 internal fun PrivacySectionContent(
     isQueryLoggingPaused: Boolean,
     onQueryLoggingPausedChanged: (Boolean) -> Unit,
+    hideFromRecents: Boolean = false,
+    onHideFromRecentsChanged: (Boolean) -> Unit = {},
     onExportCsv: () -> Unit,
     onExportJson: () -> Unit,
     onRequestClearHistory: () -> Unit,
@@ -407,6 +409,18 @@ internal fun PrivacySectionContent(
                     subtitle = stringResource(R.string.settings_pause_logging_subtitle),
                     checked = isQueryLoggingPaused,
                     onCheckedChange = onQueryLoggingPausedChanged,
+                )
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                )
+
+                SettingsToggleRow(
+                    title = stringResource(R.string.settings_hide_recents_title),
+                    subtitle = stringResource(R.string.settings_hide_recents_subtitle),
+                    checked = hideFromRecents,
+                    onCheckedChange = onHideFromRecentsChanged,
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -518,67 +532,119 @@ internal fun AutomationSectionContent(
     autoRestartOnBoot: Boolean,
     onAutoRestartOnBootChanged: (Boolean) -> Unit,
     healthCheckMinutes: Int,
+    automationEnabled: Boolean = false,
+    onAutomationEnabledChanged: (Boolean) -> Unit = {},
+    automationToken: String = "",
+    onCopyAutomationToken: () -> Unit = {},
+    onRegenerateAutomationToken: () -> Unit = {},
 ) {
-    SkeuomorphicCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.Build,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp),
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = stringResource(R.string.settings_automation_title),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            SettingsToggleRow(
-                title = stringResource(R.string.settings_auto_boot_title),
-                subtitle = stringResource(R.string.settings_auto_boot_subtitle),
-                checked = autoRestartOnBoot,
-                onCheckedChange = onAutoRestartOnBootChanged,
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        SkeuomorphicCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Build,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = stringResource(R.string.settings_watchdog_title),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        text = stringResource(R.string.settings_automation_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                SettingsToggleRow(
+                    title = stringResource(R.string.settings_auto_boot_title),
+                    subtitle = stringResource(R.string.settings_auto_boot_subtitle),
+                    checked = autoRestartOnBoot,
+                    onCheckedChange = onAutoRestartOnBootChanged,
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.settings_watchdog_title),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            text = stringResource(R.string.settings_watchdog_subtitle),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (isDark) Slate800 else MaterialTheme.colorScheme.surfaceVariant,
+                        border = BorderStroke(1.dp, if (isDark) Slate700 else MaterialTheme.colorScheme.outlineVariant),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.settings_watchdog_interval, healthCheckMinutes),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        )
+                    }
+                }
+            }
+        }
+
+        SkeuomorphicCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
+            Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                SettingsToggleRow(
+                    title = stringResource(R.string.settings_automation_api_title),
+                    subtitle = stringResource(R.string.settings_automation_api_subtitle),
+                    checked = automationEnabled,
+                    onCheckedChange = onAutomationEnabledChanged,
+                )
+                if (automationEnabled && automationToken.isNotBlank()) {
+                    Text(
+                        text = stringResource(R.string.settings_automation_token_label, automationToken),
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
-                        text = stringResource(R.string.settings_watchdog_subtitle),
+                        text = stringResource(R.string.settings_automation_actions_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = if (isDark) Slate800 else MaterialTheme.colorScheme.surfaceVariant,
-                    border = BorderStroke(1.dp, if (isDark) Slate700 else MaterialTheme.colorScheme.outlineVariant),
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_watchdog_interval, healthCheckMinutes),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        OutlinedButton(
+                            onClick = onCopyAutomationToken,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.settings_automation_copy_token),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+                        TextButton(
+                            onClick = onRegenerateAutomationToken,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(stringResource(R.string.settings_automation_regenerate_token))
+                        }
+                    }
                 }
             }
         }

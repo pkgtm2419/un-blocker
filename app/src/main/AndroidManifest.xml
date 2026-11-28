@@ -41,6 +41,9 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:scheme="unblocker" />
             </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity>
         <service
             android:name="com.unblocker.app.services.UnblockerVpnService"
@@ -62,6 +65,44 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+        <service
+            android:name=".services.UnblockerTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_blocker_notification"
+            android:label="@string/qs_tile_label"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.ACTIVE_TILE"
+                android:value="true" />
+        </service>
+        <receiver
+            android:name=".widgets.ProtectionWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.unblocker.app.widget.TOGGLE" />
+                <action android:name="com.unblocker.app.widget.PAUSE_RESUME" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/protection_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".receivers.AutomationReceiver"
+            android:enabled="true"
+            android:exported="true"
+            tools:ignore="ExportedReceiver">
+            <intent-filter>
+                <action android:name="com.unblocker.app.ACTION_ENABLE_PROTECTION" />
+                <action android:name="com.unblocker.app.ACTION_DISABLE_PROTECTION" />
+                <action android:name="com.unblocker.app.ACTION_PAUSE_PROTECTION" />
+                <action android:name="com.unblocker.app.ACTION_RESUME_PROTECTION" />
             </intent-filter>
         </receiver>
         <!-- Disable default WorkManager initializer since we use HiltWorkerFactory -->

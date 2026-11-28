@@ -1,5 +1,6 @@
 package com.unblocker.app
 
+import android.app.ActivityManager
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -8,6 +9,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -39,6 +41,10 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val deepLinkUri by pendingDeepLink.collectAsState()
+            val hideFromRecents by app.preferences.hideFromRecents.collectAsState()
+            LaunchedEffect(hideFromRecents) {
+                applyHideFromRecents(hideFromRecents)
+            }
             UnblockerTheme {
                 ProvideAdaptiveWindow {
                     Surface(
@@ -64,6 +70,19 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         captureDeepLink(intent)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val app = application as UnblockerApplication
+        applyHideFromRecents(app.preferences.hideFromRecents.value)
+    }
+
+    private fun applyHideFromRecents(excluded: Boolean) {
+        val am = getSystemService(ACTIVITY_SERVICE) as? ActivityManager ?: return
+        runCatching {
+            am.appTasks.forEach { task -> task.setExcludeFromRecents(excluded) }
+        }
     }
 
     private fun captureDeepLink(incoming: Intent?) {

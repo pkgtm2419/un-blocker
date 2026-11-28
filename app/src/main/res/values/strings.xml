@@ -437,6 +437,36 @@
     <string name="logs_resume_desc">Resume Logging</string>
     <string name="logs_empty_all">No connections logged yet</string>
     <string name="logs_empty_search">No matching domains found</string>
+    <string name="qs_tile_label">Un-Blocker DNS</string>
+    <string name="qs_tile_subtitle_active">Protected</string>
+    <string name="qs_tile_subtitle_paused">Paused (5 min)</string>
+    <string name="qs_tile_subtitle_off">Inactive</string>
+    <string name="qs_tile_subtitle_setup">Tap to set up</string>
+    <string name="shortcut_home_short">Shield</string>
+    <string name="shortcut_home_long">Open Shield Home</string>
+    <string name="shortcut_logs_short">Query Logs</string>
+    <string name="shortcut_logs_long">Inspect Local DNS Logs</string>
+    <string name="shortcut_learn_short">Learn App</string>
+    <string name="shortcut_learn_long">Start App Rule Learning</string>
+    <string name="shortcut_exceptions_short">Exceptions</string>
+    <string name="shortcut_exceptions_long">Manage Allow &amp; Block Rules</string>
+    <string name="widget_label">Un-Blocker Shield</string>
+    <string name="widget_description">View DNS protection status, start/stop shield, or pause for 5 minutes.</string>
+    <string name="widget_status_active">Protected · Local DNS</string>
+    <string name="widget_status_paused">Paused · 5 min bypass</string>
+    <string name="widget_status_stopped">Protection Off</string>
+    <string name="widget_action_start">Start</string>
+    <string name="widget_action_stop">Stop</string>
+    <string name="notif_status_paused_minutes">Filtering paused (~%1$d min remaining)</string>
+    <string name="settings_hide_recents_title">Hide from Android Recents</string>
+    <string name="settings_hide_recents_subtitle">Exclude Un-Blocker from the system recent apps overview switcher.</string>
+    <string name="settings_automation_api_title">Local Broadcast Automation</string>
+    <string name="settings_automation_api_subtitle">Opt-in Tasker / MacroDroid intent endpoint gated by a random local secret token.</string>
+    <string name="settings_automation_token_label">Auth Token: %1$s</string>
+    <string name="settings_automation_actions_hint">Broadcast actions: ACTION_ENABLE_PROTECTION, ACTION_DISABLE_PROTECTION, ACTION_PAUSE_PROTECTION, ACTION_RESUME_PROTECTION (extra \"token\").</string>
+    <string name="settings_automation_copy_token">Copy Token</string>
+    <string name="settings_automation_regenerate_token">Regenerate</string>
+    <string name="settings_automation_token_copied">Automation token copied to clipboard</string>
 
     <!-- Plural resources -->
     <plurals name="learn_domain_queries">

@@ -173,11 +173,13 @@ class UnblockerVpnService : VpnService() {
         if (ACTION_PAUSE_PROTECTION == action) {
             preferences.pauseProtection(5 * 60 * 1000L)
             updateNotification()
+            VpnControlActions.notifySystemSurfaces(this)
             return START_STICKY
         }
         if (ACTION_RESUME_PROTECTION == action) {
             preferences.pauseProtection(0L)
             updateNotification()
+            VpnControlActions.notifySystemSurfaces(this)
             return START_STICKY
         }
 
@@ -286,6 +288,7 @@ class UnblockerVpnService : VpnService() {
                 if (!session.established(run.owner)) return
                 preferences.setServiceRunning(true)
             }
+            VpnControlActions.notifySystemSurfaces(this)
 
             val responseWriter = TunResponseWriter(run, session, outputStream)
             run.register(responseWriter)
@@ -815,10 +818,18 @@ class UnblockerVpnService : VpnService() {
             } else {
                 getString(R.string.notif_action_pause_5m)
             }
+        val remainingPauseMinutes =
+            if (isPaused) {
+                (((preferences.pausedUntil.value - System.currentTimeMillis()).coerceAtLeast(0L) + 59_999L) / 60_000L)
+                    .toInt()
+                    .coerceAtLeast(1)
+            } else {
+                0
+            }
         val statusText =
             when {
                 isIsolated -> getString(R.string.notif_status_isolated, isolatedPkg.orEmpty())
-                isPaused -> getString(R.string.notif_status_paused)
+                isPaused -> getString(R.string.notif_status_paused_minutes, remainingPauseMinutes)
                 else -> getString(R.string.notif_status_active)
             }
         val subText =
@@ -885,6 +896,7 @@ class UnblockerVpnService : VpnService() {
         }
 
         stopForeground(STOP_FOREGROUND_REMOVE)
+        VpnControlActions.notifySystemSurfaces(this)
     }
 
     /**

@@ -484,6 +484,58 @@ class FilteringPreferences(
         setExcludedPackages(updated)
     }
 
+    private val _hideFromRecents = MutableStateFlow(prefs.getBoolean(KEY_HIDE_FROM_RECENTS, false))
+
+    /**
+     * Whether MainActivity should mark its Android recent-tasks card as excluded (WP-34).
+     */
+    val hideFromRecents: StateFlow<Boolean> = _hideFromRecents.asStateFlow()
+
+    /**
+     * Persists and publishes whether MainActivity is hidden from Android Recents.
+     */
+    fun setHideFromRecents(hidden: Boolean) {
+        prefs.edit().putBoolean(KEY_HIDE_FROM_RECENTS, hidden).apply()
+        _hideFromRecents.value = hidden
+    }
+
+    private val _automationEnabled = MutableStateFlow(prefs.getBoolean(KEY_AUTOMATION_ENABLED, false))
+
+    /**
+     * Opt-in flag controlling third-party local automation broadcasts (disabled by default, WP-33).
+     */
+    val automationEnabled: StateFlow<Boolean> = _automationEnabled.asStateFlow()
+
+    private val _automationToken = MutableStateFlow(prefs.getString(KEY_AUTOMATION_TOKEN, "").orEmpty())
+
+    /**
+     * Local shared secret required in broadcast automation intents; never included in exports/backups.
+     */
+    val automationToken: StateFlow<String> = _automationToken.asStateFlow()
+
+    /**
+     * Enables or disables local broadcast automation and generates a random token if enabling for the first time.
+     */
+    fun setAutomationEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_AUTOMATION_ENABLED, enabled).apply()
+        _automationEnabled.value = enabled
+        if (enabled && _automationToken.value.isBlank()) {
+            regenerateAutomationToken()
+        }
+    }
+
+    /**
+     * Generates and persists a fresh 128-bit hex token for broadcast automation authentication.
+     */
+    fun regenerateAutomationToken(): String {
+        val bytes = ByteArray(16)
+        java.security.SecureRandom().nextBytes(bytes)
+        val token = bytes.joinToString("") { "%02x".format(it) }
+        prefs.edit().putString(KEY_AUTOMATION_TOKEN, token).apply()
+        _automationToken.value = token
+        return token
+    }
+
     /**
      * Persisted preference keys and the application-scoped store accessor.
      */
@@ -505,6 +557,9 @@ class FilteringPreferences(
         private const val KEY_ISOLATED_SESSION_ACTIVE = "isolated_session_active"
         private const val KEY_ISOLATED_SESSION_PACKAGE = "isolated_session_package"
         private const val KEY_EXCLUDED_PACKAGES = "excluded_packages"
+        private const val KEY_HIDE_FROM_RECENTS = "hide_from_recents"
+        private const val KEY_AUTOMATION_ENABLED = "automation_enabled"
+        private const val KEY_AUTOMATION_TOKEN = "automation_token"
         private val PACKAGE_NAME_REGEX = Regex("^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+$")
 
         /**

@@ -120,9 +120,29 @@ class VpnSessionState(
 }
 
 /**
- * Eligibility gate for restarting protection after a boot broadcast.
+ * Eligibility gate for restarting protection after a boot or package-replacement broadcast.
  */
 object BootPolicy {
+    /** System broadcast sent after the device finishes booting. */
+    const val ACTION_BOOT_COMPLETED = "android.intent.action.BOOT_COMPLETED"
+
+    /** OEM quick-boot broadcast action used on supported devices. */
+    const val ACTION_QUICKBOOT_POWERON = "android.intent.action.QUICKBOOT_POWERON"
+
+    /** System broadcast delivered to an updated package after replacement finishes. */
+    const val ACTION_MY_PACKAGE_REPLACED = "android.intent.action.MY_PACKAGE_REPLACED"
+
+    /**
+     * Checks whether [action] should attempt a background VPN protection restart.
+     *
+     * @param action Broadcast intent action, or null.
+     * @return True for boot, quick-boot, and package-replacement broadcasts.
+     */
+    fun isEligibleAction(action: String?): Boolean =
+        action == ACTION_BOOT_COMPLETED ||
+            action == ACTION_QUICKBOOT_POWERON ||
+            action == ACTION_MY_PACKAGE_REPLACED
+
     /**
      * Requires restart intent, protection intent and existing Android VPN consent.
      *
